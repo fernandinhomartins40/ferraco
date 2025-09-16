@@ -29,13 +29,13 @@ const Header = ({ onLeadModalOpen }: HeaderProps) => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-primary shadow-elegant">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 lg:h-20">
+        <div className="flex items-center justify-between h-20 lg:h-24">
           {/* Logo */}
           <div className="flex-shrink-0">
             <img 
               src={logoFerraco} 
               alt="Metalúrgica FerrAço" 
-              className="h-10 lg:h-12 w-auto transition-smooth hover:scale-105"
+              className="h-12 lg:h-16 w-auto transition-smooth hover:scale-105"
             />
           </div>
 

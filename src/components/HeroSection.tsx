@@ -45,7 +45,7 @@ const HeroSection = ({ onLeadModalOpen }: HeroSectionProps) => {
   return (
     <>
       {/* Hero Slider */}
-      <section id="inicio" className="relative pt-16 lg:pt-20 min-h-screen flex items-center hero-gradient overflow-hidden">
+      <section id="inicio" className="relative pt-20 lg:pt-24 min-h-screen flex items-center hero-gradient overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
         
         <div className="container mx-auto px-4 relative z-10">
@@ -115,37 +115,37 @@ const HeroSection = ({ onLeadModalOpen }: HeroSectionProps) => {
       <section className="bg-secondary py-4 overflow-hidden">
         <div className="marquee-container">
           <div className="marquee">
-            <div className="flex items-center space-x-8 text-primary font-bold text-lg">
+            <div className="flex items-center space-x-8 text-white font-bold text-lg">
               <span className="flex items-center space-x-2">
-                <Star className="text-primary" fill="currentColor" />
+                <Star className="text-accent" fill="currentColor" />
                 <span>Qualidade Garantida</span>
               </span>
               <span className="flex items-center space-x-2">
-                <Truck className="text-primary" />
+                <Truck className="text-accent" />
                 <span>Entrega Rápida</span>
               </span>
               <span className="flex items-center space-x-2">
-                <Award className="text-primary" />
+                <Award className="text-accent" />
                 <span>25+ Anos de Experiência</span>
               </span>
               <span className="flex items-center space-x-2">
-                <Users className="text-primary" />
+                <Users className="text-accent" />
                 <span>Atendimento Especializado</span>
               </span>
               <span className="flex items-center space-x-2">
-                <Star className="text-primary" fill="currentColor" />
+                <Star className="text-accent" fill="currentColor" />
                 <span>Melhores Produtos</span>
               </span>
               <span className="flex items-center space-x-2">
-                <Truck className="text-primary" />
+                <Truck className="text-accent" />
                 <span>Logística Nacional</span>
               </span>
               <span className="flex items-center space-x-2">
-                <Award className="text-primary" />
+                <Award className="text-accent" />
                 <span>Certificação ISO</span>
               </span>
               <span className="flex items-center space-x-2">
-                <Users className="text-primary" />
+                <Users className="text-accent" />
                 <span>Suporte Técnico</span>
               </span>
             </div>
