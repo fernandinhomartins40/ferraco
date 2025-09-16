@@ -41,8 +41,9 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
     setIsSubmitting(true);
 
     try {
-      // Simular envio do lead (aqui você integraria com Supabase)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Save lead to localStorage
+      const { leadStorage } = await import('@/utils/leadStorage');
+      leadStorage.addLead(formData.name, formData.phone);
       
       toast({
         title: "Sucesso!",

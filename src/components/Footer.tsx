@@ -81,6 +81,14 @@ const Footer = () => {
                 </li>
               ))}
             </ul>
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <a
+                href="/admin"
+                className="inline-flex items-center text-sm text-primary-foreground/80 hover:text-secondary transition-smooth font-medium"
+              >
+                🔧 Painel Administrativo
+              </a>
+            </div>
           </div>
 
           {/* Products */}
