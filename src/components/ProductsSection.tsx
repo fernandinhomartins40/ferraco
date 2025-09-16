@@ -1,4 +1,4 @@
-import { Wrench, Cog, Building, Factory } from "lucide-react";
+import { Fence, Home, Grid3x3, Settings, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -9,28 +9,34 @@ interface ProductsSectionProps {
 const ProductsSection = ({ onLeadModalOpen }: ProductsSectionProps) => {
   const products = [
     {
-      icon: <Wrench className="w-12 h-12 text-primary" />,
-      title: "Ferramentas Industriais",
-      description: "Linha completa de ferramentas de alta precisão para indústria metalúrgica, com garantia de qualidade e durabilidade.",
-      features: ["Aço carbono", "Tratamento térmico", "Certificação ISO", "Garantia estendida"]
+      icon: <Fence className="w-12 h-12 text-primary" />,
+      title: "Canzil",
+      description: "Sistema de fechamento para vacas leiteiras, fabricado com tubo galvanizado. Projetado para facilitar o acesso ao alimento e focar no conforto animal.",
+      features: ["Tubo 42,4mm x 2,65mm", "Vaca Holandesa: 750/800mm", "Vaca Jersey: 650/700mm", "Tubo galvanizado"]
     },
     {
-      icon: <Cog className="w-12 h-12 text-primary" />,
-      title: "Peças Sob Medida",
-      description: "Desenvolvimento e fabricação de peças personalizadas conforme especificações técnicas do cliente.",
-      features: ["Projeto personalizado", "Engenharia especializada", "Controle de qualidade", "Prazos reduzidos"]
+      icon: <Home className="w-12 h-12 text-primary" />,
+      title: "Bezerreiro",
+      description: "Estrutura projetada para alojar os bezerros, priorizando o bem-estar dos animais. Garante conforto térmico e físico para crescimento saudável.",
+      features: ["Bem-estar animal", "Conforto térmico", "Crescimento saudável", "Estrutura robusta"]
     },
     {
-      icon: <Building className="w-12 h-12 text-primary" />,
-      title: "Estruturas Metálicas",
-      description: "Fabricação de estruturas metálicas para construção civil e industrial com alta resistência.",
-      features: ["Cálculo estrutural", "Soldas certificadas", "Acabamento premium", "Instalação completa"]
+      icon: <Grid3x3 className="w-12 h-12 text-primary" />,
+      title: "Free Stall",
+      description: "Sistema de confinamento para gado com divisórias de aço galvanizado. Maximiza o aproveitamento do espaço e minimiza riscos de contaminação.",
+      features: ["Aço galvanizado", "Free Stall formato R", "Free Stall Suspenso", "Otimização do espaço"]
     },
     {
-      icon: <Factory className="w-12 h-12 text-primary" />,
-      title: "Equipamentos Industriais",
-      description: "Linha de equipamentos robustos para diversos segmentos industriais com tecnologia avançada.",
-      features: ["Automação disponível", "Manutenção programada", "Treinamento incluído", "Suporte técnico"]
+      icon: <Settings className="w-12 h-12 text-primary" />,
+      title: "Sistema de Contenção",
+      description: "Sala de ordenha fabricada em aço galvanizado para facilitar o manejo e conforto dos animais durante a ordenha.",
+      features: ["Contenção Europeia", "Contenção Espinha de Peixe", "Aço galvanizado", "Segurança operacional"]
+    },
+    {
+      icon: <Droplets className="w-12 h-12 text-primary" />,
+      title: "Bebedouros",
+      description: "Bebedouros basculantes limpa fácil em aço inox com alta capacidade e vazão para atender o rebanho com eficiência.",
+      features: ["Inox 304/430", "Volume: 180 litros", "Boia alta vazão", "Sistema limpa fácil"]
     }
   ];
 
@@ -42,7 +48,7 @@ const ProductsSection = ({ onLeadModalOpen }: ProductsSectionProps) => {
             Nossos Produtos
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Soluções metalúrgicas completas com a qualidade e confiabilidade que sua empresa precisa
+            Equipamentos especializados para pecuária leiteira com a qualidade e confiabilidade que sua fazenda precisa
           </p>
         </div>
 
