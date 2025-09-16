@@ -1,12 +1,29 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import Header from "@/components/Header";
+import HeroSection from "@/components/HeroSection";
+import ProductsSection from "@/components/ProductsSection";
+import AboutSection from "@/components/AboutSection";
+import ExperienceSection from "@/components/ExperienceSection";
+import ContactSection from "@/components/ContactSection";
+import Footer from "@/components/Footer";
+import LeadModal from "@/components/LeadModal";
 
 const Index = () => {
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+
+  const openLeadModal = () => setIsLeadModalOpen(true);
+  const closeLeadModal = () => setIsLeadModalOpen(false);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen">
+      <Header onLeadModalOpen={openLeadModal} />
+      <HeroSection onLeadModalOpen={openLeadModal} />
+      <AboutSection onLeadModalOpen={openLeadModal} />
+      <ProductsSection onLeadModalOpen={openLeadModal} />
+      <ExperienceSection onLeadModalOpen={openLeadModal} />
+      <ContactSection onLeadModalOpen={openLeadModal} />
+      <Footer />
+      <LeadModal isOpen={isLeadModalOpen} onClose={closeLeadModal} />
     </div>
   );
 };
