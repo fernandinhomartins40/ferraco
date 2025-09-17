@@ -35,8 +35,8 @@ services:
     ports:
       - "${BACKEND_PORT:-3051}:3000"
     volumes:
-      # Database volume para persistência
-      - backend-data:/app/data
+      # Database volume para persistência (bind mount para garantir acesso)
+      - ./backend/data:/app/data
       # Uploads volume para arquivos
       - backend-uploads:/app/uploads
       # Logs volume para debugging
@@ -53,8 +53,8 @@ services:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
 
   # Nginx Reverse Proxy
   proxy:

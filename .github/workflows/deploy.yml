@@ -182,7 +182,15 @@ jobs:
           # Preparar banco de dados
           echo '🗄️ Preparando banco de dados...'
           mkdir -p backend/data
-          cd backend && npm ci && npx prisma generate && npx prisma db push && cd ..
+          cd backend
+          echo '📦 Instalando dependências do backend...'
+          npm ci
+          echo '🔧 Gerando cliente Prisma...'
+          npx prisma generate
+          echo '🗄️ Criando banco de dados...'
+          npx prisma db push --accept-data-loss
+          echo '✅ Banco de dados pronto!'
+          cd ..
 
           # Deploy com Docker Compose
           echo '🐳 Executando deploy com Docker Compose...'
