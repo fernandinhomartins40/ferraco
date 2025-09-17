@@ -115,20 +115,20 @@ jobs:
             docker stop ferraco-backend ferraco-frontend ferraco-proxy 2>/dev/null || true
             docker rm -f ferraco-backend ferraco-frontend ferraco-proxy 2>/dev/null || true
 
-            # Remover TODAS as imagens relacionadas ao projeto
+            # Remover APENAS as imagens do Ferraco (específicas)
             echo '🗑️ Removendo imagens antigas do Ferraco...'
-            docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "(ferraco|none)" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
+            docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "ferraco" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
 
-            # Limpeza agressiva de imagens órfãs
-            docker image prune -af 2>/dev/null || true
+            # Remover apenas imagens do compose project ferraco
+            docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "ferraco-crm" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
 
             # Liberar portas específicas forçadamente
             docker ps --filter "publish=${{ env.BACKEND_PORT }}" --format "table {{.ID}}" | tail -n +2 | xargs -r docker stop 2>/dev/null || true
             docker ps --filter "publish=${{ env.FRONTEND_PORT }}" --format "table {{.ID}}" | tail -n +2 | xargs -r docker stop 2>/dev/null || true
             docker ps --filter "publish=${{ env.NGINX_PORT }}" --format "table {{.ID}}" | tail -n +2 | xargs -r docker stop 2>/dev/null || true
 
-            # Limpeza completa do sistema
-            docker system prune -af --volumes >/dev/null 2>&1 || true
+            # Remover apenas volumes específicos do ferraco
+            docker volume ls --format "table {{.Name}}" | grep -E "ferraco" | xargs -r docker volume rm 2>/dev/null || true
 
             echo '✅ Stack anterior parada, imagens antigas removidas e portas liberadas'
           fi
@@ -206,16 +206,10 @@ jobs:
           # Build e start dos serviços com invalidação forçada de cache
           echo '🏗️ Building imagens com invalidação total de cache...'
 
-          # Remover TODAS as imagens antigas do projeto (novamente por segurança)
-          echo '🧹 Limpeza final de imagens antes do build...'
-          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "(ferraco|<none>)" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
-
-          # Limpar completamente cache de build e buildkit
-          docker builder prune -af 2>/dev/null || true
-          docker buildx prune -af 2>/dev/null || true
-
-          # Forçar remoção de qualquer volume órfão
-          docker volume prune -af 2>/dev/null || true
+          # Remover APENAS imagens do ferraco (sem afetar outras aplicações)
+          echo '🧹 Limpeza final de imagens do Ferraco antes do build...'
+          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "ferraco" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
+          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "ferraco-crm" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
 
           # Build com cache totalmente limpo e timestamp único
           echo '🔨 Construindo imagens completamente novas...'
@@ -228,9 +222,9 @@ jobs:
           if ! docker compose -p ${{ env.COMPOSE_PROJECT }} up -d; then
             echo '⚠️ Falha no start normal, tentando restart forçado...'
 
-            # Restart mais agressivo
+            # Restart específico do ferraco apenas
             docker compose -p ${{ env.COMPOSE_PROJECT }} down --volumes --remove-orphans 2>/dev/null || true
-            docker system prune -af >/dev/null 2>&1 || true
+            echo '⚠️ Reiniciando apenas containers do Ferraco CRM...'
 
             # Aguardar um pouco
             sleep 10
