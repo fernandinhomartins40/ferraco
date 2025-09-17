@@ -8,11 +8,24 @@ import { Lead, LeadStats, LeadFilters as LeadFiltersType } from '@/types/lead';
 
 const AdminLeads = () => {
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
-  const [stats, setStats] = useState<LeadStats>({ total: 0, novo: 0, em_andamento: 0, concluido: 0 });
+  const [stats, setStats] = useState<LeadStats>({
+    total: 0,
+    novo: 0,
+    em_andamento: 0,
+    concluido: 0,
+    conversionRate: 0,
+    averageConversionTime: 0,
+    todayLeads: 0,
+    weeklyGrowth: 0,
+    oldLeadsCount: 0,
+  });
   const [filters, setFilters] = useState<LeadFiltersType>({
     status: 'todos',
     search: '',
     dateRange: 'todos',
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+    tags: [],
   });
 
   useEffect(() => {
@@ -21,17 +34,13 @@ const AdminLeads = () => {
 
   const loadLeads = () => {
     const leads = leadStorage.getLeads();
-    const currentStats = leadStorage.getStats();
+    const currentStats = leadStorage.getAdvancedStats();
     setAllLeads(leads);
     setStats(currentStats);
   };
 
   const filteredLeads = useMemo(() => {
-    return leadStorage.filterLeads(
-      filters.search,
-      filters.status,
-      filters.dateRange
-    );
+    return leadStorage.filterLeadsAdvanced(filters);
   }, [filters, allLeads]);
 
   return (
