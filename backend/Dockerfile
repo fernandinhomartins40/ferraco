@@ -10,7 +10,8 @@ LABEL version="1.0.0"
 RUN apk add --no-cache \
     sqlite \
     openssl \
-    libc6-compat
+    libc6-compat \
+    curl
 
 # Criar usuário não-root para segurança
 RUN addgroup -g 1001 -S nodejs

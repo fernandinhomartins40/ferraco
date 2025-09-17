@@ -1,5 +1,5 @@
 services:
-  # Frontend React + Vite
+  # Frontend React + Vite (porta interna)
   frontend:
     build:
       context: .
@@ -8,22 +8,21 @@ services:
         - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-}
     container_name: ferraco-frontend
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3050}:80"
+    # Sem portas expostas - acesso via proxy
     environment:
       - NODE_ENV=production
-      - VITE_API_BASE_URL=http://72.60.10.108:${BACKEND_PORT:-3051}/api
+      - VITE_API_BASE_URL=http://72.60.10.108:${FRONTEND_PORT:-3050}/api
       - VITE_APP_NAME=Ferraco CRM
     networks:
       - ferraco-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health", "||", "exit", "1"]
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  # Backend Node.js + Prisma + SQLite
+  # Backend Node.js + Prisma + SQLite (porta interna)
   backend:
     build:
       context: ./backend
@@ -32,8 +31,7 @@ services:
         - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-}
     container_name: ferraco-backend
     restart: unless-stopped
-    ports:
-      - "${BACKEND_PORT:-3051}:3000"
+    # Sem portas expostas - acesso via proxy
     volumes:
       # Database volume para persistência (bind mount para garantir acesso)
       - ./backend/data:/app/data
@@ -50,19 +48,19 @@ services:
     networks:
       - ferraco-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
 
-  # Nginx Reverse Proxy
+  # Nginx Reverse Proxy (PONTO DE ENTRADA ÚNICO)
   proxy:
     image: nginx:alpine
     container_name: ferraco-proxy
     restart: unless-stopped
     ports:
-      - "${NGINX_PORT:-3052}:80"
+      - "${FRONTEND_PORT:-3050}:80"  # Porta principal da aplicação
     volumes:
       # Configuração do nginx
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
@@ -74,10 +72,11 @@ services:
     networks:
       - ferraco-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/health", "||", "exit", "1"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   # Backup automático (opcional)
   backup:
