@@ -30,8 +30,30 @@ RUN apk add --no-cache curl
 # Copiar build do estágio anterior
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copiar configuração personalizada do nginx (se existir)
-COPY nginx.conf /etc/nginx/nginx.conf
+# Configuração básica do nginx para SPA
+RUN echo 'server { \
+    listen 80; \
+    server_name localhost; \
+    root /usr/share/nginx/html; \
+    index index.html index.htm; \
+    \
+    # Health check endpoint \
+    location /health { \
+        return 200 "OK"; \
+        add_header Content-Type text/plain; \
+    } \
+    \
+    # SPA routing - todas as rotas vão para index.html \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    \
+    # Cache para assets estáticos \
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
+        expires 1y; \
+        add_header Cache-Control "public, immutable"; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
 # Criar usuário não-root para segurança
 RUN addgroup -g 1001 -S nginx-user
