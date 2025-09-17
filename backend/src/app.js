@@ -34,8 +34,9 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const corsOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:80'];
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:80',
+  origin: corsOrigins,
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
