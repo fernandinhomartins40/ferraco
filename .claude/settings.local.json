@@ -29,7 +29,10 @@
       "Bash(git push:*)",
       "Bash(grep:*)",
       "Bash(timeout 15s npm start)",
-      "Bash(timeout 10s npm start)"
+      "Bash(timeout 10s npm start)",
+      "Bash(git commit:*)",
+      "Bash(PORT=3001 npm run dev)",
+      "Bash(PORT=3002 npm run dev)"
     ],
     "deny": [],
     "ask": []

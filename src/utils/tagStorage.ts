@@ -253,4 +253,11 @@ export const tagStorage = {
       this.saveTags(this.getDefaultTags());
     }
   },
+
+  // Initialize system tags (alias for initializeDefaultTags)
+  initializeSystemTags(): void {
+    console.log('🏷️ Inicializando tags do sistema...');
+    this.initializeDefaultTags();
+    console.log('✅ Tags do sistema inicializadas');
+  },
 };

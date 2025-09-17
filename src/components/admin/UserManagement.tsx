@@ -36,6 +36,8 @@ import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/useAuth';
+import PermissionGate, { InlinePermissionCheck } from '@/components/PermissionGate';
 import { userStorage } from '@/utils/userStorage';
 import type {
   User,

@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet";
 import AdminLayout from "@/components/admin/AdminLayout";
-import UserManagement from "@/components/admin/UserManagement";
+import SimpleUserManagement from "@/components/admin/SimpleUserManagement";
 
 const AdminUsers = () => {
   return (
@@ -10,7 +10,7 @@ const AdminUsers = () => {
         <meta name="description" content="Gerencie usuários, perfis de acesso, equipes, permissões e auditoria do sistema" />
       </Helmet>
       <AdminLayout>
-        <UserManagement />
+        <SimpleUserManagement />
       </AdminLayout>
     </>
   );

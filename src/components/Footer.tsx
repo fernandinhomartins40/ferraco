@@ -1,7 +1,10 @@
-import { MapPin, Phone, Mail, Facebook, Instagram, Linkedin, Youtube } from "lucide-react";
+import { MapPin, Phone, Mail, Facebook, Instagram, Linkedin, Youtube, Shield, LogIn } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import logoFerraco from "@/assets/logo-ferraco.webp";
 
 const Footer = () => {
+  const { isAuthenticated, user } = useAuth();
+
   const quickLinks = [
     { label: "Início", href: "#inicio" },
     { label: "Sobre", href: "#sobre" },
@@ -82,12 +85,26 @@ const Footer = () => {
               ))}
             </ul>
             <div className="mt-4 pt-4 border-t border-white/20">
-              <a
-                href="/admin"
-                className="inline-flex items-center text-sm text-primary-foreground/80 hover:text-secondary transition-smooth font-medium"
-              >
-                🔧 Painel Administrativo
-              </a>
+              {isAuthenticated ? (
+                <a
+                  href="/admin"
+                  className="inline-flex items-center text-sm text-primary-foreground/80 hover:text-secondary transition-smooth font-medium"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Painel Administrativo
+                  <span className="ml-2 px-2 py-1 bg-secondary text-primary text-xs rounded-full">
+                    {user?.role === 'admin' ? 'Admin' : user?.role === 'sales' ? 'Vendedor' : 'Consultor'}
+                  </span>
+                </a>
+              ) : (
+                <a
+                  href="/login"
+                  className="inline-flex items-center text-sm text-primary-foreground/80 hover:text-secondary transition-smooth font-medium"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Login Administrativo
+                </a>
+              )}
             </div>
           </div>
 

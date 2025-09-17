@@ -10,7 +10,7 @@ const USERS = [
   {
     id: '1',
     username: 'admin',
-    password: 'admin123', // Em produção, usar hash
+    password: 'Admin123!', // Em produção, usar hash
     name: 'Administrador',
     role: 'admin',
     email: 'admin@ferraco.com',
@@ -19,7 +19,7 @@ const USERS = [
   {
     id: '2',
     username: 'vendedor',
-    password: 'vend123', // Em produção, usar hash
+    password: 'Vend123!', // Em produção, usar hash
     name: 'Vendedor',
     role: 'sales',
     email: 'vendedor@ferraco.com',
@@ -28,7 +28,7 @@ const USERS = [
   {
     id: '3',
     username: 'consultor',
-    password: 'cons123', // Em produção, usar hash
+    password: 'Cons123!', // Em produção, usar hash
     name: 'Consultor',
     role: 'consultant',
     email: 'consultor@ferraco.com',
