@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const webhookController = require('../controllers/webhookController');
-const authMiddleware = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 // Middleware de autenticação para todas as rotas
-router.use(authMiddleware);
+router.use(authenticateToken);
 
 // ==========================================
 // WEBHOOK MANAGEMENT
