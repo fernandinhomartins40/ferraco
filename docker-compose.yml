@@ -43,6 +43,11 @@ services:
       - ./backend/.env.production:/app/.env
     environment:
       - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=file:./data/ferraco.db
+      - JWT_SECRET=${JWT_SECRET:-ferraco-default-jwt-secret}
+      - JWT_EXPIRES_IN=7d
+      - CORS_ORIGIN=http://72.60.10.108:3050,http://localhost:3000,http://localhost:5173
     networks:
       - ferraco-network
     healthcheck:
