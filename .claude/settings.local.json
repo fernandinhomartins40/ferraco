@@ -43,7 +43,11 @@
       "Bash(PORT=3009 node src/app.js)",
       "Bash(docker compose build:*)",
       "Bash(PORT=3002 node src/app.js)",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(PORT=3010 node src/app.js)",
+      "Bash(PORT=3011 timeout 10s node src/app.js)",
+      "Bash(PORT=3012 node src/app_clean.js)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

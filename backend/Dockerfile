@@ -34,8 +34,11 @@ RUN /bin/bash -c "npx prisma generate"
 # Copiar código da aplicação
 COPY --chown=ferraco:nodejs . .
 
+# Criar diretório scripts se não existir
+RUN mkdir -p scripts
+
 # Tornar script de inicialização executável
-RUN chmod +x init-db.sh
+RUN chmod +x init-db.sh scripts/init-production.js
 
 # Criar diretórios necessários
 RUN mkdir -p data uploads logs && chown -R ferraco:nodejs data uploads logs

@@ -1,23 +1,23 @@
 #!/bin/bash
 
 # Script de inicialização do banco de dados para o container backend
-# Este script é executado dentro do container para garantir que o banco esteja configurado
+# Sistema Unificado - Garante que apenas o sistema de banco de dados seja usado
 
-echo "🔧 Inicializando banco de dados Ferraco CRM..."
+echo "🔧 Inicializando Ferraco CRM Backend - Sistema Unificado..."
 
 # Garantir que diretório de dados existe
 echo "📁 Criando diretório de dados..."
 mkdir -p /app/data
 
-# Sempre aplicar schema do banco
+# Aplicar schema do banco
 echo "🗄️ Aplicando schema do banco de dados..."
 npx prisma db push --accept-data-loss
 
-# Sempre executar seed para garantir usuários padrão
-echo "🌱 Executando seed do banco de dados..."
-node seed.js
+# Executar inicialização do sistema unificado
+echo "🌱 Executando inicialização do sistema unificado..."
+node scripts/init-production.js
 
-echo "✅ Banco de dados inicializado com sucesso!"
+echo "✅ Sistema unificado inicializado com sucesso!"
 
-echo "🚀 Iniciando aplicação..."
+echo "🚀 Iniciando aplicação com sistema unificado..."
 exec node src/app.js
