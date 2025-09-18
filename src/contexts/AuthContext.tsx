@@ -274,7 +274,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Call logout endpoint (optional, since JWT is stateless)
     if (state.token) {
-      apiCall('/auth/logout', { method: 'POST' })
+      apiClient.post('/auth/logout')
         .catch(error => console.warn('Logout endpoint failed:', error));
     }
 
@@ -306,7 +306,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      const response = await apiCall('/auth/me');
+      const response = await apiClient.get('/auth/me');
 
       if (response.success && response.data) {
         const user = response.data.user;
@@ -392,34 +392,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const timeUntilExpiration = expirationTime - currentTime;
 
         if (timeUntilExpiration <= 0) {
-    } catch (error) {
-      console.error('❌ Erro ao verificar autenticação:', error);
-      clearAuthData();
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Clear error function
-  const clearError = () => {
-    dispatch({ type: 'CLEAR_ERROR' });
-  };
-
-  // Initialize auth on mount
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  // Auto-logout on token expiration (optional - JWT handles this)
-  useEffect(() => {
-    if (state.token) {
-      try {
-        // Decode JWT to check expiration
-        const payload = JSON.parse(atob(state.token.split('.')[1]));
-        const expirationTime = payload.exp * 1000; // Convert to milliseconds
-        const currentTime = Date.now();
-        const timeUntilExpiration = expirationTime - currentTime;
-
-        if (timeUntilExpiration <= 0) {
           // Token is already expired
           logout();
         } else {
@@ -436,6 +408,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
   }, [state.token]);
+
+  // Initialize auth on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   // Context value
   const contextValue: AuthContextType = {
