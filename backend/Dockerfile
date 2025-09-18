@@ -11,7 +11,8 @@ RUN apk add --no-cache \
     sqlite \
     openssl \
     libc6-compat \
-    curl
+    curl \
+    bash
 
 # Criar usuário não-root para segurança
 RUN addgroup -g 1001 -S nodejs
@@ -27,11 +28,14 @@ COPY prisma ./prisma/
 # Instalar dependências
 RUN npm ci --only=production && npm cache clean --force
 
-# Gerar cliente Prisma
-RUN npx prisma generate
+# Gerar cliente Prisma (usar bash em vez de sh)
+RUN /bin/bash -c "npx prisma generate"
 
 # Copiar código da aplicação
 COPY --chown=ferraco:nodejs . .
+
+# Tornar script de inicialização executável
+RUN chmod +x init-db.sh
 
 # Criar diretórios necessários
 RUN mkdir -p data uploads logs && chown -R ferraco:nodejs data uploads logs
@@ -46,5 +50,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# Comando padrão - banco será configurado no deploy.yml
-CMD ["npm", "start"]
+# Comando padrão - inicialização e start da aplicação
+CMD ["./init-db.sh"]

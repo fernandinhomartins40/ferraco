@@ -170,18 +170,10 @@ jobs:
           echo \"JWT_SECRET=ferraco-production-jwt-${{ github.sha }}\" >> backend/.env.production
           echo \"CORS_ORIGIN=http://${{ env.VPS_HOST }}:${{ env.APP_PORT }},http://localhost:3000,http://localhost:5173,http://localhost:8080\" >> backend/.env.production
 
-          # Preparar banco de dados
-          echo '🗄️ Preparando banco de dados...'
-          mkdir -p backend/data
-          cd backend
-          echo '📦 Instalando dependências do backend...'
-          npm ci
-          echo '🔧 Gerando cliente Prisma...'
-          npx prisma generate
-          echo '🗄️ Criando banco de dados...'
-          npx prisma db push --accept-data-loss
-          echo '✅ Banco de dados pronto!'
-          cd ..
+          # Preparar diretórios de dados
+          echo '🗄️ Preparando diretórios de dados...'
+          mkdir -p backend/data backend/uploads backend/logs
+          echo '✅ Diretórios criados!'
 
           # Deploy com Docker Compose
           echo '🐳 Executando deploy com Docker Compose...'
