@@ -214,19 +214,34 @@ app.get('/api/users/list', async (req, res) => {
       include: {
         role: true,
         sessions: {
-          where: {
-            expiresAt: {
-              gt: new Date()
-            }
-          },
           orderBy: {
             createdAt: 'desc'
-          },
-          take: 1
+          }
         }
       },
       orderBy: { createdAt: 'asc' }
     });
+
+    // Também verificar todas as tabelas do banco
+    const userCount = await prisma.user.count();
+    const roleCount = await prisma.userRole.count();
+    const sessionCount = await prisma.session.count();
+
+    // Verificar auditoria se existir
+    let auditLogs = [];
+    try {
+      auditLogs = await prisma.auditLog.findMany({
+        where: {
+          action: {
+            in: ['CREATE_USER', 'UPDATE_USER', 'PASSWORD_CHANGE']
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      });
+    } catch (e) {
+      console.log('Tabela auditLog não existe ainda');
+    }
 
     const usersList = users.map(user => ({
       id: user.id,
@@ -235,14 +250,22 @@ app.get('/api/users/list', async (req, res) => {
       isActive: user.isActive,
       role: user.role?.name,
       createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
       lastLogin: user.lastLogin,
-      hasActiveSessions: user.sessions.length > 0,
-      passwordHash: user.password.substring(0, 10) + '...' // Primeiros chars do hash para identificar
+      totalSessions: user.sessions.length,
+      activeSessions: user.sessions.filter(s => s.expiresAt > new Date()).length,
+      passwordHash: user.password.substring(0, 15) + '...', // Mais chars para comparar
+      passwordLength: user.password.length
     }));
 
     res.json({
       success: true,
-      totalUsers: users.length,
+      database: {
+        userCount,
+        roleCount,
+        sessionCount
+      },
+      auditLogs,
       users: usersList
     });
 
