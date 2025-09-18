@@ -205,6 +205,57 @@ app.get('/api/leads/stats', authenticateToken, requirePermission('leads:read'), 
 // DEBUG ENDPOINT (TEMPORÁRIO)
 // ========================================
 
+// GET /api/users/list - Listar todos os usuários (TEMPORÁRIO)
+app.get('/api/users/list', async (req, res) => {
+  try {
+    console.log('🔍 Listando todos os usuários');
+
+    const users = await prisma.user.findMany({
+      include: {
+        role: true,
+        sessions: {
+          where: {
+            expiresAt: {
+              gt: new Date()
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 1
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    const usersList = users.map(user => ({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      isActive: user.isActive,
+      role: user.role?.name,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+      hasActiveSessions: user.sessions.length > 0,
+      passwordHash: user.password.substring(0, 10) + '...' // Primeiros chars do hash para identificar
+    }));
+
+    res.json({
+      success: true,
+      totalUsers: users.length,
+      users: usersList
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao listar usuários:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao listar usuários',
+      details: error.message
+    });
+  }
+});
+
 // GET /api/debug - Debug temporário para diagnosticar problema
 app.get('/api/debug', async (req, res) => {
   try {
