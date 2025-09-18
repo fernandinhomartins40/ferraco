@@ -38,7 +38,9 @@
       "Bash(PORT=3001 node src/app_working.js)",
       "Bash(PORT=3007 node src/app_real_fix.js)",
       "Bash(PORT=3099 node src/app_real_fix.js)",
-      "Bash(PORT=3008 timeout 5s node src/app.js)"
+      "Bash(PORT=3008 timeout 5s node src/app.js)",
+      "Bash(PORT=3009 timeout 5s node src/app.js)",
+      "Bash(PORT=3009 node src/app.js)"
     ],
     "deny": [],
     "ask": []
