@@ -219,37 +219,25 @@ const Login = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDemoLogin('admin', 'Admin123!')}
+                  onClick={() => handleDemoLogin('admin@ferraco.com', 'admin123')}
                   disabled={isLoading}
                   className="justify-start text-xs"
                 >
                   <Shield className="mr-2 h-3 w-3" />
-                  <span className="font-medium">admin</span>
+                  <span className="font-medium">admin@ferraco.com</span>
                   <span className="ml-2 text-muted-foreground">(Administrador)</span>
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDemoLogin('vendedor', 'Vend123!')}
+                  onClick={() => handleDemoLogin('user@ferraco.com', 'user123')}
                   disabled={isLoading}
                   className="justify-start text-xs"
                 >
                   <Shield className="mr-2 h-3 w-3" />
-                  <span className="font-medium">vendedor</span>
-                  <span className="ml-2 text-muted-foreground">(Vendas)</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin('consultor', 'Cons123!')}
-                  disabled={isLoading}
-                  className="justify-start text-xs"
-                >
-                  <Shield className="mr-2 h-3 w-3" />
-                  <span className="font-medium">consultor</span>
-                  <span className="ml-2 text-muted-foreground">(Consulta)</span>
+                  <span className="font-medium">user@ferraco.com</span>
+                  <span className="ml-2 text-muted-foreground">(Usuário)</span>
                 </Button>
               </div>
             </div>
