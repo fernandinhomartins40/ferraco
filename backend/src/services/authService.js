@@ -2,7 +2,14 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const logger = require('../utils/logger');
+
+// Logger simples para evitar problemas
+const logger = {
+  info: (msg, data) => console.log('ℹ️ ', msg, data || ''),
+  error: (msg, data) => console.error('❌', msg, data || ''),
+  warn: (msg, data) => console.warn('⚠️ ', msg, data || ''),
+  debug: (msg, data) => console.log('🔍', msg, data || '')
+};
 
 const prisma = new PrismaClient();
 

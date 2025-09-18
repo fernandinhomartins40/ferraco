@@ -1,923 +1,274 @@
 /**
- * Ferraco CRM Backend - Solução Real do Problema (sem logger problemático)
+ * Ferraco CRM Backend - Sistema Unificado de Autenticação
+ * USANDO APENAS SISTEMA 2: Banco de Dados (authService.js + authMiddleware.js)
+ * Sistema robusto com Prisma, roles dinâmicos, sessões e auditoria
  */
 
-// Carregar variáveis de ambiente explicitamente
+// Carregar variáveis de ambiente
 require('dotenv').config({ path: './.env' });
 
 // Debug das variáveis de ambiente
-console.log('🔧 Environment variables loaded:');
+console.log('🔧 Ferraco CRM - Sistema Unificado de Autenticação');
 console.log('  NODE_ENV:', process.env.NODE_ENV);
 console.log('  PORT:', process.env.PORT);
 console.log('  DATABASE_URL:', process.env.DATABASE_URL ? 'DEFINED' : 'NOT DEFINED');
 console.log('  JWT_SECRET:', process.env.JWT_SECRET ? 'DEFINED' : 'NOT DEFINED');
+
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const prisma = new PrismaClient();
 
+// ========================================
+// MIDDLEWARES GLOBAIS
+// ========================================
+
 // CORS
 app.use(cors({
-  origin: ['http://localhost:80', 'http://localhost:3000'],
+  origin: [
+    'http://localhost:80',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://ferraco.netlify.app',
+    'https://ferraco-crm.vercel.app'
+  ],
   credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware de log de requisições
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path} - IP: ${req.ip}`);
+  next();
+});
+
 // ========================================
-// MIDDLEWARE DE AUTENTICAÇÃO
+// IMPORTAR MIDDLEWARES E CONTROLADORES
 // ========================================
 
-// Middleware para verificar JWT e sessão ativa
-async function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+const { authenticateToken, requirePermission } = require('./middleware/authMiddleware');
 
-  if (!token) {
-    return res.status(401).json({ success: false, error: 'Token de acesso necessário' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Verificar se o usuário ainda existe e está ativo
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      include: { role: true }
-    });
-
-    if (!user || !user.isActive) {
-      return res.status(401).json({ success: false, error: 'Usuário inativo ou token inválido' });
-    }
-
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.error('Token inválido:', error.message);
-    return res.status(403).json({ success: false, error: 'Token inválido' });
-  }
-}
-
-// Middleware para verificar permissões
-function requirePermission(permission) {
-  return async (req, res, next) => {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.userId },
-        include: { role: true }
-      });
-
-      if (!user || !user.isActive) {
-        return res.status(403).json({ success: false, error: 'Usuário inativo' });
-      }
-
-      const permissions = JSON.parse(user.role.permissions || '[]');
-      if (!permissions.includes(permission)) {
-        return res.status(403).json({ success: false, error: 'Permissão insuficiente' });
-      }
-
-      next();
-    } catch (error) {
-      console.error('Erro ao verificar permissões:', error);
-      return res.status(500).json({ success: false, error: 'Erro interno' });
-    }
-  };
-}
+// ========================================
+// ROTAS PRINCIPAIS
+// ========================================
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '2.0.0',
+    system: 'Sistema Unificado - Banco de Dados',
+    database: 'Connected'
+  });
+});
+
+// Status do sistema
+app.get('/api/status', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Ferraco CRM - Sistema Unificado Ativo',
+    data: {
+      authSystem: 'Database + Prisma (Sistema 2)',
+      features: [
+        'Autenticação JWT com sessões',
+        'Roles dinâmicos no banco',
+        'Auditoria completa',
+        'Permissões granulares',
+        'Sistema de recuperação de senha'
+      ],
+      timestamp: new Date().toISOString()
+    }
   });
 });
 
 // ========================================
-// ROTAS LEADS IMPLEMENTADAS DIRETAMENTE
+// IMPORTAR E USAR ROTAS
 // ========================================
 
-// GET /api/leads - Buscar todos os leads
-app.get('/api/leads', authenticateToken, requirePermission('leads:read'), async (req, res) => {
+// Rotas de autenticação (Sistema 2 robusto)
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+
+// Rotas de leads
+const leadRoutes = require('./routes/leads');
+app.use('/api/leads', leadRoutes);
+
+// Rotas de tags
+const tagRoutes = require('./routes/tags');
+app.use('/api/tags', tagRoutes);
+
+// Rotas de notas
+const noteRoutes = require('./routes/notes');
+app.use('/api/notes', noteRoutes);
+
+// Rotas de leads parciais
+const partialLeadRoutes = require('./routes/partialLeads');
+app.use('/api/partial-leads', partialLeadRoutes);
+
+// Rotas extras que podem existir
+const routesToInclude = [
+  { path: '/api/activities', file: './routes/activities' },
+  { path: '/api/dashboard', file: './routes/dashboard' },
+  { path: '/api/duplicates', file: './routes/duplicates' },
+  { path: '/api/emails', file: './routes/emails' },
+  { path: '/api/opportunities', file: './routes/opportunities' },
+  { path: '/api/pipelines', file: './routes/pipelines' },
+  { path: '/api/reports', file: './routes/reports' },
+  { path: '/api/whatsapp', file: './routes/whatsapp' }
+];
+
+routesToInclude.forEach(route => {
   try {
-    const { page = 1, limit = 10, status, search } = req.query;
-
-    const where = {};
-    if (status && status !== 'todos') {
-      where.status = status;
-    }
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search } },
-        { email: { contains: search, mode: 'insensitive' } }
-      ];
-    }
-
-    const [leads, total] = await Promise.all([
-      prisma.lead.findMany({
-        where,
-        include: {
-          notes: true,
-          tags: { include: { tag: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: parseInt(limit)
-      }),
-      prisma.lead.count({ where })
-    ]);
-
-    res.json({
-      success: true,
-      data: leads,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    });
+    const routeModule = require(route.file);
+    app.use(route.path, routeModule);
+    console.log(`✅ Rota carregada: ${route.path}`);
   } catch (error) {
-    console.error('Erro ao buscar leads:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// POST /api/leads - Criar um novo lead
-app.post('/api/leads', authenticateToken, requirePermission('leads:write'), async (req, res) => {
-  try {
-    const { name, phone, email, status = 'NOVO', source = 'website' } = req.body;
-
-    const lead = await prisma.lead.create({
-      data: { name, phone, email, status, source },
-      include: {
-        notes: true,
-        tags: { include: { tag: true } }
-      }
-    });
-
-    console.log(`Lead criado: ${lead.name} (${lead.phone})`);
-    res.status(201).json({ success: true, data: lead });
-  } catch (error) {
-    console.error('Erro ao criar lead:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// GET /api/leads/stats - Estatísticas de leads
-app.get('/api/leads/stats', authenticateToken, requirePermission('leads:read'), async (req, res) => {
-  try {
-    const [total, byStatus] = await Promise.all([
-      prisma.lead.count(),
-      prisma.lead.groupBy({
-        by: ['status'],
-        _count: true
-      })
-    ]);
-
-    const stats = {
-      total,
-      byStatus: byStatus.reduce((acc, stat) => {
-        acc[stat.status] = stat._count;
-        return acc;
-      }, {}),
-      conversionRate: total > 0 ? ((byStatus.find(s => s.status === 'CONCLUIDO')?._count || 0) / total) * 100 : 0
-    };
-
-    res.json({ success: true, data: stats });
-  } catch (error) {
-    console.error('Erro ao calcular stats:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.log(`⚠️  Rota opcional não encontrada: ${route.path}`);
   }
 });
 
 // ========================================
-// DEBUG ENDPOINT (TEMPORÁRIO)
+// MIDDLEWARE DE ERRO GLOBAL
 // ========================================
 
-// GET /api/users/list - Listar todos os usuários (TEMPORÁRIO)
-app.get('/api/users/list', async (req, res) => {
-  try {
-    console.log('🔍 Listando todos os usuários');
+// 404 - Rota não encontrada
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Rota não encontrada',
+    error: 'NOT_FOUND',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
 
-    const users = await prisma.user.findMany({
-      include: {
-        role: true,
-        sessions: {
-          orderBy: {
-            createdAt: 'desc'
-          }
-        }
-      },
-      orderBy: { createdAt: 'asc' }
-    });
+// Error handler global
+app.use((error, req, res, next) => {
+  console.error('❌ Erro global capturado:', {
+    error: error.message,
+    stack: error.stack,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
 
-    // Também verificar todas as tabelas do banco
-    const userCount = await prisma.user.count();
-    const roleCount = await prisma.userRole.count();
-    const sessionCount = await prisma.session.count();
-
-    // Verificar auditoria se existir
-    let auditLogs = [];
-    try {
-      auditLogs = await prisma.auditLog.findMany({
-        where: {
-          action: {
-            in: ['CREATE_USER', 'UPDATE_USER', 'PASSWORD_CHANGE']
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10
-      });
-    } catch (e) {
-      console.log('Tabela auditLog não existe ainda');
-    }
-
-    const usersList = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      isActive: user.isActive,
-      role: user.role?.name,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      lastLogin: user.lastLogin,
-      totalSessions: user.sessions.length,
-      activeSessions: user.sessions.filter(s => s.expiresAt > new Date()).length,
-      passwordHash: user.password.substring(0, 15) + '...', // Mais chars para comparar
-      passwordLength: user.password.length
-    }));
-
-    res.json({
-      success: true,
-      database: {
-        userCount,
-        roleCount,
-        sessionCount
-      },
-      auditLogs,
-      users: usersList
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao listar usuários:', error);
-    res.status(500).json({
+  // Erro do Prisma
+  if (error.code && error.code.startsWith('P')) {
+    return res.status(400).json({
       success: false,
-      error: 'Erro ao listar usuários',
+      message: 'Erro de banco de dados',
+      error: 'DATABASE_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno'
+    });
+  }
+
+  // Erro de validação
+  if (error.name === 'ValidationError') {
+    return res.status(400).json({
+      success: false,
+      message: 'Erro de validação',
+      error: 'VALIDATION_ERROR',
       details: error.message
     });
   }
+
+  // Erro genérico
+  res.status(500).json({
+    success: false,
+    message: 'Erro interno do servidor',
+    error: 'INTERNAL_SERVER_ERROR',
+    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+  });
 });
 
-// GET /api/debug - Debug temporário para diagnosticar problema
-app.get('/api/debug', async (req, res) => {
+// ========================================
+// INICIALIZAÇÃO DO SERVIDOR
+// ========================================
+
+// Função para testar conexão com banco
+async function testDatabaseConnection() {
   try {
-    console.log('🔍 Endpoint debug chamado');
+    await prisma.$connect();
+    console.log('✅ Conexão com banco de dados estabelecida');
 
-    // Verificar variáveis de ambiente
-    const envVars = {
-      NODE_ENV: process.env.NODE_ENV,
-      DATABASE_URL: process.env.DATABASE_URL,
-      JWT_SECRET: !!process.env.JWT_SECRET,
-      JWT_SECRET_LENGTH: process.env.JWT_SECRET?.length,
-      PORT: process.env.PORT
-    };
-
-    // Verificar conexão com banco
+    // Verificar se dados foram inicializados
     const userCount = await prisma.user.count();
     const roleCount = await prisma.userRole.count();
 
-    // Verificar usuário admin específico
-    const adminUser = await prisma.user.findUnique({
-      where: { email: 'admin@ferraco.com' },
-      include: { role: true }
-    });
+    if (userCount === 0 || roleCount === 0) {
+      console.log('⚠️  Banco vazio. Execute: /api/auth/initialize para criar dados iniciais');
+    } else {
+      console.log(`📊 Sistema inicializado: ${userCount} usuários, ${roleCount} roles`);
+    }
 
-    // Informações de debug
-    const debugInfo = {
-      timestamp: new Date().toISOString(),
-      environment: envVars,
-      database: {
-        connected: true,
-        userCount,
-        roleCount,
-        adminExists: !!adminUser,
-        adminInfo: adminUser ? {
-          id: adminUser.id,
-          email: adminUser.email,
-          isActive: adminUser.isActive,
-          hasRole: !!adminUser.role,
-          roleName: adminUser.role?.name,
-          hasPermissions: !!adminUser.role?.permissions
-        } : null
-      }
-    };
-
-    console.log('🔍 Debug info:', JSON.stringify(debugInfo, null, 2));
-
-    res.json({
-      success: true,
-      debug: debugInfo
-    });
-
+    return true;
   } catch (error) {
-    console.error('❌ Erro no debug:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro no debug',
-      details: {
-        message: error.message,
-        code: error.code
-      }
-    });
+    console.error('❌ Erro na conexão com banco:', error.message);
+    return false;
   }
-});
+}
 
-// ========================================
-// ROTAS AUTH BÁSICAS
-// ========================================
+// Função para graceful shutdown
+async function gracefulShutdown(signal) {
+  console.log(`\n🔄 Recebido sinal ${signal}. Encerrando servidor graciosamente...`);
 
-// POST /api/auth/login - Login com autenticação real
-app.post('/api/auth/login', async (req, res) => {
   try {
-    console.log('🔐 Iniciando login:', { email: req.body.email, hasPassword: !!req.body.password });
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      console.log('❌ Campos obrigatórios faltando');
-      return res.status(400).json({
-        success: false,
-        error: 'Email e senha são obrigatórios'
-      });
-    }
-
-    console.log('🔍 Buscando usuário no banco...', { email });
-    // Buscar usuário no banco
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: { role: true }
-    });
-
-    if (!user) {
-      console.log('❌ Usuário não encontrado:', { email });
-      return res.status(401).json({
-        success: false,
-        error: 'Credenciais inválidas'
-      });
-    }
-
-    console.log('✅ Usuário encontrado:', { id: user.id, email: user.email, isActive: user.isActive, hasRole: !!user.role });
-
-    if (!user.isActive) {
-      console.log('❌ Usuário inativo');
-      return res.status(401).json({
-        success: false,
-        error: 'Usuário inativo'
-      });
-    }
-
-    console.log('🔑 Verificando senha...');
-    // Verificar senha
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      console.log('❌ Senha inválida');
-      return res.status(401).json({
-        success: false,
-        error: 'Credenciais inválidas'
-      });
-    }
-
-    console.log('✅ Senha válida. Gerando JWT...');
-    console.log('🔧 JWT_SECRET defined:', !!process.env.JWT_SECRET);
-    // Gerar JWT token
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        roleId: user.roleId
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
-
-    console.log('✅ JWT gerado. Criando sessão...');
-    // Criar sessão no banco
-    const session = await prisma.session.create({
-      data: {
-        userId: user.id,
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 dias
-      }
-    });
-
-    console.log('✅ Sessão criada. Atualizando último login...');
-    // Atualizar último login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() }
-    });
-
-    console.log('✅ Login realizado com sucesso:', user.email);
-
-    res.json({
-      success: true,
-      data: {
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role.name,
-          permissions: JSON.parse(user.role.permissions || '[]'),
-          avatar: user.avatar
-        }
-      }
-    });
-
+    await prisma.$disconnect();
+    console.log('✅ Conexão com banco encerrada');
+    process.exit(0);
   } catch (error) {
-    console.error('❌ Erro detalhado no login:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack?.split('\n').slice(0, 3)
-    });
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    console.error('❌ Erro durante shutdown:', error);
+    process.exit(1);
   }
-});
+}
 
-// POST /api/auth/register - Registro de novos usuários
-app.post('/api/auth/register', authenticateToken, requirePermission('users:write'), async (req, res) => {
+// Handlers para sinais de sistema
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Inicializar servidor
+async function startServer() {
   try {
-    const { email, name, password, roleId } = req.body;
+    // Testar conexão com banco
+    const dbConnected = await testDatabaseConnection();
 
-    if (!email || !name || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email, nome e senha são obrigatórios'
-      });
+    if (!dbConnected) {
+      console.error('❌ Não foi possível conectar ao banco. Verifique DATABASE_URL');
+      process.exit(1);
     }
 
-    // Verificar se usuário já existe
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
+    // Iniciar servidor
+    const server = app.listen(PORT, () => {
+      console.log('\n🎉 ========================================');
+      console.log('    FERRACO CRM - SISTEMA UNIFICADO');
+      console.log('🎉 ========================================');
+      console.log(`🚀 Servidor rodando na porta ${PORT}`);
+      console.log(`🌐 Local: http://localhost:${PORT}`);
+      console.log(`📋 Health: http://localhost:${PORT}/api/health`);
+      console.log(`🔐 Sistema: Banco de Dados (Robusto)`);
+      console.log('========================================\n');
     });
 
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email já está em uso'
-      });
-    }
+    // Configurar timeout do servidor
+    server.timeout = 120000; // 2 minutos
 
-    // Verificar se a role existe
-    const role = await prisma.userRole.findUnique({
-      where: { id: roleId || undefined }
-    });
-
-    if (roleId && !role) {
-      return res.status(400).json({
-        success: false,
-        error: 'Role inválida'
-      });
-    }
-
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Usar role padrão "User" se não especificada
-    const defaultRole = role || await prisma.userRole.findFirst({
-      where: { name: 'User' }
-    });
-
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: hashedPassword,
-        roleId: defaultRole.id,
-        preferences: JSON.stringify({
-          theme: 'light',
-          language: 'pt-BR',
-          notifications: true
-        })
-      },
-      include: { role: true }
-    });
-
-    console.log(`✅ Usuário registrado: ${newUser.email}`);
-
-    res.status(201).json({
-      success: true,
-      data: {
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          role: newUser.role.name,
-          isActive: newUser.isActive
-        }
-      }
-    });
-
+    return server;
   } catch (error) {
-    console.error('Erro no registro:', error);
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    console.error('❌ Erro ao iniciar servidor:', error);
+    process.exit(1);
   }
-});
+}
 
-// POST /api/auth/logout - Logout do usuário
-app.post('/api/auth/logout', authenticateToken, async (req, res) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (token) {
-      // Remover sessão do banco
-      await prisma.session.deleteMany({
-        where: { token }
-      });
-    }
-
-    console.log(`✅ Logout realizado: ${req.user.email}`);
-
-    res.json({
-      success: true,
-      message: 'Logout realizado com sucesso'
-    });
-
-  } catch (error) {
-    console.error('Erro no logout:', error);
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-  }
-});
-
-// GET /api/auth/me - Obter dados do usuário logado
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      include: { role: true }
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'Usuário não encontrado'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role.name,
-          permissions: JSON.parse(user.role.permissions || '[]'),
-          avatar: user.avatar,
-          lastLogin: user.lastLogin,
-          preferences: JSON.parse(user.preferences || '{}')
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Erro ao obter dados do usuário:', error);
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-  }
-});
-
-// POST /api/auth/change-password - Alterar senha do usuário
-app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-
-    // Validar campos obrigatórios
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Senha atual e nova senha são obrigatórias',
-        error: 'MISSING_PASSWORDS'
-      });
-    }
-
-    // Validar força da nova senha
-    if (newPassword.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nova senha deve ter pelo menos 8 caracteres',
-        error: 'WEAK_PASSWORD'
-      });
-    }
-
-    // Verificar se a nova senha é diferente da atual
-    if (currentPassword === newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'A nova senha deve ser diferente da senha atual',
-        error: 'SAME_PASSWORD'
-      });
-    }
-
-    // Buscar o usuário
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId }
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuário não encontrado',
-        error: 'USER_NOT_FOUND'
-      });
-    }
-
-    if (!user.isActive) {
-      return res.status(403).json({
-        success: false,
-        message: 'Usuário inativo',
-        error: 'USER_INACTIVE'
-      });
-    }
-
-    // Verificar senha atual
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Senha atual incorreta',
-        error: 'INVALID_CURRENT_PASSWORD'
-      });
-    }
-
-    // Hash da nova senha
-    const hashedNewPassword = await bcrypt.hash(newPassword, 12);
-
-    // Atualizar senha no banco
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user.userId },
-      data: {
-        password: hashedNewPassword,
-        updatedAt: new Date()
-      },
-      include: { role: true }
-    });
-
-    // Invalidar todas as sessões ativas do usuário (exceto a atual)
-    const authHeader = req.headers['authorization'];
-    const currentToken = authHeader && authHeader.split(' ')[1];
-
-    await prisma.session.deleteMany({
-      where: {
-        userId: req.user.userId,
-        token: { not: currentToken }
-      }
-    });
-
-    console.log(`✅ Senha alterada: ${user.email}`);
-
-    res.json({
-      success: true,
-      message: 'Senha alterada com sucesso',
-      data: {
-        user: {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          name: updatedUser.name,
-          role: updatedUser.role.name
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Erro ao alterar senha:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: 'CHANGE_PASSWORD_ERROR'
-    });
-  }
-});
-
-// POST /api/auth/verify-token - Verificar se token é válido
-app.post('/api/auth/verify-token', async (req, res) => {
-  try {
-    const { token } = req.body;
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token é obrigatório',
-        error: 'TOKEN_MISSING'
-      });
-    }
-
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Buscar usuário no banco para verificar se ainda está ativo
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        include: { role: true }
-      });
-
-      if (!user || !user.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: 'Token inválido ou usuário inativo',
-          data: { valid: false }
-        });
-      }
-
-      // Token válido
-      res.json({
-        success: true,
-        message: 'Token válido',
-        data: {
-          valid: true,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role.name,
-            permissions: JSON.parse(user.role.permissions || '[]'),
-            avatar: user.avatar,
-            lastLogin: user.lastLogin,
-            preferences: JSON.parse(user.preferences || '{}')
-          }
-        }
-      });
-
-    } catch (jwtError) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token inválido ou expirado',
-        data: { valid: false }
-      });
-    }
-
-  } catch (error) {
-    console.error('Erro ao verificar token:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: 'TOKEN_VERIFICATION_ERROR'
-    });
-  }
-});
-
-// PUT /api/auth/me - Atualizar perfil do usuário
-app.put('/api/auth/me', authenticateToken, async (req, res) => {
-  try {
-    const { name, email } = req.body;
-
-    // Validar campos obrigatórios
-    if (!name || !email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nome e email são obrigatórios',
-        error: 'MISSING_FIELDS'
-      });
-    }
-
-    // Validar formato do email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email deve ter um formato válido',
-        error: 'INVALID_EMAIL'
-      });
-    }
-
-    // Verificar se o email já está em uso por outro usuário
-    if (email !== req.user.email) {
-      const existingUser = await prisma.user.findUnique({
-        where: { email }
-      });
-
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'Este email já está em uso por outro usuário',
-          error: 'EMAIL_ALREADY_EXISTS'
-        });
-      }
-    }
-
-    // Atualizar dados do usuário
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user.userId },
-      data: {
-        name,
-        email,
-        updatedAt: new Date()
-      },
-      include: { role: true }
-    });
-
-    console.log(`✅ Perfil atualizado: ${updatedUser.email}`);
-
-    res.json({
-      success: true,
-      message: 'Perfil atualizado com sucesso',
-      data: {
-        user: {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          name: updatedUser.name,
-          role: updatedUser.role.name,
-          permissions: JSON.parse(updatedUser.role.permissions || '[]'),
-          avatar: updatedUser.avatar,
-          lastLogin: updatedUser.lastLogin,
-          preferences: JSON.parse(updatedUser.preferences || '{}')
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Erro ao atualizar perfil:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: 'UPDATE_PROFILE_ERROR'
-    });
-  }
-});
-
-// ========================================
-// DASHBOARD METRICS
-// ========================================
-
-// GET /api/dashboard/metrics - Métricas do dashboard
-app.get('/api/dashboard/metrics', authenticateToken, requirePermission('leads:read'), async (req, res) => {
-  try {
-    // Contagem básica de leads por status
-    const total = await prisma.lead.count();
-    const novo = await prisma.lead.count({ where: { status: 'NOVO' } });
-    const emAndamento = await prisma.lead.count({ where: { status: 'EM_ANDAMENTO' } });
-    const concluido = await prisma.lead.count({ where: { status: 'CONCLUIDO' } });
-
-    // Taxa de conversão
-    const conversionRate = total > 0 ? Math.round((concluido / total) * 100 * 100) / 100 : 0;
-
-    // Atividade recente
-    const recentLeads = await prisma.lead.findMany({
-      select: { id: true, name: true, createdAt: true },
-      orderBy: { createdAt: 'desc' },
-      take: 5
-    });
-
-    const recentActivity = recentLeads.map(lead => ({
-      id: `lead-${lead.id}`,
-      type: 'lead_created',
-      description: `Lead "${lead.name}" foi criado`,
-      timestamp: lead.createdAt.toISOString()
-    }));
-
-    res.json({
-      success: true,
-      data: {
-        leadsCount: { total, novo, emAndamento, concluido },
-        conversionRate,
-        recentActivity,
-        trends: { leadsThisWeek: 0, leadsLastWeek: 0 }
-      }
-    });
-  } catch (error) {
-    console.error('Erro ao gerar métricas:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Rotas de leads parciais
-const partialLeadsRoutes = require('./routes/partialLeads');
-app.use('/api/partial-leads', partialLeadsRoutes);
-
-// 404 handler
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'Endpoint não encontrado' });
-});
-
-// Error handler
-app.use((error, req, res, next) => {
-  console.error('Error:', error);
-  res.status(500).json({ error: error.message });
-});
-
-// Start server
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Ferraco CRM Backend funcionando na porta ${PORT}!`);
-  console.log(`🔗 Health: http://localhost:${PORT}/api/health`);
-  console.log(`📊 Dashboard: http://localhost:${PORT}/api/dashboard/metrics`);
-  console.log(`👥 Leads: http://localhost:${PORT}/api/leads`);
-});
+// Inicializar aplicação
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app;
