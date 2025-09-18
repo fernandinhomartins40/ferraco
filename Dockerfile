@@ -6,6 +6,11 @@ LABEL maintainer="Ferraco CRM Team"
 LABEL description="Frontend para Ferraco CRM - Interface React + Vite"
 LABEL version="1.0.0"
 
+# Build arguments para variáveis de ambiente de produção
+ARG VITE_API_URL
+ARG VITE_APP_NAME="Ferraco CRM"
+ARG BUILD_TIMESTAMP
+
 # Definir diretório de trabalho
 WORKDIR /app
 
@@ -18,7 +23,12 @@ RUN npm ci && npm cache clean --force
 # Copiar código da aplicação
 COPY . .
 
-# Build da aplicação
+# Configurar variáveis de ambiente para o build
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+ENV NODE_ENV=production
+
+# Build da aplicação com variáveis de produção
 RUN npm run build
 
 # Estágio de produção
