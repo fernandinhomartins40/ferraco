@@ -46,17 +46,14 @@ async function authenticateToken(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Verificar se a sessão ainda está ativa no banco
-    const session = await prisma.session.findFirst({
-      where: {
-        token,
-        userId: decoded.userId,
-        expiresAt: { gt: new Date() }
-      }
+    // Verificar se o usuário ainda existe e está ativo
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: { role: true }
     });
 
-    if (!session) {
-      return res.status(401).json({ success: false, error: 'Sessão expirada ou inválida' });
+    if (!user || !user.isActive) {
+      return res.status(401).json({ success: false, error: 'Usuário inativo ou token inválido' });
     }
 
     req.user = decoded;
@@ -705,6 +702,73 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
       success: false,
       message: 'Erro interno do servidor',
       error: 'CHANGE_PASSWORD_ERROR'
+    });
+  }
+});
+
+// POST /api/auth/verify-token - Verificar se token é válido
+app.post('/api/auth/verify-token', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token é obrigatório',
+        error: 'TOKEN_MISSING'
+      });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Buscar usuário no banco para verificar se ainda está ativo
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        include: { role: true }
+      });
+
+      if (!user || !user.isActive) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token inválido ou usuário inativo',
+          data: { valid: false }
+        });
+      }
+
+      // Token válido
+      res.json({
+        success: true,
+        message: 'Token válido',
+        data: {
+          valid: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role.name,
+            permissions: JSON.parse(user.role.permissions || '[]'),
+            avatar: user.avatar,
+            lastLogin: user.lastLogin,
+            preferences: JSON.parse(user.preferences || '{}')
+          }
+        }
+      });
+
+    } catch (jwtError) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token inválido ou expirado',
+        data: { valid: false }
+      });
+    }
+
+  } catch (error) {
+    console.error('Erro ao verificar token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: 'TOKEN_VERIFICATION_ERROR'
     });
   }
 });

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
 import { securityLogger, SecurityEventType, SecurityLevel } from '@/utils/securityLogger';
+import { apiClient } from '@/lib/apiClient';
 
 // Types
 export interface User {
@@ -258,6 +259,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Save to storage (localStorage if rememberMe, sessionStorage otherwise)
         saveAuthData(user, token, rememberMe);
 
+        // Sync token with apiClient
+        apiClient.setToken(token);
+
         // Update state
         dispatch({
           type: 'LOGIN_SUCCESS',
@@ -324,6 +328,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     );
 
+    // Clear data from apiClient
+    apiClient.removeToken();
+
     // Clear data
     clearAuthData();
     dispatch({ type: 'LOGOUT' });
@@ -387,6 +394,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (result.success && result.data && result.data.valid) {
           // Token is still valid
+          // Sync token with apiClient
+          apiClient.setToken(authData.token);
+
           dispatch({
             type: 'LOGIN_SUCCESS',
             payload: {
@@ -397,6 +407,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.log('✅ Sessão restaurada automaticamente');
         } else {
           // Token is invalid
+          apiClient.removeToken();
           clearAuthData();
           dispatch({ type: 'SET_LOADING', payload: false });
         }

@@ -120,17 +120,24 @@ class ApiClient {
   // Gerenciamento de token
   public setToken(token: string) {
     this.token = token;
-    localStorage.setItem('ferraco_token', token);
+    // Usar as mesmas chaves do AuthContext
+    localStorage.setItem('ferraco_auth_token', token);
+    sessionStorage.setItem('ferraco_auth_token', token);
   }
 
   public removeToken() {
     this.token = null;
-    localStorage.removeItem('ferraco_token');
-    sessionStorage.removeItem('ferraco_token');
+    // Usar as mesmas chaves do AuthContext
+    localStorage.removeItem('ferraco_auth_token');
+    sessionStorage.removeItem('ferraco_auth_token');
+    localStorage.removeItem('ferraco_auth_user');
+    sessionStorage.removeItem('ferraco_auth_user');
+    localStorage.removeItem('ferraco_remember_me');
   }
 
   private loadTokenFromStorage() {
-    const token = localStorage.getItem('ferraco_token') || sessionStorage.getItem('ferraco_token');
+    // Usar as mesmas chaves do AuthContext
+    const token = localStorage.getItem('ferraco_auth_token') || sessionStorage.getItem('ferraco_auth_token');
     if (token) {
       this.token = token;
     }
