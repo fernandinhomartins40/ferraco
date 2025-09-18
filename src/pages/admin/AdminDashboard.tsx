@@ -1,157 +1,234 @@
-import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Area, AreaChart } from 'recharts';
+import { useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import AdminLayout from '@/components/admin/AdminLayout';
 import StatsCards from '@/components/admin/StatsCards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { leadStorage } from '@/utils/leadStorage';
-import { LeadStats, DashboardMetrics } from '@/types/lead';
-import { Clock, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useDashboardMetrics } from '@/hooks/api/useDashboard';
+import { useLeads } from '@/hooks/api/useLeads';
+import { DashboardMetrics, ApiLead } from '@/types/api';
+import { Clock, RefreshCw, AlertCircle } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState<LeadStats>({
-    total: 0,
-    novo: 0,
-    em_andamento: 0,
-    concluido: 0,
-    conversionRate: 0,
-    averageConversionTime: 0,
-    todayLeads: 0,
-    weeklyGrowth: 0,
-    oldLeadsCount: 0,
-  });
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  // Hooks da API
+  const {
+    data: dashboardData,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+    refetch: refetchDashboard
+  } = useDashboardMetrics();
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const {
+    data: recentLeadsData,
+    isLoading: leadsLoading,
+    error: leadsError,
+    refetch: refetchLeads
+  } = useLeads({ limit: 5, sortBy: 'createdAt', sortOrder: 'desc' });
 
-  const loadDashboardData = () => {
-    // Load advanced stats
-    const currentStats = leadStorage.getAdvancedStats();
-    setStats(currentStats);
+  // Dados simplificados - sem conversões complexas
+  const stats = useMemo(() => {
+    if (!dashboardData) {
+      return {
+        total: 0,
+        novo: 0,
+        em_andamento: 0,
+        concluido: 0,
+        conversionRate: 0,
+        todayLeads: 0,
+        weeklyGrowth: 0,
+      };
+    }
 
-    // Load dashboard metrics
-    const dashboardMetrics = leadStorage.getDashboardMetrics();
-    setMetrics(dashboardMetrics);
+    const weeklyGrowth = dashboardData.trends.leadsThisWeek > 0
+      ? ((dashboardData.trends.leadsThisWeek - dashboardData.trends.leadsLastWeek) / dashboardData.trends.leadsLastWeek) * 100
+      : 0;
+
+    return {
+      total: dashboardData.leadsCount.total,
+      novo: dashboardData.leadsCount.novo,
+      em_andamento: dashboardData.leadsCount.emAndamento,
+      concluido: dashboardData.leadsCount.concluido,
+      conversionRate: dashboardData.conversionRate,
+      todayLeads: dashboardData.recentActivity.filter(activity =>
+        new Date(activity.timestamp).toDateString() === new Date().toDateString()
+      ).length,
+      weeklyGrowth,
+    };
+  }, [dashboardData]);
+
+  const recentLeads = useMemo(() => {
+    if (!recentLeadsData?.data) return [];
+    return recentLeadsData.data.slice(0, 5);
+  }, [recentLeadsData]);
+
+  const handleRefresh = () => {
+    refetchDashboard();
+    refetchLeads();
   };
 
-  const recentLeads = leadStorage.getLeads().slice(0, 5);
+  // Loading states
+  if (dashboardLoading || leadsLoading) {
+    return (
+      <AdminLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Dashboard</h1>
+              <p className="text-muted-foreground">
+                Visão geral dos leads capturados
+              </p>
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+
+          {/* Loading Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-6 border rounded-lg">
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            ))}
+          </div>
+
+          {/* Loading Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 p-6 border rounded-lg">
+              <Skeleton className="h-6 w-48 mb-4" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+            <div className="p-6 border rounded-lg">
+              <Skeleton className="h-6 w-32 mb-4" />
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Error states
+  if (dashboardError || leadsError) {
+    return (
+      <AdminLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Visão geral dos leads capturados
+            </p>
+          </div>
+
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                Erro ao carregar dados: {dashboardError?.message || leadsError?.message || 'Erro desconhecido'}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                className="ml-4"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Tentar Novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Visão geral dos leads capturados
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Visão geral dos leads capturados
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            className="flex items-center space-x-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Atualizar</span>
+          </Button>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards Simplificados */}
         <StatsCards stats={stats} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Trends Chart */}
+          {/* Gráfico Básico de Status */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Tendências dos Últimos 30 Dias</CardTitle>
+              <CardTitle>Distribuição por Status</CardTitle>
             </CardHeader>
             <CardContent>
-              {metrics && (
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={metrics.trendsData}>
-                    <defs>
-                      <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
-                      </linearGradient>
-                      <linearGradient id="colorConversions" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis
-                      dataKey="date"
-                      fontSize={12}
-                      tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                    />
-                    <YAxis fontSize={12} />
-                    <Tooltip
-                      labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                      formatter={(value: any, name: any) => [
-                        value,
-                        name === 'leads' ? 'Leads' : name === 'conversions' ? 'Conversões' : 'Taxa de Conversão'
-                      ]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="leads"
-                      stroke="hsl(var(--primary))"
-                      fillOpacity={1}
-                      fill="url(#colorLeads)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="conversions"
-                      stroke="hsl(var(--chart-2))"
-                      fillOpacity={1}
-                      fill="url(#colorConversions)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={[
+                  { name: 'Novo', value: stats.novo },
+                  { name: 'Em Andamento', value: stats.em_andamento },
+                  { name: 'Concluído', value: stats.concluido },
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Performance Metrics */}
+          {/* Métricas Básicas */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Clock className="h-4 w-4" />
-                <span>Performance</span>
+                <span>Resumo</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {metrics && (
-                <>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Crescimento Semanal</span>
-                      <Badge variant={metrics.weeklyGrowth >= 0 ? 'default' : 'secondary'}>
-                        {metrics.weeklyGrowth >= 0 ? '+' : ''}{metrics.weeklyGrowth}%
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Crescimento Mensal</span>
-                      <Badge variant={metrics.monthlyGrowth >= 0 ? 'default' : 'secondary'}>
-                        {metrics.monthlyGrowth >= 0 ? '+' : ''}{metrics.monthlyGrowth}%
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Leads Hoje</span>
-                      <Badge>{metrics.todayLeads}</Badge>
-                    </div>
-                  </div>
-
-                  {metrics.oldLeadsAlert > 0 && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <div className="flex items-center space-x-2 text-destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span className="text-sm font-medium">Atenção Necessária</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {metrics.oldLeadsAlert} leads há mais de 7 dias sem contato
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Taxa de Conversão</span>
+                  <Badge variant="default">
+                    {stats.conversionRate.toFixed(1)}%
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Leads Hoje</span>
+                  <Badge>{stats.todayLeads}</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Crescimento Semanal</span>
+                  <Badge variant={stats.weeklyGrowth >= 0 ? 'default' : 'secondary'}>
+                    {stats.weeklyGrowth >= 0 ? '+' : ''}{stats.weeklyGrowth.toFixed(1)}%
+                  </Badge>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Recent Leads */}
+          {/* Leads Recentes */}
           <Card className="lg:col-span-3">
             <CardHeader>
               <CardTitle>Leads Recentes</CardTitle>
@@ -173,8 +250,8 @@ const AdminDashboard = () => {
                         <div className="font-medium text-sm">{lead.name}</div>
                         <Badge
                           variant={
-                            lead.status === 'novo' ? 'default' :
-                            lead.status === 'em_andamento' ? 'secondary' : 'outline'
+                            lead.status === 'NOVO' ? 'default' :
+                            lead.status === 'EM_ANDAMENTO' ? 'secondary' : 'outline'
                           }
                           className="text-xs"
                         >

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Tag, Plus, Edit, Trash2, Palette, BarChart3, TrendingUp, TrendingDown, Target } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Tag, Plus, Edit, Trash2, Palette, BarChart3, TrendingUp, TrendingDown, Target, RefreshCw, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,14 +9,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TagDefinition, TagStats } from '@/types/lead';
-import { tagStorage } from '@/utils/tagStorage';
+import { ApiTag } from '@/types/api';
+import { useTags, useCreateTag, useUpdateTag, useDeleteTag, useTagStats, usePredefinedColors } from '@/hooks/api/useTags';
 import { useToast } from '@/hooks/use-toast';
+
+// Função para converter ApiTag para TagDefinition (frontend)
+const convertApiTagToTagDefinition = (apiTag: ApiTag): TagDefinition => ({
+  id: apiTag.id,
+  name: apiTag.name,
+  color: apiTag.color,
+  description: apiTag.description,
+  isSystem: apiTag.isSystem,
+  createdAt: apiTag.createdAt,
+});
 
 const TagManagement = () => {
   const { toast } = useToast();
-  const [tags, setTags] = useState<TagDefinition[]>([]);
-  const [tagStats, setTagStats] = useState<TagStats[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<TagDefinition | null>(null);
@@ -26,22 +37,52 @@ const TagManagement = () => {
     description: '',
   });
 
-  useEffect(() => {
-    loadTags();
-    loadTagStats();
-  }, []);
+  // Hooks da API
+  const {
+    data: tagsResponse,
+    isLoading: tagsLoading,
+    error: tagsError,
+    refetch: refetchTags
+  } = useTags({ limit: 100 });
 
-  const loadTags = () => {
-    const allTags = tagStorage.getTags();
-    setTags(allTags);
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    error: statsError,
+    refetch: refetchStats
+  } = useTagStats();
+
+  const {
+    data: predefinedColors,
+    isLoading: colorsLoading
+  } = usePredefinedColors();
+
+  const createTagMutation = useCreateTag();
+  const updateTagMutation = useUpdateTag();
+  const deleteTagMutation = useDeleteTag();
+
+  // Converter dados da API para formato do frontend
+  const tags = useMemo(() => {
+    if (!tagsResponse?.data) return [];
+    return tagsResponse.data.map(convertApiTagToTagDefinition);
+  }, [tagsResponse]);
+
+  const tagStats: TagStats[] = useMemo(() => {
+    if (!statsData || !Array.isArray(statsData)) return [];
+    return statsData.map((stat: any) => ({
+      tagName: stat.name || '',
+      count: stat.count || 0,
+      conversionRate: stat.conversionRate || 0,
+      trend: stat.trend || 'stable',
+    }));
+  }, [statsData]);
+
+  const handleRefresh = () => {
+    refetchTags();
+    refetchStats();
   };
 
-  const loadTagStats = () => {
-    const stats = tagStorage.getTagStats();
-    setTagStats(stats);
-  };
-
-  const handleCreateTag = () => {
+  const handleCreateTag = async () => {
     if (!newTag.name.trim()) {
       toast({
         title: 'Erro',
@@ -52,21 +93,18 @@ const TagManagement = () => {
     }
 
     try {
-      tagStorage.createTag(newTag.name, newTag.color, newTag.description);
-      loadTags();
-      loadTagStats();
+      await createTagMutation.mutateAsync({
+        name: newTag.name,
+        color: newTag.color,
+        description: newTag.description,
+      });
+
       setIsCreateDialogOpen(false);
       setNewTag({ name: '', color: '#3b82f6', description: '' });
-      toast({
-        title: 'Tag criada',
-        description: 'Tag criada com sucesso!',
-      });
+      refetchStats(); // Atualizar estatísticas também
     } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao criar tag',
-        variant: 'destructive',
-      });
+      // O toast de erro já é mostrado pelo hook
+      console.error('Erro ao criar tag:', error);
     }
   };
 
@@ -80,34 +118,28 @@ const TagManagement = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateTag = () => {
+  const handleUpdateTag = async () => {
     if (!selectedTag || !newTag.name.trim()) return;
 
     try {
-      tagStorage.updateTag(selectedTag.id, {
+      await updateTagMutation.mutateAsync({
+        id: selectedTag.id,
         name: newTag.name,
         color: newTag.color,
         description: newTag.description,
       });
-      loadTags();
-      loadTagStats();
+
       setIsEditDialogOpen(false);
       setSelectedTag(null);
       setNewTag({ name: '', color: '#3b82f6', description: '' });
-      toast({
-        title: 'Tag atualizada',
-        description: 'Tag atualizada com sucesso!',
-      });
+      refetchStats(); // Atualizar estatísticas também
     } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao atualizar tag',
-        variant: 'destructive',
-      });
+      // O toast de erro já é mostrado pelo hook
+      console.error('Erro ao atualizar tag:', error);
     }
   };
 
-  const handleDeleteTag = (tag: TagDefinition) => {
+  const handleDeleteTag = async (tag: TagDefinition) => {
     if (tag.isSystem) {
       toast({
         title: 'Não permitido',
@@ -120,23 +152,13 @@ const TagManagement = () => {
     if (!confirm(`Tem certeza que deseja excluir a tag "${tag.name}"?`)) return;
 
     try {
-      tagStorage.deleteTag(tag.id);
-      loadTags();
-      loadTagStats();
-      toast({
-        title: 'Tag excluída',
-        description: 'Tag excluída com sucesso!',
-      });
+      await deleteTagMutation.mutateAsync(tag.id);
+      refetchStats(); // Atualizar estatísticas também
     } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao excluir tag',
-        variant: 'destructive',
-      });
+      // O toast de erro já é mostrado pelo hook
+      console.error('Erro ao excluir tag:', error);
     }
   };
-
-  const predefinedColors = tagStorage.getPredefinedColors();
 
   const getTagStats = (tagName: string): TagStats | undefined => {
     return tagStats.find(stat => stat.tagName === tagName);
@@ -153,6 +175,82 @@ const TagManagement = () => {
     }
   };
 
+  // Loading states
+  if (tagsLoading || statsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Gestão de Tags</h2>
+            <p className="text-muted-foreground">
+              Gerencie tags coloridas e analise performance
+            </p>
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        {/* Loading Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="p-4 border rounded-lg">
+              <Skeleton className="h-8 w-16 mb-2" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+
+        {/* Loading Table */}
+        <div className="border rounded-lg p-4">
+          <Skeleton className="h-6 w-32 mb-4" />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex space-x-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error states
+  if (tagsError || statsError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Gestão de Tags</h2>
+            <p className="text-muted-foreground">
+              Gerencie tags coloridas e analise performance
+            </p>
+          </div>
+        </div>
+
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              Erro ao carregar dados: {tagsError?.message || statsError?.message || 'Erro desconhecido'}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              className="ml-4"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Tentar Novamente
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -163,10 +261,24 @@ const TagManagement = () => {
             Gerencie tags coloridas e analise performance
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center space-x-2">
-          <Plus className="h-4 w-4" />
-          <span>Nova Tag</span>
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            className="flex items-center space-x-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Atualizar</span>
+          </Button>
+          <Button
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="flex items-center space-x-2"
+            disabled={createTagMutation.isLoading}
+          >
+            <Plus className="h-4 w-4" />
+            <span>Nova Tag</span>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -317,7 +429,7 @@ const TagManagement = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditTag(tag)}
-                          disabled={tag.isSystem}
+                          disabled={tag.isSystem || updateTagMutation.isLoading}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -325,7 +437,7 @@ const TagManagement = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteTag(tag)}
-                          disabled={tag.isSystem}
+                          disabled={tag.isSystem || deleteTagMutation.isLoading}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -371,7 +483,7 @@ const TagManagement = () => {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  {predefinedColors.map((color) => (
+                  {(predefinedColors || []).map((color) => (
                     <SelectItem key={color.value} value={color.value}>
                       <div className="flex items-center space-x-2">
                         <div
@@ -395,10 +507,19 @@ const TagManagement = () => {
               />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+                disabled={createTagMutation.isLoading}
+              >
                 Cancelar
               </Button>
-              <Button onClick={handleCreateTag}>Criar Tag</Button>
+              <Button
+                onClick={handleCreateTag}
+                disabled={createTagMutation.isLoading}
+              >
+                {createTagMutation.isLoading ? 'Criando...' : 'Criar Tag'}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -436,7 +557,7 @@ const TagManagement = () => {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  {predefinedColors.map((color) => (
+                  {(predefinedColors || []).map((color) => (
                     <SelectItem key={color.value} value={color.value}>
                       <div className="flex items-center space-x-2">
                         <div
@@ -460,10 +581,19 @@ const TagManagement = () => {
               />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={updateTagMutation.isLoading}
+              >
                 Cancelar
               </Button>
-              <Button onClick={handleUpdateTag}>Salvar Alterações</Button>
+              <Button
+                onClick={handleUpdateTag}
+                disabled={updateTagMutation.isLoading}
+              >
+                {updateTagMutation.isLoading ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
             </div>
           </div>
         </DialogContent>

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Lead, LeadStatus } from '@/types/lead';
-import { leadStorage } from '@/utils/leadStorage';
+import { useUpdateLeadStatus, useDeleteLead } from '@/hooks/api/useLeads';
 import { useToast } from '@/hooks/use-toast';
 import LeadNotes from './LeadNotes';
 
@@ -30,42 +30,29 @@ const statusVariants: Record<LeadStatus, 'default' | 'secondary' | 'destructive'
 
 const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
   const { toast } = useToast();
-  const [updatingLeads, setUpdatingLeads] = useState<Set<string>>(new Set());
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showNotesDialog, setShowNotesDialog] = useState(false);
   const [compactView, setCompactView] = useState(false);
 
+  // Hooks da API
+  const updateLeadStatusMutation = useUpdateLeadStatus();
+  const deleteLeadMutation = useDeleteLead();
+
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
-    setUpdatingLeads(prev => new Set(prev).add(leadId));
-    
+    // Converter status para formato da API
+    const apiStatus = newStatus === 'novo' ? 'NOVO' :
+                     newStatus === 'em_andamento' ? 'EM_ANDAMENTO' : 'CONCLUIDO';
+
     try {
-      const success = leadStorage.updateLeadStatus(leadId, newStatus);
-      
-      if (success) {
-        onLeadsChange();
-        toast({
-          title: 'Status atualizado',
-          description: `Status do lead alterado para ${statusLabels[newStatus].toLowerCase()}.`,
-        });
-      } else {
-        toast({
-          title: 'Erro',
-          description: 'Não foi possível atualizar o status do lead.',
-          variant: 'destructive'
-        });
-      }
+      await updateLeadStatusMutation.mutateAsync({
+        id: leadId,
+        status: apiStatus
+      });
+
+      onLeadsChange();
     } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Ocorreu um erro ao atualizar o status.',
-        variant: 'destructive'
-      });
-    } finally {
-      setUpdatingLeads(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(leadId);
-        return newSet;
-      });
+      // O toast de erro já é mostrado pelo hook
+      console.error('Erro ao atualizar status:', error);
     }
   };
 
@@ -75,27 +62,11 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
     }
 
     try {
-      const success = leadStorage.deleteLead(leadId);
-      
-      if (success) {
-        onLeadsChange();
-        toast({
-          title: 'Lead excluído',
-          description: `Lead "${leadName}" foi excluído com sucesso.`,
-        });
-      } else {
-        toast({
-          title: 'Erro',
-          description: 'Não foi possível excluir o lead.',
-          variant: 'destructive'
-        });
-      }
+      await deleteLeadMutation.mutateAsync(leadId);
+      onLeadsChange();
     } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Ocorreu um erro ao excluir o lead.',
-        variant: 'destructive'
-      });
+      // O toast de erro já é mostrado pelo hook
+      console.error('Erro ao excluir lead:', error);
     }
   };
 
@@ -212,7 +183,7 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
                           <Select
                             value={lead.status}
                             onValueChange={(value) => handleStatusChange(lead.id, value as LeadStatus)}
-                            disabled={updatingLeads.has(lead.id)}
+                            disabled={updateLeadStatusMutation.isLoading}
                           >
                             <SelectTrigger className="w-32 h-8">
                               <SelectValue />
@@ -335,12 +306,8 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
               lead={selectedLead}
               onLeadUpdate={() => {
                 onLeadsChange();
-                // Update selected lead
-                const updatedLeads = leadStorage.getLeads();
-                const updatedLead = updatedLeads.find(l => l.id === selectedLead.id);
-                if (updatedLead) {
-                  setSelectedLead(updatedLead);
-                }
+                // Update selected lead - será atualizado quando AdminLeads refizer a query
+                // O React Query já cuida da sincronização dos dados
               }}
             />
           )}

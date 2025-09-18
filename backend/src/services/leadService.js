@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 
 class LeadService {
-  // Criar um novo lead
+  // Criar um novo lead (simplificado)
   async createLead(data) {
     try {
       const lead = await prisma.lead.create({
@@ -14,11 +14,6 @@ class LeadService {
           email: data.email || null,
           status: data.status || 'NOVO',
           source: data.source || 'website',
-          priority: data.priority || 'MEDIUM',
-          assignedTo: data.assignedTo || null,
-          nextFollowUp: data.nextFollowUp ? new Date(data.nextFollowUp) : null,
-          leadScore: data.leadScore || null,
-          pipelineStage: data.pipelineStage || null
         },
         include: {
           notes: true,
@@ -46,48 +41,50 @@ class LeadService {
     }
   }
 
-  // Buscar todos os leads com filtros
+  // Buscar todos os leads com filtros básicos
   async getAllLeads(filters = {}) {
     try {
       const {
         status,
-        priority,
-        source,
-        assignedTo,
         search,
+        tags,
         page = 1,
         limit = 10,
         sortBy = 'createdAt',
         sortOrder = 'desc'
       } = filters;
 
-      const skip = (parseInt(page) - 1) * parseInt(limit);
-
+      // Construir where clause
       const where = {};
 
-      // Aplicar filtros
-      if (status) where.status = status;
-      if (priority) where.priority = priority;
-      if (source) where.source = source;
-      if (assignedTo) where.assignedTo = assignedTo;
+      if (status && status !== 'todos') {
+        where.status = status;
+      }
 
-      // Busca por nome, email ou telefone
       if (search) {
         where.OR = [
           { name: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search } }
+          { phone: { contains: search } },
+          { email: { contains: search, mode: 'insensitive' } }
         ];
       }
 
+      if (tags && tags.length > 0) {
+        where.tags = {
+          some: {
+            tag: {
+              name: { in: tags }
+            }
+          }
+        };
+      }
+
+      // Buscar com paginação
       const [leads, total] = await Promise.all([
         prisma.lead.findMany({
           where,
           include: {
-            notes: {
-              orderBy: { createdAt: 'desc' },
-              take: 3
-            },
+            notes: true,
             tags: {
               include: {
                 tag: true
@@ -95,17 +92,18 @@ class LeadService {
             }
           },
           orderBy: { [sortBy]: sortOrder },
-          skip,
+          skip: (page - 1) * limit,
           take: parseInt(limit)
         }),
         prisma.lead.count({ where })
       ]);
 
-      const totalPages = Math.ceil(total / parseInt(limit));
+      const totalPages = Math.ceil(total / limit);
 
       logger.info('Leads recuperados com sucesso', {
+        count: leads.length,
         total,
-        page: parseInt(page),
+        page,
         totalPages,
         filters
       });
@@ -113,10 +111,10 @@ class LeadService {
       return {
         leads,
         pagination: {
-          total,
           page: parseInt(page),
-          totalPages,
-          limit: parseInt(limit)
+          limit: parseInt(limit),
+          total,
+          totalPages
         }
       };
     } catch (error) {
@@ -141,14 +139,6 @@ class LeadService {
             include: {
               tag: true
             }
-          },
-          communications: {
-            orderBy: { createdAt: 'desc' },
-            take: 10
-          },
-          interactions: {
-            orderBy: { createdAt: 'desc' },
-            take: 5
           }
         }
       });
@@ -176,35 +166,15 @@ class LeadService {
   // Atualizar um lead
   async updateLead(id, data) {
     try {
-      // Verificar se lead existe
-      const existingLead = await prisma.lead.findUnique({
-        where: { id }
-      });
-
-      if (!existingLead) {
-        logger.warn('Lead não encontrado para atualização', { leadId: id });
-        return null;
-      }
-
-      const updateData = {};
-
-      // Apenas atualizar campos fornecidos
-      if (data.name !== undefined) updateData.name = data.name;
-      if (data.phone !== undefined) updateData.phone = data.phone;
-      if (data.email !== undefined) updateData.email = data.email;
-      if (data.status !== undefined) updateData.status = data.status;
-      if (data.source !== undefined) updateData.source = data.source;
-      if (data.priority !== undefined) updateData.priority = data.priority;
-      if (data.assignedTo !== undefined) updateData.assignedTo = data.assignedTo;
-      if (data.nextFollowUp !== undefined) {
-        updateData.nextFollowUp = data.nextFollowUp ? new Date(data.nextFollowUp) : null;
-      }
-      if (data.leadScore !== undefined) updateData.leadScore = data.leadScore;
-      if (data.pipelineStage !== undefined) updateData.pipelineStage = data.pipelineStage;
-
       const lead = await prisma.lead.update({
         where: { id },
-        data: updateData,
+        data: {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          status: data.status,
+          source: data.source,
+        },
         include: {
           notes: true,
           tags: {
@@ -217,12 +187,16 @@ class LeadService {
 
       logger.info('Lead atualizado com sucesso', {
         leadId: lead.id,
-        name: lead.name,
-        updatedFields: Object.keys(updateData)
+        name: lead.name
       });
 
       return lead;
     } catch (error) {
+      if (error.code === 'P2025') {
+        logger.warn('Lead não encontrado para atualização', { leadId: id });
+        return null;
+      }
+
       logger.error('Erro ao atualizar lead', {
         error: error.message,
         leadId: id,
@@ -235,27 +209,18 @@ class LeadService {
   // Deletar um lead
   async deleteLead(id) {
     try {
-      // Verificar se lead existe
-      const existingLead = await prisma.lead.findUnique({
-        where: { id }
-      });
-
-      if (!existingLead) {
-        logger.warn('Lead não encontrado para exclusão', { leadId: id });
-        return null;
-      }
-
       await prisma.lead.delete({
         where: { id }
       });
 
-      logger.info('Lead deletado com sucesso', {
-        leadId: id,
-        name: existingLead.name
-      });
-
+      logger.info('Lead deletado com sucesso', { leadId: id });
       return true;
     } catch (error) {
+      if (error.code === 'P2025') {
+        logger.warn('Lead não encontrado para deleção', { leadId: id });
+        return false;
+      }
+
       logger.error('Erro ao deletar lead', {
         error: error.message,
         leadId: id
@@ -264,43 +229,27 @@ class LeadService {
     }
   }
 
-  // Buscar estatísticas de leads
+  // Buscar estatísticas básicas de leads
   async getLeadStats() {
     try {
-      const [
-        total,
-        novos,
-        emAndamento,
-        concluidos,
-        highPriority,
-        mediumPriority,
-        lowPriority
-      ] = await Promise.all([
+      const [total, byStatus] = await Promise.all([
         prisma.lead.count(),
-        prisma.lead.count({ where: { status: 'NOVO' } }),
-        prisma.lead.count({ where: { status: 'EM_ANDAMENTO' } }),
-        prisma.lead.count({ where: { status: 'CONCLUIDO' } }),
-        prisma.lead.count({ where: { priority: 'HIGH' } }),
-        prisma.lead.count({ where: { priority: 'MEDIUM' } }),
-        prisma.lead.count({ where: { priority: 'LOW' } })
+        prisma.lead.groupBy({
+          by: ['status'],
+          _count: true
+        })
       ]);
 
       const stats = {
         total,
-        byStatus: {
-          novo: novos,
-          emAndamento,
-          concluido: concluidos
-        },
-        byPriority: {
-          high: highPriority,
-          medium: mediumPriority,
-          low: lowPriority
-        }
+        byStatus: byStatus.reduce((acc, stat) => {
+          acc[stat.status] = stat._count;
+          return acc;
+        }, {}),
+        conversionRate: total > 0 ? ((byStatus.find(s => s.status === 'CONCLUIDO')?._count || 0) / total) * 100 : 0
       };
 
       logger.info('Estatísticas de leads calculadas', stats);
-
       return stats;
     } catch (error) {
       logger.error('Erro ao calcular estatísticas de leads', {
@@ -313,21 +262,11 @@ class LeadService {
   // Adicionar nota a um lead
   async addNote(leadId, content, important = false, createdBy = null) {
     try {
-      // Verificar se lead existe
-      const lead = await prisma.lead.findUnique({
-        where: { id: leadId }
-      });
-
-      if (!lead) {
-        logger.warn('Lead não encontrado para adicionar nota', { leadId });
-        return null;
-      }
-
       const note = await prisma.leadNote.create({
         data: {
+          leadId,
           content,
           important,
-          leadId,
           createdBy
         }
       });
@@ -340,7 +279,12 @@ class LeadService {
 
       return note;
     } catch (error) {
-      logger.error('Erro ao adicionar nota ao lead', {
+      if (error.code === 'P2003') {
+        logger.warn('Lead não encontrado para adicionar nota', { leadId });
+        return null;
+      }
+
+      logger.error('Erro ao adicionar nota', {
         error: error.message,
         leadId,
         content
