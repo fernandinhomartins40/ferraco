@@ -2,7 +2,15 @@
  * Ferraco CRM Backend - Solução Real do Problema (sem logger problemático)
  */
 
-require('dotenv').config();
+// Carregar variáveis de ambiente explicitamente
+require('dotenv').config({ path: './.env' });
+
+// Debug das variáveis de ambiente
+console.log('🔧 Environment variables loaded:');
+console.log('  NODE_ENV:', process.env.NODE_ENV);
+console.log('  PORT:', process.env.PORT);
+console.log('  DATABASE_URL:', process.env.DATABASE_URL ? 'DEFINED' : 'NOT DEFINED');
+console.log('  JWT_SECRET:', process.env.JWT_SECRET ? 'DEFINED' : 'NOT DEFINED');
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
