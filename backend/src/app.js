@@ -200,15 +200,18 @@ app.get('/api/leads/stats', authenticateToken, requirePermission('leads:read'), 
 // POST /api/auth/login - Login com autenticação real
 app.post('/api/auth/login', async (req, res) => {
   try {
+    console.log('🔐 Iniciando login:', { email: req.body.email, hasPassword: !!req.body.password });
     const { email, password } = req.body;
 
     if (!email || !password) {
+      console.log('❌ Campos obrigatórios faltando');
       return res.status(400).json({
         success: false,
         error: 'Email e senha são obrigatórios'
       });
     }
 
+    console.log('🔍 Buscando usuário no banco...', { email });
     // Buscar usuário no banco
     const user = await prisma.user.findUnique({
       where: { email },
@@ -216,28 +219,36 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
     if (!user) {
+      console.log('❌ Usuário não encontrado:', { email });
       return res.status(401).json({
         success: false,
         error: 'Credenciais inválidas'
       });
     }
 
+    console.log('✅ Usuário encontrado:', { id: user.id, email: user.email, isActive: user.isActive, hasRole: !!user.role });
+
     if (!user.isActive) {
+      console.log('❌ Usuário inativo');
       return res.status(401).json({
         success: false,
         error: 'Usuário inativo'
       });
     }
 
+    console.log('🔑 Verificando senha...');
     // Verificar senha
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      console.log('❌ Senha inválida');
       return res.status(401).json({
         success: false,
         error: 'Credenciais inválidas'
       });
     }
 
+    console.log('✅ Senha válida. Gerando JWT...');
+    console.log('🔧 JWT_SECRET defined:', !!process.env.JWT_SECRET);
     // Gerar JWT token
     const token = jwt.sign(
       {
@@ -249,6 +260,7 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
+    console.log('✅ JWT gerado. Criando sessão...');
     // Criar sessão no banco
     const session = await prisma.session.create({
       data: {
@@ -258,13 +270,14 @@ app.post('/api/auth/login', async (req, res) => {
       }
     });
 
+    console.log('✅ Sessão criada. Atualizando último login...');
     // Atualizar último login
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() }
     });
 
-    console.log(`✅ Login realizado: ${user.email}`);
+    console.log('✅ Login realizado com sucesso:', user.email);
 
     res.json({
       success: true,
@@ -282,7 +295,11 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro no login:', error);
+    console.error('❌ Erro detalhado no login:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack?.split('\n').slice(0, 3)
+    });
     res.status(500).json({ success: false, error: 'Erro interno do servidor' });
   }
 });
