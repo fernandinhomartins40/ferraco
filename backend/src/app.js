@@ -897,6 +897,10 @@ app.get('/api/dashboard/metrics', authenticateToken, requirePermission('leads:re
   }
 });
 
+// Rotas de leads parciais
+const partialLeadsRoutes = require('./routes/partialLeads');
+app.use('/api/partial-leads', partialLeadsRoutes);
+
 // 404 handler
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'Endpoint não encontrado' });

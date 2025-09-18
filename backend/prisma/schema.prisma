@@ -50,6 +50,26 @@ model Lead {
   @@map("leads")
 }
 
+model PartialLead {
+  id               String   @id @default(cuid())
+  sessionId        String   // ID único da sessão do usuário
+  name             String   @default("")
+  phone            String   @default("")
+  source           String   @default("website") // Origem: modal-orcamento, footer-form, etc
+  url              String   // URL onde foi capturado
+  userAgent        String   // User agent do navegador
+  ipAddress        String?  // IP do usuário
+  firstInteraction DateTime @default(now())
+  lastUpdate       DateTime @updatedAt @default(now())
+  interactions     Int      @default(1) // Número de vezes que foi atualizado
+  completed        Boolean  @default(false) // Se foi convertido em lead real
+  abandoned        Boolean  @default(false) // Se foi marcado como abandonado
+  completedAt      DateTime? // Quando foi convertido/abandonado
+  createdAt        DateTime @default(now())
+
+  @@map("partial_leads")
+}
+
 model LeadNote {
   id        String   @id @default(cuid())
   content   String

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, User, Phone, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/useDebounce";
+import { partialLeadService } from "@/services/partialLeadService";
 
 interface LeadModalProps {
   isOpen: boolean;
@@ -17,6 +19,22 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  // Debounce dos dados do formulário para captura silenciosa
+  const debouncedFormData = useDebounce(formData, 800); // 800ms de delay
+
+  // Capturar dados silenciosamente conforme o usuário digita
+  useEffect(() => {
+    // Só capturar se o modal estiver aberto e houver dados
+    if (isOpen && (debouncedFormData.name.trim() || debouncedFormData.phone.trim())) {
+      partialLeadService.captureFormData(
+        debouncedFormData.name,
+        debouncedFormData.phone,
+        'modal-orcamento',
+        window.location.href
+      );
+    }
+  }, [debouncedFormData, isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -44,13 +62,16 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
       // Save lead to localStorage
       const { leadStorage } = await import('@/utils/leadStorage');
       leadStorage.addLead(formData.name, formData.phone);
-      
+
+      // Marcar lead parcial como convertido
+      await partialLeadService.markAsConverted('modal-orcamento');
+
       toast({
         title: "Sucesso!",
         description: "Seus dados foram enviados. Nossa equipe entrará em contato em breve.",
         variant: "default"
       });
-      
+
       // Reset form and close modal
       setFormData({ name: "", phone: "" });
       onClose();

@@ -3,11 +3,13 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import StatsCards from '@/components/admin/StatsCards';
 import LeadFilters from '@/components/admin/LeadFilters';
 import LeadTable from '@/components/admin/LeadTable';
+import PartialLeadsManager from '@/components/admin/PartialLeadsManager';
 import { useLeads, useLeadStats } from '@/hooks/api/useLeads';
 import { Lead, LeadStats, LeadFilters as LeadFiltersType } from '@/types/lead';
 import { ApiLead, LeadFilters as ApiLeadFilters } from '@/types/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -247,7 +249,7 @@ const AdminLeads = () => {
           <div>
             <h1 className="text-3xl font-bold">Gerenciamento de Leads</h1>
             <p className="text-muted-foreground">
-              Gerencie todos os leads capturados pelo site
+              Gerencie todos os leads capturados pelo site e dados parciais
             </p>
           </div>
           <Button
@@ -260,35 +262,48 @@ const AdminLeads = () => {
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <StatsCards stats={stats} />
+        <Tabs defaultValue="leads" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="leads">Leads Finalizados</TabsTrigger>
+            <TabsTrigger value="partial">Leads Parciais</TabsTrigger>
+          </TabsList>
 
-        {/* Filters */}
-        <LeadFilters
-          filters={filters}
-          onFiltersChange={setFilters}
-        />
+          <TabsContent value="leads" className="space-y-6">
+            {/* Stats Cards */}
+            <StatsCards stats={stats} />
 
-        {/* Results Summary */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Mostrando {filteredLeads.length} de {allLeads.length} leads
-            {leadsResponse?.pagination && (
-              <span className="ml-2">
-                ({leadsResponse.pagination.total} total no servidor)
-              </span>
-            )}
-          </div>
-        </div>
+            {/* Filters */}
+            <LeadFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
 
-        {/* Leads Table */}
-        <LeadTable
-          leads={filteredLeads}
-          onLeadsChange={() => {
-            refetchLeads();
-            refetchStats();
-          }}
-        />
+            {/* Results Summary */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {filteredLeads.length} de {allLeads.length} leads
+                {leadsResponse?.pagination && (
+                  <span className="ml-2">
+                    ({leadsResponse.pagination.total} total no servidor)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Leads Table */}
+            <LeadTable
+              leads={filteredLeads}
+              onLeadsChange={() => {
+                refetchLeads();
+                refetchStats();
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="partial">
+            <PartialLeadsManager />
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );
