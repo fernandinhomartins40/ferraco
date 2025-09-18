@@ -50,9 +50,6 @@ const TOKEN_STORAGE_KEY = 'ferraco_auth_token';
 const USER_STORAGE_KEY = 'ferraco_auth_user';
 const REMEMBER_ME_KEY = 'ferraco_remember_me';
 
-// API base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
 // Initial state
 const initialState: AuthState = {
   user: null,
@@ -206,51 +203,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // API call function
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`;
-
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    // Add token to headers if available
-    if (state.token && !endpoint.includes('/auth/login')) {
-      config.headers = {
-        ...config.headers,
-        'Authorization': `Bearer ${state.token}`,
-      };
-    }
-
-    const response = await fetch(url, config);
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        // Token expired or invalid
-        dispatch({ type: 'TOKEN_EXPIRED' });
-        clearAuthData();
-        throw new Error('Sessão expirada. Faça login novamente.');
-      }
-
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
-  };
-
   // Login function
   const login = async (username: string, password: string, rememberMe: boolean = false): Promise<void> => {
     dispatch({ type: 'LOGIN_START' });
 
     try {
-      const response = await apiCall('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: username, password }),
+      // Use apiClient directly instead of internal apiCall
+      const response = await apiClient.post('/auth/login', {
+        email: username,
+        password
       });
 
       if (response.success && response.data) {
@@ -259,7 +220,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Save to storage (localStorage if rememberMe, sessionStorage otherwise)
         saveAuthData(user, token, rememberMe);
 
-        // Sync token with apiClient
+        // Set token in apiClient immediately
         apiClient.setToken(token);
 
         // Update state
@@ -380,42 +341,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      // Verify token with backend
-      const response = await fetch(`${API_BASE_URL}/auth/verify-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: authData.token }),
-      });
+      // Set token in apiClient first
+      apiClient.setToken(authData.token);
 
-      if (response.ok) {
-        const result = await response.json();
+      // Verify token with backend using /auth/me endpoint
+      const result = await apiClient.get('/auth/me');
 
-        if (result.success && result.data && result.data.valid) {
-          // Token is still valid
-          // Sync token with apiClient
-          apiClient.setToken(authData.token);
-
-          dispatch({
-            type: 'LOGIN_SUCCESS',
-            payload: {
-              user: result.data.user || authData.user,
-              token: authData.token
-            }
-          });
-          console.log('✅ Sessão restaurada automaticamente');
-        } else {
-          // Token is invalid
-          apiClient.removeToken();
-          clearAuthData();
-          dispatch({ type: 'SET_LOADING', payload: false });
-        }
+      if (result.success && result.data) {
+        // Token is still valid, update user data
+        dispatch({
+          type: 'LOGIN_SUCCESS',
+          payload: {
+            user: result.data.user || authData.user,
+            token: authData.token
+          }
+        });
+        console.log('✅ Sessão restaurada automaticamente');
       } else {
-        // Token verification failed
+        // Token is invalid
+        apiClient.removeToken();
         clearAuthData();
-        dispatch({ type: 'SET_LOADING', payload: false });
       }
+    } catch (error) {
+      console.error('❌ Erro ao verificar autenticação:', error);
+      apiClient.removeToken();
+      clearAuthData();
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  // Clear error function
+  const clearError = () => {
+    dispatch({ type: 'CLEAR_ERROR' });
+  };
+
+  // Initialize auth on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  // Auto-logout on token expiration (optional - JWT handles this)
+  useEffect(() => {
+    if (state.token) {
+      try {
+        // Decode JWT to check expiration
+        const payload = JSON.parse(atob(state.token.split('.')[1]));
+        const expirationTime = payload.exp * 1000; // Convert to milliseconds
+        const currentTime = Date.now();
+        const timeUntilExpiration = expirationTime - currentTime;
+
+        if (timeUntilExpiration <= 0) {
     } catch (error) {
       console.error('❌ Erro ao verificar autenticação:', error);
       clearAuthData();
