@@ -219,7 +219,7 @@ const Login = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDemoLogin('admin', 'admin123')}
+                  onClick={() => handleDemoLogin('admin', 'Admin123!')}
                   disabled={isLoading}
                   className="justify-start text-xs"
                 >
