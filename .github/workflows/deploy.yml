@@ -129,6 +129,13 @@ jobs:
             echo '✅ Stack anterior parada, imagens antigas removidas e portas liberadas'
           fi
 
+          # Limpar dados persistidos do banco de dados anterior
+          echo '🗑️ Limpando dados persistidos do banco anterior...'
+          rm -rf ${{ env.APP_DIR }}/backend/data/* 2>/dev/null || true
+          rm -rf ${{ env.APP_DIR }}/backend/uploads/* 2>/dev/null || true
+          rm -rf ${{ env.APP_DIR }}/backend/logs/* 2>/dev/null || true
+          echo '✅ Dados antigos limpos - banco será criado do zero'
+
           # Instalar/Atualizar Docker
           echo '🐳 Configurando Docker + Compose...'
           if ! command -v docker &> /dev/null; then

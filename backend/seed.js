@@ -56,7 +56,11 @@ async function seed() {
 
     const adminUser = await prisma.user.upsert({
       where: { email: 'admin@ferraco.com' },
-      update: {},
+      update: {
+        password: hashedPassword,
+        isActive: true,
+        roleId: adminRole.id
+      },
       create: {
         email: 'admin@ferraco.com',
         name: 'Admin Ferraco',
@@ -80,7 +84,11 @@ async function seed() {
 
     const testUser = await prisma.user.upsert({
       where: { email: 'user@ferraco.com' },
-      update: {},
+      update: {
+        password: userPassword,
+        isActive: true,
+        roleId: userRole.id
+      },
       create: {
         email: 'user@ferraco.com',
         name: 'Usuário Teste',
