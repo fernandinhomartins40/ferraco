@@ -284,6 +284,74 @@ class AuthService {
   }
 
   /**
+   * Altera a senha de um usuário após validar a senha atual
+   */
+  async changePassword(userId, currentPassword, newPassword) {
+    try {
+      // Buscar o usuário
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        throw new Error('Usuário não encontrado');
+      }
+
+      if (!user.isActive) {
+        throw new Error('Usuário inativo');
+      }
+
+      // Verificar senha atual
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        throw new Error('Senha atual incorreta');
+      }
+
+      // Hash da nova senha
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+      // Atualizar senha no banco
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: hashedNewPassword,
+          updatedAt: new Date()
+        },
+        include: { role: true }
+      });
+
+      // Invalidar todas as sessões ativas do usuário (forçar novo login)
+      await prisma.session.updateMany({
+        where: {
+          userId: userId,
+          expiresAt: { gt: new Date() }
+        },
+        data: {
+          expiresAt: new Date() // Expirar imediatamente
+        }
+      });
+
+      // Remover senha da resposta
+      const { password: _, ...userResponse } = updatedUser;
+
+      logger.info('Senha alterada com sucesso', {
+        userId: userId,
+        email: user.email,
+        name: user.name
+      });
+
+      return {
+        success: true,
+        message: 'Senha alterada com sucesso',
+        data: { user: userResponse }
+      };
+    } catch (error) {
+      logger.error('Error in changePassword:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Lista usuários com filtros
    */
   async listUsers(filters = {}) {

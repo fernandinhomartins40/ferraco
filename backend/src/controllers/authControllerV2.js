@@ -480,6 +480,74 @@ class AuthControllerV2 {
   }
 
   /**
+   * Alterar senha do usuário
+   */
+  async changePassword(req, res) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      // Validar campos obrigatórios
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Senha atual e nova senha são obrigatórias',
+          error: 'MISSING_PASSWORDS'
+        });
+      }
+
+      // Validar força da nova senha
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nova senha deve ter pelo menos 8 caracteres',
+          error: 'WEAK_PASSWORD'
+        });
+      }
+
+      // Verificar se a nova senha é diferente da atual
+      if (currentPassword === newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'A nova senha deve ser diferente da senha atual',
+          error: 'SAME_PASSWORD'
+        });
+      }
+
+      const result = await authService.changePassword(
+        req.user.id,
+        currentPassword,
+        newPassword
+      );
+
+      logger.info('Senha alterada via changePassword', {
+        userId: req.user.id,
+        email: req.user.email,
+        ip: req.ip
+      });
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result.data
+      });
+
+    } catch (error) {
+      logger.error('Erro ao alterar senha', {
+        error: error.message,
+        userId: req.user?.id,
+        ip: req.ip
+      });
+
+      const statusCode = error.message.includes('Senha atual incorreta') ? 400 : 500;
+      res.status(statusCode).json({
+        success: false,
+        message: error.message || 'Erro ao alterar senha',
+        error: 'CHANGE_PASSWORD_ERROR'
+      });
+    }
+  }
+
+  /**
    * Solicitar recuperação de senha
    */
   async requestPasswordReset(req, res) {

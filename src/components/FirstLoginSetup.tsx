@@ -34,7 +34,7 @@ interface SetupFormData {
 }
 
 const FirstLoginSetup = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
@@ -161,13 +161,27 @@ const FirstLoginSetup = () => {
     setError('');
 
     try {
-      // Simular verificação da senha atual e alteração
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Chamar API real para alterar senha
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+        }),
+      });
 
-      // Mock: verificar se a senha atual é uma das senhas demo
-      const demoPasswords = ['Admin123!', 'Vend123!', 'Cons123!'];
-      if (!demoPasswords.includes(formData.currentPassword)) {
-        throw new Error('Senha atual incorreta');
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao alterar senha');
+      }
+
+      if (!result.success) {
+        throw new Error(result.message || 'Falha na alteração da senha');
       }
 
       // Log da alteração de senha no primeiro login
@@ -215,8 +229,28 @@ const FirstLoginSetup = () => {
     setError('');
 
     try {
-      // Simular atualização do perfil
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Chamar API real para atualizar perfil
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao atualizar perfil');
+      }
+
+      if (!result.success) {
+        throw new Error(result.message || 'Falha na atualização do perfil');
+      }
 
       // Log da conclusão do setup
       securityLogger.logEvent(

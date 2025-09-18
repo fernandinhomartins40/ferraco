@@ -597,6 +597,197 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/auth/change-password - Alterar senha do usuário
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validar campos obrigatórios
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Senha atual e nova senha são obrigatórias',
+        error: 'MISSING_PASSWORDS'
+      });
+    }
+
+    // Validar força da nova senha
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nova senha deve ter pelo menos 8 caracteres',
+        error: 'WEAK_PASSWORD'
+      });
+    }
+
+    // Verificar se a nova senha é diferente da atual
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'A nova senha deve ser diferente da senha atual',
+        error: 'SAME_PASSWORD'
+      });
+    }
+
+    // Buscar o usuário
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuário não encontrado',
+        error: 'USER_NOT_FOUND'
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário inativo',
+        error: 'USER_INACTIVE'
+      });
+    }
+
+    // Verificar senha atual
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Senha atual incorreta',
+        error: 'INVALID_CURRENT_PASSWORD'
+      });
+    }
+
+    // Hash da nova senha
+    const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+    // Atualizar senha no banco
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.userId },
+      data: {
+        password: hashedNewPassword,
+        updatedAt: new Date()
+      },
+      include: { role: true }
+    });
+
+    // Invalidar todas as sessões ativas do usuário (exceto a atual)
+    const authHeader = req.headers['authorization'];
+    const currentToken = authHeader && authHeader.split(' ')[1];
+
+    await prisma.session.deleteMany({
+      where: {
+        userId: req.user.userId,
+        token: { not: currentToken }
+      }
+    });
+
+    console.log(`✅ Senha alterada: ${user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Senha alterada com sucesso',
+      data: {
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          role: updatedUser.role.name
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: 'CHANGE_PASSWORD_ERROR'
+    });
+  }
+});
+
+// PUT /api/auth/me - Atualizar perfil do usuário
+app.put('/api/auth/me', authenticateToken, async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    // Validar campos obrigatórios
+    if (!name || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nome e email são obrigatórios',
+        error: 'MISSING_FIELDS'
+      });
+    }
+
+    // Validar formato do email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email deve ter um formato válido',
+        error: 'INVALID_EMAIL'
+      });
+    }
+
+    // Verificar se o email já está em uso por outro usuário
+    if (email !== req.user.email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Este email já está em uso por outro usuário',
+          error: 'EMAIL_ALREADY_EXISTS'
+        });
+      }
+    }
+
+    // Atualizar dados do usuário
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.userId },
+      data: {
+        name,
+        email,
+        updatedAt: new Date()
+      },
+      include: { role: true }
+    });
+
+    console.log(`✅ Perfil atualizado: ${updatedUser.email}`);
+
+    res.json({
+      success: true,
+      message: 'Perfil atualizado com sucesso',
+      data: {
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          role: updatedUser.role.name,
+          permissions: JSON.parse(updatedUser.role.permissions || '[]'),
+          avatar: updatedUser.avatar,
+          lastLogin: updatedUser.lastLogin,
+          preferences: JSON.parse(updatedUser.preferences || '{}')
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar perfil:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: 'UPDATE_PROFILE_ERROR'
+    });
+  }
+});
+
 // ========================================
 // DASHBOARD METRICS
 // ========================================
