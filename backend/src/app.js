@@ -194,6 +194,74 @@ app.get('/api/leads/stats', authenticateToken, requirePermission('leads:read'), 
 });
 
 // ========================================
+// DEBUG ENDPOINT (TEMPORÁRIO)
+// ========================================
+
+// GET /api/debug - Debug temporário para diagnosticar problema
+app.get('/api/debug', async (req, res) => {
+  try {
+    console.log('🔍 Endpoint debug chamado');
+
+    // Verificar variáveis de ambiente
+    const envVars = {
+      NODE_ENV: process.env.NODE_ENV,
+      DATABASE_URL: process.env.DATABASE_URL,
+      JWT_SECRET: !!process.env.JWT_SECRET,
+      JWT_SECRET_LENGTH: process.env.JWT_SECRET?.length,
+      PORT: process.env.PORT
+    };
+
+    // Verificar conexão com banco
+    const userCount = await prisma.user.count();
+    const roleCount = await prisma.userRole.count();
+
+    // Verificar usuário admin específico
+    const adminUser = await prisma.user.findUnique({
+      where: { email: 'admin@ferraco.com' },
+      include: { role: true }
+    });
+
+    // Informações de debug
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      environment: envVars,
+      database: {
+        connected: true,
+        userCount,
+        roleCount,
+        adminExists: !!adminUser,
+        adminInfo: adminUser ? {
+          id: adminUser.id,
+          email: adminUser.email,
+          isActive: adminUser.isActive,
+          hasRole: !!adminUser.role,
+          roleName: adminUser.role?.name,
+          hasPermissions: !!adminUser.role?.permissions
+        } : null
+      }
+    };
+
+    console.log('🔍 Debug info:', JSON.stringify(debugInfo, null, 2));
+
+    res.json({
+      success: true,
+      debug: debugInfo
+    });
+
+  } catch (error) {
+    console.error('❌ Erro no debug:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro no debug',
+      details: {
+        message: error.message,
+        code: error.code
+      }
+    });
+  }
+});
+
+// ========================================
 // ROTAS AUTH BÁSICAS
 // ========================================
 
