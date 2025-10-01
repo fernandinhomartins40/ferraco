@@ -1,85 +1,77 @@
 import { Communication, MessageTemplate, WhatsAppConfig } from '@/types/lead';
+import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
 
-const COMMUNICATIONS_STORAGE_KEY = 'ferraco_communications';
-const TEMPLATES_STORAGE_KEY = 'ferraco_message_templates';
-const WHATSAPP_CONFIG_KEY = 'ferraco_whatsapp_config';
+interface CommunicationStorageItem extends StorageItem {
+  type: Communication['type'];
+  content: string;
+  direction: Communication['direction'];
+  status: Communication['status'];
+  templateId?: string;
+  metadata?: Record<string, any>;
+  leadId: string;
+  timestamp: string;
+}
 
-export const communicationStorage = {
+interface TemplateStorageItem extends StorageItem {
+  name: string;
+  type: MessageTemplate['type'];
+  content: string;
+  variables: string[];
+  isActive: boolean;
+  category?: string;
+}
+
+class CommunicationStorageClass extends BaseStorage<CommunicationStorageItem> {
+  private templateStorage: BaseStorage<TemplateStorageItem>;
+  private configKey = 'ferraco_whatsapp_config';
+
+  constructor() {
+    super({ key: 'ferraco_communications', enableDebug: false });
+    this.templateStorage = new BaseStorage<TemplateStorageItem>({
+      key: 'ferraco_message_templates',
+      enableDebug: false
+    });
+    this.initializeDefaultTemplates();
+  }
+
   // Communications management
   getCommunications(leadId?: string): Communication[] {
-    try {
-      const communications = localStorage.getItem(COMMUNICATIONS_STORAGE_KEY);
-      const allComms = communications ? JSON.parse(communications) : [];
-
-      if (leadId) {
-        return allComms.filter((comm: Communication & { leadId: string }) => comm.leadId === leadId);
-      }
-
-      return allComms;
-    } catch (error) {
-      console.error('Error reading communications from localStorage:', error);
-      return [];
+    if (leadId) {
+      return this.filter(comm => comm.leadId === leadId);
     }
-  },
+    return this.getAll();
+  }
 
   saveCommunications(communications: (Communication & { leadId: string })[]): void {
-    try {
-      localStorage.setItem(COMMUNICATIONS_STORAGE_KEY, JSON.stringify(communications));
-    } catch (error) {
-      console.error('Error saving communications to localStorage:', error);
-    }
-  },
+    this.data = communications as CommunicationStorageItem[];
+    this.save();
+  }
 
   addCommunication(leadId: string, communication: Omit<Communication, 'id' | 'timestamp'>): Communication {
-    const newCommunication: Communication & { leadId: string } = {
+    return this.add({
       ...communication,
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
       leadId,
-    };
-
-    const communications = this.getCommunications();
-    communications.push(newCommunication);
-    this.saveCommunications(communications);
-
-    return newCommunication;
-  },
+      timestamp: new Date().toISOString(),
+    });
+  }
 
   updateCommunicationStatus(communicationId: string, status: Communication['status']): boolean {
-    const communications = this.getCommunications();
-    const commIndex = communications.findIndex(comm => comm.id === communicationId);
-
-    if (commIndex === -1) return false;
-
-    communications[commIndex] = { ...communications[commIndex], status };
-    this.saveCommunications(communications);
-    return true;
-  },
+    return this.update(communicationId, { status }) !== null;
+  }
 
   // Message Templates management
   getTemplates(type?: MessageTemplate['type']): MessageTemplate[] {
-    try {
-      const templates = localStorage.getItem(TEMPLATES_STORAGE_KEY);
-      const allTemplates = templates ? JSON.parse(templates) : this.getDefaultTemplates();
-
-      if (type) {
-        return allTemplates.filter((template: MessageTemplate) => template.type === type);
-      }
-
-      return allTemplates;
-    } catch (error) {
-      console.error('Error reading templates from localStorage:', error);
-      return this.getDefaultTemplates();
+    const templates = this.templateStorage.getAll();
+    if (type) {
+      return templates.filter(template => template.type === type);
     }
-  },
+    return templates;
+  }
 
   saveTemplates(templates: MessageTemplate[]): void {
-    try {
-      localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
-    } catch (error) {
-      console.error('Error saving templates to localStorage:', error);
-    }
-  },
+    this.templateStorage.data = templates as TemplateStorageItem[];
+    this.templateStorage.save();
+  }
 
   getDefaultTemplates(): MessageTemplate[] {
     return [
@@ -124,63 +116,38 @@ export const communicationStorage = {
         category: 'promotional',
       },
     ];
-  },
+  }
 
   createTemplate(template: Omit<MessageTemplate, 'id' | 'createdAt'>): MessageTemplate {
-    const newTemplate: MessageTemplate = {
-      ...template,
-      id: `template-${crypto.randomUUID()}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    const templates = this.getTemplates();
-    templates.push(newTemplate);
-    this.saveTemplates(templates);
-    return newTemplate;
-  },
+    return this.templateStorage.add(template);
+  }
 
   updateTemplate(templateId: string, updates: Partial<MessageTemplate>): boolean {
-    const templates = this.getTemplates();
-    const templateIndex = templates.findIndex(template => template.id === templateId);
-
-    if (templateIndex === -1) return false;
-
-    templates[templateIndex] = { ...templates[templateIndex], ...updates };
-    this.saveTemplates(templates);
-    return true;
-  },
+    return this.templateStorage.update(templateId, updates) !== null;
+  }
 
   deleteTemplate(templateId: string): boolean {
-    const templates = this.getTemplates();
-    const filteredTemplates = templates.filter(template => template.id !== templateId);
-
-    if (filteredTemplates.length === templates.length) return false;
-
-    this.saveTemplates(filteredTemplates);
-    return true;
-  },
+    return this.templateStorage.delete(templateId);
+  }
 
   // WhatsApp Configuration
   getWhatsAppConfig(): WhatsAppConfig {
     try {
-      const config = localStorage.getItem(WHATSAPP_CONFIG_KEY);
-      return config ? JSON.parse(config) : {
-        isEnabled: false,
-        isConnected: false,
-      };
+      const config = localStorage.getItem(this.configKey);
+      return config ? JSON.parse(config) : { isEnabled: false, isConnected: false };
     } catch (error) {
       console.error('Error reading WhatsApp config from localStorage:', error);
       return { isEnabled: false, isConnected: false };
     }
-  },
+  }
 
   saveWhatsAppConfig(config: WhatsAppConfig): void {
     try {
-      localStorage.setItem(WHATSAPP_CONFIG_KEY, JSON.stringify(config));
+      localStorage.setItem(this.configKey, JSON.stringify(config));
     } catch (error) {
       console.error('Error saving WhatsApp config to localStorage:', error);
     }
-  },
+  }
 
   // Template variable processing
   processTemplate(templateContent: string, variables: Record<string, string>): string {
@@ -192,7 +159,7 @@ export const communicationStorage = {
     });
 
     return processedContent;
-  },
+  }
 
   // Extract variables from template
   extractVariables(templateContent: string): string[] {
@@ -207,7 +174,7 @@ export const communicationStorage = {
     }
 
     return variables;
-  },
+  }
 
   // Send WhatsApp message (simulation)
   async sendWhatsAppMessage(
@@ -224,10 +191,8 @@ export const communicationStorage = {
       };
     }
 
-    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Simulate success/failure (90% success rate)
     const success = Math.random() > 0.1;
 
     if (success) {
@@ -241,7 +206,7 @@ export const communicationStorage = {
         error: 'Falha no envio da mensagem',
       };
     }
-  },
+  }
 
   // Bulk message sending
   async sendBulkMessages(
@@ -275,7 +240,6 @@ export const communicationStorage = {
         ...result,
       });
 
-      // Add communication record
       this.addCommunication(recipient.leadId, {
         type: 'whatsapp',
         content: processedMessage,
@@ -285,12 +249,11 @@ export const communicationStorage = {
         metadata: { bulkSend: true, variables },
       });
 
-      // Small delay between messages
       await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     return results;
-  },
+  }
 
   // Get communication statistics
   getCommunicationStats(leadId?: string): {
@@ -321,13 +284,18 @@ export const communicationStorage = {
       byStatus,
       recentActivity,
     };
-  },
+  }
 
   // Initialize default templates
   initializeDefaultTemplates(): void {
-    const existingTemplates = this.getTemplates();
-    if (existingTemplates.length === 0) {
-      this.saveTemplates(this.getDefaultTemplates());
+    if (this.templateStorage.count() === 0) {
+      const defaultTemplates = this.getDefaultTemplates();
+      defaultTemplates.forEach(template => {
+        this.templateStorage.data.push(template as TemplateStorageItem);
+      });
+      this.templateStorage.save();
     }
-  },
-};
+  }
+}
+
+export const communicationStorage = new CommunicationStorageClass();
