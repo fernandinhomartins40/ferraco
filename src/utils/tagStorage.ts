@@ -1,28 +1,19 @@
 import { TagDefinition, TagRule, TagStats } from '@/types/lead';
+import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
 
-const TAGS_STORAGE_KEY = 'ferraco_tags';
-const TAG_RULES_STORAGE_KEY = 'ferraco_tag_rules';
+interface TagStorageItem extends StorageItem {
+  name: string;
+  color: string;
+  description?: string;
+  isSystem?: boolean;
+  rules?: TagRule[];
+}
 
-export const tagStorage = {
-  // Get all tag definitions
-  getTags(): TagDefinition[] {
-    try {
-      const tags = localStorage.getItem(TAGS_STORAGE_KEY);
-      return tags ? JSON.parse(tags) : this.getDefaultTags();
-    } catch (error) {
-      console.error('Error reading tags from localStorage:', error);
-      return this.getDefaultTags();
-    }
-  },
-
-  // Save tags to localStorage
-  saveTags(tags: TagDefinition[]): void {
-    try {
-      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
-    } catch (error) {
-      console.error('Error saving tags to localStorage:', error);
-    }
-  },
+class TagStorage extends BaseStorage<TagStorageItem> {
+  constructor() {
+    super({ key: 'ferraco_tags', enableDebug: false });
+    this.initializeDefaultTags();
+  }
 
   // Get default system tags
   getDefaultTags(): TagDefinition[] {
@@ -68,67 +59,44 @@ export const tagStorage = {
         isSystem: true,
       },
     ];
-  },
+  }
 
   // Create a new tag
   createTag(name: string, color: string, description?: string, rules?: TagRule[]): TagDefinition {
-    const newTag: TagDefinition = {
-      id: `tag-${crypto.randomUUID()}`,
+    return this.add({
       name: name.trim(),
       color,
       description: description?.trim(),
-      createdAt: new Date().toISOString(),
       isSystem: false,
       rules: rules || [],
-    };
-
-    const tags = this.getTags();
-    tags.push(newTag);
-    this.saveTags(tags);
-    return newTag;
-  },
+    });
+  }
 
   // Update a tag
   updateTag(tagId: string, updates: Partial<TagDefinition>): boolean {
-    const tags = this.getTags();
-    const tagIndex = tags.findIndex(tag => tag.id === tagId);
-
-    if (tagIndex === -1) return false;
+    const tag = this.getById(tagId);
+    if (!tag) return false;
 
     // Don't allow updating system tags' core properties
-    if (tags[tagIndex].isSystem) {
+    if (tag.isSystem) {
       delete updates.name;
-      delete updates.isSystem;
+      delete (updates as any).isSystem;
     }
 
-    tags[tagIndex] = { ...tags[tagIndex], ...updates };
-    this.saveTags(tags);
-    return true;
-  },
+    return this.update(tagId, updates) !== null;
+  }
 
   // Delete a tag
   deleteTag(tagId: string): boolean {
-    const tags = this.getTags();
-    const tag = tags.find(t => t.id === tagId);
-
+    const tag = this.getById(tagId);
     if (!tag || tag.isSystem) return false;
-
-    const filteredTags = tags.filter(tag => tag.id !== tagId);
-    this.saveTags(filteredTags);
-    return true;
-  },
-
-  // Get tag by ID
-  getTagById(tagId: string): TagDefinition | null {
-    const tags = this.getTags();
-    return tags.find(tag => tag.id === tagId) || null;
-  },
+    return this.delete(tagId);
+  }
 
   // Get tags by color
   getTagsByColor(color: string): TagDefinition[] {
-    const tags = this.getTags();
-    return tags.filter(tag => tag.color === color);
-  },
+    return this.filter(tag => tag.color === color);
+  }
 
   // Get predefined colors
   getPredefinedColors(): { name: string; value: string }[] {
@@ -144,11 +112,11 @@ export const tagStorage = {
       { name: 'Cinza', value: '#6b7280' },
       { name: 'Preto', value: '#374151' },
     ];
-  },
+  }
 
   // Get tag statistics
   getTagStats(): TagStats[] {
-    const tags = this.getTags();
+    const tags = this.getAll();
     const leadStorage = (window as any).leadStorage;
 
     if (!leadStorage) return [];
@@ -168,16 +136,14 @@ export const tagStorage = {
         ? (convertedLeads.length / leadsWithTag.length) * 100
         : 0;
 
-      // Calculate average time to conversion
       const averageTime = convertedLeads.length > 0
         ? convertedLeads.reduce((sum: number, lead: any) => {
             const created = new Date(lead.createdAt);
             const updated = new Date(lead.updatedAt);
             return sum + (updated.getTime() - created.getTime());
-          }, 0) / convertedLeads.length / (1000 * 60 * 60 * 24) // days
+          }, 0) / convertedLeads.length / (1000 * 60 * 60 * 24)
         : 0;
 
-      // Simple trend calculation (comparing last 7 days vs previous 7 days)
       const now = new Date();
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -204,7 +170,7 @@ export const tagStorage = {
         trend,
       };
     });
-  },
+  }
 
   // Apply automatic tag rules
   applyAutomaticTags(leadId: string, context: {
@@ -213,7 +179,7 @@ export const tagStorage = {
     content?: string;
     timeInStatus?: number;
   }): string[] {
-    const tags = this.getTags();
+    const tags = this.getAll();
     const appliedTags: string[] = [];
 
     tags.forEach(tag => {
@@ -244,20 +210,31 @@ export const tagStorage = {
     });
 
     return appliedTags;
-  },
+  }
 
   // Initialize default tags if none exist
   initializeDefaultTags(): void {
-    const existingTags = this.getTags();
-    if (existingTags.length === 0) {
-      this.saveTags(this.getDefaultTags());
+    if (this.count() === 0) {
+      const defaultTags = this.getDefaultTags();
+      defaultTags.forEach(tag => {
+        this.data.push(tag as TagStorageItem);
+      });
+      this.save();
     }
-  },
+  }
 
-  // Initialize system tags (alias for initializeDefaultTags)
-  initializeSystemTags(): void {
+  // Legacy API compatibility
+  getTags = () => this.getAll();
+  saveTags = (tags: TagDefinition[]) => {
+    this.data = tags as TagStorageItem[];
+    this.save();
+  };
+  getTagById = (tagId: string) => this.getById(tagId);
+  initializeSystemTags = () => {
     console.log('🏷️ Inicializando tags do sistema...');
     this.initializeDefaultTags();
     console.log('✅ Tags do sistema inicializadas');
-  },
-};
+  };
+}
+
+export const tagStorage = new TagStorage();
