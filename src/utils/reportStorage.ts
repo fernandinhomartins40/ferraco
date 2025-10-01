@@ -1,27 +1,33 @@
 import { Report, ReportFilters, ReportWidget, ScheduleConfig, DashboardConfig, DashboardWidget } from '@/types/lead';
+import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
 
-const REPORTS_STORAGE_KEY = 'ferraco_reports';
-const DASHBOARD_CONFIGS_KEY = 'ferraco_dashboard_configs';
+interface ReportStorageItem extends StorageItem {
+  name: string;
+  type: Report['type'];
+  filters: ReportFilters;
+  widgets: ReportWidget[];
+  isScheduled: boolean;
+  schedule?: ScheduleConfig;
+}
 
-export const reportStorage = {
-  // Reports management
-  getReports(): Report[] {
-    try {
-      const reports = localStorage.getItem(REPORTS_STORAGE_KEY);
-      return reports ? JSON.parse(reports) : this.getDefaultReports();
-    } catch (error) {
-      console.error('Error reading reports from localStorage:', error);
-      return this.getDefaultReports();
-    }
-  },
+interface DashboardStorageItem extends StorageItem {
+  name: string;
+  widgets: DashboardWidget[];
+  layout: DashboardConfig['layout'];
+  isDefault: boolean;
+}
 
-  saveReports(reports: Report[]): void {
-    try {
-      localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(reports));
-    } catch (error) {
-      console.error('Error saving reports to localStorage:', error);
-    }
-  },
+class ReportStorageClass extends BaseStorage<ReportStorageItem> {
+  private dashboardStorage: BaseStorage<DashboardStorageItem>;
+
+  constructor() {
+    super({ key: 'ferraco_reports', enableDebug: false });
+    this.dashboardStorage = new BaseStorage<DashboardStorageItem>({
+      key: 'ferraco_dashboard_configs',
+      enableDebug: false
+    });
+    this.initializeDefaults();
+  }
 
   getDefaultReports(): Report[] {
     const now = new Date();
@@ -130,45 +136,23 @@ export const reportStorage = {
         createdAt: new Date().toISOString(),
       },
     ];
-  },
+  }
 
   createReport(report: Omit<Report, 'id' | 'createdAt'>): Report {
-    const newReport: Report = {
-      ...report,
-      id: `report-${crypto.randomUUID()}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    const reports = this.getReports();
-    reports.push(newReport);
-    this.saveReports(reports);
-    return newReport;
-  },
+    return this.add(report);
+  }
 
   updateReport(reportId: string, updates: Partial<Report>): boolean {
-    const reports = this.getReports();
-    const reportIndex = reports.findIndex(report => report.id === reportId);
-
-    if (reportIndex === -1) return false;
-
-    reports[reportIndex] = { ...reports[reportIndex], ...updates };
-    this.saveReports(reports);
-    return true;
-  },
+    return this.update(reportId, updates) !== null;
+  }
 
   deleteReport(reportId: string): boolean {
-    const reports = this.getReports();
-    const filteredReports = reports.filter(report => report.id !== reportId);
-
-    if (filteredReports.length === reports.length) return false;
-
-    this.saveReports(filteredReports);
-    return true;
-  },
+    return this.delete(reportId);
+  }
 
   // Generate report data
   generateReportData(reportId: string): any {
-    const report = this.getReports().find(r => r.id === reportId);
+    const report = this.getById(reportId);
     if (!report) return null;
 
     const leadStorage = (window as any).leadStorage;
@@ -191,55 +175,42 @@ export const reportStorage = {
       default:
         return this.generateCustomReportData(filteredLeads, report);
     }
-  },
+  }
 
   // Apply filters to leads
   applyFilters(leads: any[], filters: ReportFilters): any[] {
     let filteredLeads = [...leads];
 
-    // Date range filter
     if (filters.dateRange) {
       const startDate = new Date(filters.dateRange.start);
       const endDate = new Date(filters.dateRange.end);
-
       filteredLeads = filteredLeads.filter(lead => {
         const leadDate = new Date(lead.createdAt);
         return leadDate >= startDate && leadDate <= endDate;
       });
     }
 
-    // Status filter
     if (filters.status && filters.status.length > 0) {
-      filteredLeads = filteredLeads.filter(lead =>
-        filters.status!.includes(lead.status)
-      );
+      filteredLeads = filteredLeads.filter(lead => filters.status!.includes(lead.status));
     }
 
-    // Tags filter
     if (filters.tags && filters.tags.length > 0) {
       filteredLeads = filteredLeads.filter(lead =>
         lead.tags && filters.tags!.some(tag => lead.tags.includes(tag))
       );
     }
 
-    // Source filter
     if (filters.source && filters.source.length > 0) {
-      filteredLeads = filteredLeads.filter(lead =>
-        filters.source!.includes(lead.source || 'unknown')
-      );
+      filteredLeads = filteredLeads.filter(lead => filters.source!.includes(lead.source || 'unknown'));
     }
 
-    // Priority filter
     if (filters.priority && filters.priority.length > 0) {
-      filteredLeads = filteredLeads.filter(lead =>
-        filters.priority!.includes(lead.priority || 'medium')
-      );
+      filteredLeads = filteredLeads.filter(lead => filters.priority!.includes(lead.priority || 'medium'));
     }
 
     return filteredLeads;
-  },
+  }
 
-  // Generate leads overview data
   generateLeadsOverviewData(leads: any[]): any {
     const total = leads.length;
     const byStatus = leads.reduce((acc, lead) => {
@@ -250,7 +221,6 @@ export const reportStorage = {
     const converted = leads.filter(lead => lead.status === 'concluido').length;
     const conversionRate = total > 0 ? (converted / total) * 100 : 0;
 
-    // Group by date for timeline
     const timelineData = leads.reduce((acc, lead) => {
       const date = new Date(lead.createdAt).toISOString().split('T')[0];
       acc[date] = (acc[date] || 0) + 1;
@@ -274,9 +244,8 @@ export const reportStorage = {
         in_progress_leads: leads.filter(lead => lead.status === 'em_andamento').length,
       },
     };
-  },
+  }
 
-  // Generate conversion funnel data
   generateConversionFunnelData(leads: any[]): any {
     const stages = [
       { name: 'Leads Capturados', count: leads.length },
@@ -285,12 +254,11 @@ export const reportStorage = {
       { name: 'Convertidos', count: leads.filter(lead => lead.status === 'concluido').length },
     ];
 
-    // Calculate conversion times
     const convertedLeads = leads.filter(lead => lead.status === 'concluido');
     const conversionTimes = convertedLeads.map(lead => {
       const created = new Date(lead.createdAt);
       const updated = new Date(lead.updatedAt);
-      return (updated.getTime() - created.getTime()) / (1000 * 60 * 60 * 24); // days
+      return (updated.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
     });
 
     const avgConversionTime = conversionTimes.length > 0
@@ -305,15 +273,12 @@ export const reportStorage = {
         conversion_rate: stages.length > 0 ? `${Math.round((stages[3].count / stages[0].count) * 100)}%` : '0%',
       },
     };
-  },
+  }
 
-  // Generate tag performance data
   generateTagPerformanceData(leads: any[], tagStorage: any): any {
     if (!tagStorage) return { tagStats: [] };
 
     const tagStats = tagStorage.getTagStats();
-
-    // Enhance with additional metrics
     const enhancedStats = tagStats.map((stat: any) => {
       const leadsWithTag = leads.filter(lead =>
         lead.tags && lead.tags.includes(stat.tagName.toLowerCase())
@@ -327,24 +292,16 @@ export const reportStorage = {
       };
     });
 
-    return {
-      tagStats: enhancedStats,
-    };
-  },
+    return { tagStats: enhancedStats };
+  }
 
-  // Generate automation statistics
   generateAutomationStatsData(): any {
     const automationStorage = (window as any).automationStorage;
     if (!automationStorage) return { stats: null };
+    return { stats: automationStorage.getAutomationStats() };
+  }
 
-    return {
-      stats: automationStorage.getAutomationStats(),
-    };
-  },
-
-  // Generate custom report data
   generateCustomReportData(leads: any[], report: Report): any {
-    // This is a flexible function for custom reports
     const data: any = {
       leads,
       summary: {
@@ -356,7 +313,6 @@ export const reportStorage = {
       },
     };
 
-    // Process each widget's data requirements
     report.widgets.forEach(widget => {
       switch (widget.config.metric) {
         case 'total_leads':
@@ -366,18 +322,16 @@ export const reportStorage = {
           const converted = leads.filter(lead => lead.status === 'concluido').length;
           data[widget.id] = leads.length > 0 ? `${Math.round((converted / leads.length) * 100)}%` : '0%';
           break;
-        // Add more metric calculations as needed
       }
     });
 
     return data;
-  },
+  }
 
-  // Export report to different formats
   async exportReport(reportId: string, format: 'pdf' | 'excel' | 'json' | 'csv'): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       const reportData = this.generateReportData(reportId);
-      const report = this.getReports().find(r => r.id === reportId);
+      const report = this.getById(reportId);
 
       if (!reportData || !report) {
         return { success: false, error: 'Relatório não encontrado' };
@@ -407,8 +361,6 @@ export const reportStorage = {
 
         case 'excel':
         case 'pdf':
-          // These would require additional libraries
-          // For now, return JSON format
           return {
             success: false,
             error: `Formato ${format} não implementado ainda`,
@@ -420,18 +372,15 @@ export const reportStorage = {
     } catch (error) {
       return { success: false, error: `Erro ao exportar: ${error}` };
     }
-  },
+  }
 
-  // Convert report data to CSV
   convertToCSV(data: any, report: Report): string {
     const lines: string[] = [];
 
-    // Add report header
     lines.push(`Relatório: ${report.name}`);
     lines.push(`Gerado em: ${new Date().toLocaleString('pt-BR')}`);
     lines.push('');
 
-    // Add metrics if available
     if (data.metrics) {
       lines.push('Métricas:');
       Object.entries(data.metrics).forEach(([key, value]) => {
@@ -440,7 +389,6 @@ export const reportStorage = {
       lines.push('');
     }
 
-    // Add leads data if available
     if (data.leads && Array.isArray(data.leads)) {
       lines.push('Dados dos Leads:');
       lines.push('Nome,Telefone,Status,Criado em,Tags');
@@ -453,9 +401,8 @@ export const reportStorage = {
     }
 
     return lines.join('\n');
-  },
+  }
 
-  // Download report file
   downloadReport(filename: string, content: string, mimeType: string): void {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -470,26 +417,17 @@ export const reportStorage = {
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
-  },
+  }
 
   // Dashboard configurations
   getDashboardConfigs(): DashboardConfig[] {
-    try {
-      const configs = localStorage.getItem(DASHBOARD_CONFIGS_KEY);
-      return configs ? JSON.parse(configs) : this.getDefaultDashboardConfigs();
-    } catch (error) {
-      console.error('Error reading dashboard configs from localStorage:', error);
-      return this.getDefaultDashboardConfigs();
-    }
-  },
+    return this.dashboardStorage.getAll();
+  }
 
   saveDashboardConfigs(configs: DashboardConfig[]): void {
-    try {
-      localStorage.setItem(DASHBOARD_CONFIGS_KEY, JSON.stringify(configs));
-    } catch (error) {
-      console.error('Error saving dashboard configs to localStorage:', error);
-    }
-  },
+    this.dashboardStorage.data = configs as DashboardStorageItem[];
+    this.dashboardStorage.save();
+  }
 
   getDefaultDashboardConfigs(): DashboardConfig[] {
     return [
@@ -548,44 +486,42 @@ export const reportStorage = {
         createdAt: new Date().toISOString(),
       },
     ];
-  },
+  }
 
   createDashboardConfig(config: Omit<DashboardConfig, 'id' | 'createdAt'>): DashboardConfig {
-    const newConfig: DashboardConfig = {
-      ...config,
-      id: `dashboard-${crypto.randomUUID()}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    const configs = this.getDashboardConfigs();
-    configs.push(newConfig);
-    this.saveDashboardConfigs(configs);
-    return newConfig;
-  },
+    return this.dashboardStorage.add(config);
+  }
 
   updateDashboardConfig(configId: string, updates: Partial<DashboardConfig>): boolean {
-    const configs = this.getDashboardConfigs();
-    const configIndex = configs.findIndex(config => config.id === configId);
+    return this.dashboardStorage.update(configId, updates) !== null;
+  }
 
-    if (configIndex === -1) return false;
-
-    configs[configIndex] = { ...configs[configIndex], ...updates };
-    this.saveDashboardConfigs(configs);
-    return true;
-  },
-
-  // Initialize default data
-  initializeDefaultReports(): void {
-    const existingReports = this.getReports();
-    if (existingReports.length === 0) {
-      this.saveReports(this.getDefaultReports());
+  initializeDefaults(): void {
+    if (this.count() === 0) {
+      const defaultReports = this.getDefaultReports();
+      defaultReports.forEach(report => {
+        this.data.push(report as ReportStorageItem);
+      });
+      this.save();
     }
-  },
 
-  initializeDefaultDashboardConfigs(): void {
-    const existingConfigs = this.getDashboardConfigs();
-    if (existingConfigs.length === 0) {
-      this.saveDashboardConfigs(this.getDefaultDashboardConfigs());
+    if (this.dashboardStorage.count() === 0) {
+      const defaultDashboards = this.getDefaultDashboardConfigs();
+      defaultDashboards.forEach(dashboard => {
+        this.dashboardStorage.data.push(dashboard as DashboardStorageItem);
+      });
+      this.dashboardStorage.save();
     }
-  },
-};
+  }
+
+  // Legacy API compatibility
+  getReports = () => this.getAll();
+  saveReports = (reports: Report[]) => {
+    this.data = reports as ReportStorageItem[];
+    this.save();
+  };
+  initializeDefaultReports = () => this.initializeDefaults();
+  initializeDefaultDashboardConfigs = () => this.initializeDefaults();
+}
+
+export const reportStorage = new ReportStorageClass();
