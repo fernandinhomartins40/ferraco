@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import {
   Target,
   TrendingUp,
@@ -129,27 +129,27 @@ const CRMPipeline = () => {
     }
   };
 
-  const getStageById = (stageId: string): PipelineStage | undefined => {
+  const getStageById = useCallback((stageId: string): PipelineStage | undefined => {
     return activePipeline?.stages.find(s => s.id === stageId);
-  };
+  }, [activePipeline]);
 
-  const getLeadsByStage = (stageId: string): Lead[] => {
+  const getLeadsByStage = useCallback((stageId: string): Lead[] => {
     return leads.filter(lead => lead.pipelineStage === stageId);
-  };
+  }, [leads]);
 
-  const getOpportunitiesByStage = (stageId: string): Opportunity[] => {
+  const getOpportunitiesByStage = useCallback((stageId: string): Opportunity[] => {
     return opportunities.filter(opp => opp.stage === stageId);
-  };
+  }, [opportunities]);
 
-  const getTotalValueByStage = (stageId: string): number => {
+  const getTotalValueByStage = useCallback((stageId: string): number => {
     return getOpportunitiesByStage(stageId).reduce((sum, opp) => sum + opp.value, 0);
-  };
+  }, [getOpportunitiesByStage]);
 
-  const getWeightedValueByStage = (stageId: string): number => {
+  const getWeightedValueByStage = useCallback((stageId: string): number => {
     return getOpportunitiesByStage(stageId).reduce((sum, opp) => {
       return sum + (opp.value * (opp.probability / 100));
     }, 0);
-  };
+  }, [getOpportunitiesByStage]);
 
   const createOpportunity = () => {
     if (!selectedLead || !newOpportunity.title) return;
@@ -220,7 +220,7 @@ const CRMPipeline = () => {
     }
   };
 
-  const addInteraction = (leadId: string, type: Interaction['type']) => {
+  const addInteraction = useCallback((leadId: string, type: Interaction['type']) => {
     const interaction = {
       type,
       title: `${type.charAt(0).toUpperCase() + type.slice(1)} - ${new Date().toLocaleDateString()}`,
@@ -237,9 +237,9 @@ const CRMPipeline = () => {
       title: 'Interação Adicionada',
       description: `${type} registrado com sucesso`,
     });
-  };
+  }, [toast]);
 
-  const calculateLeadScore = (leadId: string) => {
+  const calculateLeadScore = useCallback((leadId: string) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
@@ -258,7 +258,7 @@ const CRMPipeline = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [leads, toast]);
 
   const renderLeadCard = (lead: Lead, index: number) => {
     const leadScore = leadScoring[lead.id];
@@ -768,4 +768,4 @@ const CRMPipeline = () => {
   );
 };
 
-export default CRMPipeline;
+export default memo(CRMPipeline);

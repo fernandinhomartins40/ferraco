@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo, useCallback, useMemo } from 'react';
 import { MessageSquare, Plus, Star, StarOff, Edit, Trash2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,7 +22,7 @@ const LeadNotes = ({ lead, onLeadUpdate }: LeadNotesProps) => {
   const [editContent, setEditContent] = useState('');
   const [editImportant, setEditImportant] = useState(false);
 
-  const handleAddNote = async () => {
+  const handleAddNote = useCallback(async () => {
     if (!newNoteContent.trim()) return;
 
     const success = leadStorage.addNote(lead.id, newNoteContent, newNoteImportant);
@@ -43,15 +43,15 @@ const LeadNotes = ({ lead, onLeadUpdate }: LeadNotesProps) => {
         variant: 'destructive',
       });
     }
-  };
+  }, [lead.id, newNoteContent, newNoteImportant, onLeadUpdate, toast]);
 
-  const handleEditNote = (note: LeadNote) => {
+  const handleEditNote = useCallback((note: LeadNote) => {
     setEditingNoteId(note.id);
     setEditContent(note.content);
     setEditImportant(note.important || false);
-  };
+  }, []);
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = useCallback(async () => {
     if (!editingNoteId || !editContent.trim()) return;
 
     const success = leadStorage.updateNote(lead.id, editingNoteId, editContent, editImportant);
@@ -72,9 +72,9 @@ const LeadNotes = ({ lead, onLeadUpdate }: LeadNotesProps) => {
         variant: 'destructive',
       });
     }
-  };
+  }, [lead.id, editingNoteId, editContent, editImportant, onLeadUpdate, toast]);
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = useCallback(async (noteId: string) => {
     if (!confirm('Tem certeza que deseja excluir esta nota?')) return;
 
     const success = leadStorage.deleteNote(lead.id, noteId);
@@ -92,15 +92,15 @@ const LeadNotes = ({ lead, onLeadUpdate }: LeadNotesProps) => {
         variant: 'destructive',
       });
     }
-  };
+  }, [lead.id, onLeadUpdate, toast]);
 
-  const cancelEdit = () => {
+  const cancelEdit = useCallback(() => {
     setEditingNoteId(null);
     setEditContent('');
     setEditImportant(false);
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -108,15 +108,17 @@ const LeadNotes = ({ lead, onLeadUpdate }: LeadNotesProps) => {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }, []);
 
-  const notes = lead.notes || [];
-  const sortedNotes = [...notes].sort((a, b) => {
-    // Important notes first, then by date
-    if (a.important && !b.important) return -1;
-    if (!a.important && b.important) return 1;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const sortedNotes = useMemo(() => {
+    const notes = lead.notes || [];
+    return [...notes].sort((a, b) => {
+      // Important notes first, then by date
+      if (a.important && !b.important) return -1;
+      if (!a.important && b.important) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [lead.notes]);
 
   return (
     <Card>
@@ -125,8 +127,8 @@ const LeadNotes = ({ lead, onLeadUpdate }: LeadNotesProps) => {
           <CardTitle className="flex items-center space-x-2">
             <MessageSquare className="h-4 w-4" />
             <span>Notas</span>
-            {notes.length > 0 && (
-              <Badge variant="secondary">{notes.length}</Badge>
+            {lead.notes && lead.notes.length > 0 && (
+              <Badge variant="secondary">{lead.notes.length}</Badge>
             )}
           </CardTitle>
           <Button
@@ -291,4 +293,4 @@ const LeadNotes = ({ lead, onLeadUpdate }: LeadNotesProps) => {
   );
 };
 
-export default LeadNotes;
+export default memo(LeadNotes);

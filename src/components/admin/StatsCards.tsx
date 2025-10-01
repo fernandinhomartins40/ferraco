@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, UserPlus, Clock, CheckCircle, TrendingUp, TrendingDown, AlertTriangle, Calendar } from 'lucide-react';
@@ -8,7 +9,7 @@ interface StatsCardsProps {
 }
 
 const StatsCards = ({ stats }: StatsCardsProps) => {
-  const cards = [
+  const cards = useMemo(() => [
     {
       title: 'Total de Leads',
       value: stats.total,
@@ -67,7 +68,7 @@ const StatsCards = ({ stats }: StatsCardsProps) => {
       description: 'Precisam atenção',
       alert: stats.oldLeadsCount > 0,
     },
-  ];
+  ], [stats]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -127,4 +128,4 @@ const StatsCards = ({ stats }: StatsCardsProps) => {
   );
 };
 
-export default StatsCards;
+export default memo(StatsCards);

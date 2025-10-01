@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import {
   Users,
   Shield,
@@ -210,7 +210,7 @@ const UserManagement = () => {
     });
   };
 
-  const getFilteredUsers = () => {
+  const getFilteredUsers = useMemo(() => {
     return users.filter(user => {
       const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -221,9 +221,9 @@ const UserManagement = () => {
 
       return matchesSearch && matchesRole && matchesStatus;
     });
-  };
+  }, [users, searchTerm, filterRole, filterStatus]);
 
-  const getUserStats = () => {
+  const getUserStats = useMemo(() => {
     const totalUsers = users.length;
     const activeUsers = users.filter(u => u.isActive).length;
     const totalRoles = roles.length;
@@ -232,7 +232,7 @@ const UserManagement = () => {
       new Date(u.lastLogin) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length;
 
     return { totalUsers, activeUsers, totalRoles, totalTeams, recentLogins };
-  };
+  }, [users, roles, teams]);
 
   const availablePermissions = [
     'leads.create', 'leads.read', 'leads.update', 'leads.delete', 'leads.export',
@@ -251,7 +251,7 @@ const UserManagement = () => {
     'signatures.create', 'signatures.view', 'signatures.verify'
   ];
 
-  const stats = getUserStats();
+  const stats = getUserStats;
 
   return (
     <div className="space-y-6">
@@ -404,7 +404,7 @@ const UserManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {getFilteredUsers().map((user) => (
+                  {getFilteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -934,4 +934,4 @@ const UserManagement = () => {
   );
 };
 
-export default UserManagement;
+export default memo(UserManagement);

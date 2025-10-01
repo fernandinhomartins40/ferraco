@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import AdminLayout from '@/components/admin/AdminLayout';
 import StatsCards from '@/components/admin/StatsCards';
@@ -64,10 +64,10 @@ const AdminDashboard = () => {
     return recentLeadsData.data.slice(0, 5);
   }, [recentLeadsData]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     refetchDashboard();
     refetchLeads();
-  };
+  }, [refetchDashboard, refetchLeads]);
 
   // Loading states
   if (dashboardLoading || leadsLoading) {

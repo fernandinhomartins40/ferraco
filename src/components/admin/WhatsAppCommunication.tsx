@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { MessageSquare, Send, Users, Settings, Plus, Edit, Trash2, CheckCircle, XCircle, Clock, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ const WhatsAppCommunication = () => {
     setLeads(leadStorage.getLeads());
   };
 
-  const handleConfigUpdate = (updates: Partial<WhatsAppConfig>) => {
+  const handleConfigUpdate = useCallback((updates: Partial<WhatsAppConfig>) => {
     const newConfig = { ...config, ...updates };
     setConfig(newConfig);
     communicationStorage.saveWhatsAppConfig(newConfig);
@@ -55,9 +55,9 @@ const WhatsAppCommunication = () => {
       title: 'Configuração atualizada',
       description: 'Configurações do WhatsApp foram salvas.',
     });
-  };
+  }, [config, toast]);
 
-  const handleCreateTemplate = () => {
+  const handleCreateTemplate = useCallback(() => {
     if (!newTemplate.name.trim() || !newTemplate.content.trim()) {
       toast({
         title: 'Erro',
@@ -92,9 +92,9 @@ const WhatsAppCommunication = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [newTemplate, toast]);
 
-  const handleEditTemplate = (template: MessageTemplate) => {
+  const handleEditTemplate = useCallback((template: MessageTemplate) => {
     setSelectedTemplate(template);
     setNewTemplate({
       name: template.name,
@@ -102,9 +102,9 @@ const WhatsAppCommunication = () => {
       category: template.category,
     });
     setIsTemplateDialogOpen(true);
-  };
+  }, []);
 
-  const handleUpdateTemplate = () => {
+  const handleUpdateTemplate = useCallback(() => {
     if (!selectedTemplate) return;
 
     try {
@@ -131,9 +131,9 @@ const WhatsAppCommunication = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [selectedTemplate, newTemplate, toast]);
 
-  const handleDeleteTemplate = (template: MessageTemplate) => {
+  const handleDeleteTemplate = useCallback((template: MessageTemplate) => {
     if (!confirm(`Tem certeza que deseja excluir o template "${template.name}"?`)) return;
 
     try {
@@ -151,9 +151,9 @@ const WhatsAppCommunication = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
 
-  const handleBulkSend = async () => {
+  const handleBulkSend = useCallback(async () => {
     if (!bulkSend.templateId || bulkSend.selectedLeads.length === 0) {
       toast({
         title: 'Erro',
@@ -195,18 +195,18 @@ const WhatsAppCommunication = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [bulkSend, leads, toast]);
 
-  const formatTimestamp = (timestamp: string) => {
+  const formatTimestamp = useCallback((timestamp: string) => {
     return new Date(timestamp).toLocaleString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }, []);
 
-  const getStatusIcon = (status: Communication['status']) => {
+  const getStatusIcon = useCallback((status: Communication['status']) => {
     switch (status) {
       case 'sent':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
@@ -219,9 +219,9 @@ const WhatsAppCommunication = () => {
       default:
         return <MessageCircle className="h-4 w-4 text-gray-500" />;
     }
-  };
+  }, []);
 
-  const stats = communicationStorage.getCommunicationStats();
+  const stats = useMemo(() => communicationStorage.getCommunicationStats(), [communications]);
 
   return (
     <div className="space-y-6">
@@ -624,4 +624,4 @@ const WhatsAppCommunication = () => {
   );
 };
 
-export default WhatsAppCommunication;
+export default memo(WhatsAppCommunication);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo, useCallback, useMemo } from 'react';
 import { MoreHorizontal, Trash2, MessageSquare, Star, Phone, Tag, Eye, EyeOff } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,7 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
   const updateLeadStatusMutation = useUpdateLeadStatus();
   const deleteLeadMutation = useDeleteLead();
 
-  const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
+  const handleStatusChange = useCallback(async (leadId: string, newStatus: LeadStatus) => {
     // Converter status para formato da API
     const apiStatus = newStatus === 'novo' ? 'NOVO' :
                      newStatus === 'em_andamento' ? 'EM_ANDAMENTO' : 'CONCLUIDO';
@@ -54,9 +54,9 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
       // O toast de erro já é mostrado pelo hook
       console.error('Erro ao atualizar status:', error);
     }
-  };
+  }, [updateLeadStatusMutation, onLeadsChange]);
 
-  const handleDeleteLead = async (leadId: string, leadName: string) => {
+  const handleDeleteLead = useCallback(async (leadId: string, leadName: string) => {
     if (!confirm(`Tem certeza que deseja excluir o lead "${leadName}"?`)) {
       return;
     }
@@ -68,9 +68,9 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
       // O toast de erro já é mostrado pelo hook
       console.error('Erro ao excluir lead:', error);
     }
-  };
+  }, [deleteLeadMutation, onLeadsChange]);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -78,25 +78,25 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }, []);
 
-  const formatPhone = (phone: string) => {
+  const formatPhone = useCallback((phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 11) {
       return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
     }
     return phone;
-  };
+  }, []);
 
-  const openNotesDialog = (lead: Lead) => {
+  const openNotesDialog = useCallback((lead: Lead) => {
     setSelectedLead(lead);
     setShowNotesDialog(true);
-  };
+  }, []);
 
-  const closeNotesDialog = () => {
+  const closeNotesDialog = useCallback(() => {
     setShowNotesDialog(false);
     setSelectedLead(null);
-  };
+  }, []);
 
   if (leads.length === 0) {
     return (
@@ -317,4 +317,4 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
   );
 };
 
-export default LeadTable;
+export default memo(LeadTable);

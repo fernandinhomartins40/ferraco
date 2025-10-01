@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo, useCallback } from 'react';
 import { Tag, Plus, Edit, Trash2, Palette, BarChart3, TrendingUp, TrendingDown, Target, RefreshCw, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,12 +77,12 @@ const TagManagement = () => {
     }));
   }, [statsData]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     refetchTags();
     refetchStats();
-  };
+  }, [refetchTags, refetchStats]);
 
-  const handleCreateTag = async () => {
+  const handleCreateTag = useCallback(async () => {
     if (!newTag.name.trim()) {
       toast({
         title: 'Erro',
@@ -106,9 +106,9 @@ const TagManagement = () => {
       // O toast de erro já é mostrado pelo hook
       console.error('Erro ao criar tag:', error);
     }
-  };
+  }, [newTag, createTagMutation, refetchStats, toast]);
 
-  const handleEditTag = (tag: TagDefinition) => {
+  const handleEditTag = useCallback((tag: TagDefinition) => {
     setSelectedTag(tag);
     setNewTag({
       name: tag.name,
@@ -116,9 +116,9 @@ const TagManagement = () => {
       description: tag.description || '',
     });
     setIsEditDialogOpen(true);
-  };
+  }, []);
 
-  const handleUpdateTag = async () => {
+  const handleUpdateTag = useCallback(async () => {
     if (!selectedTag || !newTag.name.trim()) return;
 
     try {
@@ -137,9 +137,9 @@ const TagManagement = () => {
       // O toast de erro já é mostrado pelo hook
       console.error('Erro ao atualizar tag:', error);
     }
-  };
+  }, [selectedTag, newTag, updateTagMutation, refetchStats]);
 
-  const handleDeleteTag = async (tag: TagDefinition) => {
+  const handleDeleteTag = useCallback(async (tag: TagDefinition) => {
     if (tag.isSystem) {
       toast({
         title: 'Não permitido',
@@ -158,13 +158,13 @@ const TagManagement = () => {
       // O toast de erro já é mostrado pelo hook
       console.error('Erro ao excluir tag:', error);
     }
-  };
+  }, [deleteTagMutation, refetchStats, toast]);
 
-  const getTagStats = (tagName: string): TagStats | undefined => {
+  const getTagStats = useCallback((tagName: string): TagStats | undefined => {
     return tagStats.find(stat => stat.tagName === tagName);
-  };
+  }, [tagStats]);
 
-  const renderTrendIcon = (trend: 'up' | 'down' | 'stable') => {
+  const renderTrendIcon = useCallback((trend: 'up' | 'down' | 'stable') => {
     switch (trend) {
       case 'up':
         return <TrendingUp className="h-4 w-4 text-green-500" />;
@@ -173,7 +173,7 @@ const TagManagement = () => {
       default:
         return <Target className="h-4 w-4 text-gray-500" />;
     }
-  };
+  }, []);
 
   // Loading states
   if (tagsLoading || statsLoading) {
@@ -602,4 +602,4 @@ const TagManagement = () => {
   );
 };
 
-export default TagManagement;
+export default memo(TagManagement);
