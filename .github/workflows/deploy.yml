@@ -1,9 +1,9 @@
-name: 🚀 Deploy Ferraco CRM - Full Stack
+name: 🚀 Deploy Ferraco CRM - Frontend
 
-# FORCE CACHE INVALIDATION - Ferraco CRM Backend Phase 4 Complete - 2025-09-17T15:25:00Z
+# FORCE CACHE INVALIDATION - Ferraco CRM Frontend - 2025-09-29T10:00:00Z
 
 concurrency:
-  group: ferraco-deploy-fullstack
+  group: ferraco-deploy-frontend
   cancel-in-progress: true
 
 on:
@@ -15,12 +15,12 @@ env:
   VPS_HOST: '72.60.10.108'
   VPS_USER: 'root'
   APP_DIR: '/root/ferraco-crm'
-  APP_PORT: '3050'  # Porta única da aplicação (nginx proxy)
+  APP_PORT: '3050'  # Porta da aplicação frontend
   COMPOSE_PROJECT: 'ferraco'
 
 jobs:
   deploy:
-    name: 🚀 Deploy Full Stack para VPS
+    name: 🚀 Deploy Frontend para VPS
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -37,27 +37,21 @@ jobs:
 
     - name: 🔍 Pre-Deploy Validation
       run: |
-        echo "🔍 Validando estrutura do projeto FERRACO CRM FULL STACK..."
+        echo "🔍 Validando estrutura do projeto FERRACO CRM FRONTEND..."
         echo "📋 Frontend:"
-        ls -la package.json vite.config.ts Dockerfile .env.example || echo "⚠️ Arquivos frontend faltando"
+        ls -la package.json vite.config.ts .env.example || echo "⚠️ Arquivos frontend faltando"
         ls -la src/components/ src/pages/ || echo "⚠️ Estrutura React faltando"
-        echo "📋 Backend:"
-        ls -la backend/package.json backend/src/app.js backend/Dockerfile || echo "⚠️ Arquivos backend faltando"
-        ls -la backend/src/services/ backend/src/controllers/ || echo "⚠️ Estrutura backend Phase 4 faltando"
-        ls -la backend/prisma/ || echo "⚠️ Schema Prisma faltando"
         echo "📋 Docker:"
         ls -la docker-compose.yml nginx.conf || echo "⚠️ Arquivos Docker faltando"
 
-    - name: 📦 Prepare Full Stack Package
+    - name: 📦 Prepare Frontend Package
       run: |
-        echo "📦 Preparando pacote FERRACO CRM FULL STACK..."
+        echo "📦 Preparando pacote FERRACO CRM FRONTEND..."
         echo "Commit: ${{ github.sha }}"
         echo "Branch: ${{ github.ref_name }}"
-        echo "Backend: Node.js + Express + Prisma + SQLite3"
         echo "Frontend: React + Vite + TypeScript"
-        echo "Features: Auth + Audit + Backup + Health + Permissions + Security"
 
-        # Criar arquivo compacto incluindo backend
+        # Criar arquivo compacto apenas com frontend
         tar --warning=no-file-changed -czf deploy.tar.gz \
           --exclude='.git' \
           --exclude='**/node_modules' \
@@ -66,14 +60,9 @@ jobs:
           --exclude='*.log' \
           --exclude='coverage' \
           --exclude='.env.local' \
-          --exclude='backend/data' \
-          --exclude='backend/uploads' \
-          --exclude='backend/logs' \
-          --exclude='nginx-logs' \
-          --exclude='backups' \
           . || true
 
-        echo "📊 Tamanho do pacote FULL STACK:"
+        echo "📊 Tamanho do pacote FRONTEND:"
         ls -lh deploy.tar.gz
 
     - name: 📤 Upload to VPS

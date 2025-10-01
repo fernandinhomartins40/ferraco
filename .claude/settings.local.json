@@ -47,7 +47,10 @@
       "Bash(PORT=3010 node src/app.js)",
       "Bash(PORT=3011 timeout 10s node src/app.js)",
       "Bash(PORT=3012 node src/app_clean.js)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(dir:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

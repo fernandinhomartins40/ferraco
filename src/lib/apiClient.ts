@@ -27,10 +27,11 @@ export interface ApiError {
 class ApiClient {
   private client: AxiosInstance;
   private token: string | null = null;
+  private useMock: boolean = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   constructor() {
     // Base URL dinâmica baseada no ambiente
-    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+    const baseURL = this.useMock ? undefined : (import.meta.env.VITE_API_URL || 'http://localhost:3002/api');
 
     this.client = axios.create({
       baseURL,
@@ -189,26 +190,41 @@ class ApiClient {
 
   // Métodos HTTP públicos
   public async get<T = any>(url: string, params?: object): Promise<ApiResponse<T>> {
+    if (this.useMock) {
+      return this.makeMockRequest<T>(url, 'GET');
+    }
     const response = await this.client.get(url, { params });
     return response.data;
   }
 
   public async post<T = any>(url: string, data?: object): Promise<ApiResponse<T>> {
+    if (this.useMock) {
+      return this.makeMockRequest<T>(url, 'POST', data);
+    }
     const response = await this.client.post(url, data);
     return response.data;
   }
 
   public async put<T = any>(url: string, data?: object): Promise<ApiResponse<T>> {
+    if (this.useMock) {
+      return this.makeMockRequest<T>(url, 'PUT', data);
+    }
     const response = await this.client.put(url, data);
     return response.data;
   }
 
   public async patch<T = any>(url: string, data?: object): Promise<ApiResponse<T>> {
+    if (this.useMock) {
+      return this.makeMockRequest<T>(url, 'PATCH', data);
+    }
     const response = await this.client.patch(url, data);
     return response.data;
   }
 
   public async delete<T = any>(url: string): Promise<ApiResponse<T>> {
+    if (this.useMock) {
+      return this.makeMockRequest<T>(url, 'DELETE');
+    }
     const response = await this.client.delete(url);
     return response.data;
   }
@@ -241,8 +257,85 @@ class ApiClient {
     window.URL.revokeObjectURL(downloadUrl);
   }
 
+  // Métodos mock para quando não há backend
+  private generateMockData(url: string): any {
+    if (url.includes('/partial-leads')) {
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        sessionId: 'mock-session-' + Math.random().toString(36).substr(2, 9),
+        name: 'Cliente Mock',
+        phone: '+5511999999999',
+        source: 'mock',
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        firstInteraction: new Date().toISOString(),
+        lastUpdate: new Date().toISOString(),
+        interactions: 1,
+        completed: false,
+        abandoned: false,
+        createdAt: new Date().toISOString(),
+      };
+    }
+    return {};
+  }
+
+  private async makeMockRequest<T>(url: string, method: string, data?: any): Promise<ApiResponse<T>> {
+    // Simular um atraso de rede
+    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
+    
+    try {
+      // Simular diferentes respostas baseadas no endpoint
+      let responseData;
+      if (method === 'GET' && url.includes('/health')) {
+        responseData = { message: 'OK' };
+      } else if (method === 'GET' && url.includes('/partial-leads')) {
+        // Simular lista de leads parciais
+        responseData = {
+          data: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, (_, i) => ({
+            ...this.generateMockData(url),
+            id: `mock-lead-${i + 1}`
+          })),
+          stats: {
+            total: 10,
+            active: 5,
+            converted: 3,
+            abandoned: 2,
+            todayCount: 2,
+            conversionRate: 30
+          },
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: 10,
+            totalPages: 1
+          }
+        };
+      } else {
+        responseData = this.generateMockData(url);
+      }
+
+      return {
+        success: true,
+        message: 'Operação realizada com sucesso',
+        data: responseData as T
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Erro na requisição mock',
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
   // Método para verificar saúde da API
   public async healthCheck(): Promise<boolean> {
+    if (this.useMock) {
+      // Simular verificação de saúde
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return true;
+    }
+    
     try {
       await this.get('/health');
       return true;

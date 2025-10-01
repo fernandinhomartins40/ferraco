@@ -227,35 +227,7 @@ export const partialLeadService = {
     }
   },
 
-  // Exportar para CSV
-  async exportToCSV(): Promise<boolean> {
-    try {
-      // O endpoint de export retorna um arquivo CSV diretamente
-      const response = await fetch('/api/partial-leads/export', {
-        headers: {
-          'Authorization': `Bearer ${apiClient.axios.defaults.headers.Authorization}`,
-        },
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `leads_parciais_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Erro ao exportar leads parciais:', error);
-      return false;
-    }
-  },
+  // Exportar para CSV\n  async exportToCSV(): Promise<boolean> {\n    try {\n      // Obter todos os leads parciais\n      const result = await this.getPartialLeads({ limit: 1000 }); // Limite alto para obter todos\n      \n      if (!result || !result.leads.length) {\n        console.warn('Nenhum lead para exportar');\n        return false;\n      }\n\n      // Converter dados para CSV\n      const headers = [\n        'ID', 'Nome', 'Telefone', 'Origem', 'URL', \n        'Agente Usuário', 'Primeira Interação', 'Última Atualização', \n        'Interações', 'Completo', 'Abandonado', 'Criado Em'\n      ];\n      \n      const csvContent = [\n        headers.join(','),\n        ...result.leads.map(lead => [\n          lead.id,\n          `\"${lead.name}\"`,\n          `\"${lead.phone}\"`,\n          `\"${lead.source}\"`,\n          `\"${lead.url}\"`,\n          `\"${lead.userAgent}\"`,\n          lead.firstInteraction,\n          lead.lastUpdate,\n          lead.interactions,\n          lead.completed,\n          lead.abandoned,\n          lead.createdAt\n        ].join(','))\n      ].join('\\n');\n\n      // Criar e fazer download do arquivo CSV\n      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });\n      const url = window.URL.createObjectURL(blob);\n      const link = document.createElement('a');\n      link.href = url;\n      link.download = `leads_parciais_${new Date().toISOString().split('T')[0]}.csv`;\n      document.body.appendChild(link);\n      link.click();\n      document.body.removeChild(link);\n      window.URL.revokeObjectURL(url);\n      \n      return true;\n    } catch (error) {\n      console.error('Erro ao exportar leads parciais:', error);\n      return false;\n    }\n  },
 
   // Compatibilidade com a interface anterior (para não quebrar código existente)
   async getStats(): Promise<PartialLeadStats> {

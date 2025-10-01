@@ -409,11 +409,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [state.token]);
 
-  // Initialize auth on mount
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
   // Context value
   const contextValue: AuthContextType = {
     state,
