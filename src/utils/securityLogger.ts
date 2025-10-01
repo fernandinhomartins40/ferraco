@@ -3,6 +3,7 @@
  * Logs security-related events for monitoring and auditing
  */
 
+import { logger } from '@/lib/logger';
 export enum SecurityEventType {
   // Authentication Events
   LOGIN_SUCCESS = 'LOGIN_SUCCESS',
@@ -53,7 +54,7 @@ export interface SecurityLogEntry {
   username?: string;
   userRole?: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   userAgent: string;
   url: string;
   ipAddress?: string;
@@ -87,7 +88,7 @@ class SecurityLogger {
         this.logs = this.logs.slice(-this.maxLogs);
       }
     } catch (error) {
-      console.error('Failed to load security logs from storage:', error);
+      logger.error('Failed to load security logs from storage:', error);
     }
   }
 
@@ -97,7 +98,7 @@ class SecurityLogger {
       const recentLogs = this.logs.slice(-this.maxLogs);
       localStorage.setItem(this.storageKey, JSON.stringify(recentLogs));
     } catch (error) {
-      console.error('Failed to save security logs to storage:', error);
+      logger.error('Failed to save security logs to storage:', error);
     }
   }
 
@@ -135,7 +136,7 @@ class SecurityLogger {
     eventType: SecurityEventType,
     level: SecurityLevel,
     message: string,
-    details?: Record<string, any>,
+    details?: Record<string, unknown>,
     userId?: string,
     username?: string,
     userRole?: string
@@ -174,17 +175,17 @@ class SecurityLogger {
     }
   }
 
-  private getConsoleMethod(level: SecurityLevel): (...args: any[]) => void {
+  private getConsoleMethod(level: SecurityLevel): (...args: unknown[]) => void {
     switch (level) {
       case SecurityLevel.CRITICAL:
-        return console.error;
+        return logger.error.bind(logger);
       case SecurityLevel.HIGH:
-        return console.warn;
+        return logger.warn.bind(logger);
       case SecurityLevel.MEDIUM:
-        return console.info;
+        return logger.info.bind(logger);
       case SecurityLevel.LOW:
       default:
-        return console.log;
+        return logger.debug.bind(logger);
     }
   }
 
@@ -207,9 +208,9 @@ class SecurityLogger {
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(logEntry)
       // });
-      console.log('🚨 Critical security event (would be sent to backend):', logEntry);
+      logger.debug('🚨 Critical security event (would be sent to backend):', logEntry);
     } catch (error) {
-      console.error('Failed to send security log to backend:', error);
+      logger.error('Failed to send security log to backend:', error);
     }
   }
 
@@ -219,7 +220,7 @@ class SecurityLogger {
     eventType: SecurityEventType.LOGIN_SUCCESS | SecurityEventType.LOGIN_FAILED | SecurityEventType.LOGOUT,
     userId?: string,
     username?: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): void {
     const level = eventType === SecurityEventType.LOGIN_FAILED ? SecurityLevel.MEDIUM : SecurityLevel.LOW;
     const messages = {
@@ -260,7 +261,7 @@ class SecurityLogger {
     userId?: string,
     username?: string,
     userRole?: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): void {
     const level = this.getActionSecurityLevel(action, resource);
 
@@ -283,7 +284,7 @@ class SecurityLogger {
     description: string,
     userId?: string,
     username?: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): void {
     this.logEvent(
       SecurityEventType.SUSPICIOUS_ACTIVITY,

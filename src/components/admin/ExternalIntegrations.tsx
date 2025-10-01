@@ -37,6 +37,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { integrationStorage } from '@/utils/integrationStorage';
+import { logger } from '@/lib/logger';
 import type {
   Integration,
   IntegrationConfig,
@@ -213,7 +214,7 @@ const ExternalIntegrations = () => {
       });
 
       if (result.errors.length > 0) {
-        console.error('Erros na sincronização:', result.errors);
+        logger.error('Erros na sincronização:', result.errors);
       }
 
       loadData();

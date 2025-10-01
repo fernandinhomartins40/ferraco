@@ -3,6 +3,7 @@
  */
 
 import { User } from '@/contexts/AuthContext';
+import { logger } from '@/lib/logger';
 
 // Storage keys
 export const AUTH_STORAGE_KEYS = {
@@ -27,7 +28,7 @@ export class TokenManager {
     try {
       return localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
     } catch (error) {
-      console.error('Failed to get token from storage:', error);
+      logger.error('Failed to get token from storage:', error);
       return null;
     }
   }
@@ -36,7 +37,7 @@ export class TokenManager {
     try {
       localStorage.setItem(AUTH_STORAGE_KEYS.TOKEN, token);
     } catch (error) {
-      console.error('Failed to save token to storage:', error);
+      logger.error('Failed to save token to storage:', error);
     }
   }
 
@@ -44,7 +45,7 @@ export class TokenManager {
     try {
       localStorage.removeItem(AUTH_STORAGE_KEYS.TOKEN);
     } catch (error) {
-      console.error('Failed to remove token from storage:', error);
+      logger.error('Failed to remove token from storage:', error);
     }
   }
 
@@ -54,7 +55,7 @@ export class TokenManager {
       const expirationTime = payload.exp * 1000;
       return Date.now() >= expirationTime;
     } catch (error) {
-      console.error('Failed to parse token:', error);
+      logger.error('Failed to parse token:', error);
       return true;
     }
   }
@@ -64,16 +65,16 @@ export class TokenManager {
       const payload = JSON.parse(atob(token.split('.')[1]));
       return new Date(payload.exp * 1000);
     } catch (error) {
-      console.error('Failed to get token expiration:', error);
+      logger.error('Failed to get token expiration:', error);
       return null;
     }
   }
 
-  static getTokenPayload(token: string): any {
+  static getTokenPayload(token: string): Record<string, unknown> | null {
     try {
       return JSON.parse(atob(token.split('.')[1]));
     } catch (error) {
-      console.error('Failed to get token payload:', error);
+      logger.error('Failed to get token payload:', error);
       return null;
     }
   }
@@ -88,7 +89,7 @@ export class UserManager {
       const userStr = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
-      console.error('Failed to get user from storage:', error);
+      logger.error('Failed to get user from storage:', error);
       return null;
     }
   }
@@ -97,7 +98,7 @@ export class UserManager {
     try {
       localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
     } catch (error) {
-      console.error('Failed to save user to storage:', error);
+      logger.error('Failed to save user to storage:', error);
     }
   }
 
@@ -105,7 +106,7 @@ export class UserManager {
     try {
       localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
     } catch (error) {
-      console.error('Failed to remove user from storage:', error);
+      logger.error('Failed to remove user from storage:', error);
     }
   }
 
@@ -115,7 +116,7 @@ export class UserManager {
     try {
       localStorage.removeItem(AUTH_STORAGE_KEYS.REMEMBER_ME);
     } catch (error) {
-      console.error('Failed to clear auth data:', error);
+      logger.error('Failed to clear auth data:', error);
     }
   }
 }
@@ -123,7 +124,7 @@ export class UserManager {
 /**
  * HTTP Response types
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -148,7 +149,7 @@ export class HttpClient {
     this.timeout = timeout;
   }
 
-  private async request<T = any>(
+  private async request<T = unknown>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
@@ -189,8 +190,8 @@ export class HttpClient {
 
       const data = await response.json();
       return data;
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new ApiError('Timeout na requisição. Tente novamente.', 408, 'TIMEOUT');
       }
 
@@ -199,7 +200,7 @@ export class HttpClient {
       }
 
       throw new ApiError(
-        error.message || 'Erro de conexão. Verifique sua internet.',
+        error instanceof Error ? error.message : 'Erro de conexão. Verifique sua internet.',
         0,
         'NETWORK_ERROR'
       );
@@ -267,7 +268,7 @@ export class HttpClient {
   }
 
   // HTTP Methods
-  async get<T = any>(endpoint: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+  async get<T = unknown>(endpoint: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
     let url = endpoint;
 
     if (params) {
@@ -283,28 +284,28 @@ export class HttpClient {
     return this.request<T>(url, { method: 'GET' });
   }
 
-  async post<T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T = unknown>(endpoint: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async put<T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async put<T = unknown>(endpoint: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async patch<T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async patch<T = unknown>(endpoint: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async delete<T = any>(endpoint: string): Promise<ApiResponse<T>> {
+  async delete<T = unknown>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
 }
@@ -360,27 +361,30 @@ export class AuthAPI {
 /**
  * Utility functions
  */
-export const formatAuthError = (error: any): string => {
+export const formatAuthError = (error: unknown): string => {
   if (error instanceof ApiError) {
     return error.message;
   }
 
-  if (error?.response?.data?.message) {
-    return error.response.data.message;
-  }
+  if (typeof error === 'object' && error !== null) {
+    const errorObj = error as { response?: { data?: { message?: string } }; message?: string };
+    if (errorObj?.response?.data?.message) {
+      return errorObj.response.data.message;
+    }
 
-  if (error?.message) {
-    return error.message;
+    if (errorObj?.message) {
+      return errorObj.message;
+    }
   }
 
   return 'Erro desconhecido. Tente novamente.';
 };
 
-export const isAuthError = (error: any): boolean => {
+export const isAuthError = (error: unknown): boolean => {
   return error instanceof ApiError && [401, 403].includes(error.status);
 };
 
-export const shouldRetry = (error: any, attempt: number): boolean => {
+export const shouldRetry = (error: unknown, attempt: number): boolean => {
   if (attempt >= API_CONFIG.RETRY_ATTEMPTS) {
     return false;
   }

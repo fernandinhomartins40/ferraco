@@ -1,8 +1,9 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 // Tipos para as respostas da API
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -55,7 +56,7 @@ class ApiClient {
 
         // Log da requisição em desenvolvimento
         if (import.meta.env.DEV) {
-          console.log(`🔄 API ${config.method?.toUpperCase()}: ${config.url}`, {
+          logger.debug(`API ${config.method?.toUpperCase()}: ${config.url}`, {
             data: config.data,
             params: config.params,
             headers: config.headers,
@@ -65,7 +66,7 @@ class ApiClient {
         return config;
       },
       (error) => {
-        console.error('❌ Erro na requisição:', error);
+        logger.error('Erro na requisição:', error);
         return Promise.reject(error);
       }
     );
@@ -75,7 +76,7 @@ class ApiClient {
       (response: AxiosResponse) => {
         // Log da resposta em desenvolvimento
         if (import.meta.env.DEV) {
-          console.log(`✅ API Response: ${response.config.url}`, response.data);
+          logger.debug(`API Response: ${response.config.url}`, response.data);
         }
 
         return response;
@@ -85,7 +86,7 @@ class ApiClient {
         const errorData = error.response?.data as ApiError;
 
         // Log do erro
-        console.error('❌ Erro na resposta da API:', {
+        logger.error('Erro na resposta da API:', {
           status: statusCode,
           data: errorData,
           url: error.config?.url,
@@ -189,7 +190,7 @@ class ApiClient {
   }
 
   // Métodos HTTP públicos
-  public async get<T = any>(url: string, params?: object): Promise<ApiResponse<T>> {
+  public async get<T = unknown>(url: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
     if (this.useMock) {
       return this.makeMockRequest<T>(url, 'GET');
     }
@@ -197,7 +198,7 @@ class ApiClient {
     return response.data;
   }
 
-  public async post<T = any>(url: string, data?: object): Promise<ApiResponse<T>> {
+  public async post<T = unknown>(url: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     if (this.useMock) {
       return this.makeMockRequest<T>(url, 'POST', data);
     }
@@ -205,7 +206,7 @@ class ApiClient {
     return response.data;
   }
 
-  public async put<T = any>(url: string, data?: object): Promise<ApiResponse<T>> {
+  public async put<T = unknown>(url: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     if (this.useMock) {
       return this.makeMockRequest<T>(url, 'PUT', data);
     }
@@ -213,7 +214,7 @@ class ApiClient {
     return response.data;
   }
 
-  public async patch<T = any>(url: string, data?: object): Promise<ApiResponse<T>> {
+  public async patch<T = unknown>(url: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     if (this.useMock) {
       return this.makeMockRequest<T>(url, 'PATCH', data);
     }
@@ -221,7 +222,7 @@ class ApiClient {
     return response.data;
   }
 
-  public async delete<T = any>(url: string): Promise<ApiResponse<T>> {
+  public async delete<T = unknown>(url: string): Promise<ApiResponse<T>> {
     if (this.useMock) {
       return this.makeMockRequest<T>(url, 'DELETE');
     }
@@ -230,7 +231,7 @@ class ApiClient {
   }
 
   // Método para upload de arquivos
-  public async upload<T = any>(url: string, formData: FormData): Promise<ApiResponse<T>> {
+  public async upload<T = unknown>(url: string, formData: FormData): Promise<ApiResponse<T>> {
     const response = await this.client.post(url, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -258,7 +259,7 @@ class ApiClient {
   }
 
   // Métodos mock para quando não há backend
-  private generateMockData(url: string): any {
+  private generateMockData(url: string): Record<string, unknown> {
     if (url.includes('/partial-leads')) {
       return {
         id: Math.random().toString(36).substr(2, 9),
@@ -279,7 +280,7 @@ class ApiClient {
     return {};
   }
 
-  private async makeMockRequest<T>(url: string, method: string, data?: any): Promise<ApiResponse<T>> {
+  private async makeMockRequest<T>(url: string, method: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     // Simular um atraso de rede
     await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
     
@@ -357,11 +358,11 @@ export const apiClient = new ApiClient();
 export default apiClient;
 
 // Utilitários para tratamento de erros
-export const isApiError = (error: any): error is AxiosError => {
-  return error?.isAxiosError === true;
+export const isApiError = (error: unknown): error is AxiosError => {
+  return typeof error === 'object' && error !== null && 'isAxiosError' in error && error.isAxiosError === true;
 };
 
-export const getApiErrorMessage = (error: any): string => {
+export const getApiErrorMessage = (error: unknown): string => {
   if (isApiError(error)) {
     const apiError = error.response?.data as ApiError;
     return apiError?.message || apiError?.error || 'Erro na comunicação com o servidor';
@@ -371,9 +372,9 @@ export const getApiErrorMessage = (error: any): string => {
 
 // Hook utilitário para usar com React Query
 export const createApiErrorHandler = (defaultMessage = 'Erro na operação') => {
-  return (error: any) => {
+  return (error: unknown) => {
     const message = getApiErrorMessage(error);
     toast.error(message || defaultMessage);
-    console.error('API Error:', error);
+    logger.error('API Error:', error);
   };
 };

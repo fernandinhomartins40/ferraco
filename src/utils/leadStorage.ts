@@ -1,4 +1,5 @@
 import { Lead, LeadStatus, LeadStats, LeadNote, DashboardMetrics, TrendData, LeadFilters } from '@/types/lead';
+import { logger } from '@/lib/logger';
 
 // Import all Phase 2 storage systems
 import { tagStorage } from './tagStorage';
@@ -15,7 +16,7 @@ export const leadStorage = {
       const leads = localStorage.getItem(LEADS_STORAGE_KEY);
       return leads ? JSON.parse(leads) : [];
     } catch (error) {
-      console.error('Error reading leads from localStorage:', error);
+      logger.error('Error reading leads from localStorage:', error);
       return [];
     }
   },
@@ -25,7 +26,7 @@ export const leadStorage = {
     try {
       localStorage.setItem(LEADS_STORAGE_KEY, JSON.stringify(leads));
     } catch (error) {
-      console.error('Error saving leads to localStorage:', error);
+      logger.error('Error saving leads to localStorage:', error);
     }
   },
 
@@ -426,8 +427,8 @@ export const leadStorage = {
 
     // Apply sorting
     leads.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | Date;
+      let bValue: string | Date;
 
       switch (filters.sortBy) {
         case 'name':
@@ -474,15 +475,15 @@ export const leadStorage = {
   // Phase 2 - New methods for automation and communication integration
 
   // Execute automation rules for a lead
-  async executeAutomationsForLead(lead: Lead, triggerType: string, context?: Record<string, any>): Promise<void> {
+  async executeAutomationsForLead(lead: Lead, triggerType: string, context?: Record<string, unknown>): Promise<void> {
     try {
       await automationStorage.executeAutomations(
-        { type: triggerType as any },
+        { type: triggerType as 'lead_created' | 'status_changed' | 'time_based' | 'tag_added' | 'note_added' },
         lead,
         context
       );
     } catch (error) {
-      console.error('Error executing automations for lead:', error);
+      logger.error('Error executing automations for lead:', error);
     }
   },
 
@@ -540,10 +541,10 @@ export const leadStorage = {
   },
 
   // Get lead with all related data
-  getLeadDetails(leadId: string): Lead & {
-    communications: any[];
-    tagDefinitions: any[];
-  } | null {
+  getLeadDetails(leadId: string): (Lead & {
+    communications: Array<Record<string, unknown>>;
+    tagDefinitions: Array<Record<string, unknown>>;
+  }) | null {
     const lead = this.getLeads().find(l => l.id === leadId);
     if (!lead) return null;
 
@@ -584,7 +585,7 @@ export const leadStorage = {
   getExtendedStats(): LeadStats & {
     bySource: Record<string, number>;
     byPriority: Record<string, number>;
-    communicationStats: any;
+    communicationStats: Record<string, unknown>;
   } {
     const basicStats = this.getAdvancedStats();
     const leads = this.getLeads();
@@ -628,7 +629,7 @@ export const leadStorage = {
 
       // Add any other scheduled tasks here
     } catch (error) {
-      console.error('Error running scheduled tasks:', error);
+      logger.error('Error running scheduled tasks:', error);
     }
   },
 };

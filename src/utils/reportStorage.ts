@@ -1,5 +1,7 @@
-import { Report, ReportFilters, ReportWidget, ScheduleConfig, DashboardConfig, DashboardWidget } from '@/types/lead';
+import { Report, ReportFilters, ReportWidget, ScheduleConfig, DashboardConfig, DashboardWidget, Lead, AutomationRule, TagDefinition } from '@/types/lead';
+import { LeadsOverviewData, ConversionFunnelData, TagPerformanceData, AutomationStatsData, CustomReportData } from '@/types/reports';
 import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
+import { logger } from '@/lib/logger';
 
 interface ReportStorageItem extends StorageItem {
   name: string;
@@ -151,17 +153,17 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
   }
 
   // Generate report data
-  generateReportData(reportId: string): any {
+  generateReportData(reportId: string): LeadsOverviewData | ConversionFunnelData | TagPerformanceData | AutomationStatsData | CustomReportData | null {
     const report = this.getById(reportId);
     if (!report) return null;
 
     // Load leads directly from localStorage to avoid circular dependency
-    let leads: any[] = [];
+    let leads: Lead[] = [];
     try {
       const storedLeads = localStorage.getItem('ferraco_leads');
       leads = storedLeads ? JSON.parse(storedLeads) : [];
     } catch (error) {
-      console.error('Error loading leads for report:', error);
+      logger.error('Error loading leads for report:', error);
       return null;
     }
 
@@ -182,7 +184,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
   }
 
   // Apply filters to leads
-  applyFilters(leads: any[], filters: ReportFilters): any[] {
+  applyFilters(leads: Lead[], filters: ReportFilters): Lead[] {
     let filteredLeads = [...leads];
 
     if (filters.dateRange) {
@@ -215,7 +217,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     return filteredLeads;
   }
 
-  generateLeadsOverviewData(leads: any[]): any {
+  generateLeadsOverviewData(leads: Lead[]): LeadsOverviewData {
     const total = leads.length;
     const byStatus = leads.reduce((acc, lead) => {
       acc[lead.status] = (acc[lead.status] || 0) + 1;
@@ -250,7 +252,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     };
   }
 
-  generateConversionFunnelData(leads: any[]): any {
+  generateConversionFunnelData(leads: Lead[]): ConversionFunnelData {
     const stages = [
       { name: 'Leads Capturados', count: leads.length },
       { name: 'Em Contato', count: leads.filter(lead => lead.status !== 'novo').length },
@@ -279,23 +281,23 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     };
   }
 
-  generateTagPerformanceData(leads: any[]): any {
+  generateTagPerformanceData(leads: Lead[]): TagPerformanceData {
     // Load tags directly from localStorage to avoid circular dependency
-    let tags: any[] = [];
+    let tags: TagDefinition[] = [];
     try {
       const storedTags = localStorage.getItem('ferraco_tags');
       tags = storedTags ? JSON.parse(storedTags) : [];
     } catch (error) {
-      console.error('Error loading tags for report:', error);
+      logger.error('Error loading tags for report:', error);
       return { tagStats: [] };
     }
 
-    const tagStats = tags.map((tag: any) => {
+    const tagStats = tags.map((tag: TagDefinition) => {
       const leadsWithTag = leads.filter(lead =>
         lead.tags && lead.tags.includes(tag.name.toLowerCase())
       );
 
-      const convertedLeads = leadsWithTag.filter((lead: any) =>
+      const convertedLeads = leadsWithTag.filter((lead: Lead) =>
         lead.status === 'concluido'
       );
 
@@ -304,7 +306,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
         : 0;
 
       const averageTime = convertedLeads.length > 0
-        ? convertedLeads.reduce((sum: number, lead: any) => {
+        ? convertedLeads.reduce((sum: number, lead: Lead) => {
             const created = new Date(lead.createdAt);
             const updated = new Date(lead.updatedAt);
             return sum + (updated.getTime() - created.getTime());
@@ -314,7 +316,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
       const now = new Date();
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      const recentLeads = leadsWithTag.filter((lead: any) =>
+      const recentLeads = leadsWithTag.filter((lead: Lead) =>
         new Date(lead.createdAt) >= sevenDaysAgo
       ).length;
 
@@ -331,7 +333,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     return { tagStats };
   }
 
-  generateAutomationStatsData(): any {
+  generateAutomationStatsData(): AutomationStatsData {
     // Load automations directly from localStorage to avoid circular dependency
     try {
       const storedAutomations = localStorage.getItem('ferraco_automations');
@@ -360,13 +362,13 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
         }
       };
     } catch (error) {
-      console.error('Error loading automation stats:', error);
+      logger.error('Error loading automation stats:', error);
       return { stats: null };
     }
   }
 
-  generateCustomReportData(leads: any[], report: Report): any {
-    const data: any = {
+  generateCustomReportData(leads: Lead[], report: Report): CustomReportData {
+    const data: CustomReportData = {
       leads,
       summary: {
         total: leads.length,
@@ -392,7 +394,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     return data;
   }
 
-  async exportReport(reportId: string, format: 'pdf' | 'excel' | 'json' | 'csv'): Promise<{ success: boolean; data?: any; error?: string }> {
+  async exportReport(reportId: string, format: 'pdf' | 'excel' | 'json' | 'csv'): Promise<{ success: boolean; data?: string | Record<string, unknown>; error?: string }> {
     try {
       const reportData = this.generateReportData(reportId);
       const report = this.getById(reportId);
@@ -438,7 +440,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     }
   }
 
-  convertToCSV(data: any, report: Report): string {
+  convertToCSV(data: Record<string, unknown>, report: Report): string {
     const lines: string[] = [];
 
     lines.push(`Relatório: ${report.name}`);
@@ -457,7 +459,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
       lines.push('Dados dos Leads:');
       lines.push('Nome,Telefone,Status,Criado em,Tags');
 
-      data.leads.forEach((lead: any) => {
+      data.leads.forEach((lead: Lead) => {
         const tags = (lead.tags || []).join(';');
         const createdAt = new Date(lead.createdAt).toLocaleString('pt-BR');
         lines.push(`"${lead.name}","${lead.phone}","${lead.status}","${createdAt}","${tags}"`);

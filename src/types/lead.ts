@@ -99,7 +99,7 @@ export interface Communication {
   status: 'pending' | 'sent' | 'delivered' | 'failed' | 'read';
   timestamp: string;
   templateId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface MessageTemplate {
@@ -128,18 +128,18 @@ export interface AutomationRule {
 
 export interface AutomationTrigger {
   type: 'lead_created' | 'status_changed' | 'time_based' | 'tag_added' | 'note_added';
-  value?: any;
+  value?: string | number | boolean;
 }
 
 export interface AutomationCondition {
   field: string;
   operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'days_since';
-  value: any;
+  value: string | number | boolean | string[];
 }
 
 export interface AutomationAction {
   type: 'send_message' | 'change_status' | 'add_tag' | 'remove_tag' | 'add_note' | 'set_follow_up' | 'assign_user';
-  value: any;
+  value: string | number | string[];
   templateId?: string;
 }
 
@@ -172,7 +172,7 @@ export interface ReportWidget {
   title: string;
   size: 'small' | 'medium' | 'large';
   position: { x: number; y: number };
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface ScheduleConfig {
@@ -198,7 +198,7 @@ export interface DashboardWidget {
   title: string;
   size: 'sm' | 'md' | 'lg' | 'xl';
   position: { x: number; y: number; w: number; h: number };
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   isVisible: boolean;
 }
 
@@ -302,7 +302,7 @@ export interface ChatbotQuestion {
 export interface ChatbotRule {
   condition: string;
   action: 'ask_question' | 'add_tag' | 'set_priority' | 'handoff' | 'end_conversation';
-  value: any;
+  value: string | number;
 }
 
 export interface BusinessHours {
@@ -401,7 +401,7 @@ export interface LeadScoring {
 
 export interface ScoringFactor {
   factor: string;
-  value: any;
+  value: string | number | boolean;
   points: number;
   weight: number;
   description: string;
@@ -457,13 +457,13 @@ export interface DataMapping {
 export interface IntegrationFilter {
   field: string;
   operator: string;
-  value: any;
+  value: string | number | boolean | string[];
 }
 
 export interface IntegrationAction {
   trigger: string;
   action: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface GoogleAnalyticsConfig {
@@ -548,7 +548,7 @@ export interface Permission {
 export interface PermissionCondition {
   field: string;
   operator: 'equals' | 'not_equals' | 'in' | 'not_in';
-  value: any;
+  value: string | number | string[];
 }
 
 export interface UserPreferences {
@@ -593,7 +593,7 @@ export interface AuditLog {
   action: string;
   resource: string;
   resourceId: string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   ipAddress: string;
   userAgent: string;
   timestamp: string;
@@ -696,7 +696,7 @@ export interface PredictiveInsight {
   impact: 'high' | 'medium' | 'low';
   timeframe: string;
   recommendations: string[];
-  data: any;
+  data: Record<string, unknown>;
 }
 
 export interface Benchmark {
