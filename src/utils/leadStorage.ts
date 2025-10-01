@@ -6,13 +6,6 @@ import { communicationStorage } from './communicationStorage';
 import { automationStorage } from './automationStorage';
 import { reportStorage } from './reportStorage';
 
-// Make storage systems globally available
-(window as any).tagStorage = tagStorage;
-(window as any).communicationStorage = communicationStorage;
-(window as any).automationStorage = automationStorage;
-(window as any).reportStorage = reportStorage;
-(window as any).leadStorage = null; // Will be set after definition
-
 const LEADS_STORAGE_KEY = 'ferraco_leads';
 
 export const leadStorage = {
@@ -639,6 +632,3 @@ export const leadStorage = {
     }
   },
 };
-
-// Set global reference after definition
-(window as any).leadStorage = leadStorage;

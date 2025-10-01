@@ -117,11 +117,16 @@ class TagStorage extends BaseStorage<TagStorageItem> {
   // Get tag statistics
   getTagStats(): TagStats[] {
     const tags = this.getAll();
-    const leadStorage = (window as any).leadStorage;
 
-    if (!leadStorage) return [];
-
-    const leads = leadStorage.getLeads();
+    // Import dynamically to avoid circular dependency
+    let leads: any[] = [];
+    try {
+      const storedLeads = localStorage.getItem('ferraco_leads');
+      leads = storedLeads ? JSON.parse(storedLeads) : [];
+    } catch (error) {
+      console.error('Error loading leads for tag stats:', error);
+      return [];
+    }
 
     return tags.map(tag => {
       const leadsWithTag = leads.filter((lead: any) =>

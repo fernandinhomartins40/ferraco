@@ -258,8 +258,3 @@ export const partialLeadService = {
     return this.convertPartialLead(partialLeadId);
   },
 };
-
-// Disponibilizar globalmente para debugging
-if (import.meta.env.DEV) {
-  (window as any).partialLeadService = partialLeadService;
-}

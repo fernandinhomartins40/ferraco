@@ -155,12 +155,16 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     const report = this.getById(reportId);
     if (!report) return null;
 
-    const leadStorage = (window as any).leadStorage;
-    const tagStorage = (window as any).tagStorage;
+    // Load leads directly from localStorage to avoid circular dependency
+    let leads: any[] = [];
+    try {
+      const storedLeads = localStorage.getItem('ferraco_leads');
+      leads = storedLeads ? JSON.parse(storedLeads) : [];
+    } catch (error) {
+      console.error('Error loading leads for report:', error);
+      return null;
+    }
 
-    if (!leadStorage) return null;
-
-    const leads = leadStorage.getLeads();
     const filteredLeads = this.applyFilters(leads, report.filters);
 
     switch (report.type) {
@@ -169,7 +173,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
       case 'conversion_funnel':
         return this.generateConversionFunnelData(filteredLeads);
       case 'tag_performance':
-        return this.generateTagPerformanceData(filteredLeads, tagStorage);
+        return this.generateTagPerformanceData(filteredLeads);
       case 'automation_stats':
         return this.generateAutomationStatsData();
       default:
@@ -275,30 +279,90 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     };
   }
 
-  generateTagPerformanceData(leads: any[], tagStorage: any): any {
-    if (!tagStorage) return { tagStats: [] };
+  generateTagPerformanceData(leads: any[]): any {
+    // Load tags directly from localStorage to avoid circular dependency
+    let tags: any[] = [];
+    try {
+      const storedTags = localStorage.getItem('ferraco_tags');
+      tags = storedTags ? JSON.parse(storedTags) : [];
+    } catch (error) {
+      console.error('Error loading tags for report:', error);
+      return { tagStats: [] };
+    }
 
-    const tagStats = tagStorage.getTagStats();
-    const enhancedStats = tagStats.map((stat: any) => {
+    const tagStats = tags.map((tag: any) => {
       const leadsWithTag = leads.filter(lead =>
-        lead.tags && lead.tags.includes(stat.tagName.toLowerCase())
+        lead.tags && lead.tags.includes(tag.name.toLowerCase())
       );
 
+      const convertedLeads = leadsWithTag.filter((lead: any) =>
+        lead.status === 'concluido'
+      );
+
+      const conversionRate = leadsWithTag.length > 0
+        ? (convertedLeads.length / leadsWithTag.length) * 100
+        : 0;
+
+      const averageTime = convertedLeads.length > 0
+        ? convertedLeads.reduce((sum: number, lead: any) => {
+            const created = new Date(lead.createdAt);
+            const updated = new Date(lead.updatedAt);
+            return sum + (updated.getTime() - created.getTime());
+          }, 0) / convertedLeads.length / (1000 * 60 * 60 * 24)
+        : 0;
+
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const recentLeads = leadsWithTag.filter((lead: any) =>
+        new Date(lead.createdAt) >= sevenDaysAgo
+      ).length;
+
       return {
-        ...stat,
-        recentLeads: leadsWithTag.filter(lead =>
-          new Date(lead.createdAt) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-        ).length,
+        tagId: tag.id,
+        tagName: tag.name,
+        count: leadsWithTag.length,
+        conversionRate: Math.round(conversionRate * 100) / 100,
+        averageTime: Math.round(averageTime * 10) / 10,
+        recentLeads,
       };
     });
 
-    return { tagStats: enhancedStats };
+    return { tagStats };
   }
 
   generateAutomationStatsData(): any {
-    const automationStorage = (window as any).automationStorage;
-    if (!automationStorage) return { stats: null };
-    return { stats: automationStorage.getAutomationStats() };
+    // Load automations directly from localStorage to avoid circular dependency
+    try {
+      const storedAutomations = localStorage.getItem('ferraco_automations');
+      const automations = storedAutomations ? JSON.parse(storedAutomations) : [];
+
+      const total = automations.length;
+      const active = automations.filter((auto: any) => auto.isActive).length;
+      const totalExecutions = automations.reduce((sum: number, auto: any) => sum + (auto.executionCount || 0), 0);
+
+      const recentExecutions = automations
+        .filter((auto: any) => auto.lastExecuted)
+        .sort((a: any, b: any) => new Date(b.lastExecuted!).getTime() - new Date(a.lastExecuted!).getTime())
+        .slice(0, 5)
+        .map((auto: any) => ({
+          name: auto.name,
+          lastExecuted: auto.lastExecuted!,
+          count: auto.executionCount || 0,
+        }));
+
+      return {
+        stats: {
+          total,
+          active,
+          totalExecutions,
+          recentExecutions,
+        }
+      };
+    } catch (error) {
+      console.error('Error loading automation stats:', error);
+      return { stats: null };
+    }
   }
 
   generateCustomReportData(leads: any[], report: Report): any {

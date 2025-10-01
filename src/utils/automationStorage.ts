@@ -254,8 +254,9 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
     lead: Lead,
     context?: Record<string, any>
   ): Promise<void> {
-    const leadStorage = (window as any).leadStorage;
-    const communicationStorage = (window as any).communicationStorage;
+    // Import dynamically to avoid circular dependency
+    const { leadStorage } = await import('./leadStorage');
+    const { communicationStorage } = await import('./communicationStorage');
 
     for (const action of actions) {
       try {
@@ -309,8 +310,8 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
 
   // Run scheduled automations (for time-based triggers)
   async runScheduledAutomations(): Promise<{ processed: number; executed: number; errors: string[] }> {
-    const leadStorage = (window as any).leadStorage;
-    if (!leadStorage) return { processed: 0, executed: 0, errors: [] };
+    // Import dynamically to avoid circular dependency
+    const { leadStorage } = await import('./leadStorage');
 
     const leads = leadStorage.getLeads();
     const timeBasedAutomations = this.filter(auto => auto.isActive && auto.trigger.type === 'time_based');
