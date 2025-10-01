@@ -12,6 +12,7 @@ import {
   DigitalSignature,
   Team
 } from '@/types/lead';
+import { logger } from '@/lib/logger';
 
 export class UserStorage {
   private readonly STORAGE_KEYS = {
@@ -39,7 +40,7 @@ export class UserStorage {
 
       return users;
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      logger.error('Erro ao carregar usuários:', error);
       return this.initializeDefaultUsers();
     }
   }
@@ -86,7 +87,7 @@ export class UserStorage {
 
       return user;
     } catch (error) {
-      console.error('Erro ao criar usuário:', error);
+      logger.error('Erro ao criar usuário:', error);
       throw error;
     }
   }
@@ -108,7 +109,7 @@ export class UserStorage {
 
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
+      logger.error('Erro ao atualizar usuário:', error);
       return false;
     }
   }
@@ -121,7 +122,7 @@ export class UserStorage {
       }
       return result;
     } catch (error) {
-      console.error('Erro ao desativar usuário:', error);
+      logger.error('Erro ao desativar usuário:', error);
       return false;
     }
   }
@@ -134,7 +135,7 @@ export class UserStorage {
       }
       return result;
     } catch (error) {
-      console.error('Erro ao ativar usuário:', error);
+      logger.error('Erro ao ativar usuário:', error);
       return false;
     }
   }
@@ -162,7 +163,7 @@ export class UserStorage {
 
       return true;
     } catch (error) {
-      console.error('Erro ao deletar usuário:', error);
+      logger.error('Erro ao deletar usuário:', error);
       return false;
     }
   }
@@ -186,7 +187,7 @@ export class UserStorage {
         return this.currentUser;
       }
     } catch (error) {
-      console.error('Erro ao carregar usuário atual:', error);
+      logger.error('Erro ao carregar usuário atual:', error);
     }
 
     return null;
@@ -202,7 +203,7 @@ export class UserStorage {
 
       this.logAction('user_login', 'authentication', user.id, {});
     } catch (error) {
-      console.error('Erro ao definir usuário atual:', error);
+      logger.error('Erro ao definir usuário atual:', error);
     }
   }
 
@@ -215,7 +216,7 @@ export class UserStorage {
       this.currentUser = null;
       localStorage.removeItem(this.STORAGE_KEYS.CURRENT_USER);
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      logger.error('Erro ao fazer logout:', error);
     }
   }
 
@@ -231,7 +232,7 @@ export class UserStorage {
 
       return roles;
     } catch (error) {
-      console.error('Erro ao carregar roles:', error);
+      logger.error('Erro ao carregar roles:', error);
       return this.initializeDefaultRoles();
     }
   }
@@ -266,7 +267,7 @@ export class UserStorage {
 
       return role;
     } catch (error) {
-      console.error('Erro ao criar role:', error);
+      logger.error('Erro ao criar role:', error);
       throw error;
     }
   }
@@ -288,7 +289,7 @@ export class UserStorage {
 
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar role:', error);
+      logger.error('Erro ao atualizar role:', error);
       return false;
     }
   }
@@ -309,7 +310,7 @@ export class UserStorage {
       this.logAction('role_deleted', 'roles', roleId, {});
       return true;
     } catch (error) {
-      console.error('Erro ao deletar role:', error);
+      logger.error('Erro ao deletar role:', error);
       return false;
     }
   }
@@ -341,7 +342,7 @@ export class UserStorage {
 
       return true;
     } catch (error) {
-      console.error('Erro ao verificar permissão:', error);
+      logger.error('Erro ao verificar permissão:', error);
       return false;
     }
   }
@@ -376,7 +377,7 @@ export class UserStorage {
 
       return permissions;
     } catch (error) {
-      console.error('Erro ao carregar permissões:', error);
+      logger.error('Erro ao carregar permissões:', error);
       return this.initializeDefaultPermissions();
     }
   }
@@ -421,7 +422,7 @@ export class UserStorage {
 
       localStorage.setItem(this.STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs));
     } catch (error) {
-      console.error('Erro ao registrar log de auditoria:', error);
+      logger.error('Erro ao registrar log de auditoria:', error);
     }
   }
 
@@ -445,7 +446,7 @@ export class UserStorage {
         .sort((a: AuditLog, b: AuditLog) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, limit);
     } catch (error) {
-      console.error('Erro ao carregar logs de auditoria:', error);
+      logger.error('Erro ao carregar logs de auditoria:', error);
       return [];
     }
   }
@@ -481,7 +482,7 @@ export class UserStorage {
 
       return signature;
     } catch (error) {
-      console.error('Erro ao criar assinatura digital:', error);
+      logger.error('Erro ao criar assinatura digital:', error);
       throw error;
     }
   }
@@ -497,7 +498,7 @@ export class UserStorage {
 
       return signatures;
     } catch (error) {
-      console.error('Erro ao carregar assinaturas digitais:', error);
+      logger.error('Erro ao carregar assinaturas digitais:', error);
       return [];
     }
   }
@@ -512,7 +513,7 @@ export class UserStorage {
       // In a real implementation, this would validate against a certificate authority
       return signature.isValid;
     } catch (error) {
-      console.error('Erro ao validar assinatura digital:', error);
+      logger.error('Erro ao validar assinatura digital:', error);
       return false;
     }
   }
@@ -523,7 +524,7 @@ export class UserStorage {
       const stored = localStorage.getItem(this.STORAGE_KEYS.TEAMS);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Erro ao carregar equipes:', error);
+      logger.error('Erro ao carregar equipes:', error);
       return [];
     }
   }
@@ -553,7 +554,7 @@ export class UserStorage {
 
       return team;
     } catch (error) {
-      console.error('Erro ao criar equipe:', error);
+      logger.error('Erro ao criar equipe:', error);
       throw error;
     }
   }
@@ -571,7 +572,7 @@ export class UserStorage {
       this.logAction('team_updated', 'teams', teamId, { updates });
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar equipe:', error);
+      logger.error('Erro ao atualizar equipe:', error);
       return false;
     }
   }
@@ -589,7 +590,7 @@ export class UserStorage {
       this.logAction('user_added_to_team', 'teams', teamId, { userId });
       return true;
     } catch (error) {
-      console.error('Erro ao adicionar usuário à equipe:', error);
+      logger.error('Erro ao adicionar usuário à equipe:', error);
       return false;
     }
   }
@@ -607,7 +608,7 @@ export class UserStorage {
       this.logAction('user_removed_from_team', 'teams', teamId, { userId });
       return true;
     } catch (error) {
-      console.error('Erro ao remover usuário da equipe:', error);
+      logger.error('Erro ao remover usuário da equipe:', error);
       return false;
     }
   }
@@ -630,7 +631,7 @@ export class UserStorage {
       this.logAction('preferences_updated', 'users', userId, { preferences });
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar preferências:', error);
+      logger.error('Erro ao atualizar preferências:', error);
       return false;
     }
   }
@@ -818,7 +819,7 @@ export class UserStorage {
     try {
       localStorage.setItem(this.STORAGE_KEYS.USERS, JSON.stringify(users));
     } catch (error) {
-      console.error('Erro ao salvar usuários:', error);
+      logger.error('Erro ao salvar usuários:', error);
     }
   }
 
@@ -826,7 +827,7 @@ export class UserStorage {
     try {
       localStorage.setItem(this.STORAGE_KEYS.ROLES, JSON.stringify(roles));
     } catch (error) {
-      console.error('Erro ao salvar roles:', error);
+      logger.error('Erro ao salvar roles:', error);
     }
   }
 
@@ -834,7 +835,7 @@ export class UserStorage {
     try {
       localStorage.setItem(this.STORAGE_KEYS.TEAMS, JSON.stringify(teams));
     } catch (error) {
-      console.error('Erro ao salvar equipes:', error);
+      logger.error('Erro ao salvar equipes:', error);
     }
   }
 
@@ -842,7 +843,7 @@ export class UserStorage {
     try {
       localStorage.setItem(this.STORAGE_KEYS.DIGITAL_SIGNATURES, JSON.stringify(signatures));
     } catch (error) {
-      console.error('Erro ao salvar assinaturas digitais:', error);
+      logger.error('Erro ao salvar assinaturas digitais:', error);
     }
   }
 
@@ -875,9 +876,9 @@ export class UserStorage {
         }
       }
 
-      console.log('✅ Sistema de usuários inicializado com sucesso');
+      logger.debug('✅ Sistema de usuários inicializado com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao inicializar sistema de usuários:', error);
+      logger.error('❌ Erro ao inicializar sistema de usuários:', error);
     }
   }
 }

@@ -9,6 +9,7 @@ import {
   PaginationParams,
   PaginatedResponse,
 } from '@/types/api';
+import { logger } from '@/lib/logger';
 
 // Query Keys para cache management
 export const tagKeys = {
@@ -91,7 +92,7 @@ export function useCreateTag() {
       toast.success(`Tag "${newTag.name}" criada com sucesso!`);
     },
     onError: (error) => {
-      console.error('Erro ao criar tag:', error);
+      logger.error('Erro ao criar tag:', error);
       toast.error('Erro ao criar tag. Tente novamente.');
     },
   });
@@ -117,7 +118,7 @@ export function useUpdateTag() {
       toast.success(`Tag "${updatedTag.name}" atualizada com sucesso!`);
     },
     onError: (error) => {
-      console.error('Erro ao atualizar tag:', error);
+      logger.error('Erro ao atualizar tag:', error);
       toast.error('Erro ao atualizar tag. Tente novamente.');
     },
   });
@@ -143,7 +144,7 @@ export function useDeleteTag() {
       toast.success('Tag deletada com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao deletar tag:', error);
+      logger.error('Erro ao deletar tag:', error);
       toast.error('Erro ao deletar tag. Tente novamente.');
     },
   });
@@ -178,7 +179,7 @@ export function useManageTagRules() {
       toast.success('Regras de tag atualizadas com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao atualizar regras:', error);
+      logger.error('Erro ao atualizar regras:', error);
       toast.error('Erro ao atualizar regras de tag. Tente novamente.');
     },
   });
@@ -244,7 +245,7 @@ export function useToggleTagStatus() {
       toast.success(`Tag "${updatedTag.name}" ${status} com sucesso!`);
     },
     onError: (error) => {
-      console.error('Erro ao alterar status da tag:', error);
+      logger.error('Erro ao alterar status da tag:', error);
       toast.error('Erro ao alterar status da tag. Tente novamente.');
     },
   });
@@ -292,7 +293,7 @@ export function useApplyAutomaticTags() {
       toast.success('Tags automáticas aplicadas com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao aplicar tags automáticas:', error);
+      logger.error('Erro ao aplicar tags automáticas:', error);
       toast.error('Erro ao aplicar tags automáticas. Tente novamente.');
     },
   });

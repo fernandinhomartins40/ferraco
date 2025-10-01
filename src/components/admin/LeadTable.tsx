@@ -10,6 +10,7 @@ import { Lead, LeadStatus } from '@/types/lead';
 import { useUpdateLeadStatus, useDeleteLead } from '@/hooks/api/useLeads';
 import { useToast } from '@/hooks/use-toast';
 import LeadNotes from './LeadNotes';
+import { logger } from '@/lib/logger';
 
 interface LeadTableProps {
   leads: Lead[];
@@ -52,7 +53,7 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
       onLeadsChange();
     } catch (error) {
       // O toast de erro já é mostrado pelo hook
-      console.error('Erro ao atualizar status:', error);
+      logger.error('Erro ao atualizar status:', error);
     }
   }, [updateLeadStatusMutation, onLeadsChange]);
 
@@ -66,7 +67,7 @@ const LeadTable = ({ leads, onLeadsChange }: LeadTableProps) => {
       onLeadsChange();
     } catch (error) {
       // O toast de erro já é mostrado pelo hook
-      console.error('Erro ao excluir lead:', error);
+      logger.error('Erro ao excluir lead:', error);
     }
   }, [deleteLeadMutation, onLeadsChange]);
 

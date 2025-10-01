@@ -11,6 +11,7 @@ import {
   CreateNoteRequest,
   ApiLeadNote,
 } from '@/types/api';
+import { logger } from '@/lib/logger';
 
 // Query Keys simplificados
 export const leadKeys = {
@@ -62,7 +63,7 @@ export function useCreateLead() {
       toast.success(`Lead "${newLead.name}" criado com sucesso!`);
     },
     onError: (error) => {
-      console.error('Erro ao criar lead:', error);
+      logger.error('Erro ao criar lead:', error);
       toast.error('Erro ao criar lead. Tente novamente.');
     },
   });
@@ -88,7 +89,7 @@ export function useUpdateLead() {
       toast.success(`Lead "${updatedLead.name}" atualizado com sucesso!`);
     },
     onError: (error) => {
-      console.error('Erro ao atualizar lead:', error);
+      logger.error('Erro ao atualizar lead:', error);
       toast.error('Erro ao atualizar lead. Tente novamente.');
     },
   });
@@ -120,7 +121,7 @@ export function useUpdateLeadStatus() {
       toast.success(`Status alterado para "${statusLabels[updatedLead.status]}"!`);
     },
     onError: (error) => {
-      console.error('Erro ao atualizar status:', error);
+      logger.error('Erro ao atualizar status:', error);
       toast.error('Erro ao atualizar status. Tente novamente.');
     },
   });
@@ -145,7 +146,7 @@ export function useDeleteLead() {
       toast.success('Lead deletado com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao deletar lead:', error);
+      logger.error('Erro ao deletar lead:', error);
       toast.error('Erro ao deletar lead. Tente novamente.');
     },
   });
@@ -181,7 +182,7 @@ export function useCreateLeadNote(leadId: string) {
       toast.success('Nota adicionada com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao criar nota:', error);
+      logger.error('Erro ao criar nota:', error);
       toast.error('Erro ao adicionar nota. Tente novamente.');
     },
   });

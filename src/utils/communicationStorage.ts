@@ -1,5 +1,6 @@
 import { Communication, MessageTemplate, WhatsAppConfig } from '@/types/lead';
 import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
+import { logger } from '@/lib/logger';
 
 interface CommunicationStorageItem extends StorageItem {
   type: Communication['type'];
@@ -136,7 +137,7 @@ class CommunicationStorageClass extends BaseStorage<CommunicationStorageItem> {
       const config = localStorage.getItem(this.configKey);
       return config ? JSON.parse(config) : { isEnabled: false, isConnected: false };
     } catch (error) {
-      console.error('Error reading WhatsApp config from localStorage:', error);
+      logger.error('Error reading WhatsApp config from localStorage:', error);
       return { isEnabled: false, isConnected: false };
     }
   }
@@ -145,7 +146,7 @@ class CommunicationStorageClass extends BaseStorage<CommunicationStorageItem> {
     try {
       localStorage.setItem(this.configKey, JSON.stringify(config));
     } catch (error) {
-      console.error('Error saving WhatsApp config to localStorage:', error);
+      logger.error('Error saving WhatsApp config to localStorage:', error);
     }
   }
 

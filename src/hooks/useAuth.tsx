@@ -1,4 +1,5 @@
 import { useAuthContext, type User, type AuthContextType } from '@/contexts/AuthContext';
+import { logger } from '@/lib/logger';
 
 /**
  * Custom hook for authentication
@@ -214,7 +215,7 @@ export const useSession = () => {
         isExpiringSoon,
       };
     } catch (error) {
-      console.error('Error parsing token:', error);
+      logger.error('Error parsing token:', error);
       return {
         isValid: false,
         expiresAt: null,
@@ -229,7 +230,7 @@ export const useSession = () => {
       await refreshToken();
       return true;
     } catch (error) {
-      console.error('Failed to extend session:', error);
+      logger.error('Failed to extend session:', error);
       return false;
     }
   };
@@ -239,7 +240,7 @@ export const useSession = () => {
       await checkAuth();
       return true;
     } catch (error) {
-      console.error('Session validation failed:', error);
+      logger.error('Session validation failed:', error);
       return false;
     }
   };

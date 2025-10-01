@@ -10,6 +10,7 @@ import { AlertCircle, Download, Eye, RefreshCw, Users, TrendingUp, Clock, AlertT
 import { useToast } from '@/hooks/use-toast';
 import { partialLeadService, PartialLead, PartialLeadStats, PartialLeadFilters } from '@/services/partialLeadService';
 import { leadStorage } from '@/utils/leadStorage';
+import { logger } from '@/lib/logger';
 
 const PartialLeadsManager: React.FC = () => {
   const [partialLeads, setPartialLeads] = useState<PartialLead[]>([]);
@@ -43,7 +44,7 @@ const PartialLeadsManager: React.FC = () => {
         throw new Error('Falha ao carregar dados');
       }
     } catch (error) {
-      console.error('Erro ao carregar leads parciais:', error);
+      logger.error('Erro ao carregar leads parciais:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao carregar leads parciais',
@@ -75,7 +76,7 @@ const PartialLeadsManager: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Erro ao converter lead:', error);
+      logger.error('Erro ao converter lead:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao converter lead parcial.',
@@ -105,7 +106,7 @@ const PartialLeadsManager: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Erro ao marcar como abandonado:', error);
+      logger.error('Erro ao marcar como abandonado:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao marcar lead como abandonado.',
@@ -133,7 +134,7 @@ const PartialLeadsManager: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Erro ao exportar:', error);
+      logger.error('Erro ao exportar:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao exportar leads parciais.',
@@ -163,7 +164,7 @@ const PartialLeadsManager: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Erro na limpeza:', error);
+      logger.error('Erro na limpeza:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao limpar dados antigos.',

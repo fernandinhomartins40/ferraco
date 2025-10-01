@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { securityLogger, SecurityEventType, SecurityLevel } from '@/utils/securityLogger';
+import { logger } from '@/lib/logger';
 
 interface FirstLoginStatus {
   isFirstLogin: boolean;
@@ -68,7 +69,7 @@ export const useFirstLogin = (): FirstLoginStatus => {
         setIsFirstLogin(false);
       }
     } catch (error) {
-      console.error('Erro ao verificar primeiro login:', error);
+      logger.error('Erro ao verificar primeiro login:', error);
 
       securityLogger.logEvent(
         SecurityEventType.ERROR_OCCURRED,
@@ -133,7 +134,7 @@ export const useFirstLogin = (): FirstLoginStatus => {
       user.role
     );
 
-    console.log('✅ Primeiro login marcado como concluído para usuário:', user.username);
+    logger.debug('✅ Primeiro login marcado como concluído para usuário:', user.username);
   };
 
   return {
@@ -189,7 +190,7 @@ export const resetFirstLoginStatus = (userId: string) => {
     { userId, resetTime: new Date().toISOString() }
   );
 
-  console.log('🔄 Status de primeiro login resetado para usuário:', userId);
+  logger.debug('🔄 Status de primeiro login resetado para usuário:', userId);
 };
 
 export default useFirstLogin;

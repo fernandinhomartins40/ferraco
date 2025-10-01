@@ -15,6 +15,7 @@ import { TagDefinition, TagStats } from '@/types/lead';
 import { ApiTag } from '@/types/api';
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag, useTagStats, usePredefinedColors } from '@/hooks/api/useTags';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 // Função para converter ApiTag para TagDefinition (frontend)
 const convertApiTagToTagDefinition = (apiTag: ApiTag): TagDefinition => ({
@@ -104,7 +105,7 @@ const TagManagement = () => {
       refetchStats(); // Atualizar estatísticas também
     } catch (error) {
       // O toast de erro já é mostrado pelo hook
-      console.error('Erro ao criar tag:', error);
+      logger.error('Erro ao criar tag:', error);
     }
   }, [newTag, createTagMutation, refetchStats, toast]);
 
@@ -135,7 +136,7 @@ const TagManagement = () => {
       refetchStats(); // Atualizar estatísticas também
     } catch (error) {
       // O toast de erro já é mostrado pelo hook
-      console.error('Erro ao atualizar tag:', error);
+      logger.error('Erro ao atualizar tag:', error);
     }
   }, [selectedTag, newTag, updateTagMutation, refetchStats]);
 
@@ -156,7 +157,7 @@ const TagManagement = () => {
       refetchStats(); // Atualizar estatísticas também
     } catch (error) {
       // O toast de erro já é mostrado pelo hook
-      console.error('Erro ao excluir tag:', error);
+      logger.error('Erro ao excluir tag:', error);
     }
   }, [deleteTagMutation, refetchStats, toast]);
 

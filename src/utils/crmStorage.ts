@@ -17,6 +17,7 @@ import {
   SourceAnalytics,
   TeamPerformance
 } from '@/types/lead';
+import { logger } from '@/lib/logger';
 
 export class CRMStorage {
   private readonly STORAGE_KEYS = {
@@ -41,7 +42,7 @@ export class CRMStorage {
 
       return pipelines;
     } catch (error) {
-      console.error('Erro ao carregar pipelines:', error);
+      logger.error('Erro ao carregar pipelines:', error);
       return this.initializeDefaultPipelines();
     }
   }
@@ -74,7 +75,7 @@ export class CRMStorage {
 
       return pipeline;
     } catch (error) {
-      console.error('Erro ao criar pipeline:', error);
+      logger.error('Erro ao criar pipeline:', error);
       throw error;
     }
   }
@@ -90,7 +91,7 @@ export class CRMStorage {
       this.savePipelines(pipelines);
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar pipeline:', error);
+      logger.error('Erro ao atualizar pipeline:', error);
       return false;
     }
   }
@@ -106,7 +107,7 @@ export class CRMStorage {
       this.savePipelines(filtered);
       return true;
     } catch (error) {
-      console.error('Erro ao deletar pipeline:', error);
+      logger.error('Erro ao deletar pipeline:', error);
       return false;
     }
   }
@@ -126,7 +127,7 @@ export class CRMStorage {
 
       return true;
     } catch (error) {
-      console.error('Erro ao mover lead entre estágios:', error);
+      logger.error('Erro ao mover lead entre estágios:', error);
       return false;
     }
   }
@@ -299,7 +300,7 @@ export class CRMStorage {
       const stored = localStorage.getItem(this.STORAGE_KEYS.OPPORTUNITIES);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Erro ao carregar oportunidades:', error);
+      logger.error('Erro ao carregar oportunidades:', error);
       return [];
     }
   }
@@ -336,7 +337,7 @@ export class CRMStorage {
 
       return opportunity;
     } catch (error) {
-      console.error('Erro ao criar oportunidade:', error);
+      logger.error('Erro ao criar oportunidade:', error);
       throw error;
     }
   }
@@ -357,7 +358,7 @@ export class CRMStorage {
       this.saveOpportunities(opportunities);
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar oportunidade:', error);
+      logger.error('Erro ao atualizar oportunidade:', error);
       return false;
     }
   }
@@ -369,7 +370,7 @@ export class CRMStorage {
       this.saveOpportunities(filtered);
       return true;
     } catch (error) {
-      console.error('Erro ao deletar oportunidade:', error);
+      logger.error('Erro ao deletar oportunidade:', error);
       return false;
     }
   }
@@ -422,7 +423,7 @@ export class CRMStorage {
 
       return allInteractions;
     } catch (error) {
-      console.error('Erro ao carregar interações:', error);
+      logger.error('Erro ao carregar interações:', error);
       return [];
     }
   }
@@ -445,7 +446,7 @@ export class CRMStorage {
 
       return newInteraction;
     } catch (error) {
-      console.error('Erro ao adicionar interação:', error);
+      logger.error('Erro ao adicionar interação:', error);
       throw error;
     }
   }
@@ -461,7 +462,7 @@ export class CRMStorage {
       this.saveInteractions(interactions);
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar interação:', error);
+      logger.error('Erro ao atualizar interação:', error);
       return false;
     }
   }
@@ -473,7 +474,7 @@ export class CRMStorage {
       this.saveInteractions(filtered);
       return true;
     } catch (error) {
-      console.error('Erro ao deletar interação:', error);
+      logger.error('Erro ao deletar interação:', error);
       return false;
     }
   }
@@ -510,7 +511,7 @@ export class CRMStorage {
       this.saveLeadScoring(scoring);
       return scoring;
     } catch (error) {
-      console.error('Erro ao calcular pontuação do lead:', error);
+      logger.error('Erro ao calcular pontuação do lead:', error);
       throw error;
     }
   }
@@ -649,7 +650,7 @@ export class CRMStorage {
 
       return previousScoring.history || [];
     } catch (error) {
-      console.error('Erro ao buscar histórico de pontuação:', error);
+      logger.error('Erro ao buscar histórico de pontuação:', error);
       return [];
     }
   }
@@ -659,7 +660,7 @@ export class CRMStorage {
       const allScoring = this.getAllLeadScoring();
       return allScoring.find(s => s.leadId === leadId) || null;
     } catch (error) {
-      console.error('Erro ao buscar pontuação do lead:', error);
+      logger.error('Erro ao buscar pontuação do lead:', error);
       return null;
     }
   }
@@ -669,7 +670,7 @@ export class CRMStorage {
       const stored = localStorage.getItem(this.STORAGE_KEYS.LEAD_SCORING);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Erro ao carregar pontuações:', error);
+      logger.error('Erro ao carregar pontuações:', error);
       return [];
     }
   }
@@ -692,7 +693,7 @@ export class CRMStorage {
         benchmarks: []
       };
     } catch (error) {
-      console.error('Erro ao gerar analytics avançados:', error);
+      logger.error('Erro ao gerar analytics avançados:', error);
       throw error;
     }
   }
@@ -820,7 +821,7 @@ export class CRMStorage {
     try {
       localStorage.setItem(this.STORAGE_KEYS.PIPELINES, JSON.stringify(pipelines));
     } catch (error) {
-      console.error('Erro ao salvar pipelines:', error);
+      logger.error('Erro ao salvar pipelines:', error);
     }
   }
 
@@ -828,7 +829,7 @@ export class CRMStorage {
     try {
       localStorage.setItem(this.STORAGE_KEYS.OPPORTUNITIES, JSON.stringify(opportunities));
     } catch (error) {
-      console.error('Erro ao salvar oportunidades:', error);
+      logger.error('Erro ao salvar oportunidades:', error);
     }
   }
 
@@ -836,7 +837,7 @@ export class CRMStorage {
     try {
       localStorage.setItem(this.STORAGE_KEYS.INTERACTIONS, JSON.stringify(interactions));
     } catch (error) {
-      console.error('Erro ao salvar interações:', error);
+      logger.error('Erro ao salvar interações:', error);
     }
   }
 
@@ -853,7 +854,7 @@ export class CRMStorage {
 
       localStorage.setItem(this.STORAGE_KEYS.LEAD_SCORING, JSON.stringify(allScoring));
     } catch (error) {
-      console.error('Erro ao salvar pontuação do lead:', error);
+      logger.error('Erro ao salvar pontuação do lead:', error);
     }
   }
 
@@ -871,9 +872,9 @@ export class CRMStorage {
       // Initialize default pipelines if they don't exist
       this.getPipelines();
 
-      console.log('✅ Sistema CRM inicializado com sucesso');
+      logger.debug('✅ Sistema CRM inicializado com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao inicializar sistema CRM:', error);
+      logger.error('❌ Erro ao inicializar sistema CRM:', error);
     }
   }
 }

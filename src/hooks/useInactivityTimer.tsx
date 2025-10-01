@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuth } from './useAuth';
+import { logger } from '@/lib/logger';
 
 interface UseInactivityTimerOptions {
   timeout?: number; // Timeout in milliseconds
@@ -207,7 +208,7 @@ export const useDefaultInactivityTimer = () => {
     onWarning: () => setShowWarning(true),
     onTimeout: () => {
       setShowWarning(false);
-      console.log('🔒 Usuário deslogado por inatividade');
+      logger.debug('🔒 Usuário deslogado por inatividade');
     },
     enabled: true
   });

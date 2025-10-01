@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 export interface StorageItem {
   id: string;
   createdAt: string;
@@ -29,7 +31,7 @@ export abstract class BaseStorage<T extends StorageItem> {
         this.log(`Loaded ${this.data.length} items`);
       }
     } catch (error) {
-      console.error(`Error loading ${this.key}:`, error);
+      logger.error(`Error loading ${this.key}:`, error);
       this.data = [];
     }
   }
@@ -39,7 +41,7 @@ export abstract class BaseStorage<T extends StorageItem> {
       localStorage.setItem(this.key, JSON.stringify(this.data));
       this.log(`Saved ${this.data.length} items`);
     } catch (error) {
-      console.error(`Error saving ${this.key}:`, error);
+      logger.error(`Error saving ${this.key}:`, error);
     }
   }
 
@@ -125,7 +127,7 @@ export abstract class BaseStorage<T extends StorageItem> {
 
   protected log(message: string): void {
     if (this.enableDebug) {
-      console.log(`[${this.key}] ${message}`);
+      logger.debug(`[${this.key}] ${message}`);
     }
   }
 

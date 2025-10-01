@@ -1,5 +1,6 @@
 import { AutomationRule, AutomationTrigger, AutomationCondition, AutomationAction, Lead } from '@/types/lead';
 import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
+import { logger } from '@/lib/logger';
 
 interface AutomationStorageItem extends StorageItem {
   name: string;
@@ -149,7 +150,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
           });
         }
       } catch (error) {
-        console.error(`Error executing automation ${automation.name}:`, error);
+        logger.error(`Error executing automation ${automation.name}:`, error);
         errors.push(`${automation.name}: ${error}`);
       }
     }
@@ -302,7 +303,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
             break;
         }
       } catch (error) {
-        console.error(`Error executing action ${action.type}:`, error);
+        logger.error(`Error executing action ${action.type}:`, error);
         throw error;
       }
     }
@@ -346,7 +347,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
             }
           }
         } catch (error) {
-          console.error(`Error processing automation for lead ${lead.id}:`, error);
+          logger.error(`Error processing automation for lead ${lead.id}:`, error);
           errors.push(`Lead ${lead.name}: ${error}`);
         }
       }

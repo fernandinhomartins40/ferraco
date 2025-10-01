@@ -11,6 +11,7 @@ import {
   BusinessHours,
   TimeSlot
 } from '@/types/lead';
+import { logger } from '@/lib/logger';
 
 export class AIStorage {
   private readonly STORAGE_KEYS = {
@@ -51,7 +52,7 @@ export class AIStorage {
       this.saveAIAnalysis(lead.id, analysis);
       return analysis;
     } catch (error) {
-      console.error('Erro na análise de sentimento:', error);
+      logger.error('Erro na análise de sentimento:', error);
       return this.getDefaultAnalysis();
     }
   }
@@ -247,7 +248,7 @@ export class AIStorage {
       this.saveConversionPrediction(lead.id, prediction);
       return prediction;
     } catch (error) {
-      console.error('Erro na previsão de conversão:', error);
+      logger.error('Erro na previsão de conversão:', error);
       return this.getDefaultPrediction();
     }
   }
@@ -416,7 +417,7 @@ export class AIStorage {
 
       return detections;
     } catch (error) {
-      console.error('Erro na detecção de duplicatas:', error);
+      logger.error('Erro na detecção de duplicatas:', error);
       return [];
     }
   }
@@ -547,7 +548,7 @@ export class AIStorage {
       const stored = localStorage.getItem(this.STORAGE_KEYS.CHATBOT_CONFIG);
       return stored ? JSON.parse(stored) : this.getDefaultChatbotConfig();
     } catch (error) {
-      console.error('Erro ao carregar configuração do chatbot:', error);
+      logger.error('Erro ao carregar configuração do chatbot:', error);
       return this.getDefaultChatbotConfig();
     }
   }
@@ -558,7 +559,7 @@ export class AIStorage {
       const updated = { ...current, ...config };
       localStorage.setItem(this.STORAGE_KEYS.CHATBOT_CONFIG, JSON.stringify(updated));
     } catch (error) {
-      console.error('Erro ao salvar configuração do chatbot:', error);
+      logger.error('Erro ao salvar configuração do chatbot:', error);
     }
   }
 
@@ -643,7 +644,7 @@ export class AIStorage {
       analyses[leadId] = analysis;
       localStorage.setItem(this.STORAGE_KEYS.AI_ANALYSES, JSON.stringify(analyses));
     } catch (error) {
-      console.error('Erro ao salvar análise de IA:', error);
+      logger.error('Erro ao salvar análise de IA:', error);
     }
   }
 
@@ -653,7 +654,7 @@ export class AIStorage {
       predictions[leadId] = prediction;
       localStorage.setItem(this.STORAGE_KEYS.CONVERSION_PREDICTIONS, JSON.stringify(predictions));
     } catch (error) {
-      console.error('Erro ao salvar previsão de conversão:', error);
+      logger.error('Erro ao salvar previsão de conversão:', error);
     }
   }
 
@@ -663,7 +664,7 @@ export class AIStorage {
       detections.push(detection);
       localStorage.setItem(this.STORAGE_KEYS.DUPLICATE_DETECTIONS, JSON.stringify(detections));
     } catch (error) {
-      console.error('Erro ao salvar detecção de duplicata:', error);
+      logger.error('Erro ao salvar detecção de duplicata:', error);
     }
   }
 
@@ -673,7 +674,7 @@ export class AIStorage {
       const analyses = this.getAllAIAnalyses();
       return analyses[leadId] || null;
     } catch (error) {
-      console.error('Erro ao buscar análise de IA:', error);
+      logger.error('Erro ao buscar análise de IA:', error);
       return null;
     }
   }
@@ -683,7 +684,7 @@ export class AIStorage {
       const predictions = this.getAllConversionPredictions();
       return predictions[leadId] || null;
     } catch (error) {
-      console.error('Erro ao buscar previsão de conversão:', error);
+      logger.error('Erro ao buscar previsão de conversão:', error);
       return null;
     }
   }
@@ -693,7 +694,7 @@ export class AIStorage {
       const stored = localStorage.getItem(this.STORAGE_KEYS.DUPLICATE_DETECTIONS);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Erro ao buscar detecções de duplicata:', error);
+      logger.error('Erro ao buscar detecções de duplicata:', error);
       return [];
     }
   }
@@ -703,7 +704,7 @@ export class AIStorage {
       const stored = localStorage.getItem(this.STORAGE_KEYS.AI_ANALYSES);
       return stored ? JSON.parse(stored) : {};
     } catch (error) {
-      console.error('Erro ao buscar análises de IA:', error);
+      logger.error('Erro ao buscar análises de IA:', error);
       return {};
     }
   }
@@ -713,7 +714,7 @@ export class AIStorage {
       const stored = localStorage.getItem(this.STORAGE_KEYS.CONVERSION_PREDICTIONS);
       return stored ? JSON.parse(stored) : {};
     } catch (error) {
-      console.error('Erro ao buscar previsões de conversão:', error);
+      logger.error('Erro ao buscar previsões de conversão:', error);
       return {};
     }
   }
@@ -764,9 +765,9 @@ export class AIStorage {
         this.updateChatbotConfig(this.getDefaultChatbotConfig());
       }
 
-      console.log('✅ Sistema de IA inicializado com sucesso');
+      logger.debug('✅ Sistema de IA inicializado com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao inicializar sistema de IA:', error);
+      logger.error('❌ Erro ao inicializar sistema de IA:', error);
     }
   }
 }

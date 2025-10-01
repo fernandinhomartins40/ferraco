@@ -13,6 +13,7 @@ import {
   FBLeadForm,
   Lead
 } from '@/types/lead';
+import { logger } from '@/lib/logger';
 
 export class IntegrationStorage {
   private readonly STORAGE_KEYS = {
@@ -28,7 +29,7 @@ export class IntegrationStorage {
       const stored = localStorage.getItem(this.STORAGE_KEYS.INTEGRATIONS);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Erro ao carregar integrações:', error);
+      logger.error('Erro ao carregar integrações:', error);
       return [];
     }
   }
@@ -66,7 +67,7 @@ export class IntegrationStorage {
 
       return integration;
     } catch (error) {
-      console.error('Erro ao criar integração:', error);
+      logger.error('Erro ao criar integração:', error);
       throw error;
     }
   }
@@ -82,7 +83,7 @@ export class IntegrationStorage {
       this.saveIntegrations(integrations);
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar integração:', error);
+      logger.error('Erro ao atualizar integração:', error);
       return false;
     }
   }
@@ -111,7 +112,7 @@ export class IntegrationStorage {
 
       return true;
     } catch (error) {
-      console.error('Erro ao ativar integração:', error);
+      logger.error('Erro ao ativar integração:', error);
       return false;
     }
   }
@@ -130,7 +131,7 @@ export class IntegrationStorage {
       this.saveIntegrations(filtered);
       return true;
     } catch (error) {
-      console.error('Erro ao deletar integração:', error);
+      logger.error('Erro ao deletar integração:', error);
       return false;
     }
   }
@@ -158,7 +159,7 @@ export class IntegrationStorage {
 
       return result;
     } catch (error) {
-      console.error('Erro na sincronização:', error);
+      logger.error('Erro na sincronização:', error);
       return { success: false, error: 'Erro interno na sincronização' };
     }
   }
@@ -222,7 +223,7 @@ export class IntegrationStorage {
       }
 
       // In a real implementation, this would send data to Zapier
-      console.log('Enviando dados para Zapier:', webhookUrl);
+      logger.debug('Enviando dados para Zapier:', webhookUrl);
 
       return { success: true };
     } catch (error) {
@@ -238,7 +239,7 @@ export class IntegrationStorage {
         return { success: false, error: 'URL do webhook não configurada' };
       }
 
-      console.log('Enviando dados para Make:', webhookUrl);
+      logger.debug('Enviando dados para Make:', webhookUrl);
       return { success: true };
     } catch (error) {
       return { success: false, error: 'Erro na integração com Make' };
@@ -254,7 +255,7 @@ export class IntegrationStorage {
       }
 
       // Simulate sending events to GA
-      console.log('Sincronizando com Google Analytics');
+      logger.debug('Sincronizando com Google Analytics');
 
       // In a real implementation, this would:
       // 1. Send lead events to GA4
@@ -275,7 +276,7 @@ export class IntegrationStorage {
         return { success: false, error: 'Access Token do Facebook não configurado' };
       }
 
-      console.log('Sincronizando com Facebook Ads');
+      logger.debug('Sincronizando com Facebook Ads');
 
       // In a real implementation, this would:
       // 1. Send conversion events to Facebook
@@ -296,7 +297,7 @@ export class IntegrationStorage {
         return { success: false, error: 'API Key do HubSpot não configurada' };
       }
 
-      console.log('Sincronizando com HubSpot');
+      logger.debug('Sincronizando com HubSpot');
 
       // In a real implementation, this would:
       // 1. Sync leads to HubSpot contacts
@@ -317,7 +318,7 @@ export class IntegrationStorage {
         return { success: false, error: 'API Key do Pipedrive não configurada' };
       }
 
-      console.log('Sincronizando com Pipedrive');
+      logger.debug('Sincronizando com Pipedrive');
 
       // In a real implementation, this would:
       // 1. Sync leads to Pipedrive persons
@@ -338,7 +339,7 @@ export class IntegrationStorage {
         return { success: false, error: 'API Key do Mailchimp não configurada' };
       }
 
-      console.log('Sincronizando com Mailchimp');
+      logger.debug('Sincronizando com Mailchimp');
 
       // In a real implementation, this would:
       // 1. Add leads to mailing lists
@@ -359,7 +360,7 @@ export class IntegrationStorage {
         return { success: false, error: 'URL do webhook não configurada' };
       }
 
-      console.log('Sincronizando integração customizada:', webhookUrl);
+      logger.debug('Sincronizando integração customizada:', webhookUrl);
       return { success: true };
     } catch (error) {
       return { success: false, error: 'Erro na integração customizada' };
@@ -371,7 +372,7 @@ export class IntegrationStorage {
     return new Promise((resolve) => {
       // Simulate webhook sending
       setTimeout(() => {
-        console.log('Enviando webhook:', { url, data, headers });
+        logger.debug('Enviando webhook:', { url, data, headers });
 
         // Simulate random success/failure
         const success = Math.random() > 0.1; // 90% success rate
@@ -400,7 +401,7 @@ export class IntegrationStorage {
           });
         }
       } catch (error) {
-        console.error(`Erro ao enviar webhook para ${integration.name}:`, error);
+        logger.error(`Erro ao enviar webhook para ${integration.name}:`, error);
       }
     }
   }
@@ -620,7 +621,7 @@ export class IntegrationStorage {
 
       localStorage.setItem(this.STORAGE_KEYS.SYNC_LOGS, JSON.stringify(logs));
     } catch (error) {
-      console.error('Erro ao registrar log de sincronização:', error);
+      logger.error('Erro ao registrar log de sincronização:', error);
     }
   }
 
@@ -635,7 +636,7 @@ export class IntegrationStorage {
 
       return logs;
     } catch (error) {
-      console.error('Erro ao carregar logs de sincronização:', error);
+      logger.error('Erro ao carregar logs de sincronização:', error);
       return [];
     }
   }
@@ -645,7 +646,7 @@ export class IntegrationStorage {
     try {
       localStorage.setItem(this.STORAGE_KEYS.INTEGRATIONS, JSON.stringify(integrations));
     } catch (error) {
-      console.error('Erro ao salvar integrações:', error);
+      logger.error('Erro ao salvar integrações:', error);
     }
   }
 
@@ -656,12 +657,12 @@ export class IntegrationStorage {
       const integrations = this.getIntegrations();
 
       if (integrations.length === 0) {
-        console.log('Sistema de integrações inicializado sem integrações padrão');
+        logger.debug('Sistema de integrações inicializado sem integrações padrão');
       }
 
-      console.log('✅ Sistema de integrações inicializado com sucesso');
+      logger.debug('✅ Sistema de integrações inicializado com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao inicializar sistema de integrações:', error);
+      logger.error('❌ Erro ao inicializar sistema de integrações:', error);
     }
   }
 }

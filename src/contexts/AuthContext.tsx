@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
 import { securityLogger, SecurityEventType, SecurityLevel } from '@/utils/securityLogger';
 import { apiClient } from '@/lib/apiClient';
+import { logger } from '@/lib/logger';
 
 // Types
 export interface User {
@@ -157,9 +158,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem(REMEMBER_ME_KEY);
       }
 
-      console.log(`💾 Dados salvos em ${rememberMe ? 'localStorage' : 'sessionStorage'}`);
+      logger.info(`Dados salvos em ${rememberMe ? 'localStorage' : 'sessionStorage'}`);
     } catch (error) {
-      console.error('Failed to save auth data to storage:', error);
+      logger.error('Failed to save auth data to storage:', error);
     }
   };
 
@@ -180,11 +181,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (token && userStr) {
         const user = JSON.parse(userStr);
-        console.log(`📱 Dados carregados de ${rememberMe ? 'localStorage' : 'sessionStorage'}`);
+        logger.info(`Dados carregados de ${rememberMe ? 'localStorage' : 'sessionStorage'}`);
         return { user, token, rememberMe };
       }
     } catch (error) {
-      console.error('Failed to load auth data from storage:', error);
+      logger.error('Failed to load auth data from storage:', error);
     }
     return null;
   };
@@ -197,9 +198,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem(REMEMBER_ME_KEY);
       sessionStorage.removeItem(TOKEN_STORAGE_KEY);
       sessionStorage.removeItem(USER_STORAGE_KEY);
-      console.log('🗑️ Dados de autenticação limpos');
+      logger.info('Dados de autenticação limpos');
     } catch (error) {
-      console.error('Failed to clear auth data from storage:', error);
+      logger.error('Failed to clear auth data from storage:', error);
     }
   };
 
@@ -229,7 +230,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           payload: { user, token }
         });
 
-        console.log(`✅ Login bem-sucedido: ${user.name} (${user.role}) - Remember me: ${rememberMe}`);
+        logger.info(`Login bem-sucedido: ${user.name} (${user.role}) - Remember me: ${rememberMe}`);
 
         // Log successful login
         securityLogger.logAuthentication(
@@ -246,7 +247,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error(response.message || 'Credenciais inválidas');
       }
     } catch (error: any) {
-      console.error('❌ Erro no login:', error);
+      logger.error('Erro no login:', error);
 
       // Log failed login attempt
       securityLogger.logAuthentication(
@@ -275,7 +276,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Call logout endpoint (optional, since JWT is stateless)
     if (state.token) {
       apiClient.post('/auth/logout')
-        .catch(error => console.warn('Logout endpoint failed:', error));
+        .catch(error => logger.warn('Logout endpoint failed:', error));
     }
 
     // Log logout event
@@ -296,7 +297,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     clearAuthData();
     dispatch({ type: 'LOGOUT' });
 
-    console.log('👋 Logout realizado');
+    logger.info('Logout realizado');
   };
 
   // Refresh token / verify current session
@@ -321,7 +322,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Falha ao renovar sessão');
       }
     } catch (error: any) {
-      console.error('❌ Erro ao renovar token:', error);
+      logger.error('Erro ao renovar token:', error);
       dispatch({ type: 'TOKEN_EXPIRED' });
       clearAuthData();
       throw error;
@@ -356,14 +357,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             token: authData.token
           }
         });
-        console.log('✅ Sessão restaurada automaticamente');
+        logger.info('Sessão restaurada automaticamente');
       } else {
         // Token is invalid
         apiClient.removeToken();
         clearAuthData();
       }
     } catch (error) {
-      console.error('❌ Erro ao verificar autenticação:', error);
+      logger.error('Erro ao verificar autenticação:', error);
       apiClient.removeToken();
       clearAuthData();
     } finally {
@@ -404,7 +405,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return () => clearTimeout(timeoutId);
         }
       } catch (error) {
-        console.error('Error parsing JWT token:', error);
+        logger.error('Error parsing JWT token:', error);
       }
     }
   }, [state.token]);

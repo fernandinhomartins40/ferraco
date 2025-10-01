@@ -13,6 +13,7 @@ import { useInactivityTimer } from '@/hooks/useInactivityTimer';
 import { ConditionalRender } from '@/components/ProtectedRoute';
 import InactivityWarningModal from '@/components/InactivityWarningModal';
 import { leadStorage } from '@/utils/leadStorage';
+import { logger } from '@/lib/logger';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -33,10 +34,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     warningTime: 5 * 60 * 1000, // 5 minutes warning
     enabled: true,
     onWarning: () => {
-      console.log('⚠️ Aviso de inatividade ativado');
+      logger.debug('⚠️ Aviso de inatividade ativado');
     },
     onTimeout: () => {
-      console.log('🔒 Logout por inatividade executado');
+      logger.debug('🔒 Logout por inatividade executado');
     }
   });
 

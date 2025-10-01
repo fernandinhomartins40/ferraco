@@ -8,6 +8,7 @@ import {
   PaginationParams,
   PaginatedResponse,
 } from '@/types/api';
+import { logger } from '@/lib/logger';
 
 // Query Keys para cache management
 export const noteKeys = {
@@ -110,7 +111,7 @@ export function useCreateNote(leadId?: string) {
       toast.success('Nota criada com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao criar nota:', error);
+      logger.error('Erro ao criar nota:', error);
       toast.error('Erro ao criar nota. Tente novamente.');
     },
   });
@@ -139,7 +140,7 @@ export function useUpdateNote() {
       toast.success('Nota atualizada com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao atualizar nota:', error);
+      logger.error('Erro ao atualizar nota:', error);
       toast.error('Erro ao atualizar nota. Tente novamente.');
     },
   });
@@ -173,7 +174,7 @@ export function useDeleteNote() {
       toast.success('Nota deletada com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao deletar nota:', error);
+      logger.error('Erro ao deletar nota:', error);
       toast.error('Erro ao deletar nota. Tente novamente.');
     },
   });
@@ -202,7 +203,7 @@ export function useToggleNoteImportance() {
       toast.success(`Nota ${status}!`);
     },
     onError: (error) => {
-      console.error('Erro ao alterar importância da nota:', error);
+      logger.error('Erro ao alterar importância da nota:', error);
       toast.error('Erro ao alterar status da nota. Tente novamente.');
     },
   });
@@ -320,7 +321,7 @@ export function useDuplicateNote() {
       toast.success('Nota duplicada com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao duplicar nota:', error);
+      logger.error('Erro ao duplicar nota:', error);
       toast.error('Erro ao duplicar nota. Tente novamente.');
     },
   });

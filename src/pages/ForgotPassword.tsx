@@ -9,6 +9,7 @@ import { Loader2, ArrowLeft, Mail, CheckCircle, AlertTriangle } from 'lucide-rea
 import { useToast } from '@/hooks/use-toast';
 import { securityLogger, SecurityEventType, SecurityLevel } from '@/utils/securityLogger';
 import logoFerraco from '@/assets/logo-ferraco.webp';
+import { logger } from '@/lib/logger';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -61,7 +62,7 @@ const ForgotPassword = () => {
         description: 'Se o email existe em nosso sistema, você receberá instruções para redefinir sua senha.',
       });
 
-      console.log('📧 Email de recuperação enviado para:', email);
+      logger.debug('📧 Email de recuperação enviado para:', email);
     } catch (err: any) {
       const errorMessage = err.message || 'Erro ao enviar email de recuperação';
       setError(errorMessage);

@@ -1,5 +1,6 @@
 import { TagDefinition, TagRule, TagStats } from '@/types/lead';
 import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
+import { logger } from '@/lib/logger';
 
 interface TagStorageItem extends StorageItem {
   name: string;
@@ -124,7 +125,7 @@ class TagStorage extends BaseStorage<TagStorageItem> {
       const storedLeads = localStorage.getItem('ferraco_leads');
       leads = storedLeads ? JSON.parse(storedLeads) : [];
     } catch (error) {
-      console.error('Error loading leads for tag stats:', error);
+      logger.error('Error loading leads for tag stats:', error);
       return [];
     }
 
@@ -236,9 +237,9 @@ class TagStorage extends BaseStorage<TagStorageItem> {
   };
   getTagById = (tagId: string) => this.getById(tagId);
   initializeSystemTags = () => {
-    console.log('🏷️ Inicializando tags do sistema...');
+    logger.info('Inicializando tags do sistema...');
     this.initializeDefaultTags();
-    console.log('✅ Tags do sistema inicializadas');
+    logger.info('Tags do sistema inicializadas');
   };
 }
 

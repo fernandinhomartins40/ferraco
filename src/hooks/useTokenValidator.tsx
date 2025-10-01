@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useAuth } from './useAuth';
+import { logger } from '@/lib/logger';
 
 interface TokenValidationResult {
   isValid: boolean;
@@ -76,7 +77,7 @@ export const useTokenValidator = (options: UseTokenValidatorOptions = {}) => {
         shouldRefresh
       };
     } catch (error) {
-      console.error('Token validation error:', error);
+      logger.error('Token validation error:', error);
       return {
         isValid: false,
         isExpired: true,
@@ -96,20 +97,20 @@ export const useTokenValidator = (options: UseTokenValidatorOptions = {}) => {
 
     // Handle validation results
     if (result.isExpired) {
-      console.warn('🔒 Token expirado detectado');
+      logger.warn('🔒 Token expirado detectado');
       onTokenExpired?.();
       logout();
     } else if (!result.isValid) {
-      console.warn('⚠️ Token inválido detectado');
+      logger.warn('⚠️ Token inválido detectado');
       onTokenInvalid?.();
       logout();
     } else if (result.shouldRefresh) {
-      console.log('🔄 Token precisa ser renovado');
+      logger.debug('🔄 Token precisa ser renovado');
       onRefreshNeeded?.();
 
       // Auto-refresh token if possible
       refreshToken().catch(error => {
-        console.error('Falha ao renovar token automaticamente:', error);
+        logger.error('Falha ao renovar token automaticamente:', error);
       });
     }
   }, [enabled, token, validateToken, onTokenExpired, onTokenInvalid, onRefreshNeeded, logout, refreshToken]);
@@ -154,7 +155,7 @@ export const useTokenValidator = (options: UseTokenValidatorOptions = {}) => {
         await refreshToken();
         return true;
       } catch (error) {
-        console.error('Failed to refresh token before action:', error);
+        logger.error('Failed to refresh token before action:', error);
         logout();
         return false;
       }

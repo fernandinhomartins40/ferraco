@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
+import { logger } from '@/lib/logger';
 
 // Interface dos dados do backend
 export interface PartialLead {
@@ -85,7 +86,7 @@ export const partialLeadService = {
       if (response.success && response.data) {
         // Log silencioso para debugging (apenas em desenvolvimento)
         if (import.meta.env.DEV) {
-          console.log('🔍 Dados capturados silenciosamente via API:', {
+          logger.debug('Dados capturados silenciosamente via API:', {
             id: response.data.id,
             name: response.data.name,
             phone: response.data.phone,
@@ -101,7 +102,7 @@ export const partialLeadService = {
     } catch (error) {
       // Falha silenciosa - não queremos interromper a experiência do usuário
       if (import.meta.env.DEV) {
-        console.warn('Erro ao capturar lead parcial (silencioso):', error);
+        logger.warn('Erro ao capturar lead parcial (silencioso):', error);
       }
       return null;
     }
@@ -118,13 +119,13 @@ export const partialLeadService = {
       });
 
       if (import.meta.env.DEV && response.success) {
-        console.log('✅ Lead parcial marcado como convertido via API');
+        logger.info('Lead parcial marcado como convertido via API');
       }
 
       return response.success;
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.warn('Erro ao marcar lead como convertido:', error);
+        logger.warn('Erro ao marcar lead como convertido:', error);
       }
       return false;
     }
@@ -184,7 +185,7 @@ export const partialLeadService = {
 
       return null;
     } catch (error) {
-      console.error('Erro ao buscar leads parciais:', error);
+      logger.error('Erro ao buscar leads parciais:', error);
       return null;
     }
   },
@@ -195,7 +196,7 @@ export const partialLeadService = {
       const response = await apiClient.post(`/partial-leads/${partialLeadId}/convert`);
       return response.success;
     } catch (error) {
-      console.error('Erro ao converter lead parcial:', error);
+      logger.error('Erro ao converter lead parcial:', error);
       return false;
     }
   },
@@ -206,7 +207,7 @@ export const partialLeadService = {
       const response = await apiClient.post(`/partial-leads/${partialLeadId}/abandon`);
       return response.success;
     } catch (error) {
-      console.error('Erro ao marcar lead como abandonado:', error);
+      logger.error('Erro ao marcar lead como abandonado:', error);
       return false;
     }
   },
@@ -222,12 +223,64 @@ export const partialLeadService = {
 
       return null;
     } catch (error) {
-      console.error('Erro ao limpar leads antigos:', error);
+      logger.error('Erro ao limpar leads antigos:', error);
       return null;
     }
   },
 
-  // Exportar para CSV\n  async exportToCSV(): Promise<boolean> {\n    try {\n      // Obter todos os leads parciais\n      const result = await this.getPartialLeads({ limit: 1000 }); // Limite alto para obter todos\n      \n      if (!result || !result.leads.length) {\n        console.warn('Nenhum lead para exportar');\n        return false;\n      }\n\n      // Converter dados para CSV\n      const headers = [\n        'ID', 'Nome', 'Telefone', 'Origem', 'URL', \n        'Agente Usuário', 'Primeira Interação', 'Última Atualização', \n        'Interações', 'Completo', 'Abandonado', 'Criado Em'\n      ];\n      \n      const csvContent = [\n        headers.join(','),\n        ...result.leads.map(lead => [\n          lead.id,\n          `\"${lead.name}\"`,\n          `\"${lead.phone}\"`,\n          `\"${lead.source}\"`,\n          `\"${lead.url}\"`,\n          `\"${lead.userAgent}\"`,\n          lead.firstInteraction,\n          lead.lastUpdate,\n          lead.interactions,\n          lead.completed,\n          lead.abandoned,\n          lead.createdAt\n        ].join(','))\n      ].join('\\n');\n\n      // Criar e fazer download do arquivo CSV\n      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });\n      const url = window.URL.createObjectURL(blob);\n      const link = document.createElement('a');\n      link.href = url;\n      link.download = `leads_parciais_${new Date().toISOString().split('T')[0]}.csv`;\n      document.body.appendChild(link);\n      link.click();\n      document.body.removeChild(link);\n      window.URL.revokeObjectURL(url);\n      \n      return true;\n    } catch (error) {\n      console.error('Erro ao exportar leads parciais:', error);\n      return false;\n    }\n  },
+  // Exportar para CSV
+  async exportToCSV(): Promise<boolean> {
+    try {
+      // Obter todos os leads parciais
+      const result = await this.getPartialLeads({ limit: 1000 }); // Limite alto para obter todos
+
+      if (!result || !result.leads.length) {
+        logger.warn('Nenhum lead para exportar');
+        return false;
+      }
+
+      // Converter dados para CSV
+      const headers = [
+        'ID', 'Nome', 'Telefone', 'Origem', 'URL',
+        'Agente Usuário', 'Primeira Interação', 'Última Atualização',
+        'Interações', 'Completo', 'Abandonado', 'Criado Em'
+      ];
+
+      const csvContent = [
+        headers.join(','),
+        ...result.leads.map(lead => [
+          lead.id,
+          `"${lead.name}"`,
+          `"${lead.phone}"`,
+          `"${lead.source}"`,
+          `"${lead.url}"`,
+          `"${lead.userAgent}"`,
+          lead.firstInteraction,
+          lead.lastUpdate,
+          lead.interactions,
+          lead.completed,
+          lead.abandoned,
+          lead.createdAt
+        ].join(','))
+      ].join('\n');
+
+      // Criar e fazer download do arquivo CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `leads_parciais_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return true;
+    } catch (error) {
+      logger.error('Erro ao exportar leads parciais:', error);
+      return false;
+    }
+  },
 
   // Compatibilidade com a interface anterior (para não quebrar código existente)
   async getStats(): Promise<PartialLeadStats> {
