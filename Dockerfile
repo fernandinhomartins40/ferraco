@@ -9,7 +9,7 @@ WORKDIR /frontend
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY vite.config.ts ./
-COPY tailwind.config.js ./
+COPY tailwind.config.ts ./
 COPY postcss.config.js ./
 
 # Install ALL frontend dependencies (including dev deps for build)
