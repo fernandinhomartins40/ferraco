@@ -1,5 +1,22 @@
+# ==========================================
+# FERRACO CRM - Full Stack .gitignore
+# ==========================================
+
+# Dependencies
+node_modules/
+yarn.lock
+pnpm-lock.yaml
+# package-lock.json is KEPT for Docker npm ci
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+ferraco-backend/dist/
+ferraco-backend/build/
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,10 +24,22 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Environment variables
 *.local
+.env
+.env.local
+.env.production
+.env.development
+ferraco-backend/.env
+ferraco-backend/.env.local
+
+# Database
+ferraco-backend/data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/dev.db
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +51,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+*~
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# SSL certificates
+ssl/
+*.pem
+*.key
+*.crt
