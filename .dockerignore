@@ -112,5 +112,5 @@ temp
 .prettierrc
 .prettierignore
 .editorconfig
-tsconfig.*.json
+# tsconfig.*.json - REMOVED: needed for Vite build (tsconfig.app.json, tsconfig.node.json)
 vitest.config.*
