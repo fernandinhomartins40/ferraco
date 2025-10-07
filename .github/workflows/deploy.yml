@@ -23,7 +23,7 @@ jobs:
   deploy:
     name: 🚀 Deploy Full Stack para VPS
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     steps:
     - name: 📥 Checkout
@@ -101,7 +101,7 @@ jobs:
           -o ServerAliveInterval=30 \
           -o ServerAliveCountMax=3 \
           -o ConnectTimeout=30 \
-          ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << 'DEPLOY_SCRIPT'
+          ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << "DEPLOY_SCRIPT"
           set -e
 
           echo "========================================="
@@ -133,6 +133,14 @@ jobs:
             systemctl enable docker
           fi
           docker --version
+
+          # Verificar Docker Compose v2 (PROBLEMA #8)
+          if ! docker compose version &> /dev/null; then
+            echo "Instalando Docker Compose v2..."
+            apt-get update -qq
+            apt-get install -y docker-compose-plugin >/dev/null 2>&1
+          fi
+          docker compose version
 
           # Parar containers anteriores
           echo "⏹️  Parando containers anteriores..."
@@ -173,6 +181,10 @@ jobs:
           [ -f "docker/nginx.conf" ] || { echo "❌ docker/nginx.conf não encontrado!"; exit 1; }
           [ -d "ferraco-backend" ] || { echo "❌ Backend não encontrado!"; exit 1; }
           [ -d "src" ] || { echo "❌ Frontend não encontrado!"; exit 1; }
+
+          # Corrigir permissões dos scripts (PROBLEMA #5)
+          echo "🔧 Corrigindo permissões dos scripts..."
+          chmod +x docker/startup.sh docker/setup-ssl.sh 2>/dev/null || true
 
           # Debug: listar conteúdo da pasta docker
           echo "📋 Conteúdo da pasta docker:"
