@@ -75,6 +75,9 @@ COPY --from=backend-builder --chown=nodejs:nodejs /backend/dist ./backend/dist
 COPY --from=backend-builder --chown=nodejs:nodejs /backend/prisma ./backend/prisma
 COPY --from=backend-builder --chown=nodejs:nodejs /backend/package*.json ./backend/
 
+# Install tsx globally for seed script execution
+RUN cd /app/backend && npm install -g tsx
+
 # Copy frontend build to nginx html directory
 COPY --from=frontend-builder /frontend/dist /usr/share/nginx/html
 

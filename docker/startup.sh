@@ -20,6 +20,18 @@ chmod 644 /app/backend/data/*.db 2>/dev/null || true
 echo "Running Prisma migrations..."
 npx prisma migrate deploy
 
+# Check if database needs seeding (if users table is empty)
+echo "Checking if database needs seeding..."
+USER_COUNT=$(sqlite3 /app/backend/data/ferraco.db "SELECT COUNT(*) FROM users;" 2>/dev/null || echo "0")
+
+if [ "$USER_COUNT" = "0" ]; then
+    echo "Database is empty. Running seed..."
+    npx tsx prisma/seed.ts
+    echo "Seed completed successfully!"
+else
+    echo "Database already has $USER_COUNT users. Skipping seed."
+fi
+
 # Start backend as nodejs user in background
 echo "Starting Node.js backend on port 3002..."
 su-exec nodejs:nodejs node dist/server.js > /app/backend/logs/backend.log 2>&1 &
