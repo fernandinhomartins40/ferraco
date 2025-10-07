@@ -37,16 +37,16 @@ export class AuthService {
       (up) => `${up.permission.resource}:${up.permission.action}`
     );
 
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-        permissions,
-      },
-      jwtConfig.secret,
-      { expiresIn: jwtConfig.expiresIn as string }
-    );
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      permissions,
+    };
+
+    const token = jwt.sign(payload, jwtConfig.secret, {
+      expiresIn: jwtConfig.expiresIn,
+    } as jwt.SignOptions);
 
     // Atualizar último login
     await prisma.user.update({

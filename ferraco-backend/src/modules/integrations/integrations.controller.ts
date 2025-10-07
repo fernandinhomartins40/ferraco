@@ -117,7 +117,7 @@ export class IntegrationsController {
   /**
    * GET /api/integrations/available-types
    */
-  async getAvailableTypes(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async getAvailableTypes(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const types = integrationsService.getAvailableTypes();
       res.json(successResponse(types, 'Tipos disponíveis obtidos'));
@@ -129,7 +129,7 @@ export class IntegrationsController {
   /**
    * GET /api/integrations/stats
    */
-  async getIntegrationsStats(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async getIntegrationsStats(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const stats = await integrationsService.getIntegrationsStats();
       res.json(successResponse(stats, 'Estatísticas obtidas com sucesso'));

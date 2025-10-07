@@ -61,7 +61,7 @@ export class DuplicatesController {
   /**
    * GET /api/duplicates/list
    */
-  async getDuplicateLeads(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async getDuplicateLeads(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const duplicates = await duplicatesService.getDuplicateLeads();
       res.json(successResponse(duplicates, 'Duplicatas listadas com sucesso'));
@@ -73,7 +73,7 @@ export class DuplicatesController {
   /**
    * POST /api/duplicates/scan
    */
-  async scanAllLeads(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async scanAllLeads(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const result = await duplicatesService.scanAllLeads();
       res.json(successResponse(result, 'Varredura de duplicatas concluída'));

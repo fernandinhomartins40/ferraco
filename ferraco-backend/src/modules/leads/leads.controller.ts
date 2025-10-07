@@ -201,7 +201,7 @@ export class LeadsController {
    * GET /leads/stats
    */
   async getLeadStats(
-    req: AuthenticatedRequest,
+    _req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {

@@ -259,6 +259,7 @@ model Communication {
   id          String             @id @default(uuid())
   type        CommunicationType
   content     String
+  subject     String?            // Assunto da comunicação (emails, etc)
   direction   Direction
   status      CommunicationStatus @default(PENDING)
 
@@ -268,6 +269,9 @@ model Communication {
   templateId  String?
   template    MessageTemplate?   @relation(fields: [templateId], references: [id])
 
+  sentBy      String?            // ID do usuário que enviou
+  sentAt      DateTime?          // Data/hora do envio
+
   metadata    String?            // JSON string
 
   createdAt   DateTime           @default(now())
@@ -275,6 +279,7 @@ model Communication {
 
   @@index([leadId])
   @@index([status])
+  @@index([sentAt])
   @@map("communications")
 }
 
@@ -566,9 +571,13 @@ model AuditLog {
 model Report {
   id            String         @id @default(uuid())
   name          String
+  description   String?        // Descrição do relatório
   type          ReportType
   filters       String         // JSON
   widgets       String         // JSON
+  data          String?        // Dados gerados do relatório (JSON)
+
+  generatedById String?        // ID do usuário que gerou
 
   isScheduled   Boolean        @default(false)
   scheduleConfig String?       // JSON
@@ -577,6 +586,7 @@ model Report {
   updatedAt     DateTime       @updatedAt
   lastGenerated DateTime?
 
+  @@index([generatedById])
   @@map("reports")
 }
 

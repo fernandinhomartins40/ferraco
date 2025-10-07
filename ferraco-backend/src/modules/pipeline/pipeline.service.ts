@@ -27,9 +27,9 @@ export class PipelineService {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { description: { contains: search, mode: 'insensitive' as const } },
+      ] as any;
     }
 
     const pipelines = await prisma.pipeline.findMany({

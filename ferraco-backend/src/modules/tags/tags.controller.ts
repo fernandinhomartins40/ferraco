@@ -72,7 +72,7 @@ export class TagsController {
     }
   }
 
-  async getTagStats(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async getTagStats(_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const stats = await tagsService.getTagStats();
       res.json({ success: true, message: 'Estatísticas obtidas com sucesso', data: stats });
@@ -91,12 +91,12 @@ export class TagsController {
     }
   }
 
-  getPredefinedColors(req: AuthenticatedRequest, res: Response): void {
+  getPredefinedColors(_req: AuthenticatedRequest, res: Response): void {
     const colors = tagsService.getPredefinedColors();
     res.json({ success: true, message: 'Cores predefinidas obtidas com sucesso', data: { colors } });
   }
 
-  async getTagRules(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async getTagRules(_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const rules = await tagsService.getTagRules();
       res.json({ success: true, message: 'Regras obtidas com sucesso', data: { rules } });

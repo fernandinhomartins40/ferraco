@@ -84,7 +84,10 @@
       "Bash(tasklist)",
       "Bash(ollama pull:*)",
       "Bash(git mv:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(chmod:*)",
+      "Bash(git update-index:*)",
+      "Bash(git ls-tree:*)"
     ],
     "deny": [],
     "ask": []

@@ -12,8 +12,8 @@ COPY vite.config.ts ./
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
 
-# Install frontend dependencies
-RUN npm ci --only=production && \
+# Install ALL frontend dependencies (including dev deps for build)
+RUN npm ci && \
     npm cache clean --force
 
 # Copy frontend source code
@@ -39,8 +39,8 @@ COPY ferraco-backend/package*.json ./
 COPY ferraco-backend/tsconfig.json ./
 COPY ferraco-backend/prisma ./prisma/
 
-# Install backend dependencies
-RUN npm ci --only=production && \
+# Install ALL backend dependencies (including dev deps for build)
+RUN npm ci && \
     npm cache clean --force
 
 # Copy backend source code

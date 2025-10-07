@@ -147,7 +147,7 @@ export class ChatbotController {
    * GET /api/chatbot/health
    * Verifica se Ollama está rodando
    */
-  async checkHealth(req: Request, res: Response) {
+  async checkHealth(_req: Request, res: Response) {
     try {
       const isHealthy = await aiService.checkOllamaHealth();
 

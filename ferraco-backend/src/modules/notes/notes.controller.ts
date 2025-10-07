@@ -208,7 +208,7 @@ export class NotesController {
    * GET /notes/stats
    */
   async getNoteStats(
-    req: AuthenticatedRequest,
+    _req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {
@@ -229,7 +229,7 @@ export class NotesController {
    * GET /notes/categories
    */
   async getCategories(
-    req: AuthenticatedRequest,
+    _req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {

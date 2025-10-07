@@ -1,6 +1,6 @@
 import { getPrismaClient } from '../../config/database';
 import { AppError } from '../../middleware/errorHandler';
-import { Prisma } from '@prisma/client';
+import { Prisma, ReportType, LeadStatus, CommunicationType } from '@prisma/client';
 
 const prisma = getPrismaClient();
 
@@ -20,7 +20,7 @@ export class ReportsService {
     const where: Prisma.ReportWhereInput = {};
 
     if (type) {
-      where.type = type;
+      where.type = type as ReportType;
     }
 
     if (generatedById) {
@@ -29,23 +29,14 @@ export class ReportsService {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { description: { contains: search, mode: 'insensitive' as const } },
+      ] as any;
     }
 
     const [reports, total] = await Promise.all([
       prisma.report.findMany({
         where,
-        include: {
-          generatedBy: {
-            select: {
-              id: true,
-              username: true,
-              email: true,
-            },
-          },
-        },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -70,15 +61,6 @@ export class ReportsService {
   async getReportById(id: string) {
     const report = await prisma.report.findUnique({
       where: { id },
-      include: {
-        generatedBy: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-          },
-        },
-      },
     });
 
     if (!report) {
@@ -104,18 +86,10 @@ export class ReportsService {
       data: {
         name,
         description,
-        type,
+        type: type as ReportType,
         filters,
+        widgets: '[]',
         generatedById,
-      },
-      include: {
-        generatedBy: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-          },
-        },
       },
     });
 
@@ -138,18 +112,17 @@ export class ReportsService {
       throw new AppError(404, 'Relatório não encontrado');
     }
 
+    const updateData: Prisma.ReportUpdateInput = {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.type && { type: data.type as ReportType }),
+      ...(data.filters !== undefined && { filters: data.filters }),
+      ...(data.data !== undefined && { data: data.data }),
+    };
+
     const updated = await prisma.report.update({
       where: { id },
-      data,
-      include: {
-        generatedBy: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-          },
-        },
-      },
+      data: updateData,
     });
 
     return updated;
@@ -195,7 +168,7 @@ export class ReportsService {
     }
 
     if (status) {
-      where.status = status;
+      where.status = status as LeadStatus;
     }
 
     if (source) {
@@ -301,11 +274,11 @@ export class ReportsService {
     }
 
     if (type) {
-      where.type = type;
+      where.type = type as CommunicationType;
     }
 
     if (direction) {
-      where.direction = direction;
+      where.direction = direction as any;
     }
 
     if (leadId) {
@@ -348,12 +321,6 @@ export class ReportsService {
               name: true,
               email: true,
               phone: true,
-            },
-          },
-          sentBy: {
-            select: {
-              id: true,
-              username: true,
             },
           },
         },
@@ -405,62 +372,28 @@ export class ReportsService {
       }
     }
 
-    if (pipelineId) {
-      where.pipelineId = pipelineId;
-    }
+    // Pipeline/stages não implementado no modelo Lead atual
+    const leads = await prisma.lead.findMany({ where });
 
-    const [
-      leads,
-      pipelines,
-    ] = await Promise.all([
-      prisma.lead.findMany({
-        where,
-        include: {
-          pipeline: {
-            include: {
-              stage: true,
-            },
-          },
-        },
-      }),
-
-      prisma.pipeline.findMany({
-        where: pipelineId ? { id: pipelineId } : undefined,
-        include: {
-          stages: {
-            include: {
-              _count: {
-                select: {
-                  leads: true,
-                },
-              },
-            },
-            orderBy: { order: 'asc' },
-          },
-        },
-      }),
-    ]);
+    const pipelines = await prisma.pipeline.findMany({
+      where: pipelineId ? { id: pipelineId } : undefined,
+    });
 
     const funnelData = pipelines.map((pipeline) => ({
       pipelineId: pipeline.id,
       pipelineName: pipeline.name,
-      stages: pipeline.stages.map((stage) => ({
-        stageId: stage.id,
-        stageName: stage.name,
-        order: stage.order,
-        leadsCount: stage._count.leads,
-      })),
+      stages: [] as any[], // TODO: Implementar relação Lead<->Pipeline
     }));
 
     const conversionRate = leads.length > 0
-      ? (leads.filter((l) => l.status === 'converted').length / leads.length) * 100
+      ? (leads.filter((l) => l.status === 'CONCLUIDO').length / leads.length) * 100
       : 0;
 
     return {
       summary: {
         totalLeads: leads.length,
-        convertedLeads: leads.filter((l) => l.status === 'converted').length,
-        lostLeads: leads.filter((l) => l.status === 'lost').length,
+        convertedLeads: leads.filter((l) => l.status === 'CONCLUIDO').length,
+        lostLeads: leads.filter((l) => l.status === 'PERDIDO').length,
         conversionRate: Math.round(conversionRate * 100) / 100,
       },
       funnelData,
@@ -518,25 +451,25 @@ export class ReportsService {
           }),
 
           prisma.lead.count({
-            where: { ...where, assignedToId: user.id, status: 'converted' },
+            where: { ...where, assignedToId: user.id, status: 'CONCLUIDO' },
           }),
 
           prisma.lead.count({
-            where: { ...where, assignedToId: user.id, status: 'lost' },
+            where: { ...where, assignedToId: user.id, status: 'PERDIDO' },
           }),
 
           prisma.communication.count({
             where: {
-              sentById: user.id,
-              sentAt: where.createdAt,
+              sentBy: user.id,
+              ...(where.createdAt && { sentAt: where.createdAt as any }),
             },
           }),
 
           prisma.leadNote.count({
             where: {
               createdById: user.id,
-              createdAt: where.createdAt,
-            },
+              ...(where.createdAt && { createdAt: where.createdAt as any }),
+            } as any,
           }),
         ]);
 

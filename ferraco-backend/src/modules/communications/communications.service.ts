@@ -1,6 +1,6 @@
 import { getPrismaClient } from '../../config/database';
 import { AppError } from '../../middleware/errorHandler';
-import { Prisma } from '@prisma/client';
+import { Prisma, CommunicationType, Direction, CommunicationStatus } from '@prisma/client';
 
 const prisma = getPrismaClient();
 
@@ -38,22 +38,22 @@ export class CommunicationsService {
     }
 
     if (type) {
-      where.type = type;
+      where.type = type as CommunicationType;
     }
 
     if (direction) {
-      where.direction = direction;
+      where.direction = direction as Direction;
     }
 
     if (status) {
-      where.status = status;
+      where.status = status as CommunicationStatus;
     }
 
     if (search) {
       where.OR = [
-        { subject: { contains: search, mode: 'insensitive' } },
-        { content: { contains: search, mode: 'insensitive' } },
-      ];
+        { subject: { contains: search, mode: 'insensitive' as const } },
+        { content: { contains: search, mode: 'insensitive' as const } },
+      ] as any;
     }
 
     if (startDate || endDate) {
@@ -76,13 +76,6 @@ export class CommunicationsService {
               name: true,
               email: true,
               phone: true,
-            },
-          },
-          sentBy: {
-            select: {
-              id: true,
-              username: true,
-              email: true,
             },
           },
         },
@@ -119,13 +112,6 @@ export class CommunicationsService {
             phone: true,
           },
         },
-        sentBy: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-          },
-        },
       },
     });
 
@@ -159,13 +145,13 @@ export class CommunicationsService {
     const communication = await prisma.communication.create({
       data: {
         leadId,
-        type,
-        direction,
+        type: type as CommunicationType,
+        direction: direction as Direction,
         subject,
         content,
-        sentById,
+        sentBy: sentById,
         sentAt: new Date(),
-        status: 'sent',
+        status: 'SENT' as CommunicationStatus,
         metadata,
       },
       include: {
@@ -175,13 +161,6 @@ export class CommunicationsService {
             name: true,
             email: true,
             phone: true,
-          },
-        },
-        sentBy: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
           },
         },
       },
@@ -205,9 +184,16 @@ export class CommunicationsService {
       throw new AppError(404, 'Comunicação não encontrada');
     }
 
+    const updateData: Prisma.CommunicationUpdateInput = {
+      ...(data.subject !== undefined && { subject: data.subject }),
+      ...(data.content !== undefined && { content: data.content }),
+      ...(data.status && { status: data.status as CommunicationStatus }),
+      ...(data.metadata !== undefined && { metadata: data.metadata }),
+    };
+
     const updated = await prisma.communication.update({
       where: { id },
-      data,
+      data: updateData,
       include: {
         lead: {
           select: {
@@ -215,13 +201,6 @@ export class CommunicationsService {
             name: true,
             email: true,
             phone: true,
-          },
-        },
-        sentBy: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
           },
         },
       },
@@ -257,7 +236,7 @@ export class CommunicationsService {
 
     const updated = await prisma.communication.update({
       where: { id },
-      data: { status: 'read' },
+      data: { status: 'READ' as CommunicationStatus },
       include: {
         lead: {
           select: {
@@ -265,13 +244,6 @@ export class CommunicationsService {
             name: true,
             email: true,
             phone: true,
-          },
-        },
-        sentBy: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
           },
         },
       },
@@ -338,12 +310,6 @@ export class CommunicationsService {
             select: {
               id: true,
               name: true,
-            },
-          },
-          sentBy: {
-            select: {
-              id: true,
-              username: true,
             },
           },
         },

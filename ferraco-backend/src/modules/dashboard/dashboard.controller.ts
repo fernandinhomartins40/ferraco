@@ -9,7 +9,7 @@ export class DashboardController {
    * GET /dashboard/metrics
    */
   async getMetrics(
-    req: AuthenticatedRequest,
+    _req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {

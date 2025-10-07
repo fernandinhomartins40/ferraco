@@ -1,6 +1,6 @@
 import { getPrismaClient } from '../../config/database';
 import { AppError } from '../../middleware/errorHandler';
-import { Prisma } from '@prisma/client';
+import { Prisma, IntegrationType } from '@prisma/client';
 
 const prisma = getPrismaClient();
 
@@ -17,7 +17,7 @@ export class IntegrationsService {
     const where: Prisma.IntegrationWhereInput = {};
 
     if (type) {
-      where.type = type;
+      where.type = type as IntegrationType;
     }
 
     if (isEnabled !== undefined) {
@@ -89,7 +89,7 @@ export class IntegrationsService {
     const integration = await prisma.integration.create({
       data: {
         name,
-        type,
+        type: type as IntegrationType,
         config,
         credentials: encryptedCredentials,
         isEnabled: false,

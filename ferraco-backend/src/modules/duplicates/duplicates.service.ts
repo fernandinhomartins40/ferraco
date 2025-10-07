@@ -103,15 +103,16 @@ export class DuplicatesService {
 
     // Buscar leads com mesmo email (se fornecido)
     if (lead.email) {
-      const emailMatches = await prisma.lead.findMany({
+      const allLeads = await prisma.lead.findMany({
         where: {
           id: { not: leadId },
-          email: {
-            equals: lead.email,
-            mode: 'insensitive',
-          },
+          email: { not: null },
         },
       });
+
+      const emailMatches = allLeads.filter(
+        (l) => l.email?.toLowerCase() === lead.email?.toLowerCase()
+      );
 
       emailMatches.forEach((duplicate) => {
         const existing = potentialDuplicates.find((d) => d.lead.id === duplicate.id);

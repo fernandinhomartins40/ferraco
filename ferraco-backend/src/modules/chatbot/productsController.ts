@@ -37,7 +37,7 @@ export class ProductsController {
    * GET /api/chatbot/products
    * Lista todos os produtos
    */
-  async listProducts(req: Request, res: Response) {
+  async listProducts(_req: Request, res: Response) {
     try {
       const products = await prisma.product.findMany({
         orderBy: { createdAt: 'desc' }
@@ -205,7 +205,7 @@ export class ProductsController {
    * GET /api/chatbot/faqs
    * Lista todas as FAQs
    */
-  async listFAQs(req: Request, res: Response) {
+  async listFAQs(_req: Request, res: Response) {
     try {
       const faqs = await prisma.fAQItem.findMany({
         orderBy: { createdAt: 'desc' }
@@ -332,7 +332,7 @@ export class ProductsController {
    * GET /api/chatbot/company
    * Busca dados da empresa
    */
-  async getCompany(req: Request, res: Response) {
+  async getCompany(_req: Request, res: Response) {
     try {
       const company = await prisma.companyData.findFirst();
 

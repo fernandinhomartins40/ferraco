@@ -54,7 +54,7 @@ __tests__
 Dockerfile
 docker-compose*.yml
 .dockerignore
-docker/*.sh
+# docker/*.sh - REMOVED: scripts are needed in the image!
 
 # Documentation
 *.md

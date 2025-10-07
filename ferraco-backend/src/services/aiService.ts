@@ -274,7 +274,7 @@ R: "Sou especializado apenas em produtos da Ferraco. Mas posso ajudar com portõ
   /**
    * Extrai dados estruturados da conversa (NER básico)
    */
-  private extractStructuredData(userMessage: string, aiMessage: string): AIResponse['extractedData'] {
+  private extractStructuredData(userMessage: string, _aiMessage: string): AIResponse['extractedData'] {
     const data: AIResponse['extractedData'] = {};
 
     const text = userMessage.toLowerCase();
