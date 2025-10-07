@@ -169,8 +169,15 @@ jobs:
           [ -f "Dockerfile" ] || { echo "❌ Dockerfile não encontrado!"; exit 1; }
           [ -f "docker-compose.vps.yml" ] || { echo "❌ docker-compose.vps.yml não encontrado!"; exit 1; }
           [ -d "docker" ] || { echo "❌ Pasta docker não encontrada!"; exit 1; }
+          [ -f "docker/startup.sh" ] || { echo "❌ docker/startup.sh não encontrado!"; exit 1; }
+          [ -f "docker/nginx.conf" ] || { echo "❌ docker/nginx.conf não encontrado!"; exit 1; }
           [ -d "ferraco-backend" ] || { echo "❌ Backend não encontrado!"; exit 1; }
           [ -d "src" ] || { echo "❌ Frontend não encontrado!"; exit 1; }
+
+          # Debug: listar conteúdo da pasta docker
+          echo "📋 Conteúdo da pasta docker:"
+          ls -la docker/
+
           echo "✅ Estrutura validada!"
 
           # Criar diretórios de dados
