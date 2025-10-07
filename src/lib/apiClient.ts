@@ -32,7 +32,21 @@ class ApiClient {
 
   constructor() {
     // Base URL dinâmica baseada no ambiente
-    const baseURL = this.useMock ? undefined : (import.meta.env.VITE_API_URL || 'http://localhost:3002/api');
+    // Em produção, usa caminho relativo /api (proxy do Nginx)
+    // Em desenvolvimento, usa localhost:3002/api ou variável de ambiente
+    let baseURL: string | undefined;
+
+    if (this.useMock) {
+      baseURL = undefined;
+    } else if (import.meta.env.VITE_API_URL) {
+      baseURL = import.meta.env.VITE_API_URL;
+    } else if (import.meta.env.PROD) {
+      // Em produção, usa caminho relativo (Nginx faz proxy)
+      baseURL = '/api';
+    } else {
+      // Em desenvolvimento local
+      baseURL = 'http://localhost:3002/api';
+    }
 
     this.client = axios.create({
       baseURL,

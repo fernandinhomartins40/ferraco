@@ -21,6 +21,9 @@ COPY src ./src
 COPY public ./public
 COPY index.html ./
 
+# Copy production environment config
+COPY .env.production.example .env.production
+
 # Build frontend for production
 RUN npm run build
 
