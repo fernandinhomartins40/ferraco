@@ -29,7 +29,18 @@ interface FuseChatResponse {
   session_id: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Usar mesma lógica do apiClient para determinar URL base
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (import.meta.env.PROD) {
+    return '/api'; // Produção: usa caminho relativo (proxy Nginx)
+  }
+  return 'http://localhost:3002/api'; // Desenvolvimento
+};
+
+const API_URL = getApiUrl();
 const FUSECHAT_API_URL = 'https://digiurbis.com.br/api/chat';
 
 export function useChatbot(leadId: string) {
