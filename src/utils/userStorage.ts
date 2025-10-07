@@ -14,6 +14,11 @@ import {
 } from '@/types/lead';
 import { logger } from '@/lib/logger';
 
+// Tipos específicos para evitar 'any'
+type PermissionContext = Record<string, unknown>;
+type AuditDetails = Record<string, unknown>;
+type ObjectChanges = Record<string, { from: unknown; to: unknown }>;
+
 export class UserStorage {
   private readonly STORAGE_KEYS = {
     USERS: 'ferraco_users',
@@ -104,7 +109,7 @@ export class UserStorage {
       this.saveUsers(users);
 
       this.logAction('user_updated', 'users', userId, {
-        changes: this.getChanges(oldUser, users[index])
+        changes: this.getChanges(oldUser as unknown as Record<string, unknown>, users[index] as unknown as Record<string, unknown>)
       });
 
       return true;
@@ -284,7 +289,7 @@ export class UserStorage {
       this.saveRoles(roles);
 
       this.logAction('role_updated', 'roles', roleId, {
-        changes: this.getChanges(oldRole, roles[index])
+        changes: this.getChanges(oldRole as unknown as Record<string, unknown>, roles[index] as unknown as Record<string, unknown>)
       });
 
       return true;
@@ -320,7 +325,7 @@ export class UserStorage {
   }
 
   // 🔒 Permission System
-  hasPermission(userId: string, resource: string, action: string, context?: any): boolean {
+  hasPermission(userId: string, resource: string, action: string, context?: PermissionContext): boolean {
     try {
       const user = this.getUser(userId);
       if (!user || !user.isActive) return false;
@@ -347,7 +352,7 @@ export class UserStorage {
     }
   }
 
-  private evaluatePermissionConditions(conditions: PermissionCondition[], context: any): boolean {
+  private evaluatePermissionConditions(conditions: PermissionCondition[], context: PermissionContext | undefined): boolean {
     return conditions.every(condition => {
       const contextValue = context?.[condition.field];
 
@@ -357,9 +362,9 @@ export class UserStorage {
         case 'not_equals':
           return contextValue !== condition.value;
         case 'in':
-          return Array.isArray(condition.value) && condition.value.includes(contextValue);
+          return Array.isArray(condition.value) && condition.value.includes(contextValue as string);
         case 'not_in':
-          return Array.isArray(condition.value) && !condition.value.includes(contextValue);
+          return Array.isArray(condition.value) && !condition.value.includes(contextValue as string);
         default:
           return false;
       }
@@ -391,7 +396,7 @@ export class UserStorage {
     action: string,
     resource: string,
     resourceId: string,
-    details: Record<string, any>,
+    details: AuditDetails,
     success: boolean = true,
     errorMessage?: string
   ): void {
@@ -848,8 +853,8 @@ export class UserStorage {
   }
 
   // 🛠️ Utility Methods
-  private getChanges(oldObj: any, newObj: any): Record<string, { from: any; to: any }> {
-    const changes: Record<string, { from: any; to: any }> = {};
+  private getChanges(oldObj: Record<string, unknown>, newObj: Record<string, unknown>): ObjectChanges {
+    const changes: ObjectChanges = {};
 
     Object.keys(newObj).forEach(key => {
       if (oldObj[key] !== newObj[key]) {

@@ -70,10 +70,12 @@ const TagManagement = () => {
 
   const tagStats: TagStats[] = useMemo(() => {
     if (!statsData || !Array.isArray(statsData)) return [];
-    return statsData.map((stat: any) => ({
+    return statsData.map((stat: { id?: string; name?: string; count?: number; conversionRate?: number; averageTime?: number; trend?: 'up' | 'down' | 'stable' }) => ({
+      tagId: stat.id || '',
       tagName: stat.name || '',
       count: stat.count || 0,
       conversionRate: stat.conversionRate || 0,
+      averageTime: stat.averageTime || 0,
       trend: stat.trend || 'stable',
     }));
   }, [statsData]);
@@ -274,7 +276,7 @@ const TagManagement = () => {
           <Button
             onClick={() => setIsCreateDialogOpen(true)}
             className="flex items-center space-x-2"
-            disabled={createTagMutation.isLoading}
+            disabled={createTagMutation.isPending}
           >
             <Plus className="h-4 w-4" />
             <span>Nova Tag</span>
@@ -430,7 +432,7 @@ const TagManagement = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditTag(tag)}
-                          disabled={tag.isSystem || updateTagMutation.isLoading}
+                          disabled={tag.isSystem || updateTagMutation.isPending}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -438,7 +440,7 @@ const TagManagement = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteTag(tag)}
-                          disabled={tag.isSystem || deleteTagMutation.isLoading}
+                          disabled={tag.isSystem || deleteTagMutation.isPending}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -484,7 +486,7 @@ const TagManagement = () => {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  {(predefinedColors || []).map((color) => (
+                  {(Array.isArray(predefinedColors) ? predefinedColors : []).map((color: { name: string; value: string }) => (
                     <SelectItem key={color.value} value={color.value}>
                       <div className="flex items-center space-x-2">
                         <div
@@ -511,15 +513,15 @@ const TagManagement = () => {
               <Button
                 variant="outline"
                 onClick={() => setIsCreateDialogOpen(false)}
-                disabled={createTagMutation.isLoading}
+                disabled={createTagMutation.isPending}
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleCreateTag}
-                disabled={createTagMutation.isLoading}
+                disabled={createTagMutation.isPending}
               >
-                {createTagMutation.isLoading ? 'Criando...' : 'Criar Tag'}
+                {createTagMutation.isPending ? 'Criando...' : 'Criar Tag'}
               </Button>
             </div>
           </div>
@@ -558,7 +560,7 @@ const TagManagement = () => {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  {(predefinedColors || []).map((color) => (
+                  {(Array.isArray(predefinedColors) ? predefinedColors : []).map((color: { name: string; value: string }) => (
                     <SelectItem key={color.value} value={color.value}>
                       <div className="flex items-center space-x-2">
                         <div
@@ -585,15 +587,15 @@ const TagManagement = () => {
               <Button
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
-                disabled={updateTagMutation.isLoading}
+                disabled={updateTagMutation.isPending}
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleUpdateTag}
-                disabled={updateTagMutation.isLoading}
+                disabled={updateTagMutation.isPending}
               >
-                {updateTagMutation.isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                {updateTagMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
             </div>
           </div>

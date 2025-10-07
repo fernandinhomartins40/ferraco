@@ -49,7 +49,7 @@ const InactivityWarningModal: React.FC<InactivityWarningModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" hideCloseButton>
+      <DialogContent className="sm:max-w-md [&>button]:hidden">
         <DialogHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center mb-4">
             <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
@@ -84,14 +84,13 @@ const InactivityWarningModal: React.FC<InactivityWarningModalProps> = ({
             </div>
             <Progress
               value={progress}
-              className="h-2"
-              indicatorClassName={
+              className={`h-2 ${
                 progress > 50
-                  ? 'bg-amber-500'
+                  ? '[&>div]:bg-amber-500'
                   : progress > 25
-                    ? 'bg-orange-500'
-                    : 'bg-red-500'
-              }
+                    ? '[&>div]:bg-orange-500'
+                    : '[&>div]:bg-red-500'
+              }`}
             />
           </div>
 

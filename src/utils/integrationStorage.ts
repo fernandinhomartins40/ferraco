@@ -15,6 +15,20 @@ import {
 } from '@/types/lead';
 import { logger } from '@/lib/logger';
 
+// Tipos específicos para evitar 'any'
+interface SyncLog {
+  id: string;
+  integrationId: string;
+  timestamp: string;
+  success: boolean;
+  error?: string;
+  duration: number;
+}
+
+type LeadFieldValue = string | number | boolean | string[] | undefined;
+
+type WebhookData = Record<string, unknown>;
+
 export class IntegrationStorage {
   private readonly STORAGE_KEYS = {
     INTEGRATIONS: 'ferraco_integrations',
@@ -368,7 +382,7 @@ export class IntegrationStorage {
   }
 
   // 📤 Webhook Management
-  sendWebhook(url: string, data: any, headers?: Record<string, string>): Promise<{ success: boolean; error?: string }> {
+  sendWebhook(url: string, data: WebhookData, headers?: Record<string, string>): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
       // Simulate webhook sending
       setTimeout(() => {
@@ -384,7 +398,7 @@ export class IntegrationStorage {
     });
   }
 
-  async triggerWebhooks(event: string, data: any): Promise<void> {
+  async triggerWebhooks(event: string, data: WebhookData): Promise<void> {
     const integrations = this.getIntegrations().filter(i =>
       i.isEnabled &&
       i.config.actions.some(action => action.trigger === event)
@@ -433,8 +447,8 @@ export class IntegrationStorage {
   }
 
   // 📊 Data Transformation
-  transformLeadData(lead: Lead, mapping: DataMapping[]): Record<string, any> {
-    const transformed: Record<string, any> = {};
+  transformLeadData(lead: Lead, mapping: DataMapping[]): Record<string, LeadFieldValue> {
+    const transformed: Record<string, LeadFieldValue> = {};
 
     mapping.forEach(map => {
       let value = this.getLeadValue(lead, map.localField);
@@ -452,8 +466,8 @@ export class IntegrationStorage {
     return transformed;
   }
 
-  private getLeadValue(lead: Lead, field: string): any {
-    const fieldMap: Record<string, any> = {
+  private getLeadValue(lead: Lead, field: string): LeadFieldValue {
+    const fieldMap: Record<string, LeadFieldValue> = {
       'name': lead.name,
       'phone': lead.phone,
       'status': lead.status,
@@ -470,14 +484,14 @@ export class IntegrationStorage {
     return fieldMap[field];
   }
 
-  private applyTransformation(value: any, transformation: string): any {
+  private applyTransformation(value: LeadFieldValue, transformation: string): LeadFieldValue {
     switch (transformation) {
       case 'uppercase':
         return typeof value === 'string' ? value.toUpperCase() : value;
       case 'lowercase':
         return typeof value === 'string' ? value.toLowerCase() : value;
       case 'date_iso':
-        return new Date(value).toISOString();
+        return value ? new Date(value as string | number).toISOString() : '';
       case 'boolean':
         return Boolean(value);
       case 'number':
@@ -625,13 +639,13 @@ export class IntegrationStorage {
     }
   }
 
-  getSyncLogs(integrationId?: string): any[] {
+  getSyncLogs(integrationId?: string): SyncLog[] {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEYS.SYNC_LOGS);
-      const logs = stored ? JSON.parse(stored) : [];
+      const logs: SyncLog[] = stored ? JSON.parse(stored) : [];
 
       if (integrationId) {
-        return logs.filter((log: any) => log.integrationId === integrationId);
+        return logs.filter((log) => log.integrationId === integrationId);
       }
 
       return logs;

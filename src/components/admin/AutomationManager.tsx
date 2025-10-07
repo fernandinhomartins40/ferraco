@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 const AutomationManager = () => {
   const { toast } = useToast();
   const [automations, setAutomations] = useState<AutomationRule[]>([]);
-  const [stats, setStats] = useState<any>({});
+  const [stats, setStats] = useState<{ total?: number; active?: number; totalExecutions: number; recentExecutions: { name: string; count: number; lastExecuted: string }[] }>({ totalExecutions: 0, recentExecutions: [] });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedAutomation, setSelectedAutomation] = useState<AutomationRule | null>(null);
@@ -160,7 +160,7 @@ const AutomationManager = () => {
     setNewAutomation({
       name: '',
       description: '',
-      trigger: { type: 'lead_created', value: {} },
+      trigger: { type: 'lead_created' },
       conditions: [],
       actions: [],
       isActive: true,
@@ -327,7 +327,7 @@ const AutomationManager = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {stats.recentExecutions.map((execution: any, index: number) => (
+                  {stats.recentExecutions.map((execution, index: number) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <CheckCircle className="h-4 w-4 text-green-500" />
@@ -511,7 +511,7 @@ const AutomationManager = () => {
                 value={newAutomation.trigger.type}
                 onValueChange={(value) => setNewAutomation({
                   ...newAutomation,
-                  trigger: { type: value as any, value: {} }
+                  trigger: { type: value as AutomationTrigger['type'] }
                 })}
               >
                 <SelectTrigger>
@@ -554,7 +554,7 @@ const AutomationManager = () => {
                   </Select>
                   <Select
                     value={condition.operator}
-                    onValueChange={(value) => updateCondition(index, { operator: value as any })}
+                    onValueChange={(value) => updateCondition(index, { operator: value as AutomationCondition['operator'] })}
                   >
                     <SelectTrigger className="w-32">
                       <SelectValue />
@@ -566,8 +566,8 @@ const AutomationManager = () => {
                     </SelectContent>
                   </Select>
                   <Input
-                    value={condition.value}
-                    onChange={(e) => updateCondition(index, { value: e.target.value })}
+                    value={String(condition.value)}
+                    onChange={(e) => updateCondition(index, { value: e.target.value as string | number | boolean | string[] })}
                     placeholder="Valor"
                     className="flex-1"
                   />
@@ -596,7 +596,7 @@ const AutomationManager = () => {
                 <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg">
                   <Select
                     value={action.type}
-                    onValueChange={(value) => updateAction(index, { type: value as any })}
+                    onValueChange={(value) => updateAction(index, { type: value as AutomationAction['type'] })}
                   >
                     <SelectTrigger className="w-48">
                       <SelectValue />

@@ -28,9 +28,18 @@ export function useTags(params?: PaginationParams & { search?: string; category?
   return useQuery({
     queryKey: tagKeys.list(params),
     queryFn: async (): Promise<PaginatedResponse<ApiTag>> => {
-      const response = await apiClient.get('/tags', params);
+      const response = await apiClient.get('/tags', params as Record<string, unknown>);
+      const data = response.data as { data?: ApiTag[]; pagination?: any } | ApiTag[];
+
+      if (Array.isArray(data)) {
+        return {
+          data: data,
+          pagination: { page: 1, limit: 50, total: data.length, totalPages: 1 },
+        };
+      }
+
       return {
-        data: response.data || [],
+        data: data.data || [],
         pagination: response.pagination || {
           page: 1,
           limit: 50,
@@ -40,7 +49,7 @@ export function useTags(params?: PaginationParams & { search?: string; category?
       };
     },
     staleTime: 10 * 60 * 1000, // 10 minutos (tags mudam menos frequentemente)
-    cacheTime: 30 * 60 * 1000, // 30 minutos
+    gcTime:30 * 60 * 1000, // 30 minutos
   });
 }
 
@@ -49,11 +58,12 @@ export function useAllTags() {
   return useQuery({
     queryKey: [...tagKeys.all, 'all'],
     queryFn: async (): Promise<ApiTag[]> => {
-      const response = await apiClient.get('/tags', { limit: 1000 }); // Buscar todas
-      return response.data || [];
+      const response = await apiClient.get('/tags', { limit: 1000 } as Record<string, unknown>); // Buscar todas
+      const data = response.data as ApiTag[] | { data: ApiTag[] };
+      return Array.isArray(data) ? data : (data.data || []);
     },
     staleTime: 15 * 60 * 1000, // 15 minutos
-    cacheTime: 30 * 60 * 1000,
+    gcTime:30 * 60 * 1000,
   });
 }
 
@@ -63,11 +73,11 @@ export function useTag(id: string) {
     queryKey: tagKeys.detail(id),
     queryFn: async (): Promise<ApiTag> => {
       const response = await apiClient.get(`/tags/${id}`);
-      return response.data;
+      return response.data as ApiTag;
     },
     enabled: !!id,
     staleTime: 10 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    gcTime:30 * 60 * 1000,
   });
 }
 
@@ -77,8 +87,8 @@ export function useCreateTag() {
 
   return useMutation({
     mutationFn: async (data: CreateTagRequest): Promise<ApiTag> => {
-      const response = await apiClient.post('/tags', data);
-      return response.data;
+      const response = await apiClient.post('/tags', data as unknown as Record<string, unknown>);
+      return response.data as ApiTag;
     },
     onSuccess: (newTag) => {
       // Invalidar cache das listas de tags
@@ -104,8 +114,8 @@ export function useUpdateTag() {
 
   return useMutation({
     mutationFn: async (data: UpdateTagRequest): Promise<ApiTag> => {
-      const response = await apiClient.put(`/tags/${data.id}`, data);
-      return response.data;
+      const response = await apiClient.put(`/tags/${data.id}`, data as unknown as Record<string, unknown>);
+      return response.data as ApiTag;
     },
     onSuccess: (updatedTag) => {
       // Atualizar cache individual
@@ -159,7 +169,7 @@ export function useTagRules() {
       return response.data || [];
     },
     staleTime: 15 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    gcTime:30 * 60 * 1000,
   });
 }
 
@@ -194,7 +204,7 @@ export function useTagStats() {
       return response.data || [];
     },
     staleTime: 10 * 60 * 1000, // 10 minutos
-    cacheTime: 20 * 60 * 1000, // 20 minutos
+    gcTime:20 * 60 * 1000, // 20 minutos
   });
 }
 
@@ -218,7 +228,7 @@ export function usePredefinedColors() {
       ];
     },
     staleTime: Infinity, // Cores não mudam
-    cacheTime: Infinity,
+    gcTime:Infinity,
   });
 }
 
@@ -230,8 +240,8 @@ export function useToggleTagStatus() {
     mutationFn: async (params: { id: string; isActive: boolean }): Promise<ApiTag> => {
       const response = await apiClient.patch(`/tags/${params.id}/status`, {
         isActive: params.isActive,
-      });
-      return response.data;
+      } as Record<string, unknown>);
+      return response.data as ApiTag;
     },
     onSuccess: (updatedTag) => {
       // Atualizar cache individual
@@ -260,7 +270,7 @@ export function usePopularTags(limit = 10) {
       return response.data || [];
     },
     staleTime: 15 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    gcTime:30 * 60 * 1000,
   });
 }
 
@@ -273,7 +283,7 @@ export function useTagsByCategory() {
       return response.data || {};
     },
     staleTime: 15 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    gcTime:30 * 60 * 1000,
   });
 }
 

@@ -45,32 +45,32 @@ const HeroSection = ({ onLeadModalOpen }: HeroSectionProps) => {
   return (
     <>
       {/* Hero Slider */}
-      <section id="inicio" className="relative pt-20 lg:pt-24 min-h-screen flex items-center hero-gradient overflow-hidden">
+      <section id="inicio" className="relative pt-20 lg:pt-24 h-[60vh] md:h-[65vh] lg:h-[70vh] flex items-center hero-gradient overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center text-white">
             <div className="animate-fade-in-up">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight">
                 {slides[currentSlide].title}
               </h1>
-              <p className="text-xl md:text-2xl mb-8 opacity-90 max-w-3xl mx-auto">
+              <p className="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 opacity-90 max-w-3xl mx-auto">
                 {slides[currentSlide].subtitle}
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+                <Button
                   onClick={onLeadModalOpen}
                   size="lg"
                   variant="secondary"
-                  className="text-lg font-semibold px-8 py-4 transition-smooth hover:scale-105 shadow-glow"
+                  className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 transition-smooth hover:scale-105 shadow-glow"
                 >
                   {slides[currentSlide].cta}
                 </Button>
-                <Button 
+                <Button
                   onClick={onLeadModalOpen}
                   size="lg"
                   variant="outline"
-                  className="text-lg font-semibold px-8 py-4 border-white text-white hover:bg-white hover:text-primary transition-smooth hover:scale-105"
+                  className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 border-white text-white hover:bg-white hover:text-primary transition-smooth hover:scale-105"
                 >
                   Solicitar Orçamento
                 </Button>
@@ -112,41 +112,76 @@ const HeroSection = ({ onLeadModalOpen }: HeroSectionProps) => {
       </section>
 
       {/* Marquee Section */}
-      <section className="bg-secondary py-4 overflow-hidden">
+      <section className="bg-accent py-4 overflow-hidden">
         <div className="marquee-container">
-          <div className="marquee">
-            <div className="flex items-center space-x-8 text-white font-bold text-lg">
-              <span className="flex items-center space-x-2">
-                <Star className="text-accent" fill="currentColor" />
-                <span>Qualidade Garantida</span>
+          <div className="marquee-content">
+            <div className="marquee-track">
+              <span className="flex items-center space-x-2 mx-8">
+                <Star className="text-primary" fill="currentColor" size={20} />
+                <span className="text-secondary font-bold text-lg">Qualidade Garantida</span>
               </span>
-              <span className="flex items-center space-x-2">
-                <Truck className="text-accent" />
-                <span>Entrega Rápida</span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Truck className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Entrega Rápida</span>
               </span>
-              <span className="flex items-center space-x-2">
-                <Award className="text-accent" />
-                <span>25+ Anos de Experiência</span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Award className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">25+ Anos de Experiência</span>
               </span>
-              <span className="flex items-center space-x-2">
-                <Users className="text-accent" />
-                <span>Atendimento Especializado</span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Users className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Atendimento Especializado</span>
               </span>
-              <span className="flex items-center space-x-2">
-                <Star className="text-accent" fill="currentColor" />
-                <span>Melhores Produtos</span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Star className="text-primary" fill="currentColor" size={20} />
+                <span className="text-secondary font-bold text-lg">Melhores Produtos</span>
               </span>
-              <span className="flex items-center space-x-2">
-                <Truck className="text-accent" />
-                <span>Logística Nacional</span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Truck className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Logística Nacional</span>
               </span>
-              <span className="flex items-center space-x-2">
-                <Award className="text-accent" />
-                <span>Certificação ISO</span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Award className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Certificação ISO</span>
               </span>
-              <span className="flex items-center space-x-2">
-                <Users className="text-accent" />
-                <span>Suporte Técnico</span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Users className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Suporte Técnico</span>
+              </span>
+            </div>
+            {/* Duplicar para animação contínua */}
+            <div className="marquee-track">
+              <span className="flex items-center space-x-2 mx-8">
+                <Star className="text-primary" fill="currentColor" size={20} />
+                <span className="text-secondary font-bold text-lg">Qualidade Garantida</span>
+              </span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Truck className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Entrega Rápida</span>
+              </span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Award className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">25+ Anos de Experiência</span>
+              </span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Users className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Atendimento Especializado</span>
+              </span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Star className="text-primary" fill="currentColor" size={20} />
+                <span className="text-secondary font-bold text-lg">Melhores Produtos</span>
+              </span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Truck className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Logística Nacional</span>
+              </span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Award className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Certificação ISO</span>
+              </span>
+              <span className="flex items-center space-x-2 mx-8">
+                <Users className="text-primary" size={20} />
+                <span className="text-secondary font-bold text-lg">Suporte Técnico</span>
               </span>
             </div>
           </div>

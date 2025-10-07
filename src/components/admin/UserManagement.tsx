@@ -114,13 +114,12 @@ const UserManagement = () => {
       return;
     }
 
-    const user = userStorage.createUser({
-      email: newUser.email,
-      name: newUser.name,
-      roleId: newUser.role,
-      teams: newUser.teams,
-      isActive: newUser.isActive
-    });
+    const user = userStorage.createUser(
+      newUser.email,
+      newUser.name,
+      newUser.role,
+      newUser.teams
+    );
 
     setUsers([...users, user]);
     setNewUser({ name: '', email: '', role: '', teams: [], isActive: true });
@@ -142,15 +141,12 @@ const UserManagement = () => {
       return;
     }
 
-    const role = userStorage.createRole({
-      name: newRole.name,
-      description: newRole.description,
-      level: newRole.level,
-      permissions: newRole.permissions,
-      canCreateUsers: newRole.canCreateUsers,
-      canManageRoles: newRole.canManageRoles,
-      canViewAuditLogs: newRole.canViewAuditLogs
-    });
+    const role = userStorage.createRole(
+      newRole.name,
+      newRole.description,
+      newRole.level,
+      newRole.permissions
+    );
 
     setRoles([...roles, role]);
     setNewRole({
@@ -180,12 +176,12 @@ const UserManagement = () => {
       return;
     }
 
-    const team = userStorage.createTeam({
-      name: newTeam.name,
-      description: newTeam.description,
-      members: newTeam.members,
-      lead: newTeam.lead
-    });
+    const team = userStorage.createTeam(
+      newTeam.name,
+      newTeam.description,
+      newTeam.lead,
+      newTeam.members
+    );
 
     setTeams([...teams, team]);
     setNewTeam({ name: '', description: '', members: [], lead: '' });

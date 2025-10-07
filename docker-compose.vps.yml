@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Single Container: Frontend + Backend + Nginx (VPS - Porta 3050)
+  ferraco-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-0}
+    container_name: ferraco-crm-vps
+    restart: unless-stopped
+    ports:
+      - "3050:80"  # VPS: Porta 3050 externa -> 80 interna (nginx)
+    environment:
+      # Node.js Environment
+      - NODE_ENV=production
+      - PORT=3002
+
+      # Database Configuration
+      - DATABASE_URL=file:/app/backend/data/ferraco.db
+
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET:-ferraco-vps-jwt-secret-change-in-production}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+      # Application Settings
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
+      - LOGIN_TIMEOUT_MINUTES=${LOGIN_TIMEOUT_MINUTES:-15}
+      - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-60}
+
+      # CORS Configuration
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://72.60.10.108:3050,http://localhost:3050}
+
+    volumes:
+      # Persistent data storage
+      - ferraco-data:/app/backend/data
+      - ferraco-logs:/app/backend/logs
+
+    networks:
+      - ferraco-network
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    labels:
+      - "com.ferraco.app=crm"
+      - "com.ferraco.version=2.0.0"
+      - "com.ferraco.environment=vps"
+      - "com.ferraco.port=3050"
+
+networks:
+  ferraco-network:
+    driver: bridge
+    name: ferraco-network-vps
+
+volumes:
+  ferraco-data:
+    name: ferraco-data-vps
+    driver: local
+  ferraco-logs:
+    name: ferraco-logs-vps
+    driver: local

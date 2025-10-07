@@ -1,6 +1,15 @@
-import { TagDefinition, TagRule, TagStats } from '@/types/lead';
+import { TagDefinition, TagRule, TagStats, Lead } from '@/types/lead';
 import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
 import { logger } from '@/lib/logger';
+
+// Tipos específicos para evitar 'any'
+interface LeadWithTags {
+  id: string;
+  tags?: string[];
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 interface TagStorageItem extends StorageItem {
   name: string;
@@ -81,7 +90,8 @@ class TagStorage extends BaseStorage<TagStorageItem> {
     // Don't allow updating system tags' core properties
     if (tag.isSystem) {
       delete updates.name;
-      delete (updates as any).isSystem;
+      const mutableUpdates = updates as Partial<TagStorageItem>;
+      delete mutableUpdates.isSystem;
     }
 
     return this.update(tagId, updates) !== null;
@@ -120,7 +130,7 @@ class TagStorage extends BaseStorage<TagStorageItem> {
     const tags = this.getAll();
 
     // Import dynamically to avoid circular dependency
-    let leads: any[] = [];
+    let leads: LeadWithTags[] = [];
     try {
       const storedLeads = localStorage.getItem('ferraco_leads');
       leads = storedLeads ? JSON.parse(storedLeads) : [];
@@ -130,11 +140,11 @@ class TagStorage extends BaseStorage<TagStorageItem> {
     }
 
     return tags.map(tag => {
-      const leadsWithTag = leads.filter((lead: any) =>
+      const leadsWithTag = leads.filter((lead) =>
         lead.tags && lead.tags.includes(tag.name.toLowerCase())
       );
 
-      const convertedLeads = leadsWithTag.filter((lead: any) =>
+      const convertedLeads = leadsWithTag.filter((lead) =>
         lead.status === 'concluido'
       );
 
@@ -143,9 +153,9 @@ class TagStorage extends BaseStorage<TagStorageItem> {
         : 0;
 
       const averageTime = convertedLeads.length > 0
-        ? convertedLeads.reduce((sum: number, lead: any) => {
-            const created = new Date(lead.createdAt);
-            const updated = new Date(lead.updatedAt);
+        ? convertedLeads.reduce((sum: number, lead) => {
+            const created = new Date(lead.createdAt || Date.now());
+            const updated = new Date(lead.updatedAt || Date.now());
             return sum + (updated.getTime() - created.getTime());
           }, 0) / convertedLeads.length / (1000 * 60 * 60 * 24)
         : 0;
@@ -154,12 +164,12 @@ class TagStorage extends BaseStorage<TagStorageItem> {
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
-      const recentLeads = leadsWithTag.filter((lead: any) =>
-        new Date(lead.createdAt) >= sevenDaysAgo
+      const recentLeads = leadsWithTag.filter((lead) =>
+        new Date(lead.createdAt || Date.now()) >= sevenDaysAgo
       ).length;
 
-      const previousLeads = leadsWithTag.filter((lead: any) => {
-        const leadDate = new Date(lead.createdAt);
+      const previousLeads = leadsWithTag.filter((lead) => {
+        const leadDate = new Date(lead.createdAt || Date.now());
         return leadDate >= fourteenDaysAgo && leadDate < sevenDaysAgo;
       }).length;
 

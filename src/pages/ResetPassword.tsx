@@ -83,13 +83,14 @@ const ResetPassword = () => {
       } else {
         throw new Error('Token expirado ou inválido');
       }
-    } catch (err: any) {
-      setError(err.message || 'Token inválido');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      setError(errorMessage || 'Token inválido');
 
       securityLogger.logEvent(
         SecurityEventType.ERROR_OCCURRED,
         SecurityLevel.HIGH,
-        `Token de recuperação inválido: ${err.message}`,
+        `Token de recuperação inválido: ${errorMessage}`,
         { email, token: token.substring(0, 10) + '...' }
       );
     }
@@ -172,15 +173,15 @@ const ResetPassword = () => {
         });
       }, 3000);
 
-    } catch (err: any) {
-      const errorMessage = err.message || 'Erro ao redefinir senha';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao redefinir senha';
       setError(errorMessage);
 
       securityLogger.logEvent(
         SecurityEventType.ERROR_OCCURRED,
         SecurityLevel.HIGH,
         `Falha na redefinição de senha: ${errorMessage}`,
-        { email, error: err.message }
+        { email, error: errorMessage }
       );
 
       toast({

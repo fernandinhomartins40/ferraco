@@ -1,0 +1,1299 @@
+// Configuração do Prisma
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// AUTENTICAÇÃO E USUÁRIOS
+// ==========================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    @unique
+  password      String    // Hash bcrypt
+  name          String
+  role          UserRole  @default(USER)
+  avatar        String?
+  isActive      Boolean   @default(true)
+
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLogin     DateTime?
+
+  // Relações
+  permissions   UserPermission[]
+  teams         TeamMember[]
+  createdLeads  Lead[]    @relation("CreatedBy")
+  assignedLeads Lead[]    @relation("AssignedTo")
+  notes         LeadNote[] @relation("NoteAuthor")
+  auditLogs     AuditLog[]
+
+  // Phase 3 Relations
+  preferences       UserPreferences?
+  digitalSignatures DigitalSignature[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  SALES
+  CONSULTANT
+  USER
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  resource    String   // 'leads', 'tags', 'reports', etc.
+  action      String   // 'read', 'write', 'delete', 'export'
+  description String?
+
+  users       UserPermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model UserPermission {
+  id           String     @id @default(uuid())
+  userId       String
+  permissionId String
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model Team {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  leadUserId  String       // Líder da equipe
+  isActive    Boolean      @default(true)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  members     TeamMember[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  userId    String
+  role      String?  // Papel na equipe
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt  DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+// ==========================================
+// LEADS E RELACIONADOS
+// ==========================================
+
+model Lead {
+  id              String       @id @default(uuid())
+  name            String
+  phone           String
+  email           String?
+
+  // Status e prioridade
+  status          LeadStatus   @default(NOVO)
+  priority        LeadPriority @default(MEDIUM)
+  source          String       @default("website")
+
+  // Pontuação e pipeline
+  leadScore       Int?
+  pipelineStage   String?
+
+  // Duplicatas
+  isDuplicate     Boolean      @default(false)
+  duplicateOfId   String?
+  duplicateOf     Lead?        @relation("Duplicates", fields: [duplicateOfId], references: [id])
+  duplicates      Lead[]       @relation("Duplicates")
+
+  // Atribuição
+  assignedToId    String?
+  assignedTo      User?        @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdById     String?
+  createdBy       User?        @relation("CreatedBy", fields: [createdById], references: [id])
+
+  // Follow-up
+  nextFollowUp    DateTime?
+
+  // Timestamps
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relações
+  notes           LeadNote[]
+  tags            LeadTag[]
+  communications  Communication[]
+  opportunities   Opportunity[]
+  interactions    Interaction[]
+  automationLogs  AutomationLog[]
+
+  // Phase 3 Relations
+  aiAnalysis           AIAnalysis?
+  conversionPrediction ConversionPrediction?
+  leadScoring          LeadScoring?
+  duplicateDetections  DuplicateDetection[]
+  digitalSignatures    DigitalSignature[]
+  chatMessages         ChatMessage[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+enum LeadStatus {
+  NOVO
+  EM_ANDAMENTO
+  CONCLUIDO
+  PERDIDO
+  DESCARTADO
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model LeadNote {
+  id          String   @id @default(uuid())
+  content     String
+  important   Boolean  @default(false)
+  category    String?  // 'Reunião', 'Ligação', etc.
+  isPrivate   Boolean  @default(false)
+
+  // Relações
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  createdById String?
+  createdBy   User?    @relation("NoteAuthor", fields: [createdById], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([important])
+  @@map("lead_notes")
+}
+
+// ==========================================
+// TAGS
+// ==========================================
+
+model Tag {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  color       String
+  description String?
+  isSystem    Boolean   @default(false)
+  isActive    Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  leads       LeadTag[]
+  rules       TagRule[]
+
+  @@map("tags")
+}
+
+model LeadTag {
+  id      String   @id @default(uuid())
+  leadId  String
+  tagId   String
+
+  lead    Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag     Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  addedAt DateTime @default(now())
+
+  @@unique([leadId, tagId])
+  @@map("lead_tags")
+}
+
+model TagRule {
+  id        String   @id @default(uuid())
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  // Condição
+  condition String   // 'status_change', 'time_based', 'source', 'keyword'
+  value     String   // Valor da condição
+  action    String   // 'add_tag', 'remove_tag'
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("tag_rules")
+}
+
+// ==========================================
+// COMUNICAÇÕES
+// ==========================================
+
+model Communication {
+  id          String             @id @default(uuid())
+  type        CommunicationType
+  content     String
+  direction   Direction
+  status      CommunicationStatus @default(PENDING)
+
+  leadId      String
+  lead        Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  templateId  String?
+  template    MessageTemplate?   @relation(fields: [templateId], references: [id])
+
+  metadata    String?            // JSON string
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([leadId])
+  @@index([status])
+  @@map("communications")
+}
+
+enum CommunicationType {
+  WHATSAPP
+  EMAIL
+  CALL
+  SMS
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+enum CommunicationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  READ
+}
+
+model MessageTemplate {
+  id            String             @id @default(uuid())
+  name          String
+  type          CommunicationType
+  content       String
+  category      TemplateCategory   @default(CUSTOM)
+  variables     String             // JSON array de variáveis
+  isActive      Boolean            @default(true)
+
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  communications Communication[]
+
+  @@map("message_templates")
+}
+
+enum TemplateCategory {
+  WELCOME
+  FOLLOW_UP
+  REMINDER
+  PROMOTIONAL
+  CUSTOM
+}
+
+// ==========================================
+// AUTOMAÇÕES
+// ==========================================
+
+model Automation {
+  id             String          @id @default(uuid())
+  name           String
+  description    String?
+  isActive       Boolean         @default(true)
+
+  // Trigger
+  triggerType    String          // 'lead_created', 'status_changed', etc.
+  triggerValue   String?         // JSON string
+
+  // Condições e ações
+  conditions     String          // JSON array
+  actions        String          // JSON array
+
+  executionCount Int             @default(0)
+  lastExecuted   DateTime?
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  logs           AutomationLog[]
+
+  @@map("automations")
+}
+
+model AutomationLog {
+  id            String     @id @default(uuid())
+  automationId  String
+  automation    Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  leadId        String?
+  lead          Lead?      @relation(fields: [leadId], references: [id])
+
+  success       Boolean
+  errorMessage  String?
+  executedAt    DateTime   @default(now())
+
+  @@index([automationId])
+  @@index([leadId])
+  @@map("automation_logs")
+}
+
+// ==========================================
+// CRM E PIPELINE
+// ==========================================
+
+model Pipeline {
+  id           String          @id @default(uuid())
+  name         String
+  description  String?
+  businessType String?
+  isDefault    Boolean         @default(false)
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  stages       PipelineStage[]
+
+  @@map("pipelines")
+}
+
+model PipelineStage {
+  id               String   @id @default(uuid())
+  pipelineId       String
+  pipeline         Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  name             String
+  description      String?
+  color            String
+  order            Int
+
+  expectedDuration Int?     // em dias
+  conversionRate   Float?
+
+  isClosedWon      Boolean  @default(false)
+  isClosedLost     Boolean  @default(false)
+
+  automations      String?  // JSON array de IDs
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([pipelineId, order])
+  @@map("pipeline_stages")
+}
+
+model Opportunity {
+  id                String   @id @default(uuid())
+  title             String
+  description       String?
+  value             Float
+  currency          String   @default("BRL")
+  probability       Int      // 0-100
+
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+
+  stage             String
+  source            String?
+
+  leadId            String
+  lead              Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  assignedToId      String?
+
+  // Phase 3 Fields
+  competitors       String?  // JSON array
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([leadId])
+  @@map("opportunities")
+}
+
+model Interaction {
+  id              String           @id @default(uuid())
+  type            InteractionType
+  title           String
+  description     String?
+  duration        Int?             // em minutos
+  outcome         InteractionOutcome?
+  nextAction      String?
+  nextActionDate  DateTime?
+
+  leadId          String
+  lead            Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  // Phase 3 Fields and Relations
+  participants    String?          // JSON array de user IDs
+  files           InteractionFile[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([leadId])
+  @@map("interactions")
+}
+
+enum InteractionType {
+  CALL
+  EMAIL
+  MEETING
+  WHATSAPP
+  SMS
+  NOTE
+  TASK
+}
+
+enum InteractionOutcome {
+  SUCCESSFUL
+  NO_ANSWER
+  BUSY
+  CALLBACK_REQUESTED
+  NOT_INTERESTED
+  INTERESTED
+}
+
+// ==========================================
+// INTEGRAÇÕES
+// ==========================================
+
+model Integration {
+  id          String            @id @default(uuid())
+  name        String
+  type        IntegrationType
+  isEnabled   Boolean           @default(false)
+
+  config      String            // JSON config
+  credentials String            // JSON credentials (encrypted)
+
+  lastSync    DateTime?
+  syncStatus  SyncStatus        @default(DISABLED)
+  errorMessage String?
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Phase 3 Relations
+  googleAnalytics GoogleAnalyticsConfig?
+  facebookAds     FacebookAdsConfig?
+
+  @@map("integrations")
+}
+
+enum IntegrationType {
+  ZAPIER
+  MAKE
+  GOOGLE_ANALYTICS
+  FACEBOOK_ADS
+  INSTAGRAM_ADS
+  HUBSPOT
+  PIPEDRIVE
+  MAILCHIMP
+  CUSTOM
+}
+
+enum SyncStatus {
+  SUCCESS
+  ERROR
+  PENDING
+  DISABLED
+}
+
+// ==========================================
+// AUDITORIA E LOGS
+// ==========================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  action     String
+  resource   String
+  resourceId String?
+  details    String?  // JSON
+
+  ipAddress  String?
+  userAgent  String?
+
+  success    Boolean  @default(true)
+  errorMessage String?
+
+  timestamp  DateTime @default(now())
+
+  @@index([userId])
+  @@index([resource])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+// ==========================================
+// RELATÓRIOS
+// ==========================================
+
+model Report {
+  id            String         @id @default(uuid())
+  name          String
+  type          ReportType
+  filters       String         // JSON
+  widgets       String         // JSON
+
+  isScheduled   Boolean        @default(false)
+  scheduleConfig String?       // JSON
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  lastGenerated DateTime?
+
+  @@map("reports")
+}
+
+enum ReportType {
+  LEADS_OVERVIEW
+  CONVERSION_FUNNEL
+  TAG_PERFORMANCE
+  AUTOMATION_STATS
+  CUSTOM
+}
+
+// ==========================================
+// PHASE 3 - ADVANCED FEATURES
+// ==========================================
+
+// ==========================================
+// 🧠 AI E ANÁLISES PREDITIVAS
+// ==========================================
+
+model AIAnalysis {
+  id              String   @id @default(uuid())
+  leadId          String   @unique
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  sentimentScore  Float    // -1 to 1
+  sentiment       Sentiment
+  keyTopics       String   // JSON array
+  urgencyLevel    UrgencyLevel
+  confidenceScore Int      // 0-100
+  lastAnalyzed    DateTime @default(now())
+
+  recommendations AIRecommendation[]
+
+  @@index([leadId])
+  @@index([urgencyLevel])
+  @@index([lastAnalyzed])
+  @@map("ai_analyses")
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum UrgencyLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model AIRecommendation {
+  id               String      @id @default(uuid())
+  aiAnalysisId     String
+  aiAnalysis       AIAnalysis  @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+
+  type             RecommendationType
+  priority         RecommendationPriority
+  title            String
+  description      String
+  suggestedAction  String
+  expectedImpact   String
+  confidence       Int         // 0-100
+  isImplemented    Boolean     @default(false)
+
+  createdAt        DateTime    @default(now())
+
+  @@index([aiAnalysisId])
+  @@index([priority])
+  @@index([isImplemented])
+  @@map("ai_recommendations")
+}
+
+enum RecommendationType {
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  FOLLOW_UP
+  TAG
+  PRIORITY_CHANGE
+}
+
+enum RecommendationPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ==========================================
+// 📊 PREDIÇÃO DE CONVERSÃO
+// ==========================================
+
+model ConversionPrediction {
+  id                        String              @id @default(uuid())
+  leadId                    String              @unique
+  lead                      Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  probability               Int                 // 0-100
+  confidence                Int                 // 0-100
+  estimatedTimeToConversion Int                 // days
+  suggestedActions          String              // JSON array
+  lastUpdated               DateTime            @default(now())
+
+  factors                   ConversionFactor[]
+
+  @@index([leadId])
+  @@index([probability])
+  @@map("conversion_predictions")
+}
+
+model ConversionFactor {
+  id                     String                @id @default(uuid())
+  conversionPredictionId String
+  conversionPrediction   ConversionPrediction  @relation(fields: [conversionPredictionId], references: [id], onDelete: Cascade)
+
+  factor                 String
+  impact                 Impact
+  weight                 Float
+  description            String
+
+  @@index([conversionPredictionId])
+  @@map("conversion_factors")
+}
+
+enum Impact {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+}
+
+// ==========================================
+// 🎯 LEAD SCORING
+// ==========================================
+
+model LeadScoring {
+  id             String          @id @default(uuid())
+  leadId         String          @unique
+  lead           Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  score          Int
+  lastCalculated DateTime        @default(now())
+
+  factors        ScoringFactor[]
+  history        ScoreHistory[]
+
+  @@index([leadId])
+  @@index([score])
+  @@map("lead_scorings")
+}
+
+model ScoringFactor {
+  id            String       @id @default(uuid())
+  leadScoringId String
+  leadScoring   LeadScoring  @relation(fields: [leadScoringId], references: [id], onDelete: Cascade)
+
+  factor        String
+  value         String       // JSON
+  points        Int
+  weight        Float
+  description   String
+
+  @@index([leadScoringId])
+  @@map("scoring_factors")
+}
+
+model ScoreHistory {
+  id            String       @id @default(uuid())
+  leadScoringId String
+  leadScoring   LeadScoring  @relation(fields: [leadScoringId], references: [id], onDelete: Cascade)
+
+  date          DateTime     @default(now())
+  score         Int
+  change        Int
+  reason        String
+
+  @@index([leadScoringId])
+  @@index([date])
+  @@map("score_history")
+}
+
+// ==========================================
+// 🔍 DETECÇÃO DE DUPLICATAS
+// ==========================================
+
+model DuplicateDetection {
+  id                  String             @id @default(uuid())
+  leadId              String
+  lead                Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  confidence          Int                // 0-100
+  status              DuplicateStatus
+  resolvedAt          DateTime?
+  resolvedBy          String?
+
+  createdAt           DateTime           @default(now())
+
+  potentialDuplicates DuplicateMatch[]
+
+  @@index([leadId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("duplicate_detections")
+}
+
+model DuplicateMatch {
+  id                    String              @id @default(uuid())
+  duplicateDetectionId  String
+  duplicateDetection    DuplicateDetection  @relation(fields: [duplicateDetectionId], references: [id], onDelete: Cascade)
+
+  duplicateLeadId       String
+  similarity            Float
+  matchingFields        String              // JSON array
+  suggestedAction       SuggestedAction
+
+  @@index([duplicateDetectionId])
+  @@index([duplicateLeadId])
+  @@map("duplicate_matches")
+}
+
+enum DuplicateStatus {
+  PENDING
+  CONFIRMED
+  DISMISSED
+}
+
+enum SuggestedAction {
+  MERGE
+  KEEP_SEPARATE
+  NEEDS_REVIEW
+}
+
+// ==========================================
+// 🤖 CHATBOT E QUALIFICAÇÃO
+// ==========================================
+
+model ChatbotConfig {
+  id                    String             @id @default(uuid())
+  isEnabled             Boolean            @default(false)
+  welcomeMessage        String
+  fallbackMessage       String
+  handoffTriggers       String             // JSON array
+
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  qualificationQuestions ChatbotQuestion[]
+  businessHours         BusinessHours?
+
+  @@map("chatbot_configs")
+}
+
+model ChatbotQuestion {
+  id              String         @id @default(uuid())
+  chatbotConfigId String
+  chatbotConfig   ChatbotConfig  @relation(fields: [chatbotConfigId], references: [id], onDelete: Cascade)
+
+  question        String
+  type            QuestionType
+  options         String?        // JSON array
+  isRequired      Boolean
+  order           Int
+
+  followUpRules   ChatbotRule[]
+
+  @@index([chatbotConfigId])
+  @@index([order])
+  @@map("chatbot_questions")
+}
+
+model ChatbotRule {
+  id                String           @id @default(uuid())
+  chatbotQuestionId String
+  chatbotQuestion   ChatbotQuestion  @relation(fields: [chatbotQuestionId], references: [id], onDelete: Cascade)
+
+  condition         String
+  action            RuleAction
+  value             String           // JSON
+
+  @@index([chatbotQuestionId])
+  @@map("chatbot_rules")
+}
+
+model BusinessHours {
+  id              String         @id @default(uuid())
+  chatbotConfigId String         @unique
+  chatbotConfig   ChatbotConfig  @relation(fields: [chatbotConfigId], references: [id], onDelete: Cascade)
+
+  timezone        String
+  monday          String         // JSON TimeSlot
+  tuesday         String
+  wednesday       String
+  thursday        String
+  friday          String
+  saturday        String
+  sunday          String
+
+  @@map("business_hours")
+}
+
+enum QuestionType {
+  TEXT
+  MULTIPLE_CHOICE
+  NUMBER
+  EMAIL
+  PHONE
+}
+
+enum RuleAction {
+  ASK_QUESTION
+  ADD_TAG
+  SET_PRIORITY
+  HANDOFF
+  END_CONVERSATION
+}
+
+// ==========================================
+// 📊 ANALYTICS AVANÇADO
+// ==========================================
+
+model AdvancedAnalytics {
+  id                  String              @id @default(uuid())
+  periodStart         DateTime
+  periodEnd           DateTime
+  generatedAt         DateTime            @default(now())
+
+  conversionFunnelData String             // JSON FunnelData
+  cohortAnalysisData   String             // JSON CohortData
+
+  leadSources         SourceAnalytics[]
+  teamPerformance     TeamPerformanceRecord[]
+  predictiveInsights  PredictiveInsight[]
+  benchmarks          Benchmark[]
+
+  @@index([periodStart])
+  @@index([periodEnd])
+  @@map("advanced_analytics")
+}
+
+model SourceAnalytics {
+  id                   String             @id @default(uuid())
+  advancedAnalyticsId  String
+  advancedAnalytics    AdvancedAnalytics  @relation(fields: [advancedAnalyticsId], references: [id], onDelete: Cascade)
+
+  source               String
+  count                Int
+  conversionRate       Float
+  averageValue         Float
+  cost                 Float
+  roi                  Float
+  trend                AnalyticsTrend
+
+  @@index([advancedAnalyticsId])
+  @@index([source])
+  @@map("source_analytics")
+}
+
+model TeamPerformanceRecord {
+  id                   String             @id @default(uuid())
+  advancedAnalyticsId  String
+  advancedAnalytics    AdvancedAnalytics  @relation(fields: [advancedAnalyticsId], references: [id], onDelete: Cascade)
+
+  userId               String
+  userName             String
+  leadsAssigned        Int
+  leadsConverted       Int
+  conversionRate       Float
+  averageResponseTime  Int                // minutes
+  satisfaction         Float
+  activities           Int
+
+  @@index([advancedAnalyticsId])
+  @@index([userId])
+  @@map("team_performance_records")
+}
+
+model PredictiveInsight {
+  id                   String             @id @default(uuid())
+  advancedAnalyticsId  String
+  advancedAnalytics    AdvancedAnalytics  @relation(fields: [advancedAnalyticsId], references: [id], onDelete: Cascade)
+
+  type                 InsightType
+  title                String
+  description          String
+  confidence           Int                // 0-100
+  impact               ImpactLevel
+  timeframe            String
+  recommendations      String             // JSON array
+  data                 String             // JSON
+
+  @@index([advancedAnalyticsId])
+  @@index([type])
+  @@map("predictive_insights")
+}
+
+model Benchmark {
+  id                   String             @id @default(uuid())
+  advancedAnalyticsId  String
+  advancedAnalytics    AdvancedAnalytics  @relation(fields: [advancedAnalyticsId], references: [id], onDelete: Cascade)
+
+  metric               String
+  value                Float
+  industry             String
+  percentile           Int
+  trend                BenchmarkTrend
+  source               String
+
+  @@index([advancedAnalyticsId])
+  @@index([metric])
+  @@map("benchmarks")
+}
+
+enum AnalyticsTrend {
+  UP
+  DOWN
+  STABLE
+}
+
+enum InsightType {
+  REVENUE_FORECAST
+  CHURN_PREDICTION
+  LEAD_QUALITY
+  SEASONAL_TRENDS
+}
+
+enum ImpactLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum BenchmarkTrend {
+  ABOVE
+  BELOW
+  AT
+  UNKNOWN
+}
+
+// ==========================================
+// 🔐 ASSINATURAS DIGITAIS
+// ==========================================
+
+model DigitalSignature {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+
+  leadId        String
+  lead          Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  documentType  DocumentType
+  signatureData String         // base64 encoded
+  timestamp     DateTime       @default(now())
+  ipAddress     String
+  isValid       Boolean        @default(true)
+  certificateId String?
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([timestamp])
+  @@map("digital_signatures")
+}
+
+enum DocumentType {
+  CONTRACT
+  PROPOSAL
+  AGREEMENT
+  NDA
+  CUSTOM
+}
+
+// ==========================================
+// 📎 ARQUIVOS DE INTERAÇÕES
+// ==========================================
+
+model InteractionFile {
+  id            String       @id @default(uuid())
+  interactionId String
+  interaction   Interaction  @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+
+  name          String
+  url           String
+  type          String
+  size          Int
+  uploadedAt    DateTime     @default(now())
+
+  @@index([interactionId])
+  @@map("interaction_files")
+}
+
+// ==========================================
+// 🔌 INTEGRAÇÕES - GOOGLE ANALYTICS
+// ==========================================
+
+model GoogleAnalyticsConfig {
+  id            String      @id @default(uuid())
+  integrationId String      @unique
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  trackingId    String
+  viewId        String
+
+  events        GAEvent[]
+  goals         GAGoal[]
+
+  @@map("google_analytics_configs")
+}
+
+model GAEvent {
+  id                      String                  @id @default(uuid())
+  googleAnalyticsConfigId String
+  config                  GoogleAnalyticsConfig   @relation(fields: [googleAnalyticsConfigId], references: [id], onDelete: Cascade)
+
+  name                    String
+  category                String
+  action                  String
+  label                   String?
+  value                   Int?
+
+  @@index([googleAnalyticsConfigId])
+  @@map("ga_events")
+}
+
+model GAGoal {
+  id                      String                  @id @default(uuid())
+  googleAnalyticsConfigId String
+  config                  GoogleAnalyticsConfig   @relation(fields: [googleAnalyticsConfigId], references: [id], onDelete: Cascade)
+
+  name                    String
+  type                    GAGoalType
+  value                   Float
+  isActive                Boolean                 @default(true)
+
+  @@index([googleAnalyticsConfigId])
+  @@map("ga_goals")
+}
+
+enum GAGoalType {
+  DESTINATION
+  DURATION
+  PAGES
+  EVENT
+}
+
+// ==========================================
+// 🔌 INTEGRAÇÕES - FACEBOOK ADS
+// ==========================================
+
+model FacebookAdsConfig {
+  id            String      @id @default(uuid())
+  integrationId String      @unique
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  accountId     String
+  adAccounts    String      // JSON array
+
+  campaigns     FBCampaign[]
+  leadGenForms  FBLeadForm[]
+
+  @@map("facebook_ads_configs")
+}
+
+model FBCampaign {
+  id                   String              @id @default(uuid())
+  facebookAdsConfigId  String
+  config               FacebookAdsConfig   @relation(fields: [facebookAdsConfigId], references: [id], onDelete: Cascade)
+
+  name                 String
+  status               CampaignStatus
+  budget               Float
+  isTracked            Boolean             @default(false)
+
+  @@index([facebookAdsConfigId])
+  @@map("fb_campaigns")
+}
+
+model FBLeadForm {
+  id                   String              @id @default(uuid())
+  facebookAdsConfigId  String
+  config               FacebookAdsConfig   @relation(fields: [facebookAdsConfigId], references: [id], onDelete: Cascade)
+
+  name                 String
+  status               FormStatus
+  isConnected          Boolean             @default(false)
+  fieldMapping         String              // JSON array of DataMapping
+
+  @@index([facebookAdsConfigId])
+  @@map("fb_lead_forms")
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum FormStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+// ==========================================
+// 👤 USER PREFERENCES E NOTIFICAÇÕES
+// ==========================================
+
+model UserPreferences {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  theme       Theme     @default(AUTO)
+  language    String    @default("pt-BR")
+  timezone    String    @default("America/Sao_Paulo")
+  dashboardId String?
+
+  notifications NotificationSettings?
+
+  @@map("user_preferences")
+}
+
+model NotificationSettings {
+  id                String           @id @default(uuid())
+  userPreferencesId String           @unique
+  userPreferences   UserPreferences  @relation(fields: [userPreferencesId], references: [id], onDelete: Cascade)
+
+  // Email Notifications
+  emailNewLeads          Boolean @default(true)
+  emailLeadUpdates       Boolean @default(true)
+  emailAutomationResults Boolean @default(true)
+  emailWeeklyReports     Boolean @default(true)
+  emailSystemAlerts      Boolean @default(true)
+
+  // Push Notifications
+  pushEnabled        Boolean @default(false)
+  pushUrgentLeads    Boolean @default(true)
+  pushAssignedTasks  Boolean @default(true)
+  pushDeadlines      Boolean @default(true)
+
+  // In-App Notifications
+  inAppEnabled  Boolean @default(true)
+  inAppSound    Boolean @default(true)
+  inAppDesktop  Boolean @default(true)
+
+  @@map("notification_settings")
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  AUTO
+}
+
+// ==========================================
+// CHATBOT E IA
+// ==========================================
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  leadId    String
+  role      String   // 'user' ou 'assistant'
+  content   String
+  metadata  String?  // JSON: produtos mencionados, intent, etc
+
+  createdAt DateTime @default(now())
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@map("chat_messages")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  category    String
+  price       Float?
+  keywords    String   // JSON array de palavras-chave
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([category])
+  @@map("products")
+}
+
+model FAQItem {
+  id       String   @id @default(uuid())
+  question String
+  answer   String
+  category String
+  keywords String   // JSON array de palavras-chave
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("faq_items")
+}
+
+model CompanyData {
+  id              String   @id @default(uuid())
+  name            String
+  industry        String
+  description     String
+  differentials   String   // JSON array de diferenciais
+  targetAudience  String
+  location        String
+  workingHours    String
+  phone           String?
+  website         String?
+
+  updatedAt       DateTime @updatedAt
+
+  @@map("company_data")
+}

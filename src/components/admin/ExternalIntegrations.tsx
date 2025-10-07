@@ -48,9 +48,9 @@ import type {
 const ExternalIntegrations = () => {
   const { toast } = useToast();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [availableIntegrations, setAvailableIntegrations] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>({});
-  const [syncLogs, setSyncLogs] = useState<any[]>([]);
+  const [availableIntegrations, setAvailableIntegrations] = useState<Array<{ type: string; name: string; description: string; category: string; icon: string; requiredFields: string[] }>>([]);
+  const [stats, setStats] = useState<{ totalIntegrations: number; activeIntegrations: number; successfulSyncs: number; failedSyncs: number; lastSyncDate?: string }>({ totalIntegrations: 0, activeIntegrations: 0, successfulSyncs: 0, failedSyncs: 0 });
+  const [syncLogs, setSyncLogs] = useState<Array<{ id: string; integrationId: string; timestamp: string; success: boolean; error?: string; duration: number }>>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
@@ -515,7 +515,7 @@ const ExternalIntegrations = () => {
                         setNewIntegration({
                           ...newIntegration,
                           name: integration.name,
-                          type: integration.type
+                          type: integration.type as Integration['type']
                         });
                         setIsCreateOpen(true);
                       }}
@@ -634,7 +634,7 @@ const ExternalIntegrations = () => {
                 value={newIntegration.config.syncFrequency}
                 onValueChange={(value) => setNewIntegration({
                   ...newIntegration,
-                  config: { ...newIntegration.config, syncFrequency: value as any }
+                  config: { ...newIntegration.config, syncFrequency: value as 'daily' }
                 })}
               >
                 <SelectTrigger>

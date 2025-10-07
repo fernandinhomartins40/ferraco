@@ -1,310 +1,357 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import AdminLayout from '@/components/admin/AdminLayout';
-import StatsCards from '@/components/admin/StatsCards';
-import LeadFilters from '@/components/admin/LeadFilters';
-import LeadTable from '@/components/admin/LeadTable';
-import PartialLeadsManager from '@/components/admin/PartialLeadsManager';
-import { useLeads, useLeadStats } from '@/hooks/api/useLeads';
-import { Lead, LeadStats, LeadFilters as LeadFiltersType } from '@/types/lead';
-import { ApiLead, LeadFilters as ApiLeadFilters } from '@/types/api';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import KanbanColumn from '@/components/kanban/KanbanColumn';
+import SpecialSection from '@/components/kanban/SpecialSection';
+import ColumnModal from '@/components/kanban/ColumnModal';
+import QuickTagManager from '@/components/kanban/QuickTagManager';
+import TagSelector from '@/components/kanban/TagSelector';
 import { Button } from '@/components/ui/button';
-
-// Função para converter ApiLead para Lead (frontend)
-const convertApiLeadToLead = (apiLead: ApiLead): Lead => ({
-  id: apiLead.id,
-  name: apiLead.name,
-  phone: apiLead.phone,
-  status: apiLead.status === 'NOVO' ? 'novo' :
-          apiLead.status === 'EM_ANDAMENTO' ? 'em_andamento' : 'concluido',
-  createdAt: apiLead.createdAt,
-  updatedAt: apiLead.updatedAt,
-  notes: apiLead.notes?.map(note => ({
-    id: note.id,
-    content: note.content,
-    createdAt: note.createdAt,
-    important: note.important,
-  })),
-  tags: apiLead.tags?.map(tag => tag.tag.name),
-  source: apiLead.source,
-  priority: apiLead.priority?.toLowerCase() as 'low' | 'medium' | 'high',
-  assignedTo: apiLead.assignedTo,
-  nextFollowUp: apiLead.nextFollowUp,
-  leadScore: apiLead.leadScore,
-  pipelineStage: apiLead.pipelineStage,
-  duplicateOf: apiLead.duplicateOf,
-  isDuplicate: apiLead.isDuplicate,
-});
-
-// Função para converter filtros do frontend para API
-const convertFiltersToApi = (filters: LeadFiltersType): ApiLeadFilters => ({
-  status: filters.status === 'todos' ? undefined :
-          filters.status === 'novo' ? 'NOVO' :
-          filters.status === 'em_andamento' ? 'EM_ANDAMENTO' : 'CONCLUIDO',
-  search: filters.search || undefined,
-  // dateFrom e dateTo podem ser implementados baseado no dateRange
-  tags: filters.tags?.length ? filters.tags : undefined,
-});
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Plus, Search, Tag } from 'lucide-react';
+import { kanbanStorage, KanbanColumn as KanbanColumnType, SpecialSection as SpecialSectionType } from '@/utils/kanbanStorage';
+import { useLeads } from '@/hooks/api/useLeads';
+import { ApiLead } from '@/types/api';
+import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 const AdminLeads = () => {
-  const [filters, setFilters] = useState<LeadFiltersType>({
-    status: 'todos',
-    search: '',
-    dateRange: 'todos',
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-    tags: [],
-  });
+  const [columns, setColumns] = useState<KanbanColumnType[]>([]);
+  const [specialSections, setSpecialSections] = useState<SpecialSectionType[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
+  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
+  const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
+  const [selectedLeadForTags, setSelectedLeadForTags] = useState<string | null>(null);
+  const [editingColumn, setEditingColumn] = useState<KanbanColumnType | null>(null);
+  const [leadTags, setLeadTags] = useState<Record<string, string[]>>({});
 
-  // Converter filtros para API
-  const apiFilters = useMemo(() => convertFiltersToApi(filters), [filters]);
+  // Buscar todos os leads (modo demo com dados mockados)
+  const { data: leadsData } = useLeads({ limit: 100 });
 
-  // Usar hooks da API
-  const {
-    data: leadsResponse,
-    isLoading: leadsLoading,
-    error: leadsError,
-    refetch: refetchLeads
-  } = useLeads({
-    ...apiFilters,
-    sortBy: filters.sortBy,
-    sortOrder: filters.sortOrder,
-    limit: 100, // Buscar mais leads por página
-  });
+  // Carregar colunas, seções especiais e tags dos leads
+  useEffect(() => {
+    loadColumns();
+    loadSpecialSections();
+    loadLeadTags();
+  }, []);
 
-  const {
-    data: statsData,
-    isLoading: statsLoading,
-    error: statsError,
-    refetch: refetchStats
-  } = useLeadStats();
-
-  // Converter dados da API para formato do frontend
-  const allLeads = useMemo(() => {
-    if (!leadsResponse?.data) return [];
-    return leadsResponse.data.map(convertApiLeadToLead);
-  }, [leadsResponse]);
-
-  const stats: LeadStats = useMemo(() => {
-    if (!statsData) {
-      return {
-        total: 0,
-        novo: 0,
-        em_andamento: 0,
-        concluido: 0,
-        conversionRate: 0,
-        averageConversionTime: 0,
-        todayLeads: 0,
-        weeklyGrowth: 0,
-        oldLeadsCount: 0,
-      };
+  const loadLeadTags = () => {
+    const stored = localStorage.getItem('ferraco_lead_tags');
+    if (stored) {
+      setLeadTags(JSON.parse(stored));
     }
-
-    // Mapear dados da API para formato esperado
-    return {
-      total: statsData.total || 0,
-      novo: statsData.byStatus?.NOVO || 0,
-      em_andamento: statsData.byStatus?.EM_ANDAMENTO || 0,
-      concluido: statsData.byStatus?.CONCLUIDO || 0,
-      conversionRate: statsData.conversionRate || 0,
-      averageConversionTime: statsData.averageConversionTime || 0,
-      todayLeads: statsData.todayLeads || 0,
-      weeklyGrowth: statsData.weeklyGrowth || 0,
-      oldLeadsCount: statsData.oldLeadsCount || 0,
-    };
-  }, [statsData]);
-
-  // Filtrar leads localmente (para filtros mais complexos)
-  const filteredLeads = useMemo(() => {
-    let filtered = [...allLeads];
-
-    // Filtros de data local (se necessário)
-    if (filters.dateRange !== 'todos') {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      switch (filters.dateRange) {
-        case 'hoje':
-          filtered = filtered.filter(lead => {
-            const leadDate = new Date(lead.createdAt);
-            return leadDate >= today;
-          });
-          break;
-        case 'semana':
-          const weekAgo = new Date(today);
-          weekAgo.setDate(today.getDate() - 7);
-          filtered = filtered.filter(lead => {
-            const leadDate = new Date(lead.createdAt);
-            return leadDate >= weekAgo;
-          });
-          break;
-        case 'mes':
-          const monthAgo = new Date(today);
-          monthAgo.setMonth(today.getMonth() - 1);
-          filtered = filtered.filter(lead => {
-            const leadDate = new Date(lead.createdAt);
-            return leadDate >= monthAgo;
-          });
-          break;
-      }
-    }
-
-    return filtered;
-  }, [allLeads, filters]);
-
-  const handleRefresh = () => {
-    refetchLeads();
-    refetchStats();
   };
 
-  // Loading states
-  if (leadsLoading || statsLoading) {
-    return (
-      <AdminLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Gerenciamento de Leads</h1>
-            <p className="text-muted-foreground">
-              Gerencie todos os leads capturados pelo site
-            </p>
-          </div>
+  const saveLeadTags = (tags: Record<string, string[]>) => {
+    localStorage.setItem('ferraco_lead_tags', JSON.stringify(tags));
+    setLeadTags(tags);
+  };
 
-          {/* Loading Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="p-6 border rounded-lg">
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-8 w-16 mb-2" />
-                <Skeleton className="h-3 w-32" />
-              </div>
-            ))}
-          </div>
+  const loadColumns = () => {
+    const loadedColumns = kanbanStorage.getAllColumns();
+    setColumns(loadedColumns);
+    logger.info(`Colunas carregadas: ${loadedColumns.length}`);
+  };
 
-          {/* Loading Filters */}
-          <div className="flex flex-wrap gap-4">
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-48" />
-            <Skeleton className="h-10 w-32" />
-          </div>
+  const loadSpecialSections = () => {
+    const sections = kanbanStorage.getSpecialSections();
+    setSpecialSections(sections);
+    logger.info(`Seções especiais carregadas: ${sections.length}`);
+  };
 
-          {/* Loading Table */}
-          <div className="border rounded-lg p-4">
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex space-x-4">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-28" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </AdminLayout>
+  // Organizar leads por coluna (incluindo seções especiais) e adicionar tags
+  const leadsByColumn = useMemo(() => {
+    if (!leadsData?.data) return {};
+
+    const result: Record<string, ApiLead[]> = {};
+    const data = leadsData.data as ApiLead[];
+
+    // Adicionar colunas normais
+    columns.forEach(column => {
+      const leadIdsInColumn = kanbanStorage.getLeadsInColumn(column.id);
+      result[column.id] = leadIdsInColumn
+        .map(leadId => {
+          const lead = data.find(l => l.id === leadId);
+          if (lead) {
+            return { ...lead, tags: leadTags[leadId] || [] };
+          }
+          return null;
+        })
+        .filter(Boolean) as unknown as ApiLead[];
+    });
+
+    // Adicionar seções especiais
+    specialSections.forEach(section => {
+      const leadIdsInSection = kanbanStorage.getLeadsInColumn(section.id);
+      result[section.id] = leadIdsInSection
+        .map(leadId => {
+          const lead = data.find(l => l.id === leadId);
+          if (lead) {
+            return { ...lead, tags: leadTags[leadId] || [] };
+          }
+          return null;
+        })
+        .filter(Boolean) as unknown as ApiLead[];
+    });
+
+    // Adicionar leads que não estão em nenhuma coluna na primeira coluna
+    const allAssignedLeadIds = new Set(
+      Object.values(result).flat().map(lead => lead.id)
     );
-  }
 
-  // Error states
-  if (leadsError || statsError) {
-    return (
-      <AdminLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Gerenciamento de Leads</h1>
-            <p className="text-muted-foreground">
-              Gerencie todos os leads capturados pelo site
-            </p>
-          </div>
-
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>
-                Erro ao carregar dados: {leadsError?.message || statsError?.message || 'Erro desconhecido'}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                className="ml-4"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Tentar Novamente
-              </Button>
-            </AlertDescription>
-          </Alert>
-        </div>
-      </AdminLayout>
+    const unassignedLeads = data.filter(
+      lead => !allAssignedLeadIds.has(lead.id)
     );
-  }
+
+    if (unassignedLeads.length > 0 && columns.length > 0) {
+      const firstColumnId = columns[0].id;
+      unassignedLeads.forEach(lead => {
+        kanbanStorage.addNewLead(lead.id);
+      });
+      result[firstColumnId] = [
+        ...result[firstColumnId],
+        ...unassignedLeads
+      ];
+    }
+
+    return result;
+  }, [columns, specialSections, leadsData, leadTags]);
+
+  // Filtrar leads por busca
+  const filteredLeadsByColumn = useMemo(() => {
+    if (!searchQuery) return leadsByColumn;
+
+    const query = searchQuery.toLowerCase();
+    const filtered: Record<string, ApiLead[]> = {};
+
+    Object.entries(leadsByColumn).forEach(([columnId, leads]) => {
+      filtered[columnId] = leads.filter(lead =>
+        lead.name.toLowerCase().includes(query) ||
+        lead.phone.toLowerCase().includes(query) ||
+        lead.email?.toLowerCase().includes(query)
+      );
+    });
+
+    return filtered;
+  }, [leadsByColumn, searchQuery]);
+
+  // Handlers
+  const handleCreateColumn = () => {
+    setEditingColumn(null);
+    setIsColumnModalOpen(true);
+  };
+
+  const handleEditColumn = (column: KanbanColumnType) => {
+    setEditingColumn(column);
+    setIsColumnModalOpen(true);
+  };
+
+  const handleSaveColumn = (data: { name: string; color: string }) => {
+    if (editingColumn) {
+      // Editar coluna existente
+      kanbanStorage.updateColumn(editingColumn.id, data);
+      toast.success('Coluna atualizada com sucesso!');
+    } else {
+      // Criar nova coluna
+      kanbanStorage.createColumn(data);
+      toast.success('Coluna criada com sucesso!');
+    }
+
+    loadColumns();
+    setIsColumnModalOpen(false);
+    setEditingColumn(null);
+  };
+
+  const handleDeleteColumn = (columnId: string) => {
+    if (columns.length === 1) {
+      toast.error('Não é possível deletar a única coluna!');
+      return;
+    }
+
+    const success = kanbanStorage.deleteColumn(columnId);
+    if (success) {
+      toast.success('Coluna deletada com sucesso!');
+      loadColumns();
+    }
+  };
+
+  const handleAddTag = (leadId: string) => {
+    setSelectedLeadForTags(leadId);
+    setIsTagSelectorOpen(true);
+  };
+
+  const handleUpdateLeadTags = (leadId: string, tagNames: string[]) => {
+    const updatedTags = { ...leadTags, [leadId]: tagNames };
+    saveLeadTags(updatedTags);
+    toast.success('Tags atualizadas!');
+  };
+
+  const handleMoveLead = (leadId: string, targetColumnId: string, targetOrder: number) => {
+    const currentPosition = kanbanStorage.getLeadPosition(leadId);
+
+    if (currentPosition) {
+      // Movendo entre colunas
+      kanbanStorage.moveLeadBetweenColumns(
+        leadId,
+        currentPosition.columnId,
+        targetColumnId,
+        targetOrder
+      );
+    } else {
+      // Novo lead ou lead sem posição
+      kanbanStorage.moveLeadToColumn(leadId, targetColumnId, targetOrder);
+    }
+
+    // Recarregar dados
+    loadColumns();
+  };
+
+  const handleLeadClick = (lead: ApiLead) => {
+    // TODO: Abrir modal com detalhes do lead
+    logger.info('Lead clicado:', lead);
+    toast.info(`Lead: ${lead.name}`);
+  };
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Gerenciamento de Leads</h1>
-            <p className="text-muted-foreground">
-              Gerencie todos os leads capturados pelo site e dados parciais
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            className="flex items-center space-x-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span>Atualizar</span>
-          </Button>
-        </div>
-
-        <Tabs defaultValue="leads" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="leads">Leads Finalizados</TabsTrigger>
-            <TabsTrigger value="partial">Leads Parciais</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="leads" className="space-y-6">
-            {/* Stats Cards */}
-            <StatsCards stats={stats} />
-
-            {/* Filters */}
-            <LeadFilters
-              filters={filters}
-              onFiltersChange={setFilters}
-            />
-
-            {/* Results Summary */}
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Mostrando {filteredLeads.length} de {allLeads.length} leads
-                {leadsResponse?.pagination && (
-                  <span className="ml-2">
-                    ({leadsResponse.pagination.total} total no servidor)
-                  </span>
-                )}
-              </div>
+      <DndProvider backend={HTML5Backend}>
+        <div className="space-y-4 h-full flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Leads</h1>
+              <p className="text-muted-foreground">
+                Gerencie seus leads em um quadro Kanban
+              </p>
             </div>
 
-            {/* Leads Table */}
-            <LeadTable
-              leads={filteredLeads}
-              onLeadsChange={() => {
-                refetchLeads();
-                refetchStats();
-              }}
-            />
-          </TabsContent>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" onClick={() => setIsTagManagerOpen(true)}>
+                <Tag className="mr-2 h-4 w-4" />
+                Gerenciar Tags
+              </Button>
+              <Button onClick={handleCreateColumn}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Coluna
+              </Button>
+            </div>
+          </div>
 
-          <TabsContent value="partial">
-            <PartialLeadsManager />
-          </TabsContent>
-        </Tabs>
-      </div>
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar leads por nome, telefone ou email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Kanban Board */}
+          <div className="flex-1 overflow-auto">
+            {/* Regular Columns */}
+            <div className="flex space-x-4 mb-6">
+              {columns.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <p className="text-muted-foreground">
+                      Nenhuma coluna criada ainda
+                    </p>
+                    <Button onClick={handleCreateColumn}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar Primeira Coluna
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                columns.map(column => (
+                  <KanbanColumn
+                    key={column.id}
+                    column={column}
+                    leads={filteredLeadsByColumn[column.id] || []}
+                    onEditColumn={handleEditColumn}
+                    onDeleteColumn={handleDeleteColumn}
+                    onMoveLead={handleMoveLead}
+                    onLeadClick={handleLeadClick}
+                    onAddTag={handleAddTag}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Separator with Label */}
+            {columns.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center">
+                  <Separator className="flex-1" />
+                  <span className="px-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    Seções Especiais
+                  </span>
+                  <Separator className="flex-1" />
+                </div>
+                <p className="text-center text-xs text-muted-foreground mt-2">
+                  Arraste leads para estas seções para ativar automações especiais
+                </p>
+              </div>
+            )}
+
+            {/* Special Sections */}
+            {columns.length > 0 && (
+              <div className="flex space-x-4">
+                {specialSections.map(section => (
+                  <SpecialSection
+                    key={section.id}
+                    section={section}
+                    leads={filteredLeadsByColumn[section.id] || []}
+                    onMoveLead={handleMoveLead}
+                    onLeadClick={handleLeadClick}
+                    onAddTag={handleAddTag}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Column Modal */}
+        <ColumnModal
+          isOpen={isColumnModalOpen}
+          onClose={() => {
+            setIsColumnModalOpen(false);
+            setEditingColumn(null);
+          }}
+          onSave={handleSaveColumn}
+          column={editingColumn}
+        />
+
+        {/* Tag Manager */}
+        <QuickTagManager
+          isOpen={isTagManagerOpen}
+          onClose={() => setIsTagManagerOpen(false)}
+          onTagsChange={() => {
+            // Refresh leads to show updated tags
+            loadColumns();
+          }}
+        />
+
+        {/* Tag Selector */}
+        {selectedLeadForTags && (
+          <TagSelector
+            isOpen={isTagSelectorOpen}
+            onClose={() => {
+              setIsTagSelectorOpen(false);
+              setSelectedLeadForTags(null);
+            }}
+            leadId={selectedLeadForTags}
+            currentTags={leadTags[selectedLeadForTags] || []}
+            onTagsUpdate={handleUpdateLeadTags}
+          />
+        )}
+      </DndProvider>
     </AdminLayout>
   );
 };

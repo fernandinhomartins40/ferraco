@@ -238,11 +238,11 @@ const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({
 /**
  * Higher-order component for protecting components with permissions
  */
-export const withPermission = (
-  Component: React.ComponentType<any>,
+export const withPermission = <P extends object>(
+  Component: React.ComponentType<P>,
   requiredPermission: string
 ) => {
-  return (props: any) => (
+  return (props: P) => (
     <ProtectedRoute requiredPermission={requiredPermission}>
       <Component {...props} />
     </ProtectedRoute>
@@ -252,11 +252,11 @@ export const withPermission = (
 /**
  * Higher-order component for protecting components with roles
  */
-export const withRole = (
-  Component: React.ComponentType<any>,
+export const withRole = <P extends object>(
+  Component: React.ComponentType<P>,
   requiredRole: string | string[]
 ) => {
-  return (props: any) => (
+  return (props: P) => (
     <ProtectedRoute requiredRole={requiredRole}>
       <Component {...props} />
     </ProtectedRoute>

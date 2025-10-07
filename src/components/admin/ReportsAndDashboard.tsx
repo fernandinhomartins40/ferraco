@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
+// import { DatePickerWithRange } from '@/components/ui/date-range-picker'; // TODO: Criar componente
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import { Report, DashboardConfig, TagStats } from '@/types/lead';
 import { reportStorage } from '@/utils/reportStorage';
 import { leadStorage } from '@/utils/leadStorage';
@@ -60,7 +60,8 @@ const ReportsAndDashboard = () => {
       const result = await reportStorage.exportReport(report.id, format);
 
       if (result.success && result.data) {
-        reportStorage.downloadReport(result.data.filename, result.data.content, result.data.mimeType);
+        const data = result.data as { filename: string; content: string; mimeType: string };
+        reportStorage.downloadReport(data.filename, data.content, data.mimeType);
 
         toast({
           title: 'Relatório exportado',

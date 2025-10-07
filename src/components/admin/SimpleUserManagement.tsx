@@ -49,7 +49,8 @@ const SimpleUserManagement = () => {
       const response = await httpClient.get('/auth/users');
 
       if (response.success && response.data) {
-        setUsers(response.data.users || []);
+        const data = response.data as { users?: BackendUser[] };
+        setUsers(data.users || []);
 
         securityLogger.logUserAction(
           'view',
@@ -57,7 +58,7 @@ const SimpleUserManagement = () => {
           currentUser?.id,
           currentUser?.username,
           currentUser?.role,
-          { userCount: response.data.users?.length || 0 }
+          { userCount: data.users?.length || 0 }
         );
       } else {
         throw new Error(response.message || 'Falha ao carregar usuários');

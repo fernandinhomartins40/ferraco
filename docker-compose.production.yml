@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # Main Application: Frontend + Backend + Nginx
+  ferraco-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ferraco-crm-production
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Node.js Environment
+      - NODE_ENV=production
+      - PORT=3002
+
+      # Database Configuration
+      - DATABASE_URL=file:/app/backend/data/ferraco.db
+
+      # JWT Configuration (SET THIS IN .env.production!)
+      - JWT_SECRET=${JWT_SECRET}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+      # Application Settings
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
+      - LOGIN_TIMEOUT_MINUTES=${LOGIN_TIMEOUT_MINUTES:-15}
+      - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-60}
+
+    volumes:
+      # Persistent data storage
+      - ferraco-data:/app/backend/data
+      - ferraco-logs:/app/backend/logs
+
+      # Let's Encrypt certificates
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+
+    networks:
+      - ferraco-network
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    labels:
+      - "com.ferraco.app=crm"
+      - "com.ferraco.version=2.0.0"
+      - "com.ferraco.environment=production"
+      - "com.ferraco.domain=painelcheckar.com.br"
+
+  # Certbot for SSL Certificate Management
+  certbot:
+    image: certbot/certbot:latest
+    container_name: ferraco-certbot
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    depends_on:
+      - ferraco-app
+    networks:
+      - ferraco-network
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  ferraco-network:
+    driver: bridge
+    name: ferraco-network-production
+
+volumes:
+  ferraco-data:
+    name: ferraco-data-production
+    driver: local
+  ferraco-logs:
+    name: ferraco-logs-production
+    driver: local
+  certbot-conf:
+    name: ferraco-certbot-conf
+    driver: local
+  certbot-www:
+    name: ferraco-certbot-www
+    driver: local

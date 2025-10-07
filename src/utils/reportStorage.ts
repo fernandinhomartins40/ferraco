@@ -3,6 +3,15 @@ import { LeadsOverviewData, ConversionFunnelData, TagPerformanceData, Automation
 import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
 import { logger } from '@/lib/logger';
 
+// Tipos específicos para evitar 'any'
+interface StoredAutomation {
+  id: string;
+  name: string;
+  isActive: boolean;
+  executionCount?: number;
+  lastExecuted?: string;
+}
+
 interface ReportStorageItem extends StorageItem {
   name: string;
   type: Report['type'];
@@ -24,10 +33,13 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
 
   constructor() {
     super({ key: 'ferraco_reports', enableDebug: false });
-    this.dashboardStorage = new BaseStorage<DashboardStorageItem>({
-      key: 'ferraco_dashboard_configs',
-      enableDebug: false
-    });
+    // Create a concrete implementation for dashboard storage
+    const DashboardStorageClass = class extends BaseStorage<DashboardStorageItem> {
+      constructor() {
+        super({ key: 'ferraco_dashboard_configs', enableDebug: false });
+      }
+    };
+    this.dashboardStorage = new DashboardStorageClass();
     this.initializeDefaults();
   }
 
@@ -234,7 +246,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     }, {});
 
     const timeline = Object.entries(timelineData)
-      .map(([date, count]) => ({ date, count }))
+      .map(([date, count]) => ({ date, count: Number(count) || 0 }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
     return {
@@ -253,11 +265,12 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
   }
 
   generateConversionFunnelData(leads: Lead[]): ConversionFunnelData {
+    const total = leads.length;
     const stages = [
-      { name: 'Leads Capturados', count: leads.length },
-      { name: 'Em Contato', count: leads.filter(lead => lead.status !== 'novo').length },
-      { name: 'Em Negociação', count: leads.filter(lead => lead.status === 'em_andamento').length },
-      { name: 'Convertidos', count: leads.filter(lead => lead.status === 'concluido').length },
+      { name: 'Leads Capturados', count: leads.length, percentage: 100 },
+      { name: 'Em Contato', count: leads.filter(lead => lead.status !== 'novo').length, percentage: total > 0 ? Math.round((leads.filter(lead => lead.status !== 'novo').length / total) * 100) : 0 },
+      { name: 'Em Negociação', count: leads.filter(lead => lead.status === 'em_andamento').length, percentage: total > 0 ? Math.round((leads.filter(lead => lead.status === 'em_andamento').length / total) * 100) : 0 },
+      { name: 'Convertidos', count: leads.filter(lead => lead.status === 'concluido').length, percentage: total > 0 ? Math.round((leads.filter(lead => lead.status === 'concluido').length / total) * 100) : 0 },
     ];
 
     const convertedLeads = leads.filter(lead => lead.status === 'concluido');
@@ -320,13 +333,17 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
         new Date(lead.createdAt) >= sevenDaysAgo
       ).length;
 
+      // Calculate trend based on recent leads
+      const trend: 'up' | 'down' | 'stable' =
+        recentLeads > leadsWithTag.length * 0.3 ? 'up' :
+        recentLeads < leadsWithTag.length * 0.1 ? 'down' :
+        'stable';
+
       return {
-        tagId: tag.id,
         tagName: tag.name,
         count: leadsWithTag.length,
         conversionRate: Math.round(conversionRate * 100) / 100,
-        averageTime: Math.round(averageTime * 10) / 10,
-        recentLeads,
+        trend,
       };
     });
 
@@ -337,17 +354,17 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     // Load automations directly from localStorage to avoid circular dependency
     try {
       const storedAutomations = localStorage.getItem('ferraco_automations');
-      const automations = storedAutomations ? JSON.parse(storedAutomations) : [];
+      const automations: StoredAutomation[] = storedAutomations ? JSON.parse(storedAutomations) : [];
 
       const total = automations.length;
-      const active = automations.filter((auto: any) => auto.isActive).length;
-      const totalExecutions = automations.reduce((sum: number, auto: any) => sum + (auto.executionCount || 0), 0);
+      const active = automations.filter((auto) => auto.isActive).length;
+      const totalExecutions = automations.reduce((sum: number, auto) => sum + (auto.executionCount || 0), 0);
 
       const recentExecutions = automations
-        .filter((auto: any) => auto.lastExecuted)
-        .sort((a: any, b: any) => new Date(b.lastExecuted!).getTime() - new Date(a.lastExecuted!).getTime())
+        .filter((auto) => auto.lastExecuted)
+        .sort((a, b) => new Date(b.lastExecuted!).getTime() - new Date(a.lastExecuted!).getTime())
         .slice(0, 5)
-        .map((auto: any) => ({
+        .map((auto) => ({
           name: auto.name,
           lastExecuted: auto.lastExecuted!,
           count: auto.executionCount || 0,
@@ -375,8 +392,9 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
         byStatus: leads.reduce((acc, lead) => {
           acc[lead.status] = (acc[lead.status] || 0) + 1;
           return acc;
-        }, {}),
+        }, {} as Record<string, number>),
       },
+      charts: [],
     };
 
     report.widgets.forEach(widget => {
@@ -415,7 +433,7 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
           };
 
         case 'csv':
-          const csvContent = this.convertToCSV(reportData, report);
+          const csvContent = this.convertToCSV(reportData as unknown as Record<string, unknown>, report);
           return {
             success: true,
             data: {
@@ -491,8 +509,12 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
   }
 
   saveDashboardConfigs(configs: DashboardConfig[]): void {
-    this.dashboardStorage.data = configs as DashboardStorageItem[];
-    this.dashboardStorage.save();
+    // Clear and re-add using public API
+    const existing = this.dashboardStorage.getAll();
+    existing.forEach(item => this.dashboardStorage.delete(item.id));
+    configs.forEach(config => {
+      (this.dashboardStorage as any).add(config);
+    });
   }
 
   getDefaultDashboardConfigs(): DashboardConfig[] {
@@ -574,9 +596,8 @@ class ReportStorageClass extends BaseStorage<ReportStorageItem> {
     if (this.dashboardStorage.count() === 0) {
       const defaultDashboards = this.getDefaultDashboardConfigs();
       defaultDashboards.forEach(dashboard => {
-        this.dashboardStorage.data.push(dashboard as DashboardStorageItem);
+        (this.dashboardStorage as any).add(dashboard);
       });
-      this.dashboardStorage.save();
     }
   }
 

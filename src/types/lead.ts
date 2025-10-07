@@ -128,7 +128,7 @@ export interface AutomationRule {
 
 export interface AutomationTrigger {
   type: 'lead_created' | 'status_changed' | 'time_based' | 'tag_added' | 'note_added';
-  value?: string | number | boolean;
+  value?: string | number | boolean | { days: number; status: string };
 }
 
 export interface AutomationCondition {

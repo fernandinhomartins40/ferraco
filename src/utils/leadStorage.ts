@@ -110,12 +110,49 @@ export const leadStorage = {
   // Get lead statistics
   getStats(): LeadStats {
     const leads = this.getLeads();
-    
+    const concluidos = leads.filter(lead => lead.status === 'concluido');
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const hojeMilissegundos = hoje.getTime();
+    const seteDiasAtras = hojeMilissegundos - (7 * 24 * 60 * 60 * 1000);
+    const trintaDiasAtras = hojeMilissegundos - (30 * 24 * 60 * 60 * 1000);
+
+    const todayLeads = leads.filter(lead => new Date(lead.createdAt).getTime() >= hojeMilissegundos).length;
+    const leadsUltimaSemana = leads.filter(lead => new Date(lead.createdAt).getTime() >= seteDiasAtras).length;
+    const leadsSemanAnterior = leads.filter(lead => {
+      const created = new Date(lead.createdAt).getTime();
+      return created >= (seteDiasAtras - (7 * 24 * 60 * 60 * 1000)) && created < seteDiasAtras;
+    }).length;
+
+    const oldLeadsCount = leads.filter(lead => {
+      const updated = new Date(lead.updatedAt || lead.createdAt).getTime();
+      return updated < trintaDiasAtras && lead.status !== 'concluido';
+    }).length;
+
+    const conversionRate = leads.length > 0 ? (concluidos.length / leads.length) * 100 : 0;
+
+    let totalConversionTime = 0;
+    let conversionCount = 0;
+    concluidos.forEach(lead => {
+      const created = new Date(lead.createdAt).getTime();
+      const updated = new Date(lead.updatedAt || lead.createdAt).getTime();
+      totalConversionTime += updated - created;
+      conversionCount++;
+    });
+    const averageConversionTime = conversionCount > 0 ? totalConversionTime / conversionCount : 0;
+
+    const weeklyGrowth = leadsSemanAnterior > 0 ? ((leadsUltimaSemana - leadsSemanAnterior) / leadsSemanAnterior) * 100 : 0;
+
     return {
       total: leads.length,
       novo: leads.filter(lead => lead.status === 'novo').length,
       em_andamento: leads.filter(lead => lead.status === 'em_andamento').length,
-      concluido: leads.filter(lead => lead.status === 'concluido').length,
+      concluido: concluidos.length,
+      conversionRate,
+      averageConversionTime,
+      todayLeads,
+      weeklyGrowth,
+      oldLeadsCount,
     };
   },
 

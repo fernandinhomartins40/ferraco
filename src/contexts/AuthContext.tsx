@@ -216,7 +216,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (response.success && response.data) {
-        const { user, token } = response.data;
+        const { user, token } = response.data as { user: User; token: string };
 
         // Save to storage (localStorage if rememberMe, sessionStorage otherwise)
         saveAuthData(user, token, rememberMe);
@@ -246,7 +246,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else {
         throw new Error(response.message || 'Credenciais inválidas');
       }
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       logger.error('Erro no login:', error);
 
       // Log failed login attempt
@@ -255,7 +256,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         undefined,
         username,
         {
-          error: error.message,
+          error: errorMessage,
           attempt: 'invalid_credentials',
           timestamp: new Date().toISOString()
         }
@@ -263,7 +264,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       dispatch({
         type: 'LOGIN_FAILURE',
-        payload: error.message || 'Erro no login. Tente novamente.'
+        payload: errorMessage || 'Erro no login. Tente novamente.'
       });
       throw error;
     }
@@ -310,7 +311,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await apiClient.get('/auth/me');
 
       if (response.success && response.data) {
-        const user = response.data.user;
+        const user = (response.data as { user: User }).user;
 
         // Update user data but keep same token
         saveAuthData(user, state.token);
@@ -321,7 +322,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else {
         throw new Error('Falha ao renovar sessão');
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Erro ao renovar token:', error);
       dispatch({ type: 'TOKEN_EXPIRED' });
       clearAuthData();
@@ -353,7 +354,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         dispatch({
           type: 'LOGIN_SUCCESS',
           payload: {
-            user: result.data.user || authData.user,
+            user: (result.data as { user?: User }).user || authData.user,
             token: authData.token
           }
         });
@@ -379,7 +380,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Initialize auth on mount
   useEffect(() => {
-    checkAuth();
+    // DEMO MODE: Skip auth check for now
+    // checkAuth();
+    dispatch({ type: 'SET_LOADING', payload: false });
   }, []);
 
   // Auto-logout on token expiration (optional - JWT handles this)

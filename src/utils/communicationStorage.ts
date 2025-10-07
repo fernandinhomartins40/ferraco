@@ -8,7 +8,7 @@ interface CommunicationStorageItem extends StorageItem {
   direction: Communication['direction'];
   status: Communication['status'];
   templateId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   leadId: string;
   timestamp: string;
 }
@@ -22,16 +22,19 @@ interface TemplateStorageItem extends StorageItem {
   category?: string;
 }
 
+class TemplateStorage extends BaseStorage<TemplateStorageItem> {
+  constructor() {
+    super({ key: 'ferraco_message_templates', enableDebug: false });
+  }
+}
+
 class CommunicationStorageClass extends BaseStorage<CommunicationStorageItem> {
-  private templateStorage: BaseStorage<TemplateStorageItem>;
+  private templateStorage: TemplateStorage;
   private configKey = 'ferraco_whatsapp_config';
 
   constructor() {
     super({ key: 'ferraco_communications', enableDebug: false });
-    this.templateStorage = new BaseStorage<TemplateStorageItem>({
-      key: 'ferraco_message_templates',
-      enableDebug: false
-    });
+    this.templateStorage = new TemplateStorage();
     this.initializeDefaultTemplates();
   }
 
@@ -64,14 +67,18 @@ class CommunicationStorageClass extends BaseStorage<CommunicationStorageItem> {
   getTemplates(type?: MessageTemplate['type']): MessageTemplate[] {
     const templates = this.templateStorage.getAll();
     if (type) {
-      return templates.filter(template => template.type === type);
+      return templates.filter(template => template.type === type) as unknown as MessageTemplate[];
     }
-    return templates;
+    return templates as unknown as MessageTemplate[];
   }
 
   saveTemplates(templates: MessageTemplate[]): void {
-    this.templateStorage.data = templates as TemplateStorageItem[];
-    this.templateStorage.save();
+    // Clear existing and add new templates
+    const existingTemplates = this.templateStorage.getAll();
+    existingTemplates.forEach(t => this.templateStorage.delete(t.id));
+    templates.forEach(t => {
+      this.templateStorage.add(t as TemplateStorageItem);
+    });
   }
 
   getDefaultTemplates(): MessageTemplate[] {
@@ -120,7 +127,7 @@ class CommunicationStorageClass extends BaseStorage<CommunicationStorageItem> {
   }
 
   createTemplate(template: Omit<MessageTemplate, 'id' | 'createdAt'>): MessageTemplate {
-    return this.templateStorage.add(template);
+    return this.templateStorage.add(template as TemplateStorageItem) as unknown as MessageTemplate;
   }
 
   updateTemplate(templateId: string, updates: Partial<MessageTemplate>): boolean {
@@ -292,9 +299,8 @@ class CommunicationStorageClass extends BaseStorage<CommunicationStorageItem> {
     if (this.templateStorage.count() === 0) {
       const defaultTemplates = this.getDefaultTemplates();
       defaultTemplates.forEach(template => {
-        this.templateStorage.data.push(template as TemplateStorageItem);
+        this.templateStorage.add(template as TemplateStorageItem);
       });
-      this.templateStorage.save();
     }
   }
 }

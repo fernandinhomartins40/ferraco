@@ -27,9 +27,18 @@ export function useNotes(params?: PaginationParams & { search?: string; leadId?:
   return useQuery({
     queryKey: noteKeys.list(params),
     queryFn: async (): Promise<PaginatedResponse<ApiLeadNote>> => {
-      const response = await apiClient.get('/notes', params);
+      const response = await apiClient.get('/notes', params as unknown as Record<string, unknown>);
+      const data = response.data as { data?: ApiLeadNote[]; pagination?: any } | ApiLeadNote[];
+
+      if (Array.isArray(data)) {
+        return {
+          data: data,
+          pagination: { page: 1, limit: 10, total: data.length, totalPages: 1 },
+        };
+      }
+
       return {
-        data: response.data || [],
+        data: data.data || [],
         pagination: response.pagination || {
           page: 1,
           limit: 10,
@@ -39,7 +48,7 @@ export function useNotes(params?: PaginationParams & { search?: string; leadId?:
       };
     },
     staleTime: 2 * 60 * 1000, // 2 minutos (notas mudam frequentemente)
-    cacheTime: 5 * 60 * 1000, // 5 minutos
+    gcTime:5 * 60 * 1000, // 5 minutos
   });
 }
 
@@ -49,11 +58,11 @@ export function useNote(id: string) {
     queryKey: noteKeys.detail(id),
     queryFn: async (): Promise<ApiLeadNote> => {
       const response = await apiClient.get(`/notes/${id}`);
-      return response.data;
+      return response.data as ApiLeadNote;
     },
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime:5 * 60 * 1000,
   });
 }
 
@@ -63,11 +72,12 @@ export function useNotesByLead(leadId: string) {
     queryKey: noteKeys.byLead(leadId),
     queryFn: async (): Promise<ApiLeadNote[]> => {
       const response = await apiClient.get(`/leads/${leadId}/notes`);
-      return response.data || [];
+      const data = response.data as ApiLeadNote[] | { data: ApiLeadNote[] };
+      return Array.isArray(data) ? data : (data.data || []);
     },
     enabled: !!leadId,
     staleTime: 1 * 60 * 1000, // 1 minuto
-    cacheTime: 3 * 60 * 1000,
+    gcTime:3 * 60 * 1000,
   });
 }
 
@@ -85,10 +95,8 @@ export function useCreateNote(leadId?: string) {
       const response = await apiClient.post(`/leads/${noteLeadId}/notes`, {
         content: data.content,
         important: data.important,
-        category: data.category,
-        isPrivate: data.isPrivate,
-      });
-      return response.data;
+      } as unknown as Record<string, unknown>);
+      return response.data as ApiLeadNote;
     },
     onSuccess: (newNote) => {
       const noteLeadId = newNote.leadId;
@@ -123,8 +131,8 @@ export function useUpdateNote() {
 
   return useMutation({
     mutationFn: async (data: { id: string; content?: string; important?: boolean; category?: string; isPrivate?: boolean }): Promise<ApiLeadNote> => {
-      const response = await apiClient.put(`/notes/${data.id}`, data);
-      return response.data;
+      const response = await apiClient.put(`/notes/${data.id}`, data as unknown as Record<string, unknown>);
+      return response.data as ApiLeadNote;
     },
     onSuccess: (updatedNote) => {
       // Atualizar cache individual
@@ -188,8 +196,8 @@ export function useToggleNoteImportance() {
     mutationFn: async (params: { id: string; important: boolean }): Promise<ApiLeadNote> => {
       const response = await apiClient.patch(`/notes/${params.id}/importance`, {
         important: params.important,
-      });
-      return response.data;
+      } as unknown as Record<string, unknown>);
+      return response.data as ApiLeadNote;
     },
     onSuccess: (updatedNote) => {
       // Atualizar cache individual
@@ -224,7 +232,7 @@ export function useNoteStats() {
       };
     },
     staleTime: 10 * 60 * 1000, // 10 minutos
-    cacheTime: 15 * 60 * 1000, // 15 minutos
+    gcTime:15 * 60 * 1000, // 15 minutos
   });
 }
 
@@ -250,7 +258,7 @@ export function useNoteCategories() {
       ];
     },
     staleTime: 30 * 60 * 1000, // 30 minutos (categorias mudam raramente)
-    cacheTime: 60 * 60 * 1000, // 1 hora
+    gcTime:60 * 60 * 1000, // 1 hora
   });
 }
 
@@ -263,7 +271,7 @@ export function useImportantNotes(limit = 10) {
       return response.data || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
-    cacheTime: 10 * 60 * 1000,
+    gcTime:10 * 60 * 1000,
   });
 }
 
@@ -277,7 +285,7 @@ export function useNotesByCategory(category: string) {
     },
     enabled: !!category,
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime:10 * 60 * 1000,
   });
 }
 
@@ -307,8 +315,8 @@ export function useDuplicateNote() {
     mutationFn: async (params: { noteId: string; newLeadId?: string }): Promise<ApiLeadNote> => {
       const response = await apiClient.post(`/notes/${params.noteId}/duplicate`, {
         newLeadId: params.newLeadId,
-      });
-      return response.data;
+      } as unknown as Record<string, unknown>);
+      return response.data as ApiLeadNote;
     },
     onSuccess: (duplicatedNote) => {
       // Invalidar cache das listas

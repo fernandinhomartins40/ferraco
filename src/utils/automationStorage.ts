@@ -1,6 +1,17 @@
-import { AutomationRule, AutomationTrigger, AutomationCondition, AutomationAction, Lead } from '@/types/lead';
+import { AutomationRule, AutomationTrigger, AutomationCondition, AutomationAction, Lead, LeadStatus } from '@/types/lead';
 import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
 import { logger } from '@/lib/logger';
+
+// Tipos específicos para evitar 'any'
+interface TimeBasedTriggerValue {
+  days: number;
+  status: string;
+}
+
+type TriggerValue = string | number | boolean | TimeBasedTriggerValue;
+type ConditionValue = string | number | boolean | string[];
+type FieldValue = string | number | boolean | string[] | undefined;
+type AutomationContext = Record<string, unknown>;
 
 interface AutomationStorageItem extends StorageItem {
   name: string;
@@ -41,7 +52,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
         name: 'Follow-up Automático',
         description: 'Envia lembrete após 3 dias sem interação',
         isActive: true,
-        trigger: { type: 'time_based', value: { days: 3, status: 'novo' } },
+        trigger: { type: 'time_based', value: { days: 3, status: 'novo' } as TriggerValue },
         conditions: [{ field: 'status', operator: 'equals', value: 'novo' }],
         actions: [
           { type: 'send_message', value: 'whatsapp', templateId: 'template-follow-up-whatsapp' },
@@ -69,7 +80,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
         name: 'Alerta Lead Antigo',
         description: 'Adiciona tag de urgência para leads antigos sem follow-up',
         isActive: true,
-        trigger: { type: 'time_based', value: { days: 7, status: 'novo' } },
+        trigger: { type: 'time_based', value: { days: 7, status: 'novo' } as TriggerValue },
         conditions: [
           { field: 'status', operator: 'equals', value: 'novo' },
           { field: 'lastContact', operator: 'days_since', value: 7 },
@@ -129,7 +140,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
   async executeAutomations(
     trigger: AutomationTrigger,
     lead: Lead,
-    context?: Record<string, any>
+    context?: AutomationContext
   ): Promise<{ executed: string[]; errors: string[] }> {
     const automations = this.filter(auto => auto.isActive && auto.trigger.type === trigger.type);
 
@@ -162,7 +173,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
   async evaluateConditions(
     conditions: AutomationCondition[],
     lead: Lead,
-    context?: Record<string, any>
+    context?: AutomationContext
   ): Promise<boolean> {
     if (conditions.length === 0) return true;
 
@@ -177,9 +188,9 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
   }
 
   // Get field value from lead or context
-  getFieldValue(lead: Lead, field: string, context?: Record<string, any>): any {
+  getFieldValue(lead: Lead, field: string, context?: AutomationContext): FieldValue {
     if (context && context[field] !== undefined) {
-      return context[field];
+      return context[field] as FieldValue;
     }
 
     switch (field) {
@@ -198,7 +209,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
       case 'assignedTo':
         return lead.assignedTo;
       case 'note_content':
-        return context?.noteContent || '';
+        return (context?.noteContent as FieldValue) || '';
       case 'lastContact':
         return this.calculateDaysSinceLastContact(lead);
       case 'daysSinceCreated':
@@ -221,7 +232,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
   }
 
   // Evaluate a single condition
-  evaluateCondition(fieldValue: any, operator: string, conditionValue: any): boolean {
+  evaluateCondition(fieldValue: FieldValue, operator: string, conditionValue: ConditionValue): boolean {
     switch (operator) {
       case 'equals':
         return fieldValue === conditionValue;
@@ -229,9 +240,9 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
         return fieldValue !== conditionValue;
       case 'contains':
         if (Array.isArray(fieldValue)) {
-          return fieldValue.includes(conditionValue);
+          return fieldValue.includes(conditionValue as string);
         }
-        if (typeof fieldValue === 'string') {
+        if (typeof fieldValue === 'string' && typeof conditionValue === 'string') {
           const patterns = conditionValue.split('|');
           return patterns.some((pattern: string) =>
             fieldValue.toLowerCase().includes(pattern.toLowerCase())
@@ -243,7 +254,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
       case 'less_than':
         return Number(fieldValue) < Number(conditionValue);
       case 'days_since':
-        return fieldValue >= Number(conditionValue);
+        return Number(fieldValue) >= Number(conditionValue);
       default:
         return false;
     }
@@ -253,7 +264,7 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
   async executeActions(
     actions: AutomationAction[],
     lead: Lead,
-    context?: Record<string, any>
+    context?: AutomationContext
   ): Promise<void> {
     // Import dynamically to avoid circular dependency
     const { leadStorage } = await import('./leadStorage');
@@ -269,26 +280,26 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
             break;
 
           case 'change_status':
-            if (leadStorage) {
-              leadStorage.updateLeadStatus(lead.id, action.value);
+            if (leadStorage && typeof action.value === 'string') {
+              leadStorage.updateLeadStatus(lead.id, action.value as LeadStatus);
             }
             break;
 
           case 'add_tag':
             if (leadStorage) {
-              leadStorage.addTag(lead.id, action.value);
+              leadStorage.addTag(lead.id, action.value as string);
             }
             break;
 
           case 'remove_tag':
             if (leadStorage) {
-              leadStorage.removeTag(lead.id, action.value);
+              leadStorage.removeTag(lead.id, action.value as string);
             }
             break;
 
           case 'add_note':
             if (leadStorage) {
-              leadStorage.addNote(lead.id, action.value, false);
+              leadStorage.addNote(lead.id, action.value as string, false);
             }
             break;
 
@@ -326,13 +337,13 @@ class AutomationStorageClass extends BaseStorage<AutomationStorageItem> {
 
       for (const automation of timeBasedAutomations) {
         try {
-          const triggerValue = automation.trigger.value;
+          const triggerValue = automation.trigger.value as unknown as TimeBasedTriggerValue | undefined;
           const daysSinceCreated = Math.floor(
             (Date.now() - new Date(lead.createdAt).getTime()) / (1000 * 60 * 60 * 24)
           );
 
-          if (triggerValue.days && daysSinceCreated >= triggerValue.days) {
-            if (triggerValue.status && lead.status === triggerValue.status) {
+          if (triggerValue && typeof triggerValue === 'object' && 'days' in triggerValue && daysSinceCreated >= triggerValue.days) {
+            if ('status' in triggerValue && lead.status === triggerValue.status) {
               const shouldExecute = await this.evaluateConditions(automation.conditions, lead);
 
               if (shouldExecute) {

@@ -1,18 +1,1295 @@
-import { Helmet } from "react-helmet";
-import AdminLayout from "@/components/admin/AdminLayout";
-import AIAnalytics from "@/components/admin/AIAnalytics";
+import { useState, useEffect } from 'react';
+import AdminLayout from '@/components/admin/AdminLayout';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
+import {
+  Bot,
+  Building2,
+  Package,
+  Link as LinkIcon,
+  MessageSquare,
+  Copy,
+  Plus,
+  Edit,
+  Trash2,
+  Check,
+  AlertCircle,
+  Sparkles,
+  Facebook,
+  Instagram,
+  Globe,
+  Linkedin,
+  TrendingUp,
+  Eye,
+  Zap,
+  FileText,
+  Upload,
+  Loader2
+} from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  aiChatStorage,
+  CompanyData,
+  Product,
+  AIConfig,
+  ChatLink,
+  FAQItem
+} from '@/utils/aiChatStorage';
 
 const AdminAI = () => {
+  const [companyData, setCompanyData] = useState<CompanyData | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [aiConfig, setAIConfig] = useState<AIConfig | null>(null);
+  const [chatLinks, setChatLinks] = useState<ChatLink[]>([]);
+  const [faqItems, setFAQItems] = useState<FAQItem[]>([]);
+  const [progress, setProgress] = useState({ percentage: 0, steps: [] });
+
+  // New Product Form
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    description: '',
+    category: '',
+    price: '',
+    keywords: '',
+  });
+
+  // New Link Form
+  const [newLink, setNewLink] = useState({
+    name: '',
+    source: 'facebook' as ChatLink['source'],
+  });
+
+  // Quick Setup
+  const [quickSetupText, setQuickSetupText] = useState('');
+  const [quickSetupFile, setQuickSetupFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = () => {
+    setCompanyData(aiChatStorage.getCompanyData());
+    setProducts(aiChatStorage.getProducts());
+    setAIConfig(aiChatStorage.getAIConfig());
+    setChatLinks(aiChatStorage.getChatLinks());
+    setFAQItems(aiChatStorage.getFAQItems());
+    setProgress(aiChatStorage.getConfigurationProgress());
+  };
+
+  const handleSaveCompany = () => {
+    if (!companyData) return;
+
+    if (!companyData.name || !companyData.industry || !companyData.description) {
+      toast.error('Preencha os campos obrigatórios');
+      return;
+    }
+
+    aiChatStorage.saveCompanyData(companyData);
+    toast.success('Dados da empresa salvos!');
+    loadData();
+  };
+
+  const handleSaveAIConfig = () => {
+    if (!aiConfig) return;
+    aiChatStorage.saveAIConfig(aiConfig);
+    toast.success('Configuração da IA salva!');
+    loadData();
+  };
+
+  const handleAddProduct = () => {
+    if (!newProduct.name || !newProduct.description) {
+      toast.error('Nome e descrição são obrigatórios');
+      return;
+    }
+
+    aiChatStorage.addProduct({
+      ...newProduct,
+      keywords: newProduct.keywords.split(',').map(k => k.trim()).filter(Boolean),
+      isActive: true,
+    });
+
+    setNewProduct({ name: '', description: '', category: '', price: '', keywords: '' });
+    toast.success('Produto adicionado!');
+    loadData();
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    if (!confirm('Excluir este produto?')) return;
+    aiChatStorage.deleteProduct(id);
+    toast.success('Produto excluído');
+    loadData();
+  };
+
+  const handleCreateLink = () => {
+    if (!newLink.name) {
+      toast.error('Digite um nome para o link');
+      return;
+    }
+
+    const link = aiChatStorage.createChatLink({
+      name: newLink.name,
+      source: newLink.source,
+      url: '', // Will be generated
+      isActive: true,
+    });
+
+    const fullUrl = `${window.location.origin}/chat/${link.shortCode}`;
+    aiChatStorage.updateChatLink(link.id, { url: fullUrl });
+
+    setNewLink({ name: '', source: 'facebook' });
+    toast.success('Link criado!');
+    loadData();
+  };
+
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast.success('Link copiado!');
+  };
+
+  const getSourceIcon = (source: ChatLink['source']) => {
+    const icons = {
+      facebook: Facebook,
+      instagram: Instagram,
+      'google-ads': Globe,
+      tiktok: Globe,
+      linkedin: Linkedin,
+      website: Globe,
+      other: LinkIcon,
+    };
+    const Icon = icons[source] || LinkIcon;
+    return <Icon className="h-4 w-4" />;
+  };
+
+  const getSourceColor = (source: ChatLink['source']) => {
+    const colors = {
+      facebook: 'bg-blue-500',
+      instagram: 'bg-pink-500',
+      'google-ads': 'bg-red-500',
+      tiktok: 'bg-black',
+      linkedin: 'bg-blue-700',
+      website: 'bg-green-500',
+      other: 'bg-gray-500',
+    };
+    return colors[source] || 'bg-gray-500';
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.type.includes('text')) {
+      toast.error('Por favor, envie um arquivo PDF ou TXT');
+      return;
+    }
+
+    setQuickSetupFile(file);
+
+    // Read file content
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setQuickSetupText(text);
+    };
+
+    if (file.type.includes('text')) {
+      reader.readAsText(file);
+    } else {
+      // For PDF, we'll need a library - for now just show a message
+      toast.info('Upload de PDF detectado. Cole o texto extraído do PDF no campo abaixo.');
+    }
+  };
+
+  const handleQuickSetup = async () => {
+    if (!quickSetupText.trim()) {
+      toast.error('Por favor, cole o texto ou faça upload de um arquivo');
+      return;
+    }
+
+    if (!aiConfig?.fuseChatApiKey) {
+      toast.error('Configure a API Key primeiro na aba "1. API Config"');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Usar FuseChat API para extrair dados estruturados
+      const prompt = `Analise o texto abaixo e extraia as seguintes informações em formato JSON:
+
+{
+  "companyName": "nome da empresa",
+  "industry": "ramo/setor de atuação",
+  "description": "descrição detalhada do negócio",
+  "differentials": ["diferencial 1", "diferencial 2"],
+  "location": "localização",
+  "workingHours": "horário de funcionamento",
+  "phone": "telefone",
+  "products": [
+    {
+      "name": "nome do produto/serviço",
+      "description": "descrição",
+      "category": "categoria",
+      "price": "preço se mencionado"
+    }
+  ]
+}
+
+Texto para análise:
+${quickSetupText}
+
+Retorne APENAS o JSON, sem texto adicional.`;
+
+      // Usar proxy do backend para evitar CORS
+      const response = await fetch('http://localhost:3001/api/chatbot/fusechat-proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: prompt,
+          apiKey: aiConfig.fuseChatApiKey,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('API Key inválida. Verifique nas configurações.');
+        } else if (response.status === 429) {
+          throw new Error('Limite de requisições excedido. Aguarde 1 minuto.');
+        }
+        throw new Error('Erro ao processar com IA');
+      }
+
+      const data = await response.json();
+
+      // Extrair JSON da resposta da IA
+      let extractedData;
+      try {
+        // A resposta pode vir com markdown ou texto extra, precisamos extrair o JSON
+        const jsonMatch = data.response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          extractedData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('Formato de resposta inválido');
+        }
+      } catch (parseError) {
+        console.error('Erro ao parsear JSON:', data.response);
+        throw new Error('Não foi possível extrair os dados. Tente novamente com um texto mais claro.');
+      }
+
+      console.log('✅ Dados extraídos pela IA:', extractedData);
+
+      // Save company data
+      const newCompanyData: CompanyData = {
+        name: extractedData.companyName || 'Minha Empresa',
+        industry: extractedData.industry || 'Serviços',
+        description: extractedData.description || '',
+        differentials: extractedData.differentials || [],
+        targetAudience: '',
+        location: extractedData.location || '',
+        workingHours: extractedData.workingHours || '',
+        phone: extractedData.phone || '',
+      };
+
+      aiChatStorage.saveCompanyData(newCompanyData);
+
+      // Save products
+      let productsAdded = 0;
+      if (extractedData.products && Array.isArray(extractedData.products)) {
+        extractedData.products.forEach((product: any) => {
+          if (productsAdded >= 15) return;
+
+          const keywords = product.name
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((word: string) => word.length > 3)
+            .slice(0, 5);
+
+          aiChatStorage.addProduct({
+            name: product.name || `Produto ${productsAdded + 1}`,
+            description: product.description || '',
+            category: product.category || '',
+            price: product.price || '',
+            keywords: keywords,
+            isActive: true,
+          });
+
+          productsAdded++;
+        });
+      }
+
+      // Update AI config with greeting
+      const currentConfig = aiChatStorage.getAIConfig();
+      aiChatStorage.saveAIConfig({
+        ...currentConfig,
+        greetingMessage: `Olá! 👋 Bem-vindo à ${newCompanyData.name}. Como posso ajudar você hoje?`,
+      });
+
+      const diffCount = newCompanyData.differentials.length;
+      toast.success(`✨ Configuração automática concluída! ${productsAdded} produtos e ${diffCount} diferenciais extraídos. Revise nas abas.`);
+      loadData();
+      setQuickSetupText('');
+      setQuickSetupFile(null);
+    } catch (error: any) {
+      toast.error(`Erro: ${error.message || 'Falha ao processar com IA'}`);
+      console.error('Erro ao processar:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
-    <>
-      <Helmet>
-        <title>IA e Análises Preditivas - Ferraco CRM</title>
-        <meta name="description" content="Sistema de inteligência artificial para análise de sentimento, previsão de conversão e recomendações automáticas" />
-      </Helmet>
-      <AdminLayout>
-        <AIAnalytics />
-      </AdminLayout>
-    </>
+    <AdminLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h2 className="text-3xl font-bold flex items-center gap-2">
+            <Bot className="h-8 w-8 text-purple-600" />
+            IA de Captação de Leads
+          </h2>
+          <p className="text-muted-foreground mt-2">
+            Configure a inteligência artificial para conversar e qualificar leads automaticamente
+          </p>
+        </div>
+
+        {/* Progress Card */}
+        <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                <span className="font-semibold">Progresso da Configuração</span>
+              </div>
+              <Badge variant={progress.percentage === 100 ? 'default' : 'secondary'}>
+                {progress.percentage}%
+              </Badge>
+            </div>
+            <Progress value={progress.percentage} className="mb-4" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {progress.steps.map((step, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  {step.completed ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                  )}
+                  <span className={step.completed ? 'text-green-700' : 'text-muted-foreground'}>
+                    {step.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabs */}
+        <Tabs defaultValue="api-config" className="space-y-6">
+          <TabsList className="grid grid-cols-6 w-full">
+            <TabsTrigger value="api-config">
+              <Sparkles className="h-4 w-4 mr-2" />
+              1. API Config
+            </TabsTrigger>
+            <TabsTrigger value="ai-fill" disabled={!aiConfig?.fuseChatApiKey}>
+              <Zap className="h-4 w-4 mr-2" />
+              2. IA Automática
+            </TabsTrigger>
+            <TabsTrigger value="company" disabled={!aiConfig?.fuseChatApiKey}>
+              <Building2 className="h-4 w-4 mr-2" />
+              3. Empresa
+            </TabsTrigger>
+            <TabsTrigger value="products" disabled={!aiConfig?.fuseChatApiKey}>
+              <Package className="h-4 w-4 mr-2" />
+              4. Produtos
+            </TabsTrigger>
+            <TabsTrigger value="behavior" disabled={!aiConfig?.fuseChatApiKey}>
+              <Bot className="h-4 w-4 mr-2" />
+              5. Comportamento
+            </TabsTrigger>
+            <TabsTrigger value="links" disabled={!aiConfig?.fuseChatApiKey}>
+              <LinkIcon className="h-4 w-4 mr-2" />
+              6. Links
+            </TabsTrigger>
+          </TabsList>
+
+          {/* API Config Tab - PRIMEIRA ABA */}
+          <TabsContent value="api-config">
+            <div className="space-y-4">
+              {/* FuseChat API Integration Card */}
+              <Card className="border-2 border-purple-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    Passo 1: Configure a API da IA
+                  </CardTitle>
+                  <CardDescription>
+                    Antes de tudo, configure sua API Key do FuseChat para habilitar a inteligência artificial
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Alert className="border-purple-200 bg-purple-50">
+                    <AlertCircle className="h-4 w-4 text-purple-600" />
+                    <AlertDescription className="text-sm">
+                      <strong>🎯 Comece por aqui:</strong> Sem a API Key configurada, o chatbot não funcionará.
+                      Após configurar, as demais abas serão liberadas para você personalizar como a IA irá se comportar.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div>
+                    <label className="text-sm font-medium">API Key FuseChat *</label>
+                    <Input
+                      type="password"
+                      placeholder="pk_sua_chave_aqui"
+                      value={aiConfig?.fuseChatApiKey || ''}
+                      onChange={(e) =>
+                        setAIConfig({ ...aiConfig!, fuseChatApiKey: e.target.value })
+                      }
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      🔑 Cole sua API Key gerada no painel FuseChat (https://digiurbis.com.br)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Modelo de IA</label>
+                    <Select
+                      value={aiConfig?.fuseChatModel || 'gemma-2b'}
+                      onValueChange={(value) =>
+                        setAIConfig({ ...aiConfig!, fuseChatModel: value as any })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="qwen2.5-1.5b">
+                          Qwen2.5 1.5B - Mais rápido, ideal para respostas simples
+                        </SelectItem>
+                        <SelectItem value="gemma-2b">
+                          Gemma 2B - Balanceado (recomendado)
+                        </SelectItem>
+                        <SelectItem value="llama-3.2-3b">
+                          Llama 3.2 3B - Mais preciso, para tarefas complexas
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ⚠️ O modelo deve corresponder ao configurado na API Key
+                    </p>
+                  </div>
+
+                  <Button onClick={handleSaveAIConfig} className="w-full" size="lg">
+                    <Check className="h-4 w-4 mr-2" />
+                    Salvar e Continuar
+                  </Button>
+
+                  {aiConfig?.fuseChatApiKey && (
+                    <Alert className="border-green-200 bg-green-50">
+                      <Check className="h-4 w-4 text-green-600" />
+                      <AlertDescription>
+                        <strong>✅ API Configurada!</strong> Agora você pode prosseguir para as próximas etapas
+                        e configurar como a IA irá se comportar nas conversas.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Reset Configuration Card */}
+              <Card className="border-2 border-red-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-700">
+                    <AlertCircle className="h-5 w-5" />
+                    Zona de Perigo
+                  </CardTitle>
+                  <CardDescription>
+                    Ações irreversíveis - use com cuidado
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Limpar todas as configurações da IA e começar do zero. Esta ação não pode ser desfeita.
+                    </p>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        if (confirm('⚠️ TEM CERTEZA? Isso irá apagar:\n\n• API Key configurada\n• Dados da empresa\n• Produtos cadastrados\n• Configurações de comportamento\n• Links de campanha\n\nEsta ação NÃO PODE ser desfeita!')) {
+                          aiChatStorage.saveCompanyData({
+                            name: '',
+                            industry: '',
+                            description: '',
+                            differentials: [],
+                            targetAudience: '',
+                            location: '',
+                            workingHours: '',
+                            phone: '',
+                          });
+                          aiChatStorage.saveProducts([]);
+                          aiChatStorage.saveAIConfig({
+                            toneOfVoice: 'friendly',
+                            greetingMessage: 'Olá! 👋 Como posso ajudar você hoje?',
+                            qualificationQuestions: [],
+                            hotLeadCriteria: [],
+                            enableSmallTalk: true,
+                            fuseChatApiKey: '',
+                            fuseChatModel: 'gemma-2b',
+                          });
+                          aiChatStorage.saveChatLinks([]);
+                          aiChatStorage.saveFAQItems([]);
+                          toast.success('Todas as configurações foram resetadas');
+                          loadData();
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Limpar Todas as Configurações
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* AI Fill Tab - SEGUNDA ABA */}
+          <TabsContent value="ai-fill">
+            <Card className="border-2 border-purple-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                  Passo 2: Preenchimento Automático com IA
+                </CardTitle>
+                <CardDescription>
+                  Cole informações sobre sua empresa ou faça upload de um arquivo. A IA preencherá automaticamente os dados da empresa e criará os produtos.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert className="border-purple-200 bg-purple-50">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
+                  <AlertDescription>
+                    <strong>🤖 Magia da IA:</strong> A IA irá analisar seu texto e automaticamente:
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>Preencher os dados da empresa (nome, ramo, descrição, diferenciais)</li>
+                      <li>Criar produtos/serviços com descrições e palavras-chave</li>
+                      <li>Extrair informações de contato e localização</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+
+                {/* Upload Section */}
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors">
+                    <input
+                      type="file"
+                      id="ai-file-upload"
+                      className="hidden"
+                      accept=".pdf,.txt"
+                      onChange={handleFileUpload}
+                    />
+                    <label htmlFor="ai-file-upload" className="cursor-pointer">
+                      <Upload className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                      <p className="text-sm font-medium mb-1">
+                        Clique para fazer upload ou arraste um arquivo
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PDF ou TXT com informações da sua empresa
+                      </p>
+                    </label>
+                    {quickSetupFile && (
+                      <div className="mt-4 flex items-center justify-center gap-2 text-sm text-green-600">
+                        <FileText className="h-4 w-4" />
+                        <span>{quickSetupFile.name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 border-t border-gray-300" />
+                    <span className="text-sm text-muted-foreground">OU</span>
+                    <div className="flex-1 border-t border-gray-300" />
+                  </div>
+
+                  {/* Text Input */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Cole as informações da sua empresa aqui
+                    </label>
+                    <Textarea
+                      placeholder="Exemplo:&#10;&#10;Nome: Ferraco Soluções em TI&#10;Ramo: Tecnologia da Informação&#10;&#10;Somos uma empresa especializada em desenvolvimento de software e consultoria em TI...&#10;&#10;Produtos/Serviços:&#10;- Desenvolvimento Web: Criação de sites e sistemas web personalizados&#10;- Consultoria em Cloud: Migração e otimização de infraestrutura&#10;- Suporte Técnico: Atendimento 24/7 para empresas&#10;&#10;Diferenciais:&#10;- Atendimento personalizado&#10;- Equipe certificada&#10;- Garantia de qualidade"
+                      rows={16}
+                      value={quickSetupText}
+                      onChange={(e) => setQuickSetupText(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      💡 Dica: Quanto mais detalhado, melhor será o resultado. Inclua nome, ramo, descrição, produtos/serviços, preços e diferenciais.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <Button
+                  onClick={handleQuickSetup}
+                  disabled={isProcessing || !quickSetupText.trim()}
+                  className="w-full h-12 text-base bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Processando com IA...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5 mr-2" />
+                      Preencher Automaticamente com IA
+                    </>
+                  )}
+                </Button>
+
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    <strong>Nota:</strong> Após o preenchimento automático, você poderá revisar e ajustar os dados nas abas "3. Empresa" e "4. Produtos".
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Quick Setup Tab */}
+          <TabsContent value="quick-setup">
+            <Card className="border-2 border-purple-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                  Configuração Rápida com IA
+                </CardTitle>
+                <CardDescription>
+                  Cole informações sobre sua empresa ou faça upload de um arquivo e a IA configurará automaticamente
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert className="border-purple-200 bg-purple-50">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
+                  <AlertDescription>
+                    <strong>Como funciona:</strong> Cole um texto descritivo sobre sua empresa, produtos e serviços.
+                    A IA extrairá automaticamente as informações e preencherá os dados nas outras abas.
+                    Você poderá revisar e ajustar depois.
+                  </AlertDescription>
+                </Alert>
+
+                {/* Upload Section */}
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors">
+                    <input
+                      type="file"
+                      id="file-upload"
+                      className="hidden"
+                      accept=".pdf,.txt"
+                      onChange={handleFileUpload}
+                    />
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      <Upload className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                      <p className="text-sm font-medium mb-1">
+                        Clique para fazer upload ou arraste um arquivo
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PDF ou TXT (máx. 10MB)
+                      </p>
+                    </label>
+                    {quickSetupFile && (
+                      <div className="mt-4 flex items-center justify-center gap-2 text-sm text-green-600">
+                        <FileText className="h-4 w-4" />
+                        <span>{quickSetupFile.name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 border-t border-gray-300" />
+                    <span className="text-sm text-muted-foreground">OU</span>
+                    <div className="flex-1 border-t border-gray-300" />
+                  </div>
+
+                  {/* Text Input */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Cole as informações da sua empresa aqui
+                    </label>
+                    <Textarea
+                      placeholder="Cole aqui o texto sobre sua empresa. A IA irá extrair automaticamente:&#10;- Nome e ramo da empresa&#10;- Descrição do negócio&#10;- Produtos e serviços&#10;- Diferenciais e valores&#10;- Informações de contato&#10;&#10;Quanto mais detalhado, melhor será o resultado!"
+                      rows={12}
+                      value={quickSetupText}
+                      onChange={(e) => setQuickSetupText(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      💡 Dica: Inclua nome da empresa, ramo de atuação, produtos/serviços, preços e diferenciais
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <Button
+                  onClick={handleQuickSetup}
+                  disabled={isProcessing || !quickSetupText.trim()}
+                  className="w-full h-12 text-base bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Processando com IA...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5 mr-2" />
+                      Configurar Automaticamente com IA
+                    </>
+                  )}
+                </Button>
+
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    <strong>Nota:</strong> A configuração automática é um ponto de partida.
+                    Sempre revise os dados gerados e ajuste nas outras abas para garantir precisão.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Company Tab */}
+          <TabsContent value="company">
+            <Card>
+              <CardHeader>
+                <CardTitle>Passo 2: Dados da Empresa</CardTitle>
+                <CardDescription>
+                  Ensine a IA sobre seu negócio para ela conversar de forma natural
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!aiConfig?.fuseChatApiKey && (
+                  <Alert className="border-yellow-200 bg-yellow-50">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription>
+                      Configure a API Key primeiro na aba "1. API Config" para habilitar esta seção.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Nome da Empresa *</label>
+                    <Input
+                      placeholder="Ex: Ferraco Soluções"
+                      value={companyData?.name || ''}
+                      onChange={(e) => setCompanyData({ ...companyData!, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Ramo de Atuação *</label>
+                    <Input
+                      placeholder="Ex: Tecnologia, Consultoria, Varejo"
+                      value={companyData?.industry || ''}
+                      onChange={(e) => setCompanyData({ ...companyData!, industry: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Descrição do Negócio *</label>
+                  <Textarea
+                    placeholder="Descreva o que sua empresa faz, como atua, principais serviços..."
+                    rows={4}
+                    value={companyData?.description || ''}
+                    onChange={(e) => setCompanyData({ ...companyData!, description: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    A IA usará isso para explicar seu negócio aos clientes
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Diferenciais (um por linha)</label>
+                  <Textarea
+                    placeholder="Ex: Atendimento 24/7&#10;Garantia de 1 ano&#10;Entrega em 24h"
+                    rows={4}
+                    value={companyData?.differentials?.join('\n') || ''}
+                    onChange={(e) =>
+                      setCompanyData({
+                        ...companyData!,
+                        differentials: e.target.value.split('\n').filter(Boolean),
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Público-Alvo</label>
+                    <Input
+                      placeholder="Ex: Empresas B2B, Consumidores finais"
+                      value={companyData?.targetAudience || ''}
+                      onChange={(e) =>
+                        setCompanyData({ ...companyData!, targetAudience: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Localização</label>
+                    <Input
+                      placeholder="Ex: São Paulo, SP - Brasil"
+                      value={companyData?.location || ''}
+                      onChange={(e) => setCompanyData({ ...companyData!, location: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Horário de Atendimento</label>
+                    <Input
+                      placeholder="Ex: Seg-Sex 9h-18h"
+                      value={companyData?.workingHours || ''}
+                      onChange={(e) =>
+                        setCompanyData({ ...companyData!, workingHours: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Telefone</label>
+                    <Input
+                      placeholder="Ex: (11) 98765-4321"
+                      value={companyData?.phone || ''}
+                      onChange={(e) => setCompanyData({ ...companyData!, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={handleSaveCompany} className="w-full">
+                  <Check className="h-4 w-4 mr-2" />
+                  Salvar Dados da Empresa
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Products Tab */}
+          <TabsContent value="products">
+            <div className="space-y-4">
+              {!aiConfig?.fuseChatApiKey && (
+                <Alert className="border-yellow-200 bg-yellow-50">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription>
+                    Configure a API Key primeiro na aba "1. API Config" para habilitar esta seção.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Passo 3: Adicionar Produto/Serviço</CardTitle>
+                  <CardDescription>
+                    Cadastre produtos para a IA saber o que oferecer aos clientes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Nome do Produto *</label>
+                      <Input
+                        placeholder="Ex: Consultoria em TI"
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Categoria</label>
+                      <Input
+                        placeholder="Ex: Serviços, Produtos"
+                        value={newProduct.category}
+                        onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Descrição *</label>
+                    <Textarea
+                      placeholder="Descreva o produto, benefícios, para quem é indicado..."
+                      rows={3}
+                      value={newProduct.description}
+                      onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Preço (opcional)</label>
+                      <Input
+                        placeholder="Ex: R$ 1.500,00 ou A partir de R$ 500"
+                        value={newProduct.price}
+                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Palavras-chave (separadas por vírgula)</label>
+                      <Input
+                        placeholder="Ex: consultoria, ti, tecnologia"
+                        value={newProduct.keywords}
+                        onChange={(e) => setNewProduct({ ...newProduct, keywords: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        IA usará para identificar interesse
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button onClick={handleAddProduct} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Produto
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Products List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {products.map((product) => (
+                  <Card key={product.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-base">{product.name}</CardTitle>
+                          {product.category && (
+                            <Badge variant="outline" className="mt-1">
+                              {product.category}
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => handleDeleteProduct(product.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p className="text-sm text-muted-foreground">{product.description}</p>
+                      {product.price && (
+                        <p className="text-sm font-medium text-green-700">{product.price}</p>
+                      )}
+                      {product.keywords.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {product.keywords.map((kw, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">
+                              {kw}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {products.length === 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Nenhum produto cadastrado ainda. Adicione produtos para a IA poder oferecê-los aos clientes.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Behavior Config Tab */}
+          <TabsContent value="behavior">
+            <Card>
+              <CardHeader>
+                <CardTitle>Passo 4: Comportamento da IA</CardTitle>
+                <CardDescription>
+                  Configure a personalidade e como a IA conversa com os leads
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!aiConfig?.fuseChatApiKey && (
+                  <Alert className="border-yellow-200 bg-yellow-50">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription>
+                      Configure a API Key primeiro na aba "1. API Config" para habilitar esta seção.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                  <div>
+                    <label className="text-sm font-medium">Tom de Voz</label>
+                    <Select
+                      value={aiConfig?.toneOfVoice || 'friendly'}
+                      onValueChange={(value) =>
+                        setAIConfig({ ...aiConfig!, toneOfVoice: value as any })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="formal">Formal (corporativo, sério)</SelectItem>
+                        <SelectItem value="professional">Profissional (equilibrado)</SelectItem>
+                        <SelectItem value="friendly">Amigável (caloroso, próximo)</SelectItem>
+                        <SelectItem value="casual">Casual (descontraído)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Mensagem de Boas-vindas</label>
+                    <Textarea
+                      placeholder="Olá! 👋 Como posso ajudar você hoje?"
+                      rows={2}
+                      value={aiConfig?.greetingMessage || ''}
+                      onChange={(e) =>
+                        setAIConfig({ ...aiConfig!, greetingMessage: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">
+                      Critérios de Lead Quente (um por linha)
+                    </label>
+                    <Textarea
+                      placeholder="Ex: Mencionou orçamento&#10;Perguntou sobre disponibilidade&#10;Demonstrou urgência"
+                      rows={4}
+                      value={aiConfig?.hotLeadCriteria?.join('\n') || ''}
+                      onChange={(e) =>
+                        setAIConfig({
+                          ...aiConfig!,
+                          hotLeadCriteria: e.target.value.split('\n').filter(Boolean),
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      IA marcará o lead como "quente" se detectar esses sinais
+                    </p>
+                  </div>
+
+                  <Button onClick={handleSaveAIConfig} className="w-full">
+                    <Check className="h-4 w-4 mr-2" />
+                    Salvar Configuração
+                  </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Links Tab */}
+          <TabsContent value="links">
+            <div className="space-y-4">
+              {!aiConfig?.fuseChatApiKey && (
+                <Alert className="border-yellow-200 bg-yellow-50">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription>
+                    Configure a API Key primeiro na aba "1. API Config" para habilitar esta seção.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Passo 5: Criar Link de Captura</CardTitle>
+                  <CardDescription>
+                    Gere links rastreáveis para cada campanha ou rede social
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Nome da Campanha</label>
+                      <Input
+                        placeholder="Ex: Campanha Instagram Janeiro"
+                        value={newLink.name}
+                        onChange={(e) => setNewLink({ ...newLink, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Origem</label>
+                      <Select
+                        value={newLink.source}
+                        onValueChange={(value) =>
+                          setNewLink({ ...newLink, source: value as ChatLink['source'] })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="google-ads">Google Ads</SelectItem>
+                          <SelectItem value="tiktok">TikTok</SelectItem>
+                          <SelectItem value="linkedin">LinkedIn</SelectItem>
+                          <SelectItem value="website">Website</SelectItem>
+                          <SelectItem value="other">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <Button onClick={handleCreateLink} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Gerar Link
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Links List */}
+              <div className="space-y-3">
+                {chatLinks.map((link) => (
+                  <Card key={link.id}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`h-8 w-8 rounded-full ${getSourceColor(link.source)} flex items-center justify-center text-white`}>
+                              {getSourceIcon(link.source)}
+                            </div>
+                            <div>
+                              <p className="font-medium">{link.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Código: {link.shortCode}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="bg-muted p-2 rounded flex items-center justify-between">
+                            <code className="text-xs flex-1 truncate">{link.url}</code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCopyLink(link.url)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-4 w-4 text-blue-500" />
+                              <span>{link.clicks} cliques</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <TrendingUp className="h-4 w-4 text-green-500" />
+                              <span>{link.leads} leads</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {chatLinks.length === 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Nenhum link criado ainda. Crie links para rastrear de onde vêm seus leads.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Status Section */}
+        <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              Status da Integração IA
+            </CardTitle>
+            <CardDescription>
+              {aiConfig?.fuseChatApiKey
+                ? 'Usando FuseChat API (externa)'
+                : 'Usando IA Local (Ollama) - Configure FuseChat API para melhor performance'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {aiConfig?.fuseChatApiKey ? (
+              <Alert className="border-green-200 bg-green-50">
+                <Check className="h-4 w-4 text-green-600" />
+                <AlertDescription>
+                  <strong>✅ FuseChat Conectado:</strong> API Key configurada.
+                  Modelo: {aiConfig.fuseChatModel === 'qwen2.5-1.5b' ? 'Qwen2.5 1.5B' :
+                           aiConfig.fuseChatModel === 'gemma-2b' ? 'Gemma 2B' :
+                           'Llama 3.2 3B'}.
+                  Rate limit: 60 req/min.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription>
+                  <strong>⚠️ FuseChat não configurado:</strong> Configure a API Key na aba "IA Config"
+                  para usar a IA externa. Atualmente usando Ollama local (se disponível).
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className={`bg-white p-4 rounded-lg border ${
+                aiConfig?.fuseChatApiKey ? 'border-purple-200' : 'border-gray-200'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Bot className={`h-5 w-5 ${
+                    aiConfig?.fuseChatApiKey ? 'text-purple-600' : 'text-gray-400'
+                  }`} />
+                  <span className="font-semibold text-sm">
+                    {aiConfig?.fuseChatApiKey ? 'FuseChat API' : 'IA Local (Ollama)'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {aiConfig?.fuseChatApiKey
+                    ? 'API externa em nuvem'
+                    : 'Processamento local'}
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg border border-green-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-5 w-5 text-green-600" />
+                  <span className="font-semibold text-sm">Chat Widget</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Integrado e funcional
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg border border-green-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  <span className="font-semibold text-sm">Qualificação Auto</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Análise inteligente de leads
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>
   );
 };
 

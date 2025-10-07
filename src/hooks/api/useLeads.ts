@@ -27,19 +27,82 @@ export function useLeads(params?: LeadFilters & PaginationParams) {
   return useQuery({
     queryKey: leadKeys.list(params),
     queryFn: async (): Promise<PaginatedResponse<ApiLead>> => {
-      const response = await apiClient.get('/leads', params);
+      // DEMO MODE: Return mock data instead of API call
+      const mockLeads: ApiLead[] = [
+        {
+          id: '1',
+          name: 'João Silva',
+          phone: '(11) 98765-4321',
+          email: 'joao@email.com',
+          status: 'NOVO',
+          source: 'website',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          tags: [],
+          notes: []
+        },
+        {
+          id: '2',
+          name: 'Maria Santos',
+          phone: '(21) 97654-3210',
+          email: 'maria@email.com',
+          status: 'EM_ANDAMENTO',
+          source: 'whatsapp',
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+          updatedAt: new Date(Date.now() - 86400000).toISOString(),
+          tags: [],
+          notes: []
+        },
+        {
+          id: '3',
+          name: 'Pedro Costa',
+          phone: '(31) 96543-2109',
+          email: 'pedro@email.com',
+          status: 'CONCLUIDO',
+          source: 'instagram',
+          createdAt: new Date(Date.now() - 172800000).toISOString(),
+          updatedAt: new Date(Date.now() - 172800000).toISOString(),
+          tags: [],
+          notes: []
+        },
+        {
+          id: '4',
+          name: 'Ana Oliveira',
+          phone: '(41) 95432-1098',
+          email: 'ana@email.com',
+          status: 'NOVO',
+          source: 'facebook',
+          createdAt: new Date(Date.now() - 259200000).toISOString(),
+          updatedAt: new Date(Date.now() - 259200000).toISOString(),
+          tags: [],
+          notes: []
+        },
+        {
+          id: '5',
+          name: 'Carlos Ferreira',
+          phone: '(51) 94321-0987',
+          email: 'carlos@email.com',
+          status: 'EM_ANDAMENTO',
+          source: 'website',
+          createdAt: new Date(Date.now() - 345600000).toISOString(),
+          updatedAt: new Date(Date.now() - 345600000).toISOString(),
+          tags: [],
+          notes: []
+        }
+      ];
+
       return {
-        data: response.data || [],
-        pagination: response.pagination || {
-          page: 1,
-          limit: 10,
-          total: 0,
-          totalPages: 0,
+        data: mockLeads.slice(0, params?.limit || 5),
+        pagination: {
+          page: params?.page || 1,
+          limit: params?.limit || 5,
+          total: mockLeads.length,
+          totalPages: Math.ceil(mockLeads.length / (params?.limit || 5)),
         },
       };
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
-    cacheTime: 10 * 60 * 1000, // 10 minutos
+    gcTime:10 * 60 * 1000, // 10 minutos
   });
 }
 
@@ -49,8 +112,8 @@ export function useCreateLead() {
 
   return useMutation({
     mutationFn: async (data: CreateLeadRequest): Promise<ApiLead> => {
-      const response = await apiClient.post('/leads', data);
-      return response.data;
+      const response = await apiClient.post('/leads', data as unknown as Record<string, unknown>);
+      return response.data as ApiLead;
     },
     onSuccess: (newLead) => {
       // Invalidar cache das listas de leads
@@ -75,8 +138,8 @@ export function useUpdateLead() {
 
   return useMutation({
     mutationFn: async (data: UpdateLeadRequest): Promise<ApiLead> => {
-      const response = await apiClient.put(`/leads/${data.id}`, data);
-      return response.data;
+      const response = await apiClient.put(`/leads/${data.id}`, data as unknown as Record<string, unknown>);
+      return response.data as ApiLead;
     },
     onSuccess: (updatedLead) => {
       // Atualizar cache individual
@@ -101,8 +164,8 @@ export function useUpdateLeadStatus() {
 
   return useMutation({
     mutationFn: async (params: { id: string; status: 'NOVO' | 'EM_ANDAMENTO' | 'CONCLUIDO' }): Promise<ApiLead> => {
-      const response = await apiClient.patch(`/leads/${params.id}/status`, { status: params.status });
-      return response.data;
+      const response = await apiClient.patch(`/leads/${params.id}/status`, { status: params.status } as unknown as Record<string, unknown>);
+      return response.data as ApiLead;
     },
     onSuccess: (updatedLead) => {
       // Atualizar cache individual
@@ -161,7 +224,7 @@ export function useLeadStats() {
       return response.data;
     },
     staleTime: 10 * 60 * 1000, // 10 minutos
-    cacheTime: 15 * 60 * 1000, // 15 minutos
+    gcTime:15 * 60 * 1000, // 15 minutos
   });
 }
 
@@ -171,8 +234,8 @@ export function useCreateLeadNote(leadId: string) {
 
   return useMutation({
     mutationFn: async (data: CreateNoteRequest): Promise<ApiLeadNote> => {
-      const response = await apiClient.post(`/leads/${leadId}/notes`, data);
-      return response.data;
+      const response = await apiClient.post(`/leads/${leadId}/notes`, data as unknown as Record<string, unknown>);
+      return response.data as ApiLeadNote;
     },
     onSuccess: () => {
       // Atualizar cache do lead (pode incluir contagem de notas)

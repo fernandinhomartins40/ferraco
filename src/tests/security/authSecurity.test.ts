@@ -85,9 +85,9 @@ describe('🔐 Security Tests - Authentication System', () => {
   describe('🚫 Route Protection Tests', () => {
     it('should block access to protected routes when not authenticated', async () => {
       renderWithAuth(
-        <ProtectedRoute>
-          <TestProtectedComponent />
-        </ProtectedRoute>
+        React.createElement(ProtectedRoute, null,
+          React.createElement(TestProtectedComponent)
+        )
       );
 
       // Não deve renderizar o conteúdo protegido
@@ -124,9 +124,9 @@ describe('🔐 Security Tests - Authentication System', () => {
       });
 
       renderWithAuth(
-        <ProtectedRoute>
-          <TestProtectedComponent />
-        </ProtectedRoute>
+        React.createElement(ProtectedRoute, null,
+          React.createElement(TestProtectedComponent)
+        )
       );
 
       await waitFor(() => {
@@ -158,9 +158,10 @@ describe('🔐 Security Tests - Authentication System', () => {
       });
 
       renderWithAuth(
-        <ProtectedRoute requiredPermission="admin:write">
-          <TestProtectedComponent />
-        </ProtectedRoute>
+        React.createElement(ProtectedRoute, {
+          requiredPermission: 'admin:write',
+          children: React.createElement(TestProtectedComponent)
+        })
       );
 
       // Deve mostrar página de acesso negado
@@ -182,7 +183,7 @@ describe('🔐 Security Tests - Authentication System', () => {
         })
       });
 
-      renderWithAuth(<Login />);
+      renderWithAuth(React.createElement(Login));
 
       const usernameInput = screen.getByLabelText(/nome de usuário/i);
       const passwordInput = screen.getByLabelText(/senha/i);
@@ -243,9 +244,9 @@ describe('🔐 Security Tests - Authentication System', () => {
       });
 
       renderWithAuth(
-        <ProtectedRoute>
-          <TestProtectedComponent />
-        </ProtectedRoute>
+        React.createElement(ProtectedRoute, null,
+          React.createElement(TestProtectedComponent)
+        )
       );
 
       await waitFor(() => {
@@ -301,9 +302,10 @@ describe('🔐 Security Tests - Authentication System', () => {
         });
 
         renderWithAuth(
-          <ProtectedRoute requiredPermission={requiredPermission}>
-            <TestProtectedComponent />
-          </ProtectedRoute>
+          React.createElement(ProtectedRoute, {
+            requiredPermission: requiredPermission,
+            children: React.createElement(TestProtectedComponent)
+          })
         );
 
         if (shouldHaveAccess) {
@@ -325,9 +327,9 @@ describe('🔐 Security Tests - Authentication System', () => {
       (fetch as Mock).mockRejectedValueOnce(new Error('Network error'));
 
       renderWithAuth(
-        <ProtectedRoute>
-          <TestProtectedComponent />
-        </ProtectedRoute>
+        React.createElement(ProtectedRoute, null,
+          React.createElement(TestProtectedComponent)
+        )
       );
 
       await waitFor(() => {
@@ -336,7 +338,7 @@ describe('🔐 Security Tests - Authentication System', () => {
     });
 
     it('should sanitize user input in login form', async () => {
-      renderWithAuth(<Login />);
+      renderWithAuth(React.createElement(Login));
 
       const maliciousInputs = [
         '<script>alert("xss")</script>',
@@ -349,7 +351,7 @@ describe('🔐 Security Tests - Authentication System', () => {
 
       maliciousInputs.forEach(input => {
         fireEvent.change(usernameInput, { target: { value: input } });
-        expect(usernameInput.value).toBe(input); // Should not be processed
+        expect((usernameInput as HTMLInputElement).value).toBe(input); // Should not be processed
       });
     });
 
@@ -367,7 +369,7 @@ describe('🔐 Security Tests - Authentication System', () => {
           })
         });
 
-        renderWithAuth(<Login />);
+        renderWithAuth(React.createElement(Login));
 
         const usernameInput = screen.getByLabelText(/nome de usuário/i);
         const passwordInput = screen.getByLabelText(/senha/i);

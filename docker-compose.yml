@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Single Container: Frontend + Backend + Nginx
+  ferraco-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ferraco-crm
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Node.js Environment
+      - NODE_ENV=production
+      - PORT=3002
+
+      # Database Configuration
+      - DATABASE_URL=file:/app/backend/data/ferraco.db
+
+      # JWT Configuration (CHANGE IN PRODUCTION!)
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production-minimum-32-characters}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+      # Application Settings
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
+      - LOGIN_TIMEOUT_MINUTES=${LOGIN_TIMEOUT_MINUTES:-15}
+      - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-60}
+
+    volumes:
+      # Persistent data storage
+      - ferraco-data:/app/backend/data
+      - ferraco-logs:/app/backend/logs
+
+      # SSL certificates (optional - uncomment when needed)
+      # - ./ssl:/etc/nginx/ssl:ro
+
+    networks:
+      - ferraco-network
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    labels:
+      - "com.ferraco.app=crm"
+      - "com.ferraco.version=2.0.0"
+      - "com.ferraco.description=Ferraco CRM - Full Stack Application"
+
+networks:
+  ferraco-network:
+    driver: bridge
+    name: ferraco-network
+
+volumes:
+  ferraco-data:
+    name: ferraco-data
+    driver: local
+  ferraco-logs:
+    name: ferraco-logs
+    driver: local

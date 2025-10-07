@@ -1,9 +1,9 @@
-name: 🚀 Deploy Ferraco CRM - Frontend
+name: 🚀 Deploy Ferraco CRM - Full Stack
 
-# FORCE CACHE INVALIDATION - Ferraco CRM Frontend - 2025-09-29T10:00:00Z
+# Deploy automático do Ferraco CRM (Container Único - Frontend + Backend + Nginx)
 
 concurrency:
-  group: ferraco-deploy-frontend
+  group: ferraco-deploy-vps
   cancel-in-progress: true
 
 on:
@@ -15,14 +15,15 @@ env:
   VPS_HOST: '72.60.10.108'
   VPS_USER: 'root'
   APP_DIR: '/root/ferraco-crm'
-  APP_PORT: '3050'  # Porta da aplicação frontend
+  APP_PORT: '3050'
   COMPOSE_PROJECT: 'ferraco'
+  DOMAIN: 'painelcheckar.com.br'
 
 jobs:
   deploy:
-    name: 🚀 Deploy Frontend para VPS
+    name: 🚀 Deploy Full Stack para VPS
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
     - name: 📥 Checkout
@@ -37,250 +38,240 @@ jobs:
 
     - name: 🔍 Pre-Deploy Validation
       run: |
-        echo "🔍 Validando estrutura do projeto FERRACO CRM FRONTEND..."
-        echo "📋 Frontend:"
-        ls -la package.json vite.config.ts .env.example || echo "⚠️ Arquivos frontend faltando"
-        ls -la src/components/ src/pages/ || echo "⚠️ Estrutura React faltando"
-        echo "📋 Docker:"
-        ls -la docker-compose.yml nginx.conf || echo "⚠️ Arquivos Docker faltando"
+        echo "🔍 Validando estrutura do projeto FERRACO CRM..."
+        echo "📋 Arquitetura: Container Único (Frontend + Backend + Nginx)"
+        echo ""
+        echo "📦 Arquivos essenciais:"
+        ls -la Dockerfile docker-compose.vps.yml || { echo "❌ Docker files faltando!"; exit 1; }
+        ls -la docker/nginx.conf docker/startup.sh || { echo "❌ Nginx/startup faltando!"; exit 1; }
+        echo ""
+        echo "📋 Frontend (React):"
+        ls -la package.json vite.config.ts src/components/ src/pages/ || { echo "❌ Frontend incompleto!"; exit 1; }
+        echo ""
+        echo "📋 Backend (Node.js):"
+        ls -la ferraco-backend/package.json ferraco-backend/src/ ferraco-backend/prisma/ || { echo "❌ Backend incompleto!"; exit 1; }
+        echo ""
+        echo "✅ Estrutura validada com sucesso!"
 
-    - name: 📦 Prepare Frontend Package
+    - name: 📦 Prepare Deployment Package
       run: |
-        echo "📦 Preparando pacote FERRACO CRM FRONTEND..."
-        echo "Commit: ${{ github.sha }}"
-        echo "Branch: ${{ github.ref_name }}"
-        echo "Frontend: React + Vite + TypeScript"
-
-        # Criar arquivo compacto apenas com frontend
-        tar --warning=no-file-changed -czf deploy.tar.gz \
-          --exclude='.git' \
-          --exclude='**/node_modules' \
-          --exclude='dist' \
-          --exclude='build' \
-          --exclude='*.log' \
-          --exclude='coverage' \
-          --exclude='.env.local' \
-          . || true
-
-        echo "📊 Tamanho do pacote FRONTEND:"
-        ls -lh deploy.tar.gz
-
-    - name: 📤 Upload to VPS
-      run: |
-        echo "📤 Enviando FULL STACK para VPS..."
-        sshpass -p '${{ secrets.VPS_PASSWORD }}' scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.tar.gz ${{ env.VPS_USER }}@${{ env.VPS_HOST }}:/tmp/
-
-    - name: 🚀 Deploy Full Stack on VPS
-      run: |
-        echo "🏗️ Executando deploy FULL STACK na VPS..."
-        echo "📋 Informações do deploy:"
+        echo "📦 Preparando pacote FERRACO CRM FULL STACK..."
         echo "  📦 Commit: ${{ github.sha }}"
         echo "  🌿 Branch: ${{ github.ref_name }}"
         echo "  👤 Actor: ${{ github.actor }}"
         echo "  🕐 Timestamp: $(date -u)"
-        echo "  🎯 Stack: Node.js Backend + React Frontend"
+        echo ""
 
-        sshpass -p '${{ secrets.VPS_PASSWORD }}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=10 ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << DEPLOY_SCRIPT
+        # Criar pacote compacto
+        tar --warning=no-file-changed -czf deploy.tar.gz \
+          --exclude='.git' \
+          --exclude='**/node_modules' \
+          --exclude='**/dist' \
+          --exclude='**/build' \
+          --exclude='*.log' \
+          --exclude='coverage' \
+          --exclude='.env.local' \
+          --exclude='.env' \
+          --exclude='**/.DS_Store' \
+          --exclude='**/Thumbs.db' \
+          . || true
+
+        echo ""
+        echo "📊 Tamanho do pacote:"
+        ls -lh deploy.tar.gz
+        echo "✅ Pacote criado com sucesso!"
+
+    - name: 📤 Upload to VPS
+      run: |
+        echo "📤 Enviando pacote para VPS..."
+        sshpass -p '${{ secrets.VPS_PASSWORD }}' scp \
+          -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          -o ConnectTimeout=30 \
+          deploy.tar.gz ${{ env.VPS_USER }}@${{ env.VPS_HOST }}:/tmp/
+        echo "✅ Upload concluído!"
+
+    - name: 🚀 Deploy on VPS
+      run: |
+        echo "🚀 Iniciando deploy na VPS..."
+
+        sshpass -p '${{ secrets.VPS_PASSWORD }}' ssh \
+          -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          -o ServerAliveInterval=30 \
+          -o ServerAliveCountMax=3 \
+          -o ConnectTimeout=30 \
+          ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << 'DEPLOY_SCRIPT'
           set -e
 
-          echo '🚀 Iniciando deploy FERRACO CRM FULL STACK - Node.js + React'
+          echo "========================================="
+          echo "🚀 FERRACO CRM - Deploy Full Stack"
+          echo "========================================="
+          echo "📦 Commit: ${{ github.sha }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "👤 Actor: ${{ github.actor }}"
+          echo "🕐 Timestamp: $(date)"
+          echo "🎯 Arquitetura: Container Único"
+          echo "🐳 Porta VPS: ${{ env.APP_PORT }}"
+          echo "========================================="
+          echo ""
 
           # Configurar sistema
-          echo '📦 Configurando VPS...'
+          echo "📦 Atualizando sistema..."
           export DEBIAN_FRONTEND=noninteractive
-          apt-get update -y
-          apt-get install -y curl wget gnupg2 software-properties-common apt-transport-https ca-certificates lsb-release
-
-          # Parar stack anterior (se existir)
-          echo '⏹️ Parando stack anterior...'
-          if command -v docker &> /dev/null; then
-            # Parar todos os containers do projeto Ferraco
-            docker compose -p ${{ env.COMPOSE_PROJECT }} down --volumes --remove-orphans 2>/dev/null || true
-            docker compose -p ferraco down --volumes --remove-orphans 2>/dev/null || true
-
-            # Parar containers específicos se ainda estiverem rodando
-            docker stop ferraco-backend ferraco-frontend ferraco-proxy 2>/dev/null || true
-            docker rm -f ferraco-backend ferraco-frontend ferraco-proxy 2>/dev/null || true
-
-            # Remover APENAS as imagens do Ferraco (específicas)
-            echo '🗑️ Removendo imagens antigas do Ferraco...'
-            docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "ferraco" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
-
-            # Remover apenas imagens do compose project ferraco
-            docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "ferraco-crm" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
-
-            # Liberar porta da aplicação forçadamente
-            docker ps --filter "publish=${{ env.APP_PORT }}" --format "table {{.ID}}" | tail -n +2 | xargs -r docker stop 2>/dev/null || true
-
-            # Remover apenas volumes específicos do ferraco
-            docker volume ls --format "table {{.Name}}" | grep -E "ferraco" | xargs -r docker volume rm 2>/dev/null || true
-
-            echo '✅ Stack anterior parada, imagens antigas removidas e portas liberadas'
-          fi
-
-          # Limpar dados persistidos do banco de dados anterior
-          echo '🗑️ Limpando dados persistidos do banco anterior...'
-          rm -rf ${{ env.APP_DIR }}/backend/data/* 2>/dev/null || true
-          rm -rf ${{ env.APP_DIR }}/backend/uploads/* 2>/dev/null || true
-          rm -rf ${{ env.APP_DIR }}/backend/logs/* 2>/dev/null || true
-          echo '✅ Dados antigos limpos - banco será criado do zero'
+          apt-get update -qq
+          apt-get install -y curl wget ca-certificates lsb-release >/dev/null 2>&1
 
           # Instalar/Atualizar Docker
-          echo '🐳 Configurando Docker + Compose...'
+          echo "🐳 Configurando Docker..."
           if ! command -v docker &> /dev/null; then
-            # Instalar Docker
-            apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-            echo "deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-            apt-get update -y
-            apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-            systemctl start docker && systemctl enable docker
+            echo "Instalando Docker..."
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sh get-docker.sh >/dev/null 2>&1
+            rm get-docker.sh
+            systemctl start docker
+            systemctl enable docker
           fi
-          docker --version && docker compose version
+          docker --version
+
+          # Parar containers anteriores
+          echo "⏹️  Parando containers anteriores..."
+          cd ${{ env.APP_DIR }} 2>/dev/null || true
+          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --volumes --remove-orphans 2>/dev/null || true
+
+          # Liberar porta
+          echo "🔓 Liberando porta ${{ env.APP_PORT }}..."
+          fuser -k ${{ env.APP_PORT }}/tcp 2>/dev/null || true
+          sleep 2
+
+          # Limpar imagens antigas do Ferraco
+          echo "🧹 Limpando imagens antigas..."
+          docker images | grep -E "ferraco" | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || true
 
           # Backup e preparação
-          if [ -d '${{ env.APP_DIR }}' ]; then
-            echo '💾 Fazendo backup...'
-            mv '${{ env.APP_DIR }}' '${{ env.APP_DIR }}.backup.\$(date +%Y%m%d-%H%M%S)' 2>/dev/null || true
+          if [ -d "${{ env.APP_DIR }}" ]; then
+            echo "💾 Fazendo backup..."
+            BACKUP_DIR="${{ env.APP_DIR }}.backup.$(date +%Y%m%d-%H%M%S)"
+            mv ${{ env.APP_DIR }} $BACKUP_DIR 2>/dev/null || true
+            # Manter apenas últimos 3 backups
+            ls -dt ${{ env.APP_DIR }}.backup.* 2>/dev/null | tail -n +4 | xargs -r rm -rf
           fi
 
           # Extrair código
-          echo '📁 Extraindo FULL STACK...'
-          mkdir -p ${{ env.APP_DIR }} && cd ${{ env.APP_DIR }}
-          tar -xzf /tmp/deploy.tar.gz && rm -f /tmp/deploy.tar.gz
+          echo "📁 Extraindo aplicação..."
+          mkdir -p ${{ env.APP_DIR }}
+          cd ${{ env.APP_DIR }}
+          tar -xzf /tmp/deploy.tar.gz
+          rm -f /tmp/deploy.tar.gz
 
           # Validar estrutura
-          echo '🔍 Validando estrutura FERRACO CRM FULL STACK...'
-          ls -la docker-compose.yml nginx.conf || { echo '❌ Arquivos essenciais faltando!'; exit 1; }
-          ls -la Dockerfile backend/Dockerfile || { echo '❌ Dockerfiles faltando!'; exit 1; }
-          ls -la backend/package.json backend/src/app.js || { echo '❌ Backend incompleto!'; exit 1; }
-          ls -la backend/src/services/ backend/src/controllers/ || { echo '❌ Estrutura backend Phase 4 faltando!'; exit 1; }
-          ls -la backend/prisma/ || { echo '❌ Schema Prisma faltando!'; exit 1; }
-          ls -la package.json src/components/ || { echo '❌ Frontend incompleto!'; exit 1; }
+          echo "🔍 Validando estrutura..."
+          [ -f "Dockerfile" ] || { echo "❌ Dockerfile não encontrado!"; exit 1; }
+          [ -f "docker-compose.vps.yml" ] || { echo "❌ docker-compose.vps.yml não encontrado!"; exit 1; }
+          [ -d "docker" ] || { echo "❌ Pasta docker não encontrada!"; exit 1; }
+          [ -d "ferraco-backend" ] || { echo "❌ Backend não encontrado!"; exit 1; }
+          [ -d "src" ] || { echo "❌ Frontend não encontrado!"; exit 1; }
+          echo "✅ Estrutura validada!"
 
-          # Configurar variáveis de produção para backend
-          echo '⚙️ Configurando ambiente de produção para backend...'
-          echo \"NODE_ENV=production\" > backend/.env.production
-          echo \"PORT=3000\" >> backend/.env.production
-          echo \"DATABASE_URL=file:./data/ferraco.db\" >> backend/.env.production
-          echo \"JWT_SECRET=ferraco-production-jwt-${{ github.sha }}\" >> backend/.env.production
-          echo \"CORS_ORIGIN=http://${{ env.VPS_HOST }}:${{ env.APP_PORT }},http://localhost:3000,http://localhost:5173,http://localhost:8080\" >> backend/.env.production
+          # Criar diretórios de dados
+          echo "🗄️  Preparando diretórios de dados..."
+          mkdir -p ferraco-backend/data ferraco-backend/logs
+          chmod 777 ferraco-backend/data ferraco-backend/logs
 
-          # Preparar diretórios de dados
-          echo '🗄️ Preparando diretórios de dados...'
-          mkdir -p backend/data backend/uploads backend/logs
-          echo '✅ Diretórios criados!'
+          # Configurar variáveis de ambiente
+          echo "⚙️  Configurando ambiente..."
+          export BUILD_TIMESTAMP=$(date +%s)
+          export JWT_SECRET="ferraco-vps-jwt-${{ github.sha }}"
+          export CORS_ORIGIN="http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
 
-          # Deploy com Docker Compose
-          echo '🐳 Executando deploy com Docker Compose...'
-          export FRONTEND_PORT=${{ env.APP_PORT }}
-          export VITE_API_URL=http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api
-          export BUILD_TIMESTAMP=\$(date +%s)
-          export JWT_SECRET=ferraco-production-jwt-${{ github.sha }}
+          # Build da imagem
+          echo "🏗️  Building imagem Docker (isso pode levar alguns minutos)..."
+          DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
+            --no-cache \
+            --pull \
+            --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP
 
-          # Verificar se porta está realmente livre
-          echo '🔍 Verificando porta antes do deploy...'
-          if netstat -tuln | grep -q ":${{ env.APP_PORT }} "; then
-            echo "⚠️ Porta ${{ env.APP_PORT }} ainda ocupada, forçando liberação..."
-            fuser -k ${{ env.APP_PORT }}/tcp 2>/dev/null || true
-            sleep 2
-          fi
-
-          # Build e start dos serviços com invalidação forçada de cache
-          echo '🏗️ Building imagens com invalidação total de cache...'
-
-          # Remover APENAS imagens do ferraco (sem afetar outras aplicações)
-          echo '🧹 Limpeza final de imagens do Ferraco antes do build...'
-          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "ferraco" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
-          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -E "ferraco-crm" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
-
-          # Build com cache totalmente limpo e timestamp único
-          echo '🔨 Construindo imagens completamente novas...'
-          BUILD_TIMESTAMP=\$(date +%s)
-          DOCKER_BUILDKIT=1 docker compose -p ${{ env.COMPOSE_PROJECT }} build --no-cache --pull --build-arg BUILD_TIMESTAMP=\$BUILD_TIMESTAMP
-
-          echo '🚀 Iniciando containers...'
-
-          # Tentar start normal primeiro
-          if ! docker compose -p ${{ env.COMPOSE_PROJECT }} up -d; then
-            echo '⚠️ Falha no start normal, tentando restart forçado...'
-
-            # Restart específico do ferraco apenas
-            docker compose -p ${{ env.COMPOSE_PROJECT }} down --volumes --remove-orphans 2>/dev/null || true
-            echo '⚠️ Reiniciando apenas containers do Ferraco CRM...'
-
-            # Aguardar um pouco
-            sleep 10
-
-            # Tentar novamente
-            echo '🔄 Tentativa 2: Iniciando containers...'
-            docker compose -p ${{ env.COMPOSE_PROJECT }} up -d
-          fi
+          # Iniciar aplicação
+          echo "🚀 Iniciando aplicação..."
+          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} up -d
 
           # Aguardar inicialização
-          echo '⏳ Aguardando stack inicializar (45s)...'
+          echo "⏳ Aguardando aplicação inicializar (45 segundos)..."
           sleep 45
 
-          # Verificar serviços
-          echo '🔍 Verificando serviços...'
-          docker compose -p ${{ env.COMPOSE_PROJECT }} ps
+          # Verificar containers
+          echo "🔍 Verificando containers..."
+          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} ps
 
-          # Testar aplicação (via nginx proxy)
-          echo '🔍 Testando aplicação...'
-          for i in {1..10}; do
+          # Health check
+          echo "🩺 Executando health check..."
+          MAX_TRIES=15
+          for i in $(seq 1 $MAX_TRIES); do
             if curl -f -s http://localhost:${{ env.APP_PORT }}/health >/dev/null 2>&1; then
-              echo '✅ Nginx proxy health check passou!'
+              echo "✅ Frontend health check OK!"
+              FRONTEND_OK=true
               break
             fi
-            echo "Nginx proxy - Tentativa \$i/10 - aguardando 5s..."
+            echo "  Tentativa $i/$MAX_TRIES - aguardando..."
             sleep 5
           done
 
-          # Testar API backend via proxy
-          echo '🔍 Testando API backend via proxy...'
-          for i in {1..8}; do
+          for i in $(seq 1 $MAX_TRIES); do
             if curl -f -s http://localhost:${{ env.APP_PORT }}/api/health >/dev/null 2>&1; then
-              echo '✅ Backend API health check passou!'
+              echo "✅ Backend API health check OK!"
+              BACKEND_OK=true
               break
             fi
-            echo "Backend API - Tentativa \$i/8 - aguardando 5s..."
+            echo "  Tentativa $i/$MAX_TRIES - aguardando..."
             sleep 5
           done
 
           # Verificação final
-          echo '🎯 Verificação final...'
-          if curl -f -s http://localhost:${{ env.APP_PORT }}/health >/dev/null 2>&1 && curl -f -s http://localhost:${{ env.APP_PORT }}/api/health >/dev/null 2>&1; then
-            echo '✅ DEPLOY FULL STACK CONCLUÍDO COM SUCESSO!'
-            echo '🌐 Aplicação: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}'
-            echo '🔌 Backend API: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api'
-            echo '🩺 Health: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/health'
+          if [ "$FRONTEND_OK" = true ] && [ "$BACKEND_OK" = true ]; then
+            echo ""
+            echo "========================================="
+            echo "✅ DEPLOY CONCLUÍDO COM SUCESSO!"
+            echo "========================================="
+            echo "🌐 Frontend: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
+            echo "🔌 Backend API: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api"
+            echo "🩺 Health: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/health"
+            echo "👨‍💼 Admin: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin"
+            echo "========================================="
           else
-            echo '❌ Falha na verificação final!'
-            docker compose -p ${{ env.COMPOSE_PROJECT }} logs --tail 20
+            echo ""
+            echo "❌ FALHA NO DEPLOY - Health checks falharam!"
+            echo "📋 Logs dos containers:"
+            docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} logs --tail 50
             exit 1
           fi
         DEPLOY_SCRIPT
 
-    - name: 🎉 Full Stack Deploy Success
+    - name: 🎉 Deploy Success
       run: |
-        echo "🎉 FERRACO CRM FULL STACK DEPLOYADO!"
-        echo "✅ Backend Node.js + Express + Prisma + Frontend React em produção"
         echo ""
-        echo "🔗 LINKS FUNCIONAIS (ENTRADA ÚNICA):"
-        echo "🌐 Aplicação: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
-        echo "🔌 Backend API: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api"
-        echo "🩺 Health Check: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/health"
-        echo "👨‍💼 Painel Admin: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin"
-        echo "📊 Dashboard CRM: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin/dashboard"
+        echo "========================================="
+        echo "🎉 FERRACO CRM DEPLOYADO COM SUCESSO!"
+        echo "========================================="
         echo ""
-        echo "✅ Stack Completa:"
-        echo "  🎯 Backend: Node.js + Express + Prisma + SQLite3 + JWT"
-        echo "  🎨 Frontend: React + Vite + TypeScript"
-        echo "  🐳 Deploy: Docker Compose"
-        echo "  👥 Gerenciamento de leads e usuários"
-        echo "  🔐 Autenticação e autorização avançada"
-        echo "  📊 Sistema de auditoria completo"
-        echo "  💾 Backup automático e health checks"
-        echo "  🔑 Permissões granulares"
-        echo "  🛡️ Middleware de segurança OWASP"
-        echo "  📚 Documentação automática da API"
+        echo "📦 Informações do Deploy:"
+        echo "  🏷️  Versão: 2.0.0"
+        echo "  📦 Commit: ${{ github.sha }}"
+        echo "  🌿 Branch: ${{ github.ref_name }}"
+        echo "  👤 Autor: ${{ github.actor }}"
+        echo "  🕐 Data: $(date)"
+        echo ""
+        echo "🔗 Links de Acesso:"
+        echo "  🌐 Aplicação: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
+        echo "  🔌 API: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api"
+        echo "  🩺 Health: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/health"
+        echo "  👨‍💼 Admin: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin"
+        echo ""
+        echo "🏗️  Stack Tecnológica:"
+        echo "  🎯 Backend: Node.js + Express + Prisma + SQLite"
+        echo "  🎨 Frontend: React + Vite + TypeScript + Tailwind"
+        echo "  🌐 Proxy: Nginx"
+        echo "  🐳 Deploy: Docker (Container Único)"
+        echo "  🔐 Auth: JWT + Bcrypt"
+        echo ""
+        echo "✅ Sistema pronto para uso!"
+        echo "========================================="

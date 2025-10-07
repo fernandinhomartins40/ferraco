@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { securityLogger, SecurityEventType, SecurityLevel } from '@/utils/securityLogger';
 import logoFerraco from '@/assets/logo-ferraco.webp';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+
 interface PasswordStrength {
   score: number;
   strength: string;
@@ -205,8 +207,8 @@ const FirstLoginSetup = () => {
         title: 'Senha alterada',
         description: 'Sua senha foi alterada com sucesso. Agora complete seu perfil.',
       });
-    } catch (err: any) {
-      const errorMessage = err.message || 'Erro ao alterar senha';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao alterar senha';
       setError(errorMessage);
 
       securityLogger.logEvent(
@@ -279,8 +281,8 @@ const FirstLoginSetup = () => {
 
       // Redirecionar para o dashboard
       navigate('/admin', { replace: true });
-    } catch (err: any) {
-      const errorMessage = err.message || 'Erro ao atualizar perfil';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar perfil';
       setError(errorMessage);
 
       securityLogger.logEvent(
