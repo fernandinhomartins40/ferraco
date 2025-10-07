@@ -34,8 +34,8 @@ WORKDIR /backend
 # Install dependencies for native modules
 RUN apk add --no-cache python3 make g++
 
-# Copy backend package files
-COPY ferraco-backend/package*.json ./
+# Copy backend package files (explicitly copy both)
+COPY ferraco-backend/package.json ferraco-backend/package-lock.json ./
 COPY ferraco-backend/tsconfig.json ./
 COPY ferraco-backend/prisma ./prisma/
 
