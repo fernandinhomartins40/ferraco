@@ -37,6 +37,9 @@ export function createApp(): Application {
   // MIDDLEWARES GLOBAIS
   // ==========================================
 
+  // Trust proxy - necessário quando atrás de Nginx/Load Balancer
+  app.set('trust proxy', 1);
+
   // Segurança
   app.use(helmet());
 

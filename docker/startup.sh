@@ -10,6 +10,12 @@ echo "========================================="
 # Change to backend directory
 cd /app/backend
 
+# Fix database permissions (ensure nodejs user can write)
+echo "Fixing database permissions..."
+chown -R nodejs:nodejs /app/backend/data /app/backend/logs
+chmod 755 /app/backend/data
+chmod 644 /app/backend/data/*.db 2>/dev/null || true
+
 # Run Prisma migrations
 echo "Running Prisma migrations..."
 npx prisma migrate deploy
