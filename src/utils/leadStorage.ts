@@ -1,5 +1,6 @@
 import { Lead, LeadStatus, LeadStats, LeadNote, DashboardMetrics, TrendData, LeadFilters } from '@/types/lead';
 import { logger } from '@/lib/logger';
+import { generateUUID } from './uuid';
 
 // Import all Phase 2 storage systems
 import { tagStorage } from './tagStorage';
@@ -33,7 +34,7 @@ export const leadStorage = {
   // Add a new lead with Phase 2 enhancements
   addLead(name: string, phone: string, source?: string, priority?: 'low' | 'medium' | 'high'): Lead {
     const newLead: Lead = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: name.trim(),
       phone: phone.trim(),
       status: 'novo',
@@ -356,7 +357,7 @@ export const leadStorage = {
     if (leadIndex === -1) return false;
 
     const newNote: LeadNote = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       content: content.trim(),
       createdAt: new Date().toISOString(),
       important,

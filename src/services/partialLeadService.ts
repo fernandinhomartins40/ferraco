@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/apiClient';
 import { logger } from '@/lib/logger';
+import { generateUUID } from '@/utils/uuid';
 
 // Interface dos dados do backend
 export interface PartialLead {
@@ -44,7 +45,7 @@ const SESSION_ID_KEY = 'ferraco_session_id';
 const getSessionId = (): string => {
   let sessionId = sessionStorage.getItem(SESSION_ID_KEY);
   if (!sessionId) {
-    sessionId = crypto.randomUUID();
+    sessionId = generateUUID();
     sessionStorage.setItem(SESSION_ID_KEY, sessionId);
   }
   return sessionId;

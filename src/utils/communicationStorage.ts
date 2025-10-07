@@ -1,6 +1,7 @@
 import { Communication, MessageTemplate, WhatsAppConfig } from '@/types/lead';
 import { BaseStorage, StorageItem } from '@/lib/BaseStorage';
 import { logger } from '@/lib/logger';
+import { generateUUID } from './uuid';
 
 interface CommunicationStorageItem extends StorageItem {
   type: Communication['type'];
@@ -206,7 +207,7 @@ class CommunicationStorageClass extends BaseStorage<CommunicationStorageItem> {
     if (success) {
       return {
         success: true,
-        messageId: `msg_${crypto.randomUUID()}`,
+        messageId: `msg_${generateUUID()}`,
       };
     } else {
       return {
