@@ -13,7 +13,18 @@ import { useToast } from '@/hooks/use-toast';
 import { securityLogger, SecurityEventType, SecurityLevel } from '@/utils/securityLogger';
 import logoFerraco from '@/assets/logo-ferraco.webp';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+// Helper para obter URL base da API
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (import.meta.env.PROD) {
+    return '/api'; // Produção: usa caminho relativo (proxy Nginx)
+  }
+  return 'http://localhost:3002/api'; // Desenvolvimento
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 interface PasswordStrength {
   score: number;

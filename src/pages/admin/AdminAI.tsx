@@ -43,6 +43,17 @@ import {
   FAQItem
 } from '@/utils/aiChatStorage';
 
+// Função para obter URL base da API (mesma lógica do apiClient)
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (import.meta.env.PROD) {
+    return '/api'; // Produção: usa caminho relativo (proxy Nginx)
+  }
+  return 'http://localhost:3002/api'; // Desenvolvimento
+};
+
 const AdminAI = () => {
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -248,7 +259,8 @@ ${quickSetupText}
 Retorne APENAS o JSON, sem texto adicional.`;
 
       // Usar proxy do backend para evitar CORS
-      const response = await fetch('http://localhost:3001/api/chatbot/fusechat-proxy', {
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/chatbot/fusechat-proxy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
