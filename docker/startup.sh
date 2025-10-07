@@ -16,18 +16,26 @@ npx prisma migrate deploy
 
 # Start backend as nodejs user in background
 echo "Starting Node.js backend on port 3002..."
-su nodejs -c "node dist/server.js" &
+su-exec nodejs:nodejs node dist/server.js > /app/backend/logs/backend.log 2>&1 &
 
 # Store backend PID
 BACKEND_PID=$!
 
-# Wait a moment for backend to start
-sleep 3
+# Wait for backend to start
+sleep 5
 
 # Check if backend is running
 if ! kill -0 $BACKEND_PID 2>/dev/null; then
     echo "ERROR: Backend failed to start"
+    echo "Logs:"
+    cat /app/backend/logs/backend.log
     exit 1
+fi
+
+# Check if backend is listening on port 3002
+if ! netstat -tuln | grep -q ':3002'; then
+    echo "WARNING: Backend started but not listening on port 3002 yet, waiting..."
+    sleep 3
 fi
 
 echo "Backend started successfully (PID: $BACKEND_PID)"

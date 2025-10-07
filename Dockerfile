@@ -57,14 +57,14 @@ RUN npm run build
 # ==========================================
 FROM nginx:alpine
 
-# Install Node.js, wget, and sqlite for backend runtime
-RUN apk add --no-cache nodejs npm wget sqlite
+# Install Node.js, wget, sqlite and su-exec for backend runtime
+RUN apk add --no-cache nodejs npm wget sqlite su-exec
 
 WORKDIR /app
 
-# Create non-root user for Node.js backend
+# Create non-root user for Node.js backend with shell access
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 -s /bin/sh
 
 # Copy backend from builder
 COPY --from=backend-builder --chown=nodejs:nodejs /backend/node_modules ./backend/node_modules
