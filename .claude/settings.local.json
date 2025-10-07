@@ -89,7 +89,12 @@
       "Bash(git update-index:*)",
       "Bash(git ls-tree:*)",
       "Bash(test:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(docker build:*)",
+      "Bash(scp:*)",
+      "Bash(python3:*)",
+      "Bash(nslookup:*)",
+      "Bash(ping:*)"
     ],
     "deny": [],
     "ask": []

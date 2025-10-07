@@ -85,8 +85,12 @@ COPY --from=frontend-builder /frontend/dist /usr/share/nginx/html
 RUN mkdir -p /app/backend/data /app/backend/logs && \
     chown -R nodejs:nodejs /app/backend/data /app/backend/logs
 
-# Copy nginx configuration
+# Copy nginx configurations
 COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/nginx-domain.conf /etc/nginx/nginx-domain.conf
+
+# Create certbot directory for SSL challenges
+RUN mkdir -p /var/www/certbot
 
 # Copy startup script
 COPY docker/startup.sh /startup.sh
