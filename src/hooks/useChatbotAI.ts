@@ -1,6 +1,17 @@
-import { useState, useCallback } from 'react';
-import { aiChatStorage, CompanyData, Product, AIConfig } from '@/utils/aiChatStorage';
+/**
+ * Hook para Chatbot Inteligente Baseado em Regras
+ * Substitui a dependência de IA externa por sistema local
+ */
+
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { aiChatStorage } from '@/utils/aiChatStorage';
 import { generateUUID } from '@/utils/uuid';
+import {
+  createConversationManager,
+  ConversationManager,
+  LeadData,
+  KnowledgeBaseContext
+} from '@/utils/chatbot';
 
 interface Message {
   id: string;
@@ -10,132 +21,52 @@ interface Message {
   status?: 'sent' | 'delivered' | 'read';
 }
 
-interface LeadData {
-  nome?: string;
-  telefone?: string;
-  email?: string;
-  interesse?: string[];
-  orcamento?: string;
-  cidade?: string;
-  prazo?: string;
-  source: string;
-}
-
-interface ChatContext {
-  empresa: CompanyData | null;
-  produtos: Product[];
-  aiConfig: AIConfig | null;
-  leadData: LeadData;
-  conversationHistory: Message[];
-}
-
 /**
- * Hook para chat com IA conversacional e captação natural de leads
+ * Hook para chat com chatbot inteligente e captação natural de leads
  */
 export function useChatbotAI(linkSource: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [leadData, setLeadData] = useState<LeadData>({ source: linkSource });
   const [isTyping, setIsTyping] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [sessionId, setSessionId] = useState<string>(generateUUID());
 
+  // Referência para o conversation manager
+  const conversationManagerRef = useRef<ConversationManager | null>(null);
+
+  // Carregar dados da knowledge base
   const companyData = aiChatStorage.getCompanyData();
-  const products = aiChatStorage.getProducts().filter(p => p.isActive);
+  const products = aiChatStorage.getProducts();
+  const faqs = aiChatStorage.getFAQItems();
   const aiConfig = aiChatStorage.getAIConfig();
 
-  /**
-   * Extração natural de dados da mensagem usando NLP simples
-   */
-  const extractLeadData = useCallback((message: string): Partial<LeadData> => {
-    const data: Partial<LeadData> = {};
-    const lowerMsg = message.toLowerCase();
+  // Inicializar conversation manager
+  useEffect(() => {
+    const knowledgeBase: KnowledgeBaseContext = {
+      companyData,
+      products,
+      faqs,
+      aiConfig
+    };
 
-    // Nome: "Meu nome é João", "Sou o Carlos", "Me chamo Ana", "João aqui"
-    const namePatterns = [
-      /(?:meu nome é|me chamo|sou o|sou a|pode me chamar de)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)?)/i,
-      /^([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)?)\s+aqui/i
-    ];
-    for (const pattern of namePatterns) {
-      const match = message.match(pattern);
-      if (match) {
-        data.nome = match[1].trim();
-        break;
-      }
-    }
-
-    // Telefone: (11) 98765-4321, 11987654321, 11 98765-4321
-    const phonePattern = /\(?\d{2}\)?\s*9?\d{4,5}-?\d{4}/;
-    const phoneMatch = message.match(phonePattern);
-    if (phoneMatch) {
-      data.telefone = phoneMatch[0].replace(/\s+/g, ' ').trim();
-    }
-
-    // Email: joao@email.com
-    const emailPattern = /[\w.-]+@[\w.-]+\.\w{2,}/;
-    const emailMatch = message.match(emailPattern);
-    if (emailMatch) {
-      data.email = emailMatch[0];
-    }
-
-    // Orçamento: "R$ 100 mil", "até 50k", "200 mil reais"
-    const budgetPattern = /(?:R?\$?\s*)?(\d+(?:\.\d+)?)\s*(?:mil|k|reais)/i;
-    const budgetMatch = message.match(budgetPattern);
-    if (budgetMatch) {
-      data.orcamento = budgetMatch[0];
-    }
-
-    // Cidade: padrões comuns
-    if (lowerMsg.includes('são paulo') || lowerMsg.includes('sp')) {
-      data.cidade = 'São Paulo, SP';
-    } else if (lowerMsg.includes('rio de janeiro') || lowerMsg.includes('rj')) {
-      data.cidade = 'Rio de Janeiro, RJ';
-    }
-
-    // Prazo: "para março", "em 3 meses", "até dezembro"
-    const prazoPatterns = [
-      /(?:para|até|em)\s+(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/i,
-      /em\s+(\d+)\s+(?:mês|meses|mes|meses)/i,
-      /(?:urgente|rápido|o mais rápido)/i
-    ];
-    for (const pattern of prazoPatterns) {
-      const match = message.match(pattern);
-      if (match) {
-        data.prazo = match[0];
-        break;
-      }
-    }
-
-    return data;
+    conversationManagerRef.current = createConversationManager(knowledgeBase);
   }, []);
 
-  /**
-   * Adicionar contexto de dados já coletados à mensagem
-   * (FuseChat já tem toda a Knowledge Base configurada via RAG)
-   */
-  const buildContextMessage = useCallback((userMessage: string): string => {
-    // Se já temos dados do lead, incluir como contexto discreto
-    const collectedData: string[] = [];
+  // Atualizar knowledge base quando mudar
+  useEffect(() => {
+    if (conversationManagerRef.current) {
+      const knowledgeBase: KnowledgeBaseContext = {
+        companyData,
+        products,
+        faqs,
+        aiConfig
+      };
 
-    if (leadData.nome) collectedData.push(`Nome: ${leadData.nome}`);
-    if (leadData.telefone) collectedData.push(`Telefone: ${leadData.telefone}`);
-    if (leadData.email) collectedData.push(`Email: ${leadData.email}`);
-    if (leadData.interesse && leadData.interesse.length > 0) {
-      collectedData.push(`Interesse: ${leadData.interesse.join(', ')}`);
+      conversationManagerRef.current.updateKnowledgeBase(knowledgeBase);
     }
-    if (leadData.orcamento) collectedData.push(`Orçamento mencionado: ${leadData.orcamento}`);
-    if (leadData.cidade) collectedData.push(`Cidade: ${leadData.cidade}`);
-    if (leadData.prazo) collectedData.push(`Prazo: ${leadData.prazo}`);
-
-    // Se temos dados coletados, adicionar como contexto
-    if (collectedData.length > 0) {
-      return `[Dados já coletados: ${collectedData.join(', ')}]\n\n${userMessage}`;
-    }
-
-    return userMessage;
-  }, [leadData]);
+  }, [companyData, products, faqs, aiConfig]);
 
   /**
-   * Calcular score de qualificação do lead
+   * Calcula score de qualificação do lead
    */
   const calculateLeadScore = useCallback((): number => {
     let score = 0;
@@ -217,93 +148,75 @@ export function useChatbotAI(linkSource: string) {
   }, []);
 
   /**
-   * Enviar mensagem do usuário e obter resposta da IA
+   * Enviar mensagem do usuário e obter resposta do bot
    */
   const sendMessage = useCallback(async (userMessage: string): Promise<void> => {
     if (!userMessage.trim() || isTyping || isCompleted) return;
 
+    if (!conversationManagerRef.current) {
+      console.error('ConversationManager not initialized');
+      return;
+    }
+
     // 1. Adicionar mensagem do usuário
     addUserMessage(userMessage);
 
-    // 2. Extrair dados mencionados
-    const extractedData = extractLeadData(userMessage);
-    if (Object.keys(extractedData).length > 0) {
-      setLeadData(prev => {
-        const updated = { ...prev, ...extractedData };
-
-        // Adicionar interesse se mencionou produto
-        products.forEach(p => {
-          if (userMessage.toLowerCase().includes(p.name.toLowerCase())) {
-            const interesses = updated.interesse || [];
-            if (!interesses.includes(p.name)) {
-              updated.interesse = [...interesses, p.name];
-            }
-          }
-        });
-
-        return updated;
-      });
-    }
-
-    // 3. Mostrar indicador de digitação
+    // 2. Mostrar indicador de digitação
     setIsTyping(true);
 
     try {
-      // 4. Preparar mensagem com contexto de dados coletados
-      const contextMessage = buildContextMessage(userMessage);
+      // 3. Processar mensagem com o conversation manager
+      const result = await conversationManagerRef.current.processMessage(
+        userMessage,
+        leadData
+      );
 
-      // 5. Chamar API FuseChat (simplificado - RAG já configurado)
-      const apiUrl = import.meta.env.VITE_API_URL ||
-                     (import.meta.env.PROD ? '/api' : 'http://localhost:3002/api');
-
-      const response = await fetch(`${apiUrl}/chatbot/fusechat-proxy`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: contextMessage,
-          apiKey: aiConfig?.fuseChatApiKey,
-          session_id: sessionId
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao conectar com IA');
+      // 4. Atualizar dados do lead
+      if (result.capturedData && Object.keys(result.capturedData).length > 0) {
+        setLeadData(result.updatedLeadData);
       }
 
-      const data = await response.json();
+      // 5. Adicionar resposta do bot com delay natural
+      const delay = 800 + Math.random() * 800; // 800ms - 1600ms
 
-      // 6. Adicionar resposta da IA com delay natural
       setTimeout(() => {
         setIsTyping(false);
-        addBotMessage(data.response || 'Desculpe, não entendi. Pode reformular?');
+        addBotMessage(result.response);
 
-        // 7. Verificar se lead está qualificado
+        // 6. Verificar se deve fazer follow-up
         setTimeout(() => {
+          if (conversationManagerRef.current) {
+            const followUp = conversationManagerRef.current.shouldFollowUp(
+              result.updatedLeadData
+            );
+
+            if (followUp.should && followUp.message) {
+              setTimeout(() => {
+                addBotMessage(followUp.message!);
+              }, 1500);
+            }
+          }
+
+          // 7. Verificar se lead está qualificado
           if (isLeadQualified()) {
             console.log('✅ Lead qualificado! Score:', calculateLeadScore());
             // Será salvo pelo componente PublicChat
           }
         }, 500);
-      }, 1000 + Math.random() * 1000);
+      }, delay);
 
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      console.error('Erro ao processar mensagem:', error);
       setIsTyping(false);
 
       // Fallback para erro
-      addBotMessage('Desculpe, estou com dificuldade de conexão. Pode tentar novamente?');
+      addBotMessage('Desculpe, tive um problema técnico. Pode tentar novamente?');
     }
   }, [
     isTyping,
     isCompleted,
+    leadData,
     addUserMessage,
-    extractLeadData,
-    products,
-    buildContextMessage,
-    aiConfig,
-    sessionId,
     addBotMessage,
     isLeadQualified,
     calculateLeadScore
@@ -313,17 +226,19 @@ export function useChatbotAI(linkSource: string) {
    * Iniciar conversa com mensagem de boas-vindas
    */
   const startConversation = useCallback(() => {
-    const greeting = aiConfig?.greetingMessage ||
-                    `Olá! 👋 Bem-vindo(a) à ${companyData?.name || 'nossa empresa'}!`;
+    if (!conversationManagerRef.current) return;
+
+    const greeting = conversationManagerRef.current.generateGreeting();
 
     setTimeout(() => {
       addBotMessage(greeting);
 
+      // Segunda mensagem após o greeting
       setTimeout(() => {
         addBotMessage('Como posso te ajudar hoje?');
       }, 1200);
     }, 800);
-  }, [aiConfig, companyData, addBotMessage]);
+  }, [addBotMessage]);
 
   return {
     messages,

@@ -282,20 +282,21 @@ class AIChatStorage {
     const company = this.getCompanyData();
     const products = this.getProducts();
     const config = this.getAIConfig();
+    const faqs = this.getFAQItems();
 
-    // Ordem correta: 1. API Key, 2. Empresa, 3. Produtos, 4. Comportamento
+    // Ordem correta: 1. Empresa, 2. Produtos, 3. FAQs, 4. Comportamento
     const steps = [
       {
-        name: '1. API Key Configurada',
-        completed: Boolean(config?.fuseChatApiKey)
-      },
-      {
-        name: '2. Dados da Empresa',
+        name: '1. Dados da Empresa',
         completed: Boolean(company?.name && company?.industry && company?.description)
       },
       {
-        name: '3. Produtos Cadastrados',
+        name: '2. Produtos Cadastrados',
         completed: products.length > 0
+      },
+      {
+        name: '3. FAQs Configurados',
+        completed: faqs.length > 0
       },
       {
         name: '4. Comportamento da IA',
