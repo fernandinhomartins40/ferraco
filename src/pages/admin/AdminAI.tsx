@@ -304,7 +304,15 @@ Analise o texto abaixo e extraia as informações em formato JSON válido:
 TEXTO PARA ANÁLISE:
 ${quickSetupText}
 
-IMPORTANTE: Retorne APENAS o JSON válido, sem markdown, sem explicações, sem \`\`\`json.`;
+REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
+1. Retorne APENAS o objeto JSON puro
+2. NÃO use markdown (\`\`\`json ou \`\`\`)
+3. NÃO inclua comentários (// texto)
+4. NÃO adicione explicações antes ou depois
+5. Todos os campos de "products" devem ter valores reais (sem placeholder "Descrição objetiva...")
+6. Se não souber um valor, use string vazia ""
+
+Inicie sua resposta com { e termine com }`;
 
       // Usar proxy do backend para evitar CORS
       const apiUrl = getApiUrl();
@@ -333,15 +341,29 @@ IMPORTANTE: Retorne APENAS o JSON válido, sem markdown, sem explicações, sem 
       // Extrair JSON da resposta da IA
       let extractedData;
       try {
-        // A resposta pode vir com markdown ou texto extra, precisamos extrair o JSON
-        const jsonMatch = data.response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          extractedData = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('Formato de resposta inválido');
+        let jsonText = data.response;
+
+        // Remover markdown code blocks (```json ... ``` ou ``` ... ```)
+        jsonText = jsonText.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+
+        // Extrair apenas o objeto JSON principal
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('JSON não encontrado na resposta');
         }
+
+        let cleanedJson = jsonMatch[0];
+
+        // Remover comentários de linha (//) antes de fazer parse
+        cleanedJson = cleanedJson.replace(/\/\/.*$/gm, '');
+
+        // Remover vírgulas antes de } ou ]
+        cleanedJson = cleanedJson.replace(/,(\s*[}\]])/g, '$1');
+
+        extractedData = JSON.parse(cleanedJson);
       } catch (parseError) {
         console.error('Erro ao parsear JSON:', data.response);
+        console.error('Parse error:', parseError);
         throw new Error('Não foi possível extrair os dados. Tente novamente com um texto mais claro.');
       }
 

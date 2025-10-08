@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import PublicChat from "./pages/PublicChat";
 
 // Lazy import para páginas administrativas (carregamento sob demanda)
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -66,6 +67,7 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/chat/:shortCode" element={<PublicChat />} />
 
                 {/* ADMIN ROUTES - SEM AUTENTICAÇÃO (DEMO MODE) */}
                 <Route
