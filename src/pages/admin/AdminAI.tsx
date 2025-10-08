@@ -182,6 +182,16 @@ const AdminAI = () => {
         faqs: localFaqs.length
       });
 
+      if (!localCompanyData && localProducts.length === 0 && localFaqs.length === 0) {
+        toast.error('Adicione dados da empresa e produtos primeiro');
+        setSyncStatus({
+          type: 'error',
+          message: 'Nenhum dado para sincronizar. Configure a empresa e produtos nas abas anteriores.'
+        });
+        setIsSyncing(false);
+        return;
+      }
+
       const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/chatbot/fusechat/sync-knowledge`, {
         method: 'POST',
@@ -194,6 +204,12 @@ const AdminAI = () => {
         })
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erro na resposta:', response.status, errorText);
+        throw new Error(`Erro ${response.status}: ${errorText}`);
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -203,6 +219,7 @@ const AdminAI = () => {
         });
         toast.success('Knowledge Base sincronizada com sucesso!');
       } else {
+        console.error('❌ Resposta de erro:', data);
         setSyncStatus({
           type: 'error',
           message: data.error || 'Erro ao sincronizar'
@@ -210,6 +227,7 @@ const AdminAI = () => {
         toast.error(data.error || 'Erro ao sincronizar');
       }
     } catch (error: any) {
+      console.error('❌ Erro completo:', error);
       setSyncStatus({
         type: 'error',
         message: `Erro: ${error.message}`

@@ -255,32 +255,50 @@ export class ChatbotController {
     try {
       const { apiKey, companyData, products, faqs } = req.body;
 
+      console.log('📚 Requisição de sincronização recebida');
+      console.log('🔑 API Key presente:', !!apiKey);
+      console.log('🏢 CompanyData presente:', !!companyData);
+      console.log('📦 Products:', products?.length || 0);
+      console.log('❓ FAQs:', faqs?.length || 0);
+
       if (!apiKey) {
+        console.error('❌ API Key não fornecida');
         return res.status(400).json({ error: 'apiKey é obrigatória' });
       }
-
-      console.log('📚 Iniciando sincronização da Knowledge Base...');
 
       // Se recebeu dados do frontend, usar eles
       if (companyData || products || faqs) {
         console.log('📦 Usando dados enviados pelo frontend (localStorage)');
-        const result = await fusechatService.syncKnowledgeBaseFromData(
-          apiKey,
-          companyData,
-          products || [],
-          faqs || []
-        );
 
-        if (result.success) {
-          return res.json({
-            success: true,
-            message: result.message,
-            stats: result.stats
-          });
-        } else {
+        try {
+          const result = await fusechatService.syncKnowledgeBaseFromData(
+            apiKey,
+            companyData,
+            products || [],
+            faqs || []
+          );
+
+          console.log('✅ Resultado da sincronização:', result);
+
+          if (result.success) {
+            return res.json({
+              success: true,
+              message: result.message,
+              stats: result.stats
+            });
+          } else {
+            console.error('❌ Sincronização falhou:', result.message);
+            return res.status(500).json({
+              success: false,
+              error: result.message
+            });
+          }
+        } catch (syncError: any) {
+          console.error('❌ Erro durante syncKnowledgeBaseFromData:', syncError);
+          console.error('Stack:', syncError.stack);
           return res.status(500).json({
             success: false,
-            error: result.message
+            error: `Erro ao sincronizar: ${syncError.message}`
           });
         }
       } else {
@@ -303,10 +321,11 @@ export class ChatbotController {
       }
 
     } catch (error: any) {
-      console.error('❌ Erro ao sincronizar Knowledge Base:', error);
+      console.error('❌ Erro geral ao sincronizar Knowledge Base:', error);
+      console.error('Stack trace:', error.stack);
       return res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message || 'Erro desconhecido'
       });
     }
   }
