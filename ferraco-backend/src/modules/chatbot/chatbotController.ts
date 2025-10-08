@@ -3,7 +3,6 @@ import aiService from '../../services/aiService';
 import fusechatService from '../../services/fusechatService';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import axios from 'axios';
 
 const prisma = new PrismaClient();
 

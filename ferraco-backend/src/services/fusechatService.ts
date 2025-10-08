@@ -189,7 +189,7 @@ QUALIFICAÇÃO DE LEAD:
 
       console.log(`📤 Enviando ${documents.length} documentos para FuseChat...`);
 
-      const response = await this.client.post('/api/rag/knowledge', kbConfig);
+      await this.client.post('/api/rag/knowledge', kbConfig);
 
       console.log('✅ Knowledge Base sincronizada com sucesso!');
 
