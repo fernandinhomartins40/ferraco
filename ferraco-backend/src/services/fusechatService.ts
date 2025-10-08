@@ -182,6 +182,11 @@ QUALIFICAÇÃO DE LEAD:
         }
       });
 
+      // Validar dados antes de enviar
+      if (documents.length === 0) {
+        throw new Error('Nenhum documento para sincronizar');
+      }
+
       // Criar Knowledge Base no FuseChat
       const kbConfig: KnowledgeBaseConfig = {
         name: `Base de Conhecimento - ${companyData?.name || 'Empresa'}`,
@@ -190,10 +195,14 @@ QUALIFICAÇÃO DE LEAD:
       };
 
       console.log(`📤 Enviando ${documents.length} documentos para FuseChat...`);
+      console.log(`🔑 API Key: ${this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'NÃO DEFINIDA'}`);
+      console.log(`🌐 URL: ${this.baseUrl}/api/rag/knowledge`);
+      console.log(`📋 Payload:`, JSON.stringify(kbConfig, null, 2).substring(0, 500) + '...');
 
-      await this.client.post('/api/rag/knowledge', kbConfig);
+      const response = await this.client.post('/api/rag/knowledge', kbConfig);
 
       console.log('✅ Knowledge Base sincronizada com sucesso!');
+      console.log('📊 Status:', response.status, response.statusText);
 
       return {
         success: true,
@@ -208,11 +217,17 @@ QUALIFICAÇÃO DE LEAD:
       };
 
     } catch (error: any) {
-      console.error('❌ Erro ao sincronizar Knowledge Base:', error.response?.data || error.message);
+      console.error('❌ ERRO DETALHADO ao sincronizar Knowledge Base:');
+      console.error('▶ Status HTTP:', error.response?.status);
+      console.error('▶ Status Text:', error.response?.statusText);
+      console.error('▶ Response Data:', JSON.stringify(error.response?.data, null, 2));
+      console.error('▶ Error Message:', error.message);
+      console.error('▶ Error Code:', error.code);
+      console.error('▶ Stack:', error.stack);
 
       return {
         success: false,
-        message: `Erro: ${error.response?.data?.error || error.message}`,
+        message: `Erro: ${error.response?.data?.error || error.response?.data?.message || error.message}`,
       };
     }
   }
