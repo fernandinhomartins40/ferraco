@@ -31,7 +31,9 @@ import {
   Zap,
   FileText,
   Upload,
-  Loader2
+  Loader2,
+  Database,
+  Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -120,6 +122,8 @@ const AdminAI = () => {
   const [quickSetupText, setQuickSetupText] = useState('');
   const [quickSetupFile, setQuickSetupFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -152,6 +156,108 @@ const AdminAI = () => {
     aiChatStorage.saveAIConfig(aiConfig);
     toast.success('Configuração da IA salva!');
     loadData();
+  };
+
+  /**
+   * Sincronizar Knowledge Base com FuseChat RAG
+   */
+  const handleSyncKnowledge = async () => {
+    if (!aiConfig?.fuseChatApiKey) {
+      toast.error('Configure a API Key primeiro');
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncStatus(null);
+
+    try {
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/chatbot/fusechat/sync-knowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: aiConfig.fuseChatApiKey })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSyncStatus({
+          type: 'success',
+          message: `${data.message}. Produtos: ${data.stats?.products || 0}, FAQs: ${data.stats?.faqs || 0}`
+        });
+        toast.success('Knowledge Base sincronizada com sucesso!');
+      } else {
+        setSyncStatus({
+          type: 'error',
+          message: data.error || 'Erro ao sincronizar'
+        });
+        toast.error(data.error || 'Erro ao sincronizar');
+      }
+    } catch (error: any) {
+      setSyncStatus({
+        type: 'error',
+        message: `Erro: ${error.message}`
+      });
+      toast.error(`Erro: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  /**
+   * Sincronizar Guardrails com FuseChat
+   */
+  const handleSyncGuardrails = async () => {
+    if (!aiConfig?.fuseChatApiKey) {
+      toast.error('Configure a API Key primeiro');
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncStatus(null);
+
+    try {
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/chatbot/fusechat/sync-guardrails`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: aiConfig.fuseChatApiKey })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSyncStatus({
+          type: 'success',
+          message: data.message
+        });
+        toast.success('Guardrails configurados com sucesso!');
+      } else {
+        setSyncStatus({
+          type: 'error',
+          message: data.error || 'Erro ao configurar guardrails'
+        });
+        toast.error(data.error || 'Erro ao configurar guardrails');
+      }
+    } catch (error: any) {
+      setSyncStatus({
+        type: 'error',
+        message: `Erro: ${error.message}`
+      });
+      toast.error(`Erro: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  /**
+   * Sincronizar tudo de uma vez
+   */
+  const handleSyncAll = async () => {
+    await handleSyncKnowledge();
+    setTimeout(async () => {
+      await handleSyncGuardrails();
+    }, 2000);
   };
 
   const handleAddProduct = () => {
@@ -605,6 +711,93 @@ Inicie sua resposta com { e termine com }`;
                   )}
                 </CardContent>
               </Card>
+
+              {/* FuseChat RAG Sync Card */}
+              {aiConfig?.fuseChatApiKey && (
+                <Card className="border-2 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5 text-blue-600" />
+                      Sincronizar RAG (Knowledge Base)
+                    </CardTitle>
+                    <CardDescription>
+                      Envie seus dados (empresa, produtos, FAQs) para a Knowledge Base do FuseChat
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Alert className="border-blue-200 bg-blue-50">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-sm">
+                        <strong>🔄 Importante:</strong> Após adicionar ou editar produtos, FAQs ou dados da empresa,
+                        você DEVE sincronizar para que a IA tenha acesso às informações atualizadas.
+                      </AlertDescription>
+                    </Alert>
+
+                    {syncStatus && (
+                      <Alert variant={syncStatus.type === 'success' ? 'default' : 'destructive'}>
+                        {syncStatus.type === 'success' ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4" />
+                        )}
+                        <AlertDescription>{syncStatus.message}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Button
+                        onClick={handleSyncKnowledge}
+                        disabled={isSyncing}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {isSyncing ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Database className="h-4 w-4 mr-2" />
+                        )}
+                        Knowledge Base
+                      </Button>
+
+                      <Button
+                        onClick={handleSyncGuardrails}
+                        disabled={isSyncing}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {isSyncing ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Shield className="h-4 w-4 mr-2" />
+                        )}
+                        Guardrails
+                      </Button>
+
+                      <Button
+                        onClick={handleSyncAll}
+                        disabled={isSyncing}
+                        className="w-full"
+                      >
+                        {isSyncing ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-2" />
+                        )}
+                        Sincronizar Tudo
+                      </Button>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+                      <p className="font-semibold mb-2">📚 O que será sincronizado?</p>
+                      <ul className="space-y-1 text-muted-foreground text-xs">
+                        <li>• <strong>Knowledge Base:</strong> Dados da empresa, produtos e FAQs</li>
+                        <li>• <strong>Guardrails:</strong> Regras de comportamento da IA</li>
+                        <li>• <strong>Scripts:</strong> Instruções de captação de leads</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Reset Configuration Card */}
               <Card className="border-2 border-red-200">
