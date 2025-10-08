@@ -209,19 +209,37 @@ export class ChatbotController {
   /**
    * POST /api/chatbot/fusechat-proxy
    * Proxy para FuseChat API (evita CORS)
+   * Suporta system prompt e histórico de conversa
    */
   async fusechatProxy(req: Request, res: Response) {
     try {
-      const { message, apiKey, session_id } = req.body;
+      const { message, apiKey, session_id, systemPrompt, history } = req.body;
 
       if (!message || !apiKey) {
         return res.status(400).json({ error: 'message e apiKey são obrigatórios' });
       }
 
       console.log('🔄 Proxy FuseChat: enviando requisição...');
+      console.log(`📝 System Prompt: ${systemPrompt ? 'Presente' : 'Ausente'}`);
+      console.log(`📚 History: ${history ? 'Presente' : 'Ausente'}`);
+
+      // Montar mensagem completa com contexto
+      let fullMessage = message;
+
+      // Se tem system prompt, incluir no início
+      if (systemPrompt) {
+        fullMessage = `${systemPrompt}\n\n`;
+
+        // Se tem histórico, incluir também
+        if (history) {
+          fullMessage += `HISTÓRICO DA CONVERSA:\n${history}\n\n`;
+        }
+
+        fullMessage += `MENSAGEM ATUAL DO CLIENTE:\n${message}`;
+      }
 
       // Fazer requisição para FuseChat usando axios
-      const requestBody: any = { message };
+      const requestBody: any = { message: fullMessage };
       if (session_id) {
         requestBody.session_id = session_id;
       }
