@@ -1,51 +1,41 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Minimize2, Maximize2, X, MessageCircle, AlertCircle, CheckCircle } from 'lucide-react';
+import { Send, Minimize2, Maximize2, X, MessageCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useChatbot } from '@/hooks/useChatbot';
+import { useChatbotAI } from '@/hooks/useChatbotAI';
 import { cn } from '@/lib/utils';
 
 interface ChatWidgetProps {
-  leadId: string;
+  leadId?: string;
   initialOpen?: boolean;
   className?: string;
 }
 
-export function ChatWidget({ leadId, initialOpen = false, className }: ChatWidgetProps) {
+export function ChatWidget({ leadId = 'admin-chat', initialOpen = false, className }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(initialOpen);
   const [isMinimized, setIsMinimized] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [ollamaHealthy, setOllamaHealthy] = useState<boolean | null>(null);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const {
     messages,
-    isLoading,
-    error,
+    isTyping,
     isQualified,
     sendMessage,
-    loadHistory,
-    checkHealth
-  } = useChatbot(leadId);
+    startConversation
+  } = useChatbotAI(leadId);
 
-  // Carregar histórico ao abrir
+  // Iniciar conversa ao abrir pela primeira vez
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      loadHistory();
+    if (isOpen && !hasStarted && messages.length === 0) {
+      startConversation();
+      setHasStarted(true);
     }
-  }, [isOpen, loadHistory, messages.length]);
-
-  // Verificar saúde do Ollama ao montar
-  useEffect(() => {
-    const verifyHealth = async () => {
-      const healthy = await checkHealth();
-      setOllamaHealthy(healthy);
-    };
-    verifyHealth();
-  }, [checkHealth]);
+  }, [isOpen, hasStarted, messages.length, startConversation]);
 
   // Auto-scroll ao receber nova mensagem
   useEffect(() => {
@@ -62,7 +52,7 @@ export function ChatWidget({ leadId, initialOpen = false, className }: ChatWidge
   }, [isOpen, isMinimized]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isTyping) return;
 
     const message = inputValue;
     setInputValue('');
@@ -93,9 +83,6 @@ export function ChatWidget({ leadId, initialOpen = false, className }: ChatWidge
         aria-label="Abrir chat"
       >
         <MessageCircle className="w-6 h-6" />
-        {ollamaHealthy === false && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-        )}
       </button>
     );
   }
@@ -137,50 +124,31 @@ export function ChatWidget({ leadId, initialOpen = false, className }: ChatWidge
 
       {!isMinimized && (
         <>
-          {/* Status do Ollama */}
-          {ollamaHealthy === false && (
-            <div className="bg-yellow-50 border-b border-yellow-200 p-2 flex items-center gap-2 text-yellow-800 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span>IA temporariamente indisponível. Verifique se o Ollama está rodando.</span>
-            </div>
-          )}
-
-          {/* Error message */}
-          {error && (
-            <div className="bg-red-50 border-b border-red-200 p-2 flex items-center gap-2 text-red-800 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span>{error}</span>
-            </div>
-          )}
-
           {/* Messages */}
           <ScrollArea
             ref={scrollRef}
-            className={cn(
-              "p-4",
-              ollamaHealthy === false || error ? "h-[calc(100%-200px)]" : "h-[calc(100%-140px)]"
-            )}
+            className="h-[calc(100%-140px)] p-4"
           >
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={cn(
                   "mb-4 flex",
-                  msg.role === 'user' ? 'justify-end' : 'justify-start'
+                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
                 <div
                   className={cn(
                     "max-w-[80%] p-3 rounded-lg",
-                    msg.role === 'user'
+                    msg.sender === 'user'
                       ? 'bg-blue-600 text-white rounded-br-none'
                       : 'bg-gray-100 text-gray-800 rounded-bl-none'
                   )}
                 >
-                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
                   <span className={cn(
                     "text-xs mt-1 block",
-                    msg.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                    msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
                   )}>
                     {msg.timestamp.toLocaleTimeString('pt-BR', {
                       hour: '2-digit',
@@ -191,8 +159,8 @@ export function ChatWidget({ leadId, initialOpen = false, className }: ChatWidge
               </div>
             ))}
 
-            {/* Loading indicator */}
-            {isLoading && (
+            {/* Typing indicator */}
+            {isTyping && (
               <div className="flex justify-start mb-4">
                 <div className="bg-gray-100 p-3 rounded-lg rounded-bl-none">
                   <div className="flex gap-1">
@@ -214,12 +182,12 @@ export function ChatWidget({ leadId, initialOpen = false, className }: ChatWidge
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Digite sua mensagem..."
-                disabled={isLoading || ollamaHealthy === false}
+                disabled={isTyping}
                 className="flex-1 bg-white"
               />
               <Button
                 onClick={handleSendMessage}
-                disabled={isLoading || !inputValue.trim() || ollamaHealthy === false}
+                disabled={isTyping || !inputValue.trim()}
                 size="icon"
                 className="bg-blue-600 hover:bg-blue-700"
               >
