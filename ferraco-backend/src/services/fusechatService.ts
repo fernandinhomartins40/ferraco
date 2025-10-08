@@ -60,9 +60,15 @@ class FuseChatService {
     faqs: any[]
   ): Promise<{ success: boolean; message: string; stats?: any }> {
     try {
+      // VALIDAÇÃO CRÍTICA: API Key não pode ser vazia
+      if (!apiKey || apiKey.trim() === '') {
+        throw new Error('API Key é obrigatória e não pode ser vazia');
+      }
+
       this.setApiKey(apiKey);
 
       console.log('📚 Sincronizando Knowledge Base com dados do frontend...');
+      console.log('🔑 API Key válida:', apiKey.substring(0, 10) + '...');
 
       const documents: FuseChatDocument[] = [];
 
@@ -105,14 +111,24 @@ IMPORTANTE:
 
       // 2. Documentos de produtos
       products.forEach(product => {
+        // Validar e normalizar keywords
+        let keywordsStr = '';
+        if (product.keywords) {
+          if (Array.isArray(product.keywords) && product.keywords.length > 0) {
+            keywordsStr = `PALAVRAS-CHAVE: ${product.keywords.join(', ')}`;
+          } else if (typeof product.keywords === 'string' && product.keywords.trim()) {
+            keywordsStr = `PALAVRAS-CHAVE: ${product.keywords}`;
+          }
+        }
+
         documents.push({
           doc_type: 'produto',
-          title: product.name,
-          content: `PRODUTO: ${product.name}
+          title: product.name || 'Produto',
+          content: `PRODUTO: ${product.name || 'Produto'}
 CATEGORIA: ${product.category || 'Geral'}
-DESCRIÇÃO: ${product.description}
+DESCRIÇÃO: ${product.description || 'Sem descrição'}
 PREÇO: ${product.price || 'Sob consulta'}
-${product.keywords && product.keywords.length > 0 ? `PALAVRAS-CHAVE: ${product.keywords.join(', ')}` : ''}
+${keywordsStr}
 
 COMO RESPONDER SOBRE ESTE PRODUTO:
 - Destaque os benefícios práticos
@@ -121,8 +137,8 @@ COMO RESPONDER SOBRE ESTE PRODUTO:
 - Se cliente demonstrar interesse, capture nome e telefone`,
           metadata: {
             productId: product.id,
-            category: product.category,
-            price: product.price,
+            category: product.category || 'Geral',
+            price: product.price || 'Sob consulta',
             keywords: product.keywords,
             source: 'frontend_localStorage'
           }
@@ -131,6 +147,12 @@ COMO RESPONDER SOBRE ESTE PRODUTO:
 
       // 3. Documentos de FAQ
       faqs.forEach(faq => {
+        // Validar FAQ
+        if (!faq.question || !faq.answer) {
+          console.warn('⚠️ FAQ inválido ignorado:', faq);
+          return; // Pula este FAQ
+        }
+
         documents.push({
           doc_type: 'faq',
           title: faq.question,
@@ -141,7 +163,7 @@ RESPOSTA: ${faq.answer}
 Use esta resposta quando o cliente perguntar sobre "${faq.question}" ou tópicos relacionados.`,
           metadata: {
             faqId: faq.id,
-            category: faq.category,
+            category: faq.category || 'Geral',
             source: 'frontend_localStorage'
           }
         });
