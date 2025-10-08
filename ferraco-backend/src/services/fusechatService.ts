@@ -51,13 +51,180 @@ class FuseChatService {
   }
 
   /**
-   * Sincroniza Knowledge Base completa com FuseChat
+   * Sincroniza Knowledge Base a partir de dados fornecidos (localStorage frontend)
+   */
+  async syncKnowledgeBaseFromData(
+    apiKey: string,
+    companyData: any,
+    products: any[],
+    faqs: any[]
+  ): Promise<{ success: boolean; message: string; stats?: any }> {
+    try {
+      this.setApiKey(apiKey);
+
+      console.log('📚 Sincronizando Knowledge Base com dados do frontend...');
+
+      const documents: FuseChatDocument[] = [];
+
+      // 1. Documento de política/comportamento da IA
+      if (companyData) {
+        documents.push({
+          doc_type: 'politica',
+          title: 'Política de Atendimento',
+          content: `EMPRESA: ${companyData.name || 'Empresa'}
+RAMO: ${companyData.industry || ''}
+DESCRIÇÃO: ${companyData.description || ''}
+
+REGRAS DE ATENDIMENTO:
+1. Você é um assistente virtual especializado em ${companyData.industry || 'nossos serviços'}
+2. Responda APENAS sobre produtos e serviços da ${companyData.name || 'empresa'}
+3. Seja amigável, direto e profissional
+4. Use português brasileiro informal mas educado
+5. Respostas curtas (máximo 3-4 linhas)
+6. Sempre confirme disponibilidade antes de prometer algo
+7. Se não souber, ofereça transferir para atendente humano
+
+INFORMAÇÕES DA EMPRESA:
+- Localização: ${companyData.location || ''}
+- Horário: ${companyData.workingHours || ''}
+- Telefone: ${companyData.phone || ''}
+
+DIFERENCIAIS:
+${(companyData.differentials || []).map((d: string) => `- ${d}`).join('\n')}
+
+IMPORTANTE:
+- Nunca fale sobre política, religião, clima ou temas fora do escopo
+- Nunca invente preços ou prazos que não estejam documentados
+- Capture dados do cliente de forma natural (nome, telefone, interesse)`,
+          metadata: {
+            source: 'frontend_localStorage',
+            updatedAt: new Date().toISOString()
+          }
+        });
+      }
+
+      // 2. Documentos de produtos
+      products.forEach(product => {
+        documents.push({
+          doc_type: 'produto',
+          title: product.name,
+          content: `PRODUTO: ${product.name}
+CATEGORIA: ${product.category || 'Geral'}
+DESCRIÇÃO: ${product.description}
+PREÇO: ${product.price || 'Sob consulta'}
+${product.keywords && product.keywords.length > 0 ? `PALAVRAS-CHAVE: ${product.keywords.join(', ')}` : ''}
+
+COMO RESPONDER SOBRE ESTE PRODUTO:
+- Destaque os benefícios práticos
+- Mencione o preço se o cliente perguntar
+- Pergunte sobre necessidades específicas para oferecer orçamento personalizado
+- Se cliente demonstrar interesse, capture nome e telefone`,
+          metadata: {
+            productId: product.id,
+            category: product.category,
+            price: product.price,
+            keywords: product.keywords,
+            source: 'frontend_localStorage'
+          }
+        });
+      });
+
+      // 3. Documentos de FAQ
+      faqs.forEach(faq => {
+        documents.push({
+          doc_type: 'faq',
+          title: faq.question,
+          content: `PERGUNTA: ${faq.question}
+
+RESPOSTA: ${faq.answer}
+
+Use esta resposta quando o cliente perguntar sobre "${faq.question}" ou tópicos relacionados.`,
+          metadata: {
+            faqId: faq.id,
+            category: faq.category,
+            source: 'frontend_localStorage'
+          }
+        });
+      });
+
+      // 4. Script de captação de leads
+      documents.push({
+        doc_type: 'script',
+        title: 'Script de Captação de Leads',
+        content: `OBJETIVO: Capturar dados do cliente de forma natural durante a conversa
+
+DADOS PARA CAPTURAR:
+1. Nome - "Como posso te chamar?" ou aguardar cliente se apresentar
+2. Telefone/WhatsApp - "Posso te enviar o orçamento no WhatsApp?" (PRIORITÁRIO)
+3. Email - Opcional, apenas se cliente mencionar
+4. Interesse - Identificar pelos produtos que perguntou
+5. Orçamento disponível - Perguntar sutilmente se cliente mencionar preço
+6. Prazo desejado - Capturar se cliente mencionar urgência
+
+COMO FAZER (NATURAL):
+❌ NÃO: "Preciso do seu nome, telefone e email"
+✅ SIM: Conversar naturalmente e perguntar um dado por vez, quando fizer sentido
+
+EXEMPLOS:
+Cliente: "Quanto custa um portão?"
+Você: "Temos portões a partir de R$ 1.200. Qual tamanho você precisa? Assim faço um orçamento mais exato."
+
+Cliente: "Preciso de 3x4 metros"
+Você: "Perfeito! Posso te enviar algumas opções no WhatsApp com fotos e valores. Qual seu número?"
+
+QUALIFICAÇÃO DE LEAD:
+- QUENTE 🔥: Tem telefone + perguntou preço/prazo + demonstrou urgência
+- MORNO 🌡️: Perguntou sobre produtos mas não deixou contato
+- FRIO ❄️: Apenas curiosidade, sem aprofundar`,
+        metadata: {
+          type: 'lead_capture',
+          source: 'frontend_localStorage'
+        }
+      });
+
+      // Criar Knowledge Base no FuseChat
+      const kbConfig: KnowledgeBaseConfig = {
+        name: `Base de Conhecimento - ${companyData?.name || 'Empresa'}`,
+        description: 'Base de conhecimento completa com produtos, FAQs e políticas de atendimento',
+        documents
+      };
+
+      console.log(`📤 Enviando ${documents.length} documentos para FuseChat...`);
+
+      await this.client.post('/api/rag/knowledge', kbConfig);
+
+      console.log('✅ Knowledge Base sincronizada com sucesso!');
+
+      return {
+        success: true,
+        message: `Knowledge Base sincronizada: ${documents.length} documentos`,
+        stats: {
+          totalDocuments: documents.length,
+          products: products.length,
+          faqs: faqs.length,
+          policies: 1,
+          scripts: 1
+        }
+      };
+
+    } catch (error: any) {
+      console.error('❌ Erro ao sincronizar Knowledge Base:', error.response?.data || error.message);
+
+      return {
+        success: false,
+        message: `Erro: ${error.response?.data?.error || error.message}`,
+      };
+    }
+  }
+
+  /**
+   * Sincroniza Knowledge Base completa com FuseChat (busca do Prisma)
    */
   async syncKnowledgeBase(apiKey?: string): Promise<{ success: boolean; message: string; stats?: any }> {
     try {
       if (apiKey) this.setApiKey(apiKey);
 
-      console.log('📚 Iniciando sincronização da Knowledge Base com FuseChat...');
+      console.log('📚 Iniciando sincronização da Knowledge Base com FuseChat (Prisma)...');
 
       // Buscar dados do banco
       const companyData = await prisma.companyData.findFirst();

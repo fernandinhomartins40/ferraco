@@ -249,10 +249,11 @@ export class ChatbotController {
   /**
    * POST /api/chatbot/fusechat/sync-knowledge
    * Sincroniza Knowledge Base com FuseChat
+   * Aceita dados via body (do localStorage frontend) ou busca do Prisma
    */
   async syncFuseChatKnowledge(req: Request, res: Response) {
     try {
-      const { apiKey } = req.body;
+      const { apiKey, companyData, products, faqs } = req.body;
 
       if (!apiKey) {
         return res.status(400).json({ error: 'apiKey é obrigatória' });
@@ -260,19 +261,45 @@ export class ChatbotController {
 
       console.log('📚 Iniciando sincronização da Knowledge Base...');
 
-      const result = await fusechatService.syncKnowledgeBase(apiKey);
+      // Se recebeu dados do frontend, usar eles
+      if (companyData || products || faqs) {
+        console.log('📦 Usando dados enviados pelo frontend (localStorage)');
+        const result = await fusechatService.syncKnowledgeBaseFromData(
+          apiKey,
+          companyData,
+          products || [],
+          faqs || []
+        );
 
-      if (result.success) {
-        return res.json({
-          success: true,
-          message: result.message,
-          stats: result.stats
-        });
+        if (result.success) {
+          return res.json({
+            success: true,
+            message: result.message,
+            stats: result.stats
+          });
+        } else {
+          return res.status(500).json({
+            success: false,
+            error: result.message
+          });
+        }
       } else {
-        return res.status(500).json({
-          success: false,
-          error: result.message
-        });
+        // Fallback: buscar do Prisma (modo antigo)
+        console.log('🗄️  Buscando dados do Prisma');
+        const result = await fusechatService.syncKnowledgeBase(apiKey);
+
+        if (result.success) {
+          return res.json({
+            success: true,
+            message: result.message,
+            stats: result.stats
+          });
+        } else {
+          return res.status(500).json({
+            success: false,
+            error: result.message
+          });
+        }
       }
 
     } catch (error: any) {

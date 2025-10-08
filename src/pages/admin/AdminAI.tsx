@@ -171,11 +171,27 @@ const AdminAI = () => {
     setSyncStatus(null);
 
     try {
+      // Buscar dados do localStorage
+      const localCompanyData = aiChatStorage.getCompanyData();
+      const localProducts = aiChatStorage.getProducts();
+      const localFaqs = aiChatStorage.getFAQItems();
+
+      console.log('📦 Enviando dados do localStorage:', {
+        company: localCompanyData,
+        products: localProducts.length,
+        faqs: localFaqs.length
+      });
+
       const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/chatbot/fusechat/sync-knowledge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: aiConfig.fuseChatApiKey })
+        body: JSON.stringify({
+          apiKey: aiConfig.fuseChatApiKey,
+          companyData: localCompanyData,
+          products: localProducts,
+          faqs: localFaqs
+        })
       });
 
       const data = await response.json();
