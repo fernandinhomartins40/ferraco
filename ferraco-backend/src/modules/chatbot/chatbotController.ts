@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import aiService from '../../services/aiService';
+import fusechatService from '../../services/fusechatService';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import axios from 'axios';
@@ -208,59 +209,31 @@ export class ChatbotController {
 
   /**
    * POST /api/chatbot/fusechat-proxy
-   * Proxy para FuseChat API (evita CORS)
-   * Suporta system prompt e histórico de conversa
+   * Proxy simplificado para FuseChat API (evita CORS)
+   * RAG e Guardrails já configurados no FuseChat
    */
   async fusechatProxy(req: Request, res: Response) {
     try {
-      const { message, apiKey, session_id, systemPrompt, history } = req.body;
+      const { message, apiKey, session_id } = req.body;
 
       if (!message || !apiKey) {
         return res.status(400).json({ error: 'message e apiKey são obrigatórios' });
       }
 
       console.log('🔄 Proxy FuseChat: enviando requisição...');
-      console.log(`📝 System Prompt: ${systemPrompt ? 'Presente' : 'Ausente'}`);
-      console.log(`📚 History: ${history ? 'Presente' : 'Ausente'}`);
+      console.log(`💬 Mensagem: ${message.substring(0, 50)}...`);
 
-      // Montar mensagem completa com contexto
-      let fullMessage = message;
-
-      // Se tem system prompt, incluir no início
-      if (systemPrompt) {
-        fullMessage = `${systemPrompt}\n\n`;
-
-        // Se tem histórico, incluir também
-        if (history) {
-          fullMessage += `HISTÓRICO DA CONVERSA:\n${history}\n\n`;
-        }
-
-        fullMessage += `MENSAGEM ATUAL DO CLIENTE:\n${message}`;
-      }
-
-      // Fazer requisição para FuseChat usando axios
-      const requestBody: any = { message: fullMessage };
-      if (session_id) {
-        requestBody.session_id = session_id;
-      }
-
-      const response = await axios.post('https://digiurbis.com.br/api/chat', requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
-        },
-        timeout: 60000,
-      });
+      // Enviar mensagem simples - FuseChat usa RAG automaticamente
+      const response = await fusechatService.chat(message, session_id, apiKey);
 
       console.log('✅ Resposta FuseChat recebida');
 
-      return res.json(response.data);
+      return res.json(response);
 
     } catch (error: any) {
       console.error('❌ Erro no proxy FuseChat:', error);
 
       if (error.response) {
-        // FuseChat retornou erro
         return res.status(error.response.status).json({
           error: `FuseChat API error: ${error.response.statusText}`,
           details: error.response.data
@@ -271,6 +244,144 @@ export class ChatbotController {
         error: 'Erro no proxy',
         details: error.message
       });
+    }
+  }
+
+  /**
+   * POST /api/chatbot/fusechat/sync-knowledge
+   * Sincroniza Knowledge Base com FuseChat
+   */
+  async syncFuseChatKnowledge(req: Request, res: Response) {
+    try {
+      const { apiKey } = req.body;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: 'apiKey é obrigatória' });
+      }
+
+      console.log('📚 Iniciando sincronização da Knowledge Base...');
+
+      const result = await fusechatService.syncKnowledgeBase(apiKey);
+
+      if (result.success) {
+        return res.json({
+          success: true,
+          message: result.message,
+          stats: result.stats
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: result.message
+        });
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro ao sincronizar Knowledge Base:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * POST /api/chatbot/fusechat/sync-guardrails
+   * Configura Guardrails no FuseChat
+   */
+  async syncFuseChatGuardrails(req: Request, res: Response) {
+    try {
+      const { apiKey } = req.body;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: 'apiKey é obrigatória' });
+      }
+
+      console.log('🛡️ Configurando Guardrails...');
+
+      const result = await fusechatService.syncGuardrails(apiKey);
+
+      if (result.success) {
+        return res.json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: result.message
+        });
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro ao configurar Guardrails:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * GET /api/chatbot/fusechat/knowledge
+   * Obtém Knowledge Base atual do FuseChat
+   */
+  async getFuseChatKnowledge(req: Request, res: Response) {
+    try {
+      const apiKey = req.headers['x-api-key'] as string;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: 'X-API-Key header é obrigatório' });
+      }
+
+      const knowledge = await fusechatService.getKnowledgeBase(apiKey);
+      return res.json(knowledge);
+
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar Knowledge Base:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/chatbot/fusechat/guardrails
+   * Obtém Guardrails atuais do FuseChat
+   */
+  async getFuseChatGuardrails(req: Request, res: Response) {
+    try {
+      const apiKey = req.headers['x-api-key'] as string;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: 'X-API-Key header é obrigatório' });
+      }
+
+      const guardrails = await fusechatService.getGuardrails(apiKey);
+      return res.json(guardrails);
+
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar Guardrails:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/chatbot/fusechat/stats
+   * Obtém estatísticas da API Key do FuseChat
+   */
+  async getFuseChatStats(req: Request, res: Response) {
+    try {
+      const apiKey = req.headers['x-api-key'] as string;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: 'X-API-Key header é obrigatório' });
+      }
+
+      const stats = await fusechatService.getStats(apiKey);
+      return res.json(stats);
+
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar estatísticas:', error);
+      return res.status(500).json({ error: error.message });
     }
   }
 }

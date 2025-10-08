@@ -109,90 +109,30 @@ export function useChatbotAI(linkSource: string) {
   }, []);
 
   /**
-   * Construir prompt do sistema com contexto da empresa
+   * Adicionar contexto de dados já coletados à mensagem
+   * (FuseChat já tem toda a Knowledge Base configurada via RAG)
    */
-  const buildSystemPrompt = useCallback((): string => {
-    const empresa = companyData?.name || 'nossa empresa';
-    const ramo = companyData?.industry || 'nosso setor';
-    const descricao = companyData?.description || '';
-    const diferenciais = companyData?.differentials || [];
+  const buildContextMessage = useCallback((userMessage: string): string => {
+    // Se já temos dados do lead, incluir como contexto discreto
+    const collectedData: string[] = [];
 
-    let prompt = `Você é Ana, assistente virtual da ${empresa}.
+    if (leadData.nome) collectedData.push(`Nome: ${leadData.nome}`);
+    if (leadData.telefone) collectedData.push(`Telefone: ${leadData.telefone}`);
+    if (leadData.email) collectedData.push(`Email: ${leadData.email}`);
+    if (leadData.interesse && leadData.interesse.length > 0) {
+      collectedData.push(`Interesse: ${leadData.interesse.join(', ')}`);
+    }
+    if (leadData.orcamento) collectedData.push(`Orçamento mencionado: ${leadData.orcamento}`);
+    if (leadData.cidade) collectedData.push(`Cidade: ${leadData.cidade}`);
+    if (leadData.prazo) collectedData.push(`Prazo: ${leadData.prazo}`);
 
-SOBRE A EMPRESA:
-- Nome: ${empresa}
-- Ramo: ${ramo}
-- Descrição: ${descricao}
-${diferenciais.length > 0 ? `- Diferenciais:\n${diferenciais.map(d => `  • ${d}`).join('\n')}` : ''}
-${companyData?.workingHours ? `- Horário: ${companyData.workingHours}` : ''}
-${companyData?.location ? `- Localização: ${companyData.location}` : ''}
-
-PRODUTOS/SERVIÇOS DISPONÍVEIS:\n`;
-
-    if (products.length > 0) {
-      products.slice(0, 10).forEach((p, i) => {
-        prompt += `\n${i + 1}. ${p.name}`;
-        if (p.description) prompt += `\n   Descrição: ${p.description}`;
-        if (p.category) prompt += `\n   Categoria: ${p.category}`;
-        if (p.price) prompt += `\n   Preço: ${p.price}`;
-        if (p.keywords.length > 0) prompt += `\n   Palavras-chave: ${p.keywords.join(', ')}`;
-        prompt += '\n';
-      });
-    } else {
-      prompt += 'Consulte o cliente sobre suas necessidades específicas.\n';
+    // Se temos dados coletados, adicionar como contexto
+    if (collectedData.length > 0) {
+      return `[Dados já coletados: ${collectedData.join(', ')}]\n\n${userMessage}`;
     }
 
-    prompt += `\nREGRAS DE COMPORTAMENTO:
-1. Seja NATURAL, AMIGÁVEL e CONVERSACIONAL (estilo brasileiro informal mas profissional)
-2. Use emojis com moderação para ser mais humana 😊
-3. Responda APENAS sobre produtos/serviços listados acima
-4. Se não souber algo, seja honesta: "Deixa eu verificar isso com a equipe"
-5. NÃO force a coleta de dados - extraia NATURALMENTE da conversa
-6. NÃO peça todos os dados de uma vez (nome, telefone, email juntos)
-7. Faça perguntas abertas que incentivem o cliente a falar mais
-8. Confirme informações sutilmente quando o cliente mencionar
-
-EXTRAÇÃO NATURAL DE DADOS (sem parecer interrogatório):
-- Nome: Espere o cliente se apresentar ou pergunte casualmente "Como posso te chamar?"
-- Telefone: Pergunte APENAS quando cliente demonstrar interesse real ("Posso te mandar orçamento no WhatsApp?")
-- Email: OPCIONAL, ofereça valor em troca ("Quer receber nosso catálogo digital?")
-- Interesse: Identifique pelos produtos que o cliente perguntou
-
-QUALIFICAÇÃO DE LEAD:
-- QUENTE 🔥: Perguntou preço + prazo + disponibilidade + deixou contato
-- MORNO 🌡️: Comparou produtos, pediu detalhes técnicos
-- FRIO ❄️: Apenas pergunta genérica sem aprofundar
-
-IMPORTANTE:
-- Respostas CURTAS e DIRETAS (máximo 3 linhas por mensagem)
-- NÃO use markdown (**, ##, etc)
-- NÃO liste produtos sem ser perguntado
-- SEMPRE personalize baseado no que o cliente falou antes
-- Se cliente perguntar preço, dê o valor E os benefícios inclusos
-
-DADOS JÁ COLETADOS NESTA CONVERSA:
-${leadData.nome ? `- Nome: ${leadData.nome}` : ''}
-${leadData.telefone ? `- WhatsApp: ${leadData.telefone}` : ''}
-${leadData.email ? `- Email: ${leadData.email}` : ''}
-${leadData.interesse && leadData.interesse.length > 0 ? `- Interesse: ${leadData.interesse.join(', ')}` : ''}
-${leadData.orcamento ? `- Orçamento: ${leadData.orcamento}` : ''}
-${leadData.cidade ? `- Cidade: ${leadData.cidade}` : ''}
-${leadData.prazo ? `- Prazo: ${leadData.prazo}` : ''}
-
-Responda em PORTUGUÊS BRASILEIRO, de forma NATURAL e HUMANA.`;
-
-    return prompt;
-  }, [companyData, products, leadData]);
-
-  /**
-   * Formatar histórico de conversa para contexto
-   */
-  const formatHistory = useCallback((): string => {
-    return messages
-      .slice(-8) // Últimas 8 mensagens
-      .map(m => `${m.sender === 'user' ? 'Cliente' : 'Ana'}: ${m.text}`)
-      .join('\n');
-  }, [messages]);
+    return userMessage;
+  }, [leadData]);
 
   /**
    * Calcular score de qualificação do lead
@@ -309,11 +249,10 @@ Responda em PORTUGUÊS BRASILEIRO, de forma NATURAL e HUMANA.`;
     setIsTyping(true);
 
     try {
-      // 4. Preparar contexto para IA
-      const systemPrompt = buildSystemPrompt();
-      const history = formatHistory();
+      // 4. Preparar mensagem com contexto de dados coletados
+      const contextMessage = buildContextMessage(userMessage);
 
-      // 5. Chamar API FuseChat
+      // 5. Chamar API FuseChat (simplificado - RAG já configurado)
       const apiUrl = import.meta.env.VITE_API_URL ||
                      (import.meta.env.PROD ? '/api' : 'http://localhost:3002/api');
 
@@ -323,11 +262,9 @@ Responda em PORTUGUÊS BRASILEIRO, de forma NATURAL e HUMANA.`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userMessage,
+          message: contextMessage,
           apiKey: aiConfig?.fuseChatApiKey,
-          session_id: sessionId,
-          systemPrompt: systemPrompt,
-          history: history
+          session_id: sessionId
         }),
       });
 
@@ -364,8 +301,7 @@ Responda em PORTUGUÊS BRASILEIRO, de forma NATURAL e HUMANA.`;
     addUserMessage,
     extractLeadData,
     products,
-    buildSystemPrompt,
-    formatHistory,
+    buildContextMessage,
     aiConfig,
     sessionId,
     addBotMessage,

@@ -17,6 +17,15 @@ router.post('/extract-data', (req, res) => chatbotController.extractData(req, re
 router.post('/fusechat-proxy', (req, res) => chatbotController.fusechatProxy(req, res));
 
 // ==========================================
+// FUSECHAT - Gerenciamento RAG e Guardrails
+// ==========================================
+router.post('/fusechat/sync-knowledge', (req, res) => chatbotController.syncFuseChatKnowledge(req, res));
+router.post('/fusechat/sync-guardrails', (req, res) => chatbotController.syncFuseChatGuardrails(req, res));
+router.get('/fusechat/knowledge', (req, res) => chatbotController.getFuseChatKnowledge(req, res));
+router.get('/fusechat/guardrails', (req, res) => chatbotController.getFuseChatGuardrails(req, res));
+router.get('/fusechat/stats', (req, res) => chatbotController.getFuseChatStats(req, res));
+
+// ==========================================
 // ADMIN - História e contexto
 // ==========================================
 router.get('/history/:leadId', (req, res) => chatbotController.getHistory(req, res));

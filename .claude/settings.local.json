@@ -94,7 +94,9 @@
       "Bash(scp:*)",
       "Bash(python3:*)",
       "Bash(nslookup:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(git restore:*)",
+      "Bash(gh run list:*)"
     ],
     "deny": [],
     "ask": []
