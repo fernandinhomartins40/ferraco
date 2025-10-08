@@ -54,6 +54,45 @@ const getApiUrl = () => {
   return 'http://localhost:3002/api'; // Desenvolvimento
 };
 
+// Helper function to calculate string similarity (Levenshtein distance based)
+const calculateSimilarity = (str1: string, str2: string): number => {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+
+  if (longer.length === 0) return 1.0;
+
+  const editDistance = levenshteinDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+};
+
+const levenshteinDistance = (str1: string, str2: string): number => {
+  const matrix: number[][] = [];
+
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[str2.length][str1.length];
+};
+
 const AdminAI = () => {
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -232,31 +271,40 @@ const AdminAI = () => {
     setIsProcessing(true);
 
     try {
-      // Usar FuseChat API para extrair dados estruturados
-      const prompt = `Analise o texto abaixo e extraia as seguintes informações em formato JSON:
+      // Prompt otimizado com instruções específicas
+      const prompt = `Você é um assistente especializado em extrair informações estruturadas de negócios.
+
+INSTRUÇÕES IMPORTANTES:
+1. Extraia APENAS produtos/serviços ÚNICOS (sem repetições)
+2. Se houver variações do mesmo produto, crie apenas 1 entrada genérica
+3. Seja preciso no ramo de atividade (ex: "Metalurgia", "Construção Civil", "Tecnologia")
+4. Limite a 8 produtos principais (os mais relevantes)
+5. Preços devem ser números ou faixas (ex: "R$ 1.500" ou "R$ 100-200")
+
+Analise o texto abaixo e extraia as informações em formato JSON válido:
 
 {
-  "companyName": "nome da empresa",
-  "industry": "ramo/setor de atuação",
-  "description": "descrição detalhada do negócio",
-  "differentials": ["diferencial 1", "diferencial 2"],
-  "location": "localização",
-  "workingHours": "horário de funcionamento",
-  "phone": "telefone",
+  "companyName": "Nome exato da empresa",
+  "industry": "Setor/ramo ESPECÍFICO (ex: Metalurgia, Agropecuária, Tecnologia)",
+  "description": "Descrição clara do negócio em até 200 caracteres",
+  "differentials": ["Diferencial competitivo 1", "Diferencial 2", "máximo 5"],
+  "location": "Cidade, Estado",
+  "workingHours": "Seg-Sex 8h-18h (formato claro)",
+  "phone": "(DD) 9XXXX-XXXX ou (DD) XXXX-XXXX",
   "products": [
     {
-      "name": "nome do produto/serviço",
-      "description": "descrição",
-      "category": "categoria",
-      "price": "preço se mencionado"
+      "name": "Nome do Produto/Serviço (sem variações repetidas)",
+      "description": "Descrição objetiva em até 150 caracteres",
+      "category": "Categoria específica",
+      "price": "Valor ou faixa de preço (se mencionado)"
     }
   ]
 }
 
-Texto para análise:
+TEXTO PARA ANÁLISE:
 ${quickSetupText}
 
-Retorne APENAS o JSON, sem texto adicional.`;
+IMPORTANTE: Retorne APENAS o JSON válido, sem markdown, sem explicações, sem \`\`\`json.`;
 
       // Usar proxy do backend para evitar CORS
       const apiUrl = getApiUrl();
@@ -313,29 +361,50 @@ Retorne APENAS o JSON, sem texto adicional.`;
 
       aiChatStorage.saveCompanyData(newCompanyData);
 
-      // Save products
-      let productsAdded = 0;
+      // Deduplicate and validate products
+      const uniqueProducts = new Map<string, any>();
       if (extractedData.products && Array.isArray(extractedData.products)) {
         extractedData.products.forEach((product: any) => {
-          if (productsAdded >= 15) return;
+          if (!product.name || !product.name.trim()) return;
 
-          const keywords = product.name
-            .toLowerCase()
-            .split(/\s+/)
-            .filter((word: string) => word.length > 3)
-            .slice(0, 5);
+          // Normalizar nome para comparação
+          const normalizedName = product.name.trim().toLowerCase();
 
-          aiChatStorage.addProduct({
-            name: product.name || `Produto ${productsAdded + 1}`,
-            description: product.description || '',
-            category: product.category || '',
-            price: product.price || '',
-            keywords: keywords,
-            isActive: true,
+          // Evitar duplicatas e produtos muito similares
+          const isDuplicate = Array.from(uniqueProducts.keys()).some(existingName => {
+            const similarity = calculateSimilarity(normalizedName, existingName);
+            return similarity > 0.8; // 80% similar = duplicata
           });
 
-          productsAdded++;
+          if (!isDuplicate) {
+            uniqueProducts.set(normalizedName, product);
+          }
         });
+      }
+
+      // Save unique products (max 10)
+      let productsAdded = 0;
+      const maxProducts = 10;
+
+      for (const [, product] of uniqueProducts) {
+        if (productsAdded >= maxProducts) break;
+
+        const keywords = product.name
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((word: string) => word.length > 3)
+          .slice(0, 5);
+
+        aiChatStorage.addProduct({
+          name: product.name.trim(),
+          description: (product.description || '').trim().slice(0, 200),
+          category: (product.category || 'Geral').trim(),
+          price: (product.price || '').trim(),
+          keywords: keywords,
+          isActive: true,
+        });
+
+        productsAdded++;
       }
 
       // Update AI config with greeting
@@ -630,20 +699,37 @@ Retorne APENAS o JSON, sem texto adicional.`;
                     <div className="flex-1 border-t border-gray-300" />
                   </div>
 
+                  {/* Instructions Card */}
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-sm text-blue-900">
+                      <strong>📋 Template Recomendado:</strong>
+                      <div className="mt-2 space-y-1 text-xs">
+                        <div>✅ <strong>Nome da Empresa:</strong> Nome completo</div>
+                        <div>✅ <strong>Ramo de Atividade:</strong> Seja ESPECÍFICO (ex: Metalurgia, Agropecuária, não apenas "Indústria")</div>
+                        <div>✅ <strong>Descrição:</strong> O que a empresa faz em 2-3 linhas</div>
+                        <div>✅ <strong>Produtos/Serviços:</strong> Liste os PRINCIPAIS (máx 8), sem repetições</div>
+                        <div>✅ <strong>Preços:</strong> Se disponível (ex: "R$ 1.500" ou "R$ 100-200/m²")</div>
+                        <div>✅ <strong>Diferenciais:</strong> O que te diferencia da concorrência (máx 5)</div>
+                        <div>✅ <strong>Contato:</strong> Telefone, localização, horário</div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
                   {/* Text Input */}
                   <div>
                     <label className="text-sm font-medium mb-2 block">
                       Cole as informações da sua empresa aqui
                     </label>
                     <Textarea
-                      placeholder="Exemplo:&#10;&#10;Nome: Ferraco Soluções em TI&#10;Ramo: Tecnologia da Informação&#10;&#10;Somos uma empresa especializada em desenvolvimento de software e consultoria em TI...&#10;&#10;Produtos/Serviços:&#10;- Desenvolvimento Web: Criação de sites e sistemas web personalizados&#10;- Consultoria em Cloud: Migração e otimização de infraestrutura&#10;- Suporte Técnico: Atendimento 24/7 para empresas&#10;&#10;Diferenciais:&#10;- Atendimento personalizado&#10;- Equipe certificada&#10;- Garantia de qualidade"
-                      rows={16}
+                      placeholder="EMPRESA: Ferraco Metalúrgica Ltda&#10;RAMO: Metalurgia - Estruturas Metálicas&#10;&#10;DESCRIÇÃO: Fabricamos estruturas metálicas para construção civil, com 15 anos de experiência no mercado.&#10;&#10;PRODUTOS/SERVIÇOS:&#10;• Galpões Industriais - Estruturas completas de 200m² a 5000m² - R$ 350/m²&#10;• Coberturas Metálicas - Para residências e comércio - R$ 280/m²&#10;• Mezaninos - Aproveitamento de espaço vertical - R$ 450/m²&#10;• Portões e Grades - Sob medida - R$ 800 a R$ 3.500&#10;&#10;DIFERENCIAIS:&#10;• Projeto 3D gratuito&#10;• Garantia de 5 anos&#10;• Instalação em até 30 dias&#10;• Equipe técnica certificada&#10;&#10;CONTATO:&#10;Telefone: (11) 98765-4321&#10;Localização: São Paulo, SP&#10;Horário: Seg-Sex 8h-18h, Sáb 8h-12h"
+                      rows={18}
                       value={quickSetupText}
                       onChange={(e) => setQuickSetupText(e.target.value)}
                       className="font-mono text-sm"
                     />
                     <p className="text-xs text-muted-foreground mt-2">
-                      💡 Dica: Quanto mais detalhado, melhor será o resultado. Inclua nome, ramo, descrição, produtos/serviços, preços e diferenciais.
+                      💡 <strong>Importante:</strong> Liste apenas produtos ÚNICOS (sem variações). A IA vai eliminar duplicatas automaticamente.
                     </p>
                   </div>
                 </div>
