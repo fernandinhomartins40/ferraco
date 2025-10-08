@@ -110,26 +110,48 @@ const AdminAI = () => {
       const localProducts = aiChatStorage.getProducts();
       const localFaqs = aiChatStorage.getFAQItems();
 
+      console.log('🔍 Dados do localStorage:', {
+        companyData: localCompanyData,
+        products: localProducts.length,
+        faqs: localFaqs.length,
+        apiKey: aiConfig.fuseChatApiKey ? '✅ Presente' : '❌ Ausente'
+      });
+
       if (!localCompanyData && localProducts.length === 0) {
         toast.error('Adicione dados da empresa e produtos primeiro');
         setIsSyncing(false);
         return;
       }
 
+      const payload = {
+        apiKey: aiConfig.fuseChatApiKey,
+        companyData: localCompanyData,
+        products: localProducts,
+        faqs: localFaqs
+      };
+
+      console.log('📤 Enviando payload para backend:', JSON.stringify(payload, null, 2).substring(0, 1000) + '...');
+
       const response = await fetch(`${getApiUrl()}/chatbot/fusechat/sync-knowledge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          apiKey: aiConfig.fuseChatApiKey,
-          companyData: localCompanyData,
-          products: localProducts,
-          faqs: localFaqs
-        })
+        body: JSON.stringify(payload)
       });
 
+      console.log('📥 Resposta recebida:', response.status, response.statusText);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-        throw new Error(errorData.error || `Erro ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Erro do servidor:', errorText);
+
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || 'Erro desconhecido' };
+        }
+
+        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
