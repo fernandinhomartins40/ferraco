@@ -12,9 +12,24 @@ export class ConfigController {
   async getCompanyData(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const company = await prisma.companyData.findFirst();
+
+      if (!company) {
+        res.json({
+          success: true,
+          data: null
+        });
+        return;
+      }
+
+      // Parse differentials JSON
+      const parsedCompany = {
+        ...company,
+        differentials: JSON.parse(company.differentials || '[]')
+      };
+
       res.json({
         success: true,
-        data: company
+        data: parsedCompany
       });
     } catch (error) {
       next(new AppError(500, 'Erro ao buscar dados da empresa'));
@@ -28,6 +43,11 @@ export class ConfigController {
       // Validações básicas
       if (!data.name || !data.industry || !data.description) {
         throw new AppError(400, 'Campos obrigatórios: name, industry, description');
+      }
+
+      // Validar differentials se fornecido
+      if (data.differentials && !Array.isArray(data.differentials)) {
+        throw new AppError(400, 'differentials deve ser um array');
       }
 
       // Verificar se já existe
@@ -110,6 +130,14 @@ export class ConfigController {
     try {
       const { name, description, category, price, keywords, benefits, isActive } = req.body;
 
+      // Validar keywords e benefits
+      if (keywords && !Array.isArray(keywords)) {
+        throw new AppError(400, 'keywords deve ser um array');
+      }
+      if (benefits && !Array.isArray(benefits)) {
+        throw new AppError(400, 'benefits deve ser um array');
+      }
+
       const product = await prisma.product.create({
         data: {
           name,
@@ -141,6 +169,14 @@ export class ConfigController {
     try {
       const { id } = req.params;
       const { name, description, category, price, keywords, benefits, isActive } = req.body;
+
+      // Validar keywords e benefits
+      if (keywords && !Array.isArray(keywords)) {
+        throw new AppError(400, 'keywords deve ser um array');
+      }
+      if (benefits && !Array.isArray(benefits)) {
+        throw new AppError(400, 'benefits deve ser um array');
+      }
 
       const product = await prisma.product.update({
         where: { id },
@@ -217,6 +253,11 @@ export class ConfigController {
     try {
       const { question, answer, category, keywords } = req.body;
 
+      // Validar keywords
+      if (keywords && !Array.isArray(keywords)) {
+        throw new AppError(400, 'keywords deve ser um array');
+      }
+
       const faq = await prisma.fAQItem.create({
         data: {
           question,
@@ -244,6 +285,11 @@ export class ConfigController {
     try {
       const { id } = req.params;
       const { question, answer, category, keywords } = req.body;
+
+      // Validar keywords
+      if (keywords && !Array.isArray(keywords)) {
+        throw new AppError(400, 'keywords deve ser um array');
+      }
 
       const faq = await prisma.fAQItem.update({
         where: { id },
@@ -294,9 +340,24 @@ export class ConfigController {
   async getChatbotConfig(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const config = await prisma.chatbotConfig.findFirst();
+
+      if (!config) {
+        res.json({
+          success: true,
+          data: null
+        });
+        return;
+      }
+
+      // Parse handoffTriggers JSON
+      const parsedConfig = {
+        ...config,
+        handoffTriggers: JSON.parse(config.handoffTriggers || '[]')
+      };
+
       res.json({
         success: true,
-        data: config
+        data: parsedConfig
       });
     } catch (error) {
       next(new AppError(500, 'Erro ao buscar configuração do chatbot'));
@@ -307,6 +368,11 @@ export class ConfigController {
     try {
       const data = req.body;
 
+      // Validar handoffTriggers se fornecido
+      if (data.handoffTriggers && !Array.isArray(data.handoffTriggers)) {
+        throw new AppError(400, 'handoffTriggers deve ser um array');
+      }
+
       const existing = await prisma.chatbotConfig.findFirst();
 
       let config;
@@ -314,8 +380,8 @@ export class ConfigController {
         config = await prisma.chatbotConfig.update({
           where: { id: existing.id },
           data: {
-            welcomeMessage: data.welcomeMessage || data.greetingMessage,
-            fallbackMessage: data.fallbackMessage,
+            welcomeMessage: data.welcomeMessage || 'Olá! 👋 Como posso ajudar você hoje?',
+            fallbackMessage: data.fallbackMessage || 'Desculpe, não entendi. Pode reformular?',
             isEnabled: data.isEnabled !== false,
             handoffTriggers: data.handoffTriggers ? JSON.stringify(data.handoffTriggers) : '[]'
           }
@@ -323,7 +389,7 @@ export class ConfigController {
       } else {
         config = await prisma.chatbotConfig.create({
           data: {
-            welcomeMessage: data.welcomeMessage || data.greetingMessage || 'Olá! 👋 Como posso ajudar você hoje?',
+            welcomeMessage: data.welcomeMessage || 'Olá! 👋 Como posso ajudar você hoje?',
             fallbackMessage: data.fallbackMessage || 'Desculpe, não entendi. Pode reformular?',
             isEnabled: data.isEnabled !== false,
             handoffTriggers: data.handoffTriggers ? JSON.stringify(data.handoffTriggers) : '[]'
@@ -331,10 +397,16 @@ export class ConfigController {
         });
       }
 
+      // Parse handoffTriggers para retornar como array
+      const parsedConfig = {
+        ...config,
+        handoffTriggers: JSON.parse(config.handoffTriggers || '[]')
+      };
+
       res.json({
         success: true,
         message: 'Configuração salva com sucesso',
-        data: config
+        data: parsedConfig
       });
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
@@ -425,6 +497,11 @@ export class ConfigController {
         differentials: JSON.parse(company.differentials || '[]')
       } : null;
 
+      const parsedConfig = config ? {
+        ...config,
+        handoffTriggers: JSON.parse(config.handoffTriggers || '[]')
+      } : null;
+
       const parsedProducts = products.map(p => ({
         ...p,
         keywords: JSON.parse(p.keywords || '[]'),
@@ -439,7 +516,7 @@ export class ConfigController {
       res.json({
         success: true,
         data: {
-          config: config || {},
+          config: parsedConfig || {},
           company: parsedCompany || {},
           products: parsedProducts || [],
           faqs: parsedFAQs || []

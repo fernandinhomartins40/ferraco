@@ -45,7 +45,12 @@ const AdminAI = () => {
     website: ''
   });
   const [products, setProducts] = useState<Product[]>([]);
-  const [aiConfig, setAIConfig] = useState<AIConfig | null>(null);
+  const [aiConfig, setAIConfig] = useState<AIConfig>({
+    isEnabled: false,
+    welcomeMessage: '',
+    fallbackMessage: '',
+    handoffTriggers: []
+  });
   const [chatLinks, setChatLinks] = useState<ChatLink[]>([]);
   const [faqs, setFAQs] = useState<FAQItem[]>([]);
   const [progress, setProgress] = useState({ percentage: 0, steps: [] });
@@ -85,16 +90,38 @@ const AdminAI = () => {
         configApi.getFAQs()
       ]);
 
-      if (company) {
-        setCompanyData(company);
-      }
-      setProducts(prods);
-      setAIConfig(config || {
-        isEnabled: false,
-        welcomeMessage: '',
-        fallbackMessage: '',
-        handoffTriggers: []
+      // CompanyData com fallback
+      setCompanyData(company || {
+        name: '',
+        industry: '',
+        description: '',
+        differentials: [],
+        targetAudience: '',
+        location: '',
+        workingHours: '',
+        phone: '',
+        website: ''
       });
+
+      setProducts(prods);
+
+      // ChatbotConfig com parse seguro de handoffTriggers
+      if (config) {
+        setAIConfig({
+          ...config,
+          handoffTriggers: Array.isArray(config.handoffTriggers)
+            ? config.handoffTriggers
+            : JSON.parse(config.handoffTriggers || '[]')
+        });
+      } else {
+        setAIConfig({
+          isEnabled: false,
+          welcomeMessage: '',
+          fallbackMessage: '',
+          handoffTriggers: []
+        });
+      }
+
       setChatLinks(links);
       setFAQs(faqItems);
 
@@ -110,17 +137,33 @@ const AdminAI = () => {
     const steps: any[] = [];
     let completed = 0;
 
-    if (company?.name) { completed++; steps.push({ name: 'Empresa', done: true }); }
-    else { steps.push({ name: 'Empresa', done: false }); }
+    if (company?.name) {
+      completed++;
+      steps.push({ name: 'Empresa', done: true });
+    } else {
+      steps.push({ name: 'Empresa', done: false });
+    }
 
-    if (prods.length > 0) { completed++; steps.push({ name: 'Produtos', done: true }); }
-    else { steps.push({ name: 'Produtos', done: false }); }
+    if (prods && prods.length > 0) {
+      completed++;
+      steps.push({ name: 'Produtos', done: true });
+    } else {
+      steps.push({ name: 'Produtos', done: false });
+    }
 
-    if (faqs.length > 0) { completed++; steps.push({ name: 'FAQs', done: true }); }
-    else { steps.push({ name: 'FAQs', done: false }); }
+    if (faqs && faqs.length > 0) {
+      completed++;
+      steps.push({ name: 'FAQs', done: true });
+    } else {
+      steps.push({ name: 'FAQs', done: false });
+    }
 
-    if (config?.welcomeMessage) { completed++; steps.push({ name: 'Comportamento', done: true }); }
-    else { steps.push({ name: 'Comportamento', done: false }); }
+    if (config?.welcomeMessage) {
+      completed++;
+      steps.push({ name: 'Comportamento', done: true });
+    } else {
+      steps.push({ name: 'Comportamento', done: false });
+    }
 
     setProgress({ percentage: (completed / 4) * 100, steps });
   };
