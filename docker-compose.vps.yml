@@ -34,6 +34,9 @@ services:
       # CORS Configuration
       - CORS_ORIGIN=${CORS_ORIGIN:-http://72.60.10.108:3050,http://localhost:3050}
 
+      # Cookie Configuration
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-.painelcheckar.com.br}
+
     volumes:
       # Persistent data storage
       - ferraco-data:/app/backend/data

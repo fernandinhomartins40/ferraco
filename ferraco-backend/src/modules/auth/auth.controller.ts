@@ -19,7 +19,8 @@ export class AuthController {
         secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
         sameSite: 'lax',      // Proteção CSRF
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-        path: '/'
+        path: '/',
+        domain: process.env.COOKIE_DOMAIN || undefined // Domínio do cookie para produção
       });
 
       res.json({
@@ -77,7 +78,8 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      path: '/'
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN || undefined
     });
 
     res.json({
