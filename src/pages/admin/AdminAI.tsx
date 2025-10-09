@@ -82,6 +82,11 @@ const AdminAI = () => {
 
   const loadData = async () => {
     try {
+      // DEBUG: Verificar se token está presente
+      const token = localStorage.getItem('ferraco_auth_token') || sessionStorage.getItem('ferraco_auth_token');
+      console.log('🔑 Token presente no loadData:', !!token);
+      console.log('🔑 Token:', token?.substring(0, 20) + '...');
+
       const [company, prods, config, links, faqItems] = await Promise.all([
         configApi.getCompanyData(),
         configApi.getProducts(),
