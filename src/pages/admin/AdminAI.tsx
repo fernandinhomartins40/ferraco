@@ -82,13 +82,12 @@ const AdminAI = () => {
 
   const loadData = async () => {
     try {
-      const [company, prods, config, links, faqItems] = await Promise.all([
-        configApi.getCompanyData(),
-        configApi.getProducts(),
-        configApi.getChatbotConfig(),
-        configApi.getChatLinks(),
-        configApi.getFAQs()
-      ]);
+      // Buscar dados individualmente para tratar erros separadamente
+      const company = await configApi.getCompanyData();
+      const prods = await configApi.getProducts();
+      const config = await configApi.getChatbotConfig();
+      const links = await configApi.getChatLinks();
+      const faqItems = await configApi.getFAQs();
 
       // CompanyData com fallback
       setCompanyData(company || {
@@ -103,7 +102,7 @@ const AdminAI = () => {
         website: ''
       });
 
-      setProducts(prods);
+      setProducts(prods || []);
 
       // ChatbotConfig com parse seguro de handoffTriggers
       if (config) {
@@ -122,14 +121,17 @@ const AdminAI = () => {
         });
       }
 
-      setChatLinks(links);
-      setFAQs(faqItems);
+      setChatLinks(links || []);
+      setFAQs(faqItems || []);
 
       // Calcular progresso manualmente
       calculateProgress(company, prods, faqItems, config);
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
-      toast.error('Erro ao carregar configurações');
+      // Não mostrar erro se for 401 - usuário precisa fazer login
+      if (error?.response?.status !== 401) {
+        toast.error('Erro ao carregar configurações');
+      }
     }
   };
 
@@ -228,7 +230,7 @@ const AdminAI = () => {
       : [];
 
     try {
-      await configApi.createProduct({
+      const created = await configApi.createProduct({
         name: newProduct.name,
         description: newProduct.description,
         category: newProduct.category || 'Geral',
@@ -238,9 +240,10 @@ const AdminAI = () => {
         isActive: true,
       });
 
+      // Adicionar ao state imediatamente
+      setProducts(prev => [created, ...prev]);
       setNewProduct({ name: '', description: '', category: '', price: '', keywords: '', benefits: '' });
-      toast.success('Produto adicionado no banco de dados!');
-      loadData();
+      toast.success('Produto adicionado!');
     } catch (error) {
       console.error('Erro ao adicionar produto:', error);
       toast.error('Erro ao adicionar produto');
@@ -285,16 +288,17 @@ const AdminAI = () => {
       : [];
 
     try {
-      await configApi.createFAQ({
+      const created = await configApi.createFAQ({
         question: newFAQ.question,
         answer: newFAQ.answer,
         category: newFAQ.category,
         keywords
       });
 
+      // Adicionar ao state imediatamente
+      setFAQs(prev => [created, ...prev]);
       setNewFAQ({ question: '', answer: '', category: 'Geral', keywords: '' });
-      toast.success('FAQ adicionado no banco de dados!');
-      loadData();
+      toast.success('FAQ adicionado!');
     } catch (error) {
       console.error('Erro ao adicionar FAQ:', error);
       toast.error('Erro ao adicionar FAQ');
