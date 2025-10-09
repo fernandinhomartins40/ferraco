@@ -13,6 +13,15 @@ export class AuthController {
       const { email, password } = req.body;
       const result = await authService.login(email, password);
 
+      // Salvar token em cookie HTTP-only seguro
+      res.cookie('ferraco_auth_token', result.token, {
+        httpOnly: true,       // Não acessível via JavaScript
+        secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
+        sameSite: 'lax',      // Proteção CSRF
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+        path: '/'
+      });
+
       res.json({
         success: true,
         message: 'Login realizado com sucesso',
@@ -63,6 +72,14 @@ export class AuthController {
    * POST /auth/logout
    */
   async logout(_req: Request, res: Response): Promise<void> {
+    // Limpar cookie do token
+    res.clearCookie('ferraco_auth_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    });
+
     res.json({
       success: true,
       message: 'Logout realizado com sucesso',

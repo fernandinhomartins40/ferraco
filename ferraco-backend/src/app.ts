@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
 import { CORS_CONFIG, RATE_LIMIT_CONFIG, APP_CONFIG } from './config/constants';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -50,6 +51,9 @@ export function createApp(): Application {
   // Body parser
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Cookie parser
+  app.use(cookieParser());
 
   // Request logging
   if (APP_CONFIG.isDevelopment) {

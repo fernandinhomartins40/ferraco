@@ -23,9 +23,17 @@ export async function authMiddleware(
   next: NextFunction
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
+    // Tentar obter token do cookie primeiro, depois do header Authorization
+    let token = req.cookies?.ferraco_auth_token;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+
+    if (!token) {
       res.status(401).json({
         success: false,
         message: 'Token não fornecido',
@@ -33,8 +41,6 @@ export async function authMiddleware(
       });
       return;
     }
-
-    const token = authHeader.substring(7);
 
     // Verificar token
     const decoded = jwt.verify(token, jwtConfig.secret) as any;
