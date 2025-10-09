@@ -89,20 +89,15 @@ const AdminAI = () => {
       const links = await configApi.getChatLinks();
       const faqItems = await configApi.getFAQs();
 
-      // CompanyData com fallback
-      setCompanyData(company || {
-        name: '',
-        industry: '',
-        description: '',
-        differentials: [],
-        targetAudience: '',
-        location: '',
-        workingHours: '',
-        phone: '',
-        website: ''
-      });
+      // Apenas atualizar estado se receber dados válidos
+      // Isso preserva os valores do formulário se a API falhar no refresh
+      if (company) {
+        setCompanyData(company);
+      }
 
-      setProducts(prods || []);
+      if (prods) {
+        setProducts(prods);
+      }
 
       // ChatbotConfig com parse seguro de handoffTriggers
       if (config) {
@@ -112,19 +107,17 @@ const AdminAI = () => {
             ? config.handoffTriggers
             : JSON.parse(config.handoffTriggers || '[]')
         });
-      } else {
-        setAIConfig({
-          isEnabled: false,
-          welcomeMessage: '',
-          fallbackMessage: '',
-          handoffTriggers: []
-        });
       }
 
-      setChatLinks(links || []);
-      setFAQs(faqItems || []);
+      if (links) {
+        setChatLinks(links);
+      }
 
-      // Calcular progresso manualmente
+      if (faqItems) {
+        setFAQs(faqItems);
+      }
+
+      // Calcular progresso apenas se temos dados válidos
       calculateProgress(company, prods, faqItems, config);
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
