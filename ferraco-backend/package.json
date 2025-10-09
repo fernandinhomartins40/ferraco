@@ -1,6 +1,6 @@
 {
   "name": "ferraco-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Backend API para Ferraco CRM - Node.js + TypeScript + Prisma + SQLite",
   "main": "dist/server.js",
   "scripts": {
