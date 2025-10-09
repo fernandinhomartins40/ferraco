@@ -140,7 +140,7 @@ IMPORTANTE:
     if (products.length > 0) {
       context += `PRODUTOS E SERVIÇOS:\n`;
       products.forEach(p => {
-        const price = p.price ? `R$ ${p.price.toFixed(2)}` : 'sob consulta';
+        const price = p.price || 'sob consulta';
         context += `- ${p.name} (${p.category}): ${p.description}. Preço: ${price}\n`;
       });
       context += '\n';

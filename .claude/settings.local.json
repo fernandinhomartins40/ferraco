@@ -96,7 +96,8 @@
       "Bash(nslookup:*)",
       "Bash(ping:*)",
       "Bash(git restore:*)",
-      "Bash(gh run list:*)"
+      "Bash(gh run list:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "ask": []

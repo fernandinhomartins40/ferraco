@@ -317,7 +317,7 @@ IMPORTANTE:
           content: `PRODUTO: ${product.name}
 CATEGORIA: ${product.category}
 DESCRIÇÃO: ${product.description}
-PREÇO: ${product.price ? `R$ ${product.price.toFixed(2)}` : 'Sob consulta'}
+PREÇO: ${product.price || 'Sob consulta'}
 ${product.keywords ? `PALAVRAS-CHAVE: ${product.keywords}` : ''}
 
 COMO RESPONDER SOBRE ESTE PRODUTO:

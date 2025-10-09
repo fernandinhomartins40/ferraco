@@ -1265,7 +1265,7 @@ model Product {
   name        String
   description String
   category    String
-  price       Float?
+  price       String?
   keywords    String   // JSON array de palavras-chave
   benefits    String?  // JSON array de benefícios
   isActive    Boolean  @default(true)

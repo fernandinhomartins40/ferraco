@@ -9,7 +9,7 @@ const ProductSchema = z.object({
   name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   description: z.string().min(10, 'Descrição deve ter pelo menos 10 caracteres'),
   category: z.string().min(2, 'Categoria é obrigatória'),
-  price: z.number().positive().optional().nullable(),
+  price: z.string().optional().nullable(),
   keywords: z.array(z.string()).min(1, 'Adicione pelo menos uma palavra-chave'),
 });
 
@@ -61,17 +61,14 @@ export class ProductsController {
    */
   async createProduct(req: Request, res: Response) {
     try {
-      const data = ProductSchema.parse({
-        ...req.body,
-        price: req.body.price ? parseFloat(req.body.price) : null
-      });
+      const data = ProductSchema.parse(req.body);
 
       const product = await prisma.product.create({
         data: {
           name: data.name,
           description: data.description,
           category: data.category,
-          price: data.price,
+          price: data.price || null,
           keywords: JSON.stringify(data.keywords),
           isActive: true
         }
@@ -106,10 +103,7 @@ export class ProductsController {
   async updateProduct(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const data = ProductSchema.parse({
-        ...req.body,
-        price: req.body.price ? parseFloat(req.body.price) : null
-      });
+      const data = ProductSchema.parse(req.body);
 
       const product = await prisma.product.update({
         where: { id },
@@ -117,7 +111,7 @@ export class ProductsController {
           name: data.name,
           description: data.description,
           category: data.category,
-          price: data.price,
+          price: data.price || null,
           keywords: JSON.stringify(data.keywords),
         }
       });
