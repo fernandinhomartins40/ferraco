@@ -33,7 +33,17 @@ import { configApi, CompanyData, Product, ChatbotConfig as AIConfig, ChatLink, F
 const generateShortCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
 const AdminAI = () => {
-  const [companyData, setCompanyData] = useState<CompanyData | null>(null);
+  const [companyData, setCompanyData] = useState<CompanyData>({
+    name: '',
+    industry: '',
+    description: '',
+    differentials: [],
+    targetAudience: '',
+    location: '',
+    workingHours: '',
+    phone: '',
+    website: ''
+  });
   const [products, setProducts] = useState<Product[]>([]);
   const [aiConfig, setAIConfig] = useState<AIConfig | null>(null);
   const [chatLinks, setChatLinks] = useState<ChatLink[]>([]);
@@ -74,7 +84,9 @@ const AdminAI = () => {
         configApi.getFAQs()
       ]);
 
-      setCompanyData(company);
+      if (company) {
+        setCompanyData(company);
+      }
       setProducts(prods);
       setAIConfig(config);
       setChatLinks(links);
@@ -108,7 +120,7 @@ const AdminAI = () => {
   };
 
   const handleSaveCompany = async () => {
-    if (!companyData?.name || !companyData?.industry || !companyData?.description) {
+    if (!companyData.name || !companyData.industry || !companyData.description) {
       toast.error('Preencha os campos obrigatórios: Nome, Ramo e Descrição');
       return;
     }
@@ -340,7 +352,7 @@ const AdminAI = () => {
                     <label className="text-sm font-medium">Nome da Empresa *</label>
                     <Input
                       value={companyData?.name || ''}
-                      onChange={(e) => setCompanyData({ ...companyData!, name: e.target.value })}
+                      onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
                       placeholder="Empresa XYZ"
                     />
                   </div>
@@ -348,7 +360,7 @@ const AdminAI = () => {
                     <label className="text-sm font-medium">Ramo de Atividade *</label>
                     <Input
                       value={companyData?.industry || ''}
-                      onChange={(e) => setCompanyData({ ...companyData!, industry: e.target.value })}
+                      onChange={(e) => setCompanyData({ ...companyData, industry: e.target.value })}
                       placeholder="Ex: Metalurgia, Agropecuária..."
                     />
                   </div>
@@ -358,7 +370,7 @@ const AdminAI = () => {
                   <label className="text-sm font-medium">Descrição *</label>
                   <Textarea
                     value={companyData?.description || ''}
-                    onChange={(e) => setCompanyData({ ...companyData!, description: e.target.value })}
+                    onChange={(e) => setCompanyData({ ...companyData, description: e.target.value })}
                     rows={3}
                     placeholder="Breve descrição da empresa..."
                   />
@@ -369,7 +381,7 @@ const AdminAI = () => {
                     <label className="text-sm font-medium">Localização</label>
                     <Input
                       value={companyData?.location || ''}
-                      onChange={(e) => setCompanyData({ ...companyData!, location: e.target.value })}
+                      onChange={(e) => setCompanyData({ ...companyData, location: e.target.value })}
                       placeholder="Cidade, Estado"
                     />
                   </div>
@@ -377,7 +389,7 @@ const AdminAI = () => {
                     <label className="text-sm font-medium">Telefone</label>
                     <Input
                       value={companyData?.phone || ''}
-                      onChange={(e) => setCompanyData({ ...companyData!, phone: e.target.value })}
+                      onChange={(e) => setCompanyData({ ...companyData, phone: e.target.value })}
                       placeholder="(00) 0000-0000"
                     />
                   </div>
@@ -387,7 +399,7 @@ const AdminAI = () => {
                   <label className="text-sm font-medium">Horário de Atendimento</label>
                   <Input
                     value={companyData?.workingHours || ''}
-                    onChange={(e) => setCompanyData({ ...companyData!, workingHours: e.target.value })}
+                    onChange={(e) => setCompanyData({ ...companyData, workingHours: e.target.value })}
                     placeholder="Segunda a Sexta, 8h às 18h"
                   />
                 </div>
