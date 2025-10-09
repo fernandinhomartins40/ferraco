@@ -87,10 +87,16 @@ export class ConfigController {
         });
       }
 
+      // Parse differentials para retornar no formato correto
+      const parsedCompany = {
+        ...company,
+        differentials: JSON.parse(company.differentials || '[]')
+      };
+
       res.json({
         success: true,
         message: 'Dados da empresa salvos com sucesso',
-        data: company
+        data: parsedCompany
       });
     } catch (error: any) {
       console.error('Erro ao salvar dados da empresa:', error);

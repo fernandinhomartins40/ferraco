@@ -82,11 +82,6 @@ const AdminAI = () => {
 
   const loadData = async () => {
     try {
-      // DEBUG: Verificar se token está presente
-      const token = localStorage.getItem('ferraco_auth_token') || sessionStorage.getItem('ferraco_auth_token');
-      console.log('🔑 Token presente no loadData:', !!token);
-      console.log('🔑 Token:', token?.substring(0, 20) + '...');
-
       const [company, prods, config, links, faqItems] = await Promise.all([
         configApi.getCompanyData(),
         configApi.getProducts(),
@@ -96,7 +91,6 @@ const AdminAI = () => {
       ]);
 
       // CompanyData com fallback
-      console.log('📦 Dados da empresa recebidos da API:', company);
       setCompanyData(company || {
         name: '',
         industry: '',
@@ -112,7 +106,6 @@ const AdminAI = () => {
       setProducts(prods);
 
       // ChatbotConfig com parse seguro de handoffTriggers
-      console.log('🤖 Config do chatbot recebido da API:', config);
       if (config) {
         setAIConfig({
           ...config,
@@ -135,10 +128,8 @@ const AdminAI = () => {
       // Calcular progresso manualmente
       calculateProgress(company, prods, faqItems, config);
     } catch (error: any) {
-      console.error('❌ Erro ao carregar dados:', error);
-      console.error('❌ Status:', error?.response?.status);
-      console.error('❌ Mensagem:', error?.response?.data);
-      toast.error('Erro ao carregar configurações: ' + (error?.response?.data?.message || error.message));
+      console.error('Erro ao carregar dados:', error);
+      toast.error('Erro ao carregar configurações');
     }
   };
 
@@ -184,9 +175,17 @@ const AdminAI = () => {
     }
 
     try {
-      await configApi.saveCompanyData(companyData);
+      const savedCompany = await configApi.saveCompanyData(companyData);
+      setCompanyData(savedCompany); // Atualizar state com dados retornados da API
       toast.success('Dados da empresa salvos no banco de dados!');
-      loadData();
+
+      // Recalcular progresso
+      const [prods, faqItems, config] = await Promise.all([
+        configApi.getProducts(),
+        configApi.getFAQs(),
+        configApi.getChatbotConfig()
+      ]);
+      calculateProgress(savedCompany, prods, faqItems, config);
     } catch (error) {
       console.error('Erro ao salvar empresa:', error);
       toast.error('Erro ao salvar dados da empresa');
@@ -197,9 +196,17 @@ const AdminAI = () => {
     if (!aiConfig) return;
 
     try {
-      await configApi.saveChatbotConfig(aiConfig);
+      const savedConfig = await configApi.saveChatbotConfig(aiConfig);
+      setAIConfig(savedConfig); // Atualizar state com dados retornados da API
       toast.success('Configuração salva no banco de dados!');
-      loadData();
+
+      // Recalcular progresso
+      const [company, prods, faqItems] = await Promise.all([
+        configApi.getCompanyData(),
+        configApi.getProducts(),
+        configApi.getFAQs()
+      ]);
+      calculateProgress(company, prods, faqItems, savedConfig);
     } catch (error) {
       console.error('Erro ao salvar config:', error);
       toast.error('Erro ao salvar configuração');
