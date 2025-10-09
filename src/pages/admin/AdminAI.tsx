@@ -501,28 +501,50 @@ const AdminAI = () => {
                       Nenhum produto cadastrado
                     </p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {products.map(product => (
-                        <div key={product.id} className="flex items-center justify-between p-3 border rounded">
-                          <div className="flex-1">
-                            <h4 className="font-medium">{product.name}</h4>
-                            <p className="text-sm text-muted-foreground">{product.category}</p>
+                        <div key={product.id} className="p-4 border rounded-lg space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-lg">{product.name}</h4>
+                              <p className="text-sm text-muted-foreground">{product.category} {product.price && `• ${product.price}`}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  await configApi.deleteProduct(product.id!);
+                                  loadData();
+                                  toast.success('Produto removido do banco de dados');
+                                } catch (error) {
+                                  toast.error('Erro ao remover produto');
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                await configApi.deleteProduct(product.id);
-                                loadData();
-                                toast.success('Produto removido do banco de dados');
-                              } catch (error) {
-                                toast.error('Erro ao remover produto');
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <p className="text-sm">{product.description}</p>
+                          {product.keywords && product.keywords.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {product.keywords.map((keyword, idx) => (
+                                <span key={idx} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                  {keyword}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {product.benefits && product.benefits.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-green-700">Benefícios:</p>
+                              <ul className="text-xs space-y-1">
+                                {product.benefits.map((benefit, idx) => (
+                                  <li key={idx} className="text-muted-foreground">• {benefit}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -576,27 +598,40 @@ const AdminAI = () => {
                       Nenhum FAQ cadastrado
                     </p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {faqs.map(faq => (
-                        <div key={faq.id} className="p-3 border rounded">
-                          <h4 className="font-medium">{faq.question}</h4>
-                          <p className="text-sm text-muted-foreground mt-1">{faq.answer}</p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mt-2"
-                            onClick={async () => {
-                              try {
-                                await configApi.deleteFAQ(faq.id);
-                                loadData();
-                                toast.success('FAQ removido do banco de dados');
-                              } catch (error) {
-                                toast.error('Erro ao remover FAQ');
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div key={faq.id} className="p-4 border rounded-lg space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-base">{faq.question}</h4>
+                              <p className="text-xs text-muted-foreground">{faq.category}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  await configApi.deleteFAQ(faq.id!);
+                                  loadData();
+                                  toast.success('FAQ removido do banco de dados');
+                                } catch (error) {
+                                  toast.error('Erro ao remover FAQ');
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-sm">{faq.answer}</p>
+                          {faq.keywords && faq.keywords.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {faq.keywords.map((keyword, idx) => (
+                                <span key={idx} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                                  {keyword}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
