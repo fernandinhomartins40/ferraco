@@ -229,8 +229,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Save to storage (localStorage if rememberMe, sessionStorage otherwise)
         saveAuthData(user, token, rememberMe);
 
-        // Set token in apiClient immediately
-        apiClient.setToken(token);
+        // REMOVIDO: apiClient.setToken() - não mais necessário
+        // apiClient agora busca token diretamente do storage em cada requisição
 
         // Update state
         dispatch({

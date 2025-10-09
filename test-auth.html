@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Autenticação Ferraco</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 20px; margin: 5px; }
+        #result { margin-top: 20px; padding: 10px; background: #f0f0f0; white-space: pre-wrap; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>Teste de Autenticação - Ferraco CRM</h1>
+
+    <div>
+        <h3>1. Fazer Login</h3>
+        <input type="email" id="email" placeholder="Email" value="admin@ferraco.com.br">
+        <input type="password" id="password" placeholder="Senha" value="admin123">
+        <button onclick="testLogin()">Login</button>
+    </div>
+
+    <div>
+        <h3>2. Buscar Dados da Empresa (autenticado)</h3>
+        <button onclick="testGetCompany()">Buscar Company Data</button>
+    </div>
+
+    <div>
+        <h3>3. Verificar localStorage</h3>
+        <button onclick="checkStorage()">Ver Token no Storage</button>
+        <button onclick="clearStorage()">Limpar Storage</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const API_URL = 'https://painelcheckar.com.br/api';
+
+        function showResult(message, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = isError ? 'error' : 'success';
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const token = data.data.token;
+                    localStorage.setItem('ferraco_auth_token', token);
+                    showResult(`✅ LOGIN OK!\nToken: ${token.substring(0, 20)}...\nToken salvo no localStorage`);
+                } else {
+                    showResult(`❌ ERRO: ${data.message}`, true);
+                }
+            } catch (error) {
+                showResult(`❌ ERRO: ${error.message}`, true);
+            }
+        }
+
+        async function testGetCompany() {
+            const token = localStorage.getItem('ferraco_auth_token');
+
+            if (!token) {
+                showResult('❌ Token não encontrado! Faça login primeiro.', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/config/company`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult(`✅ DADOS RECEBIDOS!\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult(`❌ ERRO ${response.status}: ${JSON.stringify(data, null, 2)}`, true);
+                }
+            } catch (error) {
+                showResult(`❌ ERRO: ${error.message}`, true);
+            }
+        }
+
+        function checkStorage() {
+            const token = localStorage.getItem('ferraco_auth_token');
+            const sessionToken = sessionStorage.getItem('ferraco_auth_token');
+
+            showResult(`localStorage token: ${token ? token.substring(0, 30) + '...' : 'VAZIO'}\n\nsessionStorage token: ${sessionToken ? sessionToken.substring(0, 30) + '...' : 'VAZIO'}`);
+        }
+
+        function clearStorage() {
+            localStorage.removeItem('ferraco_auth_token');
+            sessionStorage.removeItem('ferraco_auth_token');
+            showResult('✅ Storage limpo!');
+        }
+    </script>
+</body>
+</html>

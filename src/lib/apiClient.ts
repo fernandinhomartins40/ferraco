@@ -27,13 +27,11 @@ export interface ApiError {
 // Configuração do cliente Axios
 class ApiClient {
   private client: AxiosInstance;
-  private token: string | null = null;
   private useMock: boolean = import.meta.env.VITE_USE_MOCK_API === 'true';
+  // REMOVIDO: private token - não armazenamos mais aqui
 
   constructor() {
     // Base URL dinâmica baseada no ambiente
-    // Em produção, usa caminho relativo /api (proxy do Nginx)
-    // Em desenvolvimento, usa localhost:3002/api ou variável de ambiente
     let baseURL: string | undefined;
 
     if (this.useMock) {
@@ -41,10 +39,8 @@ class ApiClient {
     } else if (import.meta.env.VITE_API_URL) {
       baseURL = import.meta.env.VITE_API_URL;
     } else if (import.meta.env.PROD) {
-      // Em produção, usa caminho relativo (Nginx faz proxy)
       baseURL = '/api';
     } else {
-      // Em desenvolvimento local
       baseURL = 'http://localhost:3002/api';
     }
 
@@ -54,19 +50,20 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      // withCredentials removido - não precisamos de cookies
     });
 
     this.setupInterceptors();
-    this.loadTokenFromStorage();
   }
 
   private setupInterceptors() {
-    // Interceptor de requisição - adiciona token automaticamente
+    // Interceptor REATIVO - busca token do storage em CADA requisição
     this.client.interceptors.request.use(
       (config) => {
-        if (this.token) {
-          config.headers.Authorization = `Bearer ${this.token}`;
+        // Buscar token diretamente do storage (single source of truth)
+        const token = localStorage.getItem('ferraco_auth_token') || sessionStorage.getItem('ferraco_auth_token');
+
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
 
         // Log da requisição em desenvolvimento
@@ -134,31 +131,9 @@ class ApiClient {
     );
   }
 
-  // Gerenciamento de token
-  public setToken(token: string) {
-    this.token = token;
-    // Usar as mesmas chaves do AuthContext
-    localStorage.setItem('ferraco_auth_token', token);
-    sessionStorage.setItem('ferraco_auth_token', token);
-  }
-
-  public removeToken() {
-    this.token = null;
-    // Usar as mesmas chaves do AuthContext
-    localStorage.removeItem('ferraco_auth_token');
-    sessionStorage.removeItem('ferraco_auth_token');
-    localStorage.removeItem('ferraco_auth_user');
-    sessionStorage.removeItem('ferraco_auth_user');
-    localStorage.removeItem('ferraco_remember_me');
-  }
-
-  private loadTokenFromStorage() {
-    // Usar as mesmas chaves do AuthContext
-    const token = localStorage.getItem('ferraco_auth_token') || sessionStorage.getItem('ferraco_auth_token');
-    if (token) {
-      this.token = token;
-    }
-  }
+  // REMOVIDO: Gerenciamento de token
+  // AuthContext é o único responsável por gerenciar token no storage
+  // apiClient apenas LEITURA reativa do storage no interceptor
 
   // Handlers de erro
   private handleUnauthorized(error?: ApiError) {
