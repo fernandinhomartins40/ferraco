@@ -5,7 +5,7 @@
 
 import { Intent } from './types';
 
-export const intentsConfig: Intent[] = [
+export const intentsConfigV2: Intent[] = [
   // ============================================
   // ETAPA 1: BOAS-VINDAS E CONTEXTO
   // ============================================

@@ -191,9 +191,12 @@ export class ResponseGenerator {
   }
 
   /**
-   * Aplica personalidade ao texto
+   * Aplica personalidade ao texto com validações positivas
    */
   private applyPersonality(text: string, tone: string): string {
+    // Adicionar frases de validação aleatoriamente
+    text = this.addValidationPhrases(text);
+
     switch (tone) {
       case 'friendly':
         // Mantém emojis e tom amigável
@@ -202,7 +205,7 @@ export class ResponseGenerator {
       case 'professional':
         // Remove emojis e excessos de pontuação
         return text
-          .replace(/[😊👋✨🎯]/g, '')
+          .replace(/[😊👋✨🎯😄👍👏]/g, '')
           .replace(/!+/g, '.')
           .trim();
 
@@ -215,7 +218,7 @@ export class ResponseGenerator {
       case 'formal':
         // Remove emojis e mantém tom formal
         return text
-          .replace(/[😊👋✨🎯]/g, '')
+          .replace(/[😊👋✨🎯😄👍👏]/g, '')
           .replace(/vc/gi, 'você')
           .replace(/pra/gi, 'para')
           .trim();
@@ -223,6 +226,35 @@ export class ResponseGenerator {
       default:
         return text;
     }
+  }
+
+  /**
+   * Adiciona frases de validação para tornar conversa mais humana
+   */
+  private addValidationPhrases(text: string): string {
+    // Não adicionar se já tiver validação
+    const hasValidation = /^(ótim|legal|perfeito|show|que bom|bacana|entendi)/i.test(text);
+    if (hasValidation) return text;
+
+    // Lista de validações positivas
+    const validations = [
+      'Ótima escolha!',
+      'Legal saber disso!',
+      'Entendi!',
+      'Show!',
+      'Perfeito!',
+      'Que bom!',
+      'Bacana!',
+      'Certo!'
+    ];
+
+    // 40% de chance de adicionar validação
+    if (Math.random() < 0.4) {
+      const validation = validations[Math.floor(Math.random() * validations.length)];
+      return `${validation} ${text}`;
+    }
+
+    return text;
   }
 
   /**
