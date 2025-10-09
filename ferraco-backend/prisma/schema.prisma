@@ -1307,3 +1307,21 @@ model CompanyData {
 
   @@map("company_data")
 }
+
+model ChatLink {
+  id        String   @id @default(uuid())
+  name      String
+  source    String
+  url       String
+  shortCode String   @unique
+  clicks    Int      @default(0)
+  leads     Int      @default(0)
+  isActive  Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shortCode])
+  @@index([isActive])
+  @@map("chat_links")
+}

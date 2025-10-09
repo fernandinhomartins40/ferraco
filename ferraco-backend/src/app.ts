@@ -23,6 +23,7 @@ import scoringRoutes from './modules/scoring/scoring.routes';
 import duplicatesRoutes from './modules/duplicates/duplicates.routes';
 import integrationsRoutes from './modules/integrations/integrations.routes';
 import chatbotRoutes from './modules/chatbot/chatbotRoutes';
+import configRoutes from './modules/chatbot/configRoutes';
 
 // Carregar variáveis de ambiente
 config();
@@ -168,6 +169,9 @@ export function createApp(): Application {
 
   // Rotas de chatbot
   app.use('/api/chatbot', chatbotRoutes);
+
+  // Rotas de configuração do chatbot
+  app.use('/api/config', configRoutes);
 
   // ==========================================
   // ERROR HANDLING

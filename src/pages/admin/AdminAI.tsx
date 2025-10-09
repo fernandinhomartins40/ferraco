@@ -28,14 +28,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  aiChatStorage,
-  CompanyData,
-  Product,
-  AIConfig,
-  ChatLink,
-  FAQItem
-} from '@/utils/aiChatStorage';
+import { configApi, CompanyData, Product, ChatbotConfig as AIConfig, ChatLink, FAQItem } from '@/utils/configApiClient';
 
 const generateShortCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -71,35 +64,79 @@ const AdminAI = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setCompanyData(aiChatStorage.getCompanyData());
-    setProducts(aiChatStorage.getProducts());
-    setAIConfig(aiChatStorage.getAIConfig());
-    setChatLinks(aiChatStorage.getChatLinks());
-    setFAQs(aiChatStorage.getFAQItems());
-    setProgress(aiChatStorage.getConfigurationProgress());
+  const loadData = async () => {
+    try {
+      const [company, prods, config, links, faqItems] = await Promise.all([
+        configApi.getCompanyData(),
+        configApi.getProducts(),
+        configApi.getChatbotConfig(),
+        configApi.getChatLinks(),
+        configApi.getFAQs()
+      ]);
+
+      setCompanyData(company);
+      setProducts(prods);
+      setAIConfig(config);
+      setChatLinks(links);
+      setFAQs(faqItems);
+
+      // Calcular progresso manualmente
+      calculateProgress(company, prods, faqItems, config);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      toast.error('Erro ao carregar configurações');
+    }
   };
 
-  const handleSaveCompany = () => {
+  const calculateProgress = (company: any, prods: any[], faqs: any[], config: any) => {
+    const steps: any[] = [];
+    let completed = 0;
+
+    if (company?.name) { completed++; steps.push({ name: 'Empresa', done: true }); }
+    else { steps.push({ name: 'Empresa', done: false }); }
+
+    if (prods.length > 0) { completed++; steps.push({ name: 'Produtos', done: true }); }
+    else { steps.push({ name: 'Produtos', done: false }); }
+
+    if (faqs.length > 0) { completed++; steps.push({ name: 'FAQs', done: true }); }
+    else { steps.push({ name: 'FAQs', done: false }); }
+
+    if (config?.greetingMessage) { completed++; steps.push({ name: 'Comportamento', done: true }); }
+    else { steps.push({ name: 'Comportamento', done: false }); }
+
+    setProgress({ percentage: (completed / 4) * 100, steps });
+  };
+
+  const handleSaveCompany = async () => {
     if (!companyData?.name || !companyData?.industry || !companyData?.description) {
       toast.error('Preencha os campos obrigatórios: Nome, Ramo e Descrição');
       return;
     }
 
-    aiChatStorage.saveCompanyData(companyData);
-    toast.success('Dados da empresa salvos!');
-    loadData();
+    try {
+      await configApi.saveCompanyData(companyData);
+      toast.success('Dados da empresa salvos no banco de dados!');
+      loadData();
+    } catch (error) {
+      console.error('Erro ao salvar empresa:', error);
+      toast.error('Erro ao salvar dados da empresa');
+    }
   };
 
-  const handleSaveAIConfig = () => {
+  const handleSaveAIConfig = async () => {
     if (!aiConfig) return;
 
-    aiChatStorage.saveAIConfig(aiConfig);
-    toast.success('Configuração da IA salva!');
-    loadData();
+    try {
+      await configApi.saveChatbotConfig(aiConfig);
+      toast.success('Configuração salva no banco de dados!');
+      loadData();
+    } catch (error) {
+      console.error('Erro ao salvar config:', error);
+      toast.error('Erro ao salvar configuração');
+    }
   };
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.description) {
       toast.error('Preencha nome e descrição do produto');
       return;
@@ -109,21 +146,26 @@ const AdminAI = () => {
       ? newProduct.keywords.split(',').map(k => k.trim()).filter(k => k)
       : [];
 
-    aiChatStorage.addProduct({
-      name: newProduct.name,
-      description: newProduct.description,
-      category: newProduct.category || 'Geral',
-      price: newProduct.price,
-      keywords,
-      isActive: true,
-    });
+    try {
+      await configApi.createProduct({
+        name: newProduct.name,
+        description: newProduct.description,
+        category: newProduct.category || 'Geral',
+        price: newProduct.price,
+        keywords,
+        isActive: true,
+      });
 
-    setNewProduct({ name: '', description: '', category: '', price: '', keywords: '' });
-    toast.success('Produto adicionado!');
-    loadData();
+      setNewProduct({ name: '', description: '', category: '', price: '', keywords: '' });
+      toast.success('Produto adicionado no banco de dados!');
+      loadData();
+    } catch (error) {
+      console.error('Erro ao adicionar produto:', error);
+      toast.error('Erro ao adicionar produto');
+    }
   };
 
-  const handleAddLink = () => {
+  const handleAddLink = async () => {
     if (!newLink.name) {
       toast.error('Digite um nome para o link');
       return;
@@ -132,19 +174,25 @@ const AdminAI = () => {
     const shortCode = generateShortCode();
     const fullUrl = `${window.location.origin}/chat/${shortCode}`;
 
-    aiChatStorage.createChatLink({
-      name: newLink.name,
-      source: newLink.source,
-      url: fullUrl,
-      isActive: true,
-    });
+    try {
+      await configApi.createChatLink({
+        name: newLink.name,
+        source: newLink.source,
+        url: fullUrl,
+        shortCode,
+        isActive: true,
+      });
 
-    setNewLink({ name: '', source: 'website' });
-    toast.success('Link criado!');
-    loadData();
+      setNewLink({ name: '', source: 'website' });
+      toast.success('Link criado no banco de dados!');
+      loadData();
+    } catch (error) {
+      console.error('Erro ao criar link:', error);
+      toast.error('Erro ao criar link');
+    }
   };
 
-  const handleAddFAQ = () => {
+  const handleAddFAQ = async () => {
     if (!newFAQ.question || !newFAQ.answer) {
       toast.error('Preencha pergunta e resposta');
       return;
@@ -154,16 +202,21 @@ const AdminAI = () => {
       ? newFAQ.keywords.split(',').map(k => k.trim()).filter(k => k)
       : [];
 
-    aiChatStorage.addFAQItem({
-      question: newFAQ.question,
-      answer: newFAQ.answer,
-      category: newFAQ.category,
-      keywords
-    });
+    try {
+      await configApi.createFAQ({
+        question: newFAQ.question,
+        answer: newFAQ.answer,
+        category: newFAQ.category,
+        keywords
+      });
 
-    setNewFAQ({ question: '', answer: '', category: 'Geral', keywords: '' });
-    toast.success('FAQ adicionado!');
-    loadData();
+      setNewFAQ({ question: '', answer: '', category: 'Geral', keywords: '' });
+      toast.success('FAQ adicionado no banco de dados!');
+      loadData();
+    } catch (error) {
+      console.error('Erro ao adicionar FAQ:', error);
+      toast.error('Erro ao adicionar FAQ');
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -430,10 +483,14 @@ const AdminAI = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              aiChatStorage.deleteProduct(product.id);
-                              loadData();
-                              toast.success('Produto removido');
+                            onClick={async () => {
+                              try {
+                                await configApi.deleteProduct(product.id);
+                                loadData();
+                                toast.success('Produto removido do banco de dados');
+                              } catch (error) {
+                                toast.error('Erro ao remover produto');
+                              }
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -500,10 +557,14 @@ const AdminAI = () => {
                             variant="ghost"
                             size="sm"
                             className="mt-2"
-                            onClick={() => {
-                              aiChatStorage.deleteFAQItem(faq.id);
-                              loadData();
-                              toast.success('FAQ removido');
+                            onClick={async () => {
+                              try {
+                                await configApi.deleteFAQ(faq.id);
+                                loadData();
+                                toast.success('FAQ removido do banco de dados');
+                              } catch (error) {
+                                toast.error('Erro ao remover FAQ');
+                              }
                             }}
                           >
                             <Trash2 className="h-4 w-4" />

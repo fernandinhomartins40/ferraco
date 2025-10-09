@@ -4,8 +4,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { aiChatStorage } from '@/utils/aiChatStorage';
 import { generateUUID } from '@/utils/uuid';
+import { configApi } from '@/utils/configApiClient';
 import {
   createConversationManager,
   ConversationManager,
@@ -32,38 +32,30 @@ export function useChatbotAI(linkSource: string) {
 
   // Referência para o conversation manager
   const conversationManagerRef = useRef<ConversationManager | null>(null);
+  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBaseContext | null>(null);
 
-  // Carregar dados da knowledge base
-  const companyData = aiChatStorage.getCompanyData();
-  const products = aiChatStorage.getProducts();
-  const faqs = aiChatStorage.getFAQItems();
-  const aiConfig = aiChatStorage.getAIConfig();
-
-  // Inicializar conversation manager
+  // Carregar dados da API (banco de dados)
   useEffect(() => {
-    const knowledgeBase: KnowledgeBaseContext = {
-      companyData,
-      products,
-      faqs,
-      aiConfig
+    const loadKnowledgeBase = async () => {
+      try {
+        const data = await configApi.getChatbotData();
+
+        const kb: KnowledgeBaseContext = {
+          companyData: data.company,
+          products: data.products,
+          faqs: data.faqs,
+          aiConfig: data.config
+        };
+
+        setKnowledgeBase(kb);
+        conversationManagerRef.current = createConversationManager(kb);
+      } catch (error) {
+        console.error('Erro ao carregar knowledge base:', error);
+      }
     };
 
-    conversationManagerRef.current = createConversationManager(knowledgeBase);
+    loadKnowledgeBase();
   }, []);
-
-  // Atualizar knowledge base quando mudar
-  useEffect(() => {
-    if (conversationManagerRef.current) {
-      const knowledgeBase: KnowledgeBaseContext = {
-        companyData,
-        products,
-        faqs,
-        aiConfig
-      };
-
-      conversationManagerRef.current.updateKnowledgeBase(knowledgeBase);
-    }
-  }, [companyData, products, faqs, aiConfig]);
 
   /**
    * Calcula score de qualificação do lead
