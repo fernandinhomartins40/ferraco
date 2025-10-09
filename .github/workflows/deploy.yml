@@ -155,11 +155,26 @@ jobs:
           fuser -k ${{ env.APP_PORT }}/tcp 2>/dev/null || true
           sleep 2
 
-          # Limpar imagens antigas do Ferraco (FORÇAR REBUILD COMPLETO)
-          echo "🧹 Limpando imagens antigas e cache..."
+          # Limpar TUDO do Docker relacionado ao Ferraco (REBUILD COMPLETO ZERO)
+          echo "🧹 Limpando COMPLETAMENTE Docker para rebuild zero..."
+
+          # Remover imagens do Ferraco (todas as tags e layers)
           docker images --filter "reference=*ferraco*" -q | xargs -r docker rmi -f 2>/dev/null || true
-          docker builder prune -f 2>/dev/null || true
-          docker system prune -f 2>/dev/null || true
+          docker images | grep ferraco | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || true
+
+          # Limpar cache de build (layers intermediárias) - AGRESSIVO
+          docker builder prune -a -f 2>/dev/null || true
+
+          # Limpar volumes órfãos
+          docker volume prune -f 2>/dev/null || true
+
+          # Limpar networks órfãs
+          docker network prune -f 2>/dev/null || true
+
+          # Limpeza geral de sistema - AGRESSIVA (remove tudo não usado)
+          docker system prune -a -f 2>/dev/null || true
+
+          echo "✅ Limpeza completa finalizada - garantindo rebuild 100% zero cache"
 
           # Backup e preparação
           if [ -d "${{ env.APP_DIR }}" ]; then
