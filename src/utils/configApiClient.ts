@@ -25,6 +25,7 @@ export interface Product {
   category: string;
   price?: string;
   keywords: string[];
+  benefits: string[];
   isActive: boolean;
   createdAt?: string;
 }

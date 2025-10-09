@@ -1267,6 +1267,7 @@ model Product {
   category    String
   price       Float?
   keywords    String   // JSON array de palavras-chave
+  benefits    String?  // JSON array de benefícios
   isActive    Boolean  @default(true)
 
   createdAt   DateTime @default(now())

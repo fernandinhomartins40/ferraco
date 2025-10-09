@@ -90,10 +90,11 @@ export class ConfigController {
         orderBy: { createdAt: 'desc' }
       });
 
-      // Parse keywords JSON
+      // Parse keywords and benefits JSON
       const parsedProducts = products.map(p => ({
         ...p,
-        keywords: JSON.parse(p.keywords || '[]')
+        keywords: JSON.parse(p.keywords || '[]'),
+        benefits: p.benefits ? JSON.parse(p.benefits) : []
       }));
 
       res.json({
@@ -107,7 +108,7 @@ export class ConfigController {
 
   async createProduct(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, description, category, price, keywords, isActive } = req.body;
+      const { name, description, category, price, keywords, benefits, isActive } = req.body;
 
       const product = await prisma.product.create({
         data: {
@@ -116,6 +117,7 @@ export class ConfigController {
           category,
           price: price || null,
           keywords: JSON.stringify(keywords || []),
+          benefits: benefits ? JSON.stringify(benefits) : null,
           isActive: isActive !== false
         }
       });
@@ -125,7 +127,8 @@ export class ConfigController {
         message: 'Produto criado com sucesso',
         data: {
           ...product,
-          keywords: JSON.parse(product.keywords)
+          keywords: JSON.parse(product.keywords),
+          benefits: product.benefits ? JSON.parse(product.benefits) : []
         }
       });
     } catch (error) {
@@ -137,7 +140,7 @@ export class ConfigController {
   async updateProduct(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const { name, description, category, price, keywords, isActive } = req.body;
+      const { name, description, category, price, keywords, benefits, isActive } = req.body;
 
       const product = await prisma.product.update({
         where: { id },
@@ -147,6 +150,7 @@ export class ConfigController {
           category,
           price,
           keywords: JSON.stringify(keywords || []),
+          benefits: benefits ? JSON.stringify(benefits) : null,
           isActive
         }
       });
@@ -156,7 +160,8 @@ export class ConfigController {
         message: 'Produto atualizado com sucesso',
         data: {
           ...product,
-          keywords: JSON.parse(product.keywords)
+          keywords: JSON.parse(product.keywords),
+          benefits: product.benefits ? JSON.parse(product.benefits) : []
         }
       });
     } catch (error) {

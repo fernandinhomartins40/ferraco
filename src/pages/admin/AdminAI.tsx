@@ -56,6 +56,7 @@ const AdminAI = () => {
     category: '',
     price: '',
     keywords: '',
+    benefits: '',
   });
 
   const [newLink, setNewLink] = useState({
@@ -158,6 +159,10 @@ const AdminAI = () => {
       ? newProduct.keywords.split(',').map(k => k.trim()).filter(k => k)
       : [];
 
+    const benefits = newProduct.benefits
+      ? newProduct.benefits.split(',').map(b => b.trim()).filter(b => b)
+      : [];
+
     try {
       await configApi.createProduct({
         name: newProduct.name,
@@ -165,10 +170,11 @@ const AdminAI = () => {
         category: newProduct.category || 'Geral',
         price: newProduct.price,
         keywords,
+        benefits,
         isActive: true,
       });
 
-      setNewProduct({ name: '', description: '', category: '', price: '', keywords: '' });
+      setNewProduct({ name: '', description: '', category: '', price: '', keywords: '', benefits: '' });
       toast.success('Produto adicionado no banco de dados!');
       loadData();
     } catch (error) {
@@ -466,6 +472,16 @@ const AdminAI = () => {
                         placeholder="portão, automático, ferro"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Benefícios (separados por vírgula)</label>
+                    <Textarea
+                      value={newProduct.benefits}
+                      onChange={(e) => setNewProduct({ ...newProduct, benefits: e.target.value })}
+                      rows={2}
+                      placeholder="Durabilidade, Segurança, Garantia de 5 anos"
+                    />
                   </div>
 
                   <Button onClick={handleAddProduct} className="w-full">
