@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ConfigController } from './configController';
-import { authenticate } from '../../middleware/auth';
+import { authMiddleware } from '../../middleware/auth';
 
 const router = Router();
 const controller = new ConfigController();
@@ -17,28 +17,28 @@ router.get('/chatbot-data', controller.getChatbotData.bind(controller));
 // ============================================
 
 // Company Data
-router.get('/company', authenticate, controller.getCompanyData.bind(controller));
-router.post('/company', authenticate, controller.saveCompanyData.bind(controller));
+router.get('/company', authMiddleware, controller.getCompanyData.bind(controller));
+router.post('/company', authMiddleware, controller.saveCompanyData.bind(controller));
 
 // Products
-router.get('/products', authenticate, controller.getProducts.bind(controller));
-router.post('/products', authenticate, controller.createProduct.bind(controller));
-router.put('/products/:id', authenticate, controller.updateProduct.bind(controller));
-router.delete('/products/:id', authenticate, controller.deleteProduct.bind(controller));
+router.get('/products', authMiddleware, controller.getProducts.bind(controller));
+router.post('/products', authMiddleware, controller.createProduct.bind(controller));
+router.put('/products/:id', authMiddleware, controller.updateProduct.bind(controller));
+router.delete('/products/:id', authMiddleware, controller.deleteProduct.bind(controller));
 
 // FAQs
-router.get('/faqs', authenticate, controller.getFAQs.bind(controller));
-router.post('/faqs', authenticate, controller.createFAQ.bind(controller));
-router.put('/faqs/:id', authenticate, controller.updateFAQ.bind(controller));
-router.delete('/faqs/:id', authenticate, controller.deleteFAQ.bind(controller));
+router.get('/faqs', authMiddleware, controller.getFAQs.bind(controller));
+router.post('/faqs', authMiddleware, controller.createFAQ.bind(controller));
+router.put('/faqs/:id', authMiddleware, controller.updateFAQ.bind(controller));
+router.delete('/faqs/:id', authMiddleware, controller.deleteFAQ.bind(controller));
 
 // Chatbot Config
-router.get('/chatbot-config', authenticate, controller.getChatbotConfig.bind(controller));
-router.post('/chatbot-config', authenticate, controller.saveChatbotConfig.bind(controller));
+router.get('/chatbot-config', authMiddleware, controller.getChatbotConfig.bind(controller));
+router.post('/chatbot-config', authMiddleware, controller.saveChatbotConfig.bind(controller));
 
 // Chat Links
-router.get('/chat-links', authenticate, controller.getChatLinks.bind(controller));
-router.post('/chat-links', authenticate, controller.createChatLink.bind(controller));
-router.delete('/chat-links/:id', authenticate, controller.deleteChatLink.bind(controller));
+router.get('/chat-links', authMiddleware, controller.getChatLinks.bind(controller));
+router.post('/chat-links', authMiddleware, controller.createChatLink.bind(controller));
+router.delete('/chat-links/:id', authMiddleware, controller.deleteChatLink.bind(controller));
 
 export default router;

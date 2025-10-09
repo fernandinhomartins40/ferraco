@@ -9,7 +9,7 @@ export class ConfigController {
   // COMPANY DATA
   // ============================================
 
-  async getCompanyData(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getCompanyData(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const company = await prisma.companyData.findFirst();
       res.json({
@@ -77,7 +77,7 @@ export class ConfigController {
   // PRODUCTS
   // ============================================
 
-  async getProducts(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getProducts(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const products = await prisma.product.findMany({
         orderBy: { createdAt: 'desc' }
@@ -180,7 +180,7 @@ export class ConfigController {
   // FAQs
   // ============================================
 
-  async getFAQs(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getFAQs(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const faqs = await prisma.fAQItem.findMany({
         orderBy: { createdAt: 'desc' }
@@ -279,7 +279,7 @@ export class ConfigController {
   // CHATBOT CONFIG
   // ============================================
 
-  async getChatbotConfig(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getChatbotConfig(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const config = await prisma.chatbotConfig.findFirst();
       res.json({
@@ -302,17 +302,19 @@ export class ConfigController {
         config = await prisma.chatbotConfig.update({
           where: { id: existing.id },
           data: {
-            toneOfVoice: data.toneOfVoice,
-            greetingMessage: data.greetingMessage,
-            enableSmallTalk: data.enableSmallTalk
+            welcomeMessage: data.welcomeMessage || data.greetingMessage,
+            fallbackMessage: data.fallbackMessage,
+            isEnabled: data.isEnabled !== false,
+            handoffTriggers: data.handoffTriggers ? JSON.stringify(data.handoffTriggers) : '[]'
           }
         });
       } else {
         config = await prisma.chatbotConfig.create({
           data: {
-            toneOfVoice: data.toneOfVoice || 'friendly',
-            greetingMessage: data.greetingMessage || 'Olá! 👋 Como posso ajudar você hoje?',
-            enableSmallTalk: data.enableSmallTalk !== false
+            welcomeMessage: data.welcomeMessage || data.greetingMessage || 'Olá! 👋 Como posso ajudar você hoje?',
+            fallbackMessage: data.fallbackMessage || 'Desculpe, não entendi. Pode reformular?',
+            isEnabled: data.isEnabled !== false,
+            handoffTriggers: data.handoffTriggers ? JSON.stringify(data.handoffTriggers) : '[]'
           }
         });
       }
@@ -332,7 +334,7 @@ export class ConfigController {
   // CHAT LINKS
   // ============================================
 
-  async getChatLinks(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getChatLinks(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const links = await prisma.chatLink.findMany({
         orderBy: { createdAt: 'desc' }
@@ -396,7 +398,7 @@ export class ConfigController {
   // CHATBOT DATA (Endpoint único para o chat público)
   // ============================================
 
-  async getChatbotData(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getChatbotData(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const [config, company, products, faqs] = await Promise.all([
         prisma.chatbotConfig.findFirst(),
