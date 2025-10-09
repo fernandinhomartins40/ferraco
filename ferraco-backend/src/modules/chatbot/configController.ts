@@ -25,6 +25,11 @@ export class ConfigController {
     try {
       const data = req.body;
 
+      // Validações básicas
+      if (!data.name || !data.industry || !data.description) {
+        throw new AppError(400, 'Campos obrigatórios: name, industry, description');
+      }
+
       // Verificar se já existe
       const existing = await prisma.companyData.findFirst();
 
@@ -38,11 +43,11 @@ export class ConfigController {
             industry: data.industry,
             description: data.description,
             differentials: JSON.stringify(data.differentials || []),
-            targetAudience: data.targetAudience,
-            location: data.location,
-            workingHours: data.workingHours,
-            phone: data.phone,
-            website: data.website
+            targetAudience: data.targetAudience || '',
+            location: data.location || '',
+            workingHours: data.workingHours || '',
+            phone: data.phone || null,
+            website: data.website || null
           }
         });
       } else {
@@ -53,11 +58,11 @@ export class ConfigController {
             industry: data.industry,
             description: data.description,
             differentials: JSON.stringify(data.differentials || []),
-            targetAudience: data.targetAudience,
-            location: data.location,
-            workingHours: data.workingHours,
-            phone: data.phone,
-            website: data.website
+            targetAudience: data.targetAudience || '',
+            location: data.location || '',
+            workingHours: data.workingHours || '',
+            phone: data.phone || null,
+            website: data.website || null
           }
         });
       }
@@ -67,9 +72,11 @@ export class ConfigController {
         message: 'Dados da empresa salvos com sucesso',
         data: company
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar dados da empresa:', error);
-      next(new AppError(500, 'Erro ao salvar dados da empresa'));
+      // Retornar erro mais detalhado
+      const errorMessage = error.message || 'Erro ao salvar dados da empresa';
+      next(new AppError(500, errorMessage));
     }
   }
 
