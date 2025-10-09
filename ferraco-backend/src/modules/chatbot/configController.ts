@@ -427,7 +427,8 @@ export class ConfigController {
 
       const parsedProducts = products.map(p => ({
         ...p,
-        keywords: JSON.parse(p.keywords || '[]')
+        keywords: JSON.parse(p.keywords || '[]'),
+        benefits: p.benefits ? JSON.parse(p.benefits) : []
       }));
 
       const parsedFAQs = faqs.map(f => ({
