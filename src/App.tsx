@@ -24,6 +24,7 @@ const AdminLeads = lazy(() => import("./pages/admin/AdminLeads"));
 const AdminWhatsApp = lazy(() => import("./pages/admin/AdminWhatsApp"));
 const AdminAI = lazy(() => import("./pages/admin/AdminAI"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
+const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,14 @@ const App = () => {
                   element={
                     <Suspense fallback={<LoadingSpinner />}>
                       <AdminReports />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/admin/profile"
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <AdminProfile />
                     </Suspense>
                   }
                 />

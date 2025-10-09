@@ -1,10 +1,17 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot } from 'lucide-react';
+import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-// Removed DropdownMenu imports - causing infinite loop
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -224,20 +231,48 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
             {/* User Info and Actions */}
             <div className="flex items-center space-x-4">
-              {/* User Info (Simplified - no dropdown) */}
-              <div className="flex items-center space-x-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className={cn('text-sm font-medium', getRoleColor(demoUser.role))}>
-                    {demoUser.name.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="text-left hidden sm:block">
-                  <div className="text-sm font-medium">{demoUser.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {getRoleDisplayName(demoUser.role)}
-                  </div>
-                </div>
-              </div>
+              {/* User Dropdown Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-2 hover:bg-muted">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className={cn('text-sm font-medium', getRoleColor(demoUser.role))}>
+                        {demoUser.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="text-left hidden sm:block">
+                      <div className="text-sm font-medium">{demoUser.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {getRoleDisplayName(demoUser.role)}
+                      </div>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{demoUser.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {demoUser.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/admin/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Meu Perfil</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/admin/profile?tab=password')}>
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    <span>Trocar Senha</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sair</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Theme Toggle */}
               <Button

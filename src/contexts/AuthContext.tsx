@@ -29,7 +29,8 @@ type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'CLEAR_ERROR' }
   | { type: 'TOKEN_REFRESH'; payload: { user: User; token: string } }
-  | { type: 'TOKEN_EXPIRED' };
+  | { type: 'TOKEN_EXPIRED' }
+  | { type: 'UPDATE_USER'; payload: User };
 
 export interface AuthContextType {
   state: AuthState;
@@ -38,6 +39,7 @@ export interface AuthContextType {
   refreshToken: () => Promise<void>;
   clearError: () => void;
   checkAuth: () => Promise<void>;
+  updateUser: (user: User) => void;
   // Convenience getters
   user: User | null;
   isAuthenticated: boolean;
@@ -130,6 +132,12 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         isAuthenticated: false,
         isLoading: false,
         error: 'Sessão expirada. Faça login novamente.',
+      };
+
+    case 'UPDATE_USER':
+      return {
+        ...state,
+        user: action.payload,
       };
 
     default:
@@ -378,6 +386,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     dispatch({ type: 'CLEAR_ERROR' });
   };
 
+  const updateUser = (user: User) => {
+    // Update state
+    dispatch({ type: 'UPDATE_USER', payload: user });
+
+    // Update storage
+    const rememberMe = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+    if (rememberMe) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    } else {
+      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    }
+
+    logger.info('Usuário atualizado:', user.name);
+  };
+
   // Initialize auth on mount
   useEffect(() => {
     // DEMO MODE: Skip auth check for now
@@ -421,6 +444,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     refreshToken,
     clearError,
     checkAuth,
+    updateUser,
     // Convenience getters
     user: state.user,
     isAuthenticated: state.isAuthenticated,
