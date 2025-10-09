@@ -1,6 +1,6 @@
-# Ferraco CRM - Frontend
+# Ferraco CRM - Sistema Completo
 
-Este é o frontend do sistema Ferraco CRM, uma aplicação React desenvolvida com Vite e TypeScript para gerenciamento de leads e clientes.
+Sistema completo Ferraco CRM com Frontend React + Backend Node.js para gerenciamento de leads, clientes e chatbot inteligente.
 
 ## Tecnologias Utilizadas
 
