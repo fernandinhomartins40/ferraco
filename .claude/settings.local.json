@@ -97,7 +97,8 @@
       "Bash(ping:*)",
       "Bash(git restore:*)",
       "Bash(gh run list:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(python -c \"import yaml; yaml.safe_load(open(''.github/workflows/deploy.yml''))\")"
     ],
     "deny": [],
     "ask": []

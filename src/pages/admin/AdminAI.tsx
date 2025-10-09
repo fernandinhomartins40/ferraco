@@ -89,7 +89,12 @@ const AdminAI = () => {
         setCompanyData(company);
       }
       setProducts(prods);
-      setAIConfig(config);
+      setAIConfig(config || {
+        isEnabled: false,
+        welcomeMessage: '',
+        fallbackMessage: '',
+        handoffTriggers: []
+      });
       setChatLinks(links);
       setFAQs(faqItems);
 
@@ -114,7 +119,7 @@ const AdminAI = () => {
     if (faqs.length > 0) { completed++; steps.push({ name: 'FAQs', done: true }); }
     else { steps.push({ name: 'FAQs', done: false }); }
 
-    if (config?.greetingMessage) { completed++; steps.push({ name: 'Comportamento', done: true }); }
+    if (config?.welcomeMessage) { completed++; steps.push({ name: 'Comportamento', done: true }); }
     else { steps.push({ name: 'Comportamento', done: false }); }
 
     setProgress({ percentage: (completed / 4) * 100, steps });
@@ -304,34 +309,26 @@ const AdminAI = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Tom de Voz</label>
-                  <Select
-                    value={aiConfig?.toneOfVoice}
-                    onValueChange={(value) =>
-                      setAIConfig({ ...aiConfig!, toneOfVoice: value as any })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="friendly">Amigável 😊</SelectItem>
-                      <SelectItem value="professional">Profissional 👔</SelectItem>
-                      <SelectItem value="casual">Casual 🤙</SelectItem>
-                      <SelectItem value="formal">Formal 🎓</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <label className="text-sm font-medium">Mensagem de Boas-vindas</label>
                   <Textarea
-                    value={aiConfig?.greetingMessage}
+                    value={aiConfig?.welcomeMessage || ''}
                     onChange={(e) =>
-                      setAIConfig({ ...aiConfig!, greetingMessage: e.target.value })
+                      setAIConfig({ ...aiConfig!, welcomeMessage: e.target.value })
                     }
                     rows={3}
                     placeholder="Olá! 👋 Bem-vindo(a)..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Mensagem de Fallback</label>
+                  <Textarea
+                    value={aiConfig?.fallbackMessage || ''}
+                    onChange={(e) =>
+                      setAIConfig({ ...aiConfig!, fallbackMessage: e.target.value })
+                    }
+                    rows={2}
+                    placeholder="Desculpe, não entendi. Pode reformular?"
                   />
                 </div>
 

@@ -40,9 +40,10 @@ export interface FAQItem {
 
 export interface ChatbotConfig {
   id?: string;
-  toneOfVoice: 'formal' | 'casual' | 'friendly' | 'professional';
-  greetingMessage: string;
-  enableSmallTalk: boolean;
+  isEnabled: boolean;
+  welcomeMessage: string;
+  fallbackMessage: string;
+  handoffTriggers: string[];
 }
 
 export interface ChatLink {
