@@ -54,7 +54,7 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      withCredentials: true, // Enviar cookies automaticamente
+      // withCredentials removido - não precisamos de cookies
     });
 
     this.setupInterceptors();
