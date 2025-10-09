@@ -96,6 +96,7 @@ const AdminAI = () => {
       ]);
 
       // CompanyData com fallback
+      console.log('📦 Dados da empresa recebidos da API:', company);
       setCompanyData(company || {
         name: '',
         industry: '',
@@ -111,6 +112,7 @@ const AdminAI = () => {
       setProducts(prods);
 
       // ChatbotConfig com parse seguro de handoffTriggers
+      console.log('🤖 Config do chatbot recebido da API:', config);
       if (config) {
         setAIConfig({
           ...config,
@@ -132,9 +134,11 @@ const AdminAI = () => {
 
       // Calcular progresso manualmente
       calculateProgress(company, prods, faqItems, config);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      toast.error('Erro ao carregar configurações');
+    } catch (error: any) {
+      console.error('❌ Erro ao carregar dados:', error);
+      console.error('❌ Status:', error?.response?.status);
+      console.error('❌ Mensagem:', error?.response?.data);
+      toast.error('Erro ao carregar configurações: ' + (error?.response?.data?.message || error.message));
     }
   };
 
