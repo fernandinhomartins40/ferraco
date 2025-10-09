@@ -32,7 +32,7 @@ services:
       - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-60}
 
       # CORS Configuration
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://72.60.10.108:3050,http://localhost:3050}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://painelcheckar.com.br,http://painelcheckar.com.br,http://72.60.10.108:3050,http://localhost:3050}
 
       # Cookie Configuration
       - COOKIE_DOMAIN=${COOKIE_DOMAIN:-.painelcheckar.com.br}
