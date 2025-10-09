@@ -155,9 +155,11 @@ jobs:
           fuser -k ${{ env.APP_PORT }}/tcp 2>/dev/null || true
           sleep 2
 
-          # Limpar imagens antigas do Ferraco
-          echo "🧹 Limpando imagens antigas..."
-          docker images | grep -E "ferraco" | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || true
+          # Limpar imagens antigas do Ferraco (FORÇAR REBUILD COMPLETO)
+          echo "🧹 Limpando imagens antigas e cache..."
+          docker images --filter "reference=*ferraco*" -q | xargs -r docker rmi -f 2>/dev/null || true
+          docker builder prune -f 2>/dev/null || true
+          docker system prune -f 2>/dev/null || true
 
           # Backup e preparação
           if [ -d "${{ env.APP_DIR }}" ]; then
