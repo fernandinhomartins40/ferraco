@@ -14,13 +14,14 @@ export class AuthController {
       const result = await authService.login(email, password);
 
       // Salvar token em cookie HTTP-only seguro
+      // Em produção com Nginx, NÃO setar domain - usar domain da requisição
       res.cookie('ferraco_auth_token', result.token, {
         httpOnly: true,       // Não acessível via JavaScript
         secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
         sameSite: 'lax',      // Proteção CSRF
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-        path: '/',
-        domain: process.env.COOKIE_DOMAIN || undefined // Domínio do cookie para produção
+        path: '/'
+        // domain: REMOVIDO - deixa navegador usar domain da requisição
       });
 
       res.json({
@@ -78,8 +79,8 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      path: '/',
-      domain: process.env.COOKIE_DOMAIN || undefined
+      path: '/'
+      // domain: REMOVIDO - deve bater com o usado no login
     });
 
     res.json({
