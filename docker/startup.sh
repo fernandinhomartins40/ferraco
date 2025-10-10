@@ -15,6 +15,10 @@ echo "Fixing directory permissions..."
 chown -R nodejs:nodejs /app/backend/data /app/backend/logs
 chmod 755 /app/backend/data
 
+# Regenerate Prisma Client (ensures it's in sync with schema)
+echo "Regenerating Prisma Client..."
+npx prisma generate
+
 # Run Prisma migrations
 echo "Running Prisma migrations..."
 npx prisma migrate deploy
