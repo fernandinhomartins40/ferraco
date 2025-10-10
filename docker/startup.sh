@@ -13,9 +13,11 @@ mkdir -p /app/data /app/logs
 
 # Migrar banco de dados (Prisma) - pular se DATABASE_URL não estiver configurado
 if [ -n "$DATABASE_URL" ]; then
-  echo "📊 Executando migrações do banco de dados..."
+  echo "📊 Criando/Atualizando estrutura do banco de dados..."
   cd /app/backend
-  npx prisma migrate deploy 2>&1 || echo "⚠️  Aviso: Falha na migração (pode ser normal se banco não estiver acessível)"
+
+  # Usar prisma db push em vez de migrate deploy (cria tabelas sem migration files)
+  npx prisma db push --accept-data-loss 2>&1 || echo "⚠️  Aviso: Falha ao criar tabelas"
 
   # Seed do banco (apenas se estiver vazio)
   echo "🌱 Verificando se precisa popular banco de dados..."
