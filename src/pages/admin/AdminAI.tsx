@@ -32,13 +32,7 @@ import { configApi, CompanyData, Product, ChatbotConfig as AIConfig, ChatLink, F
 
 const generateShortCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
-// ==========================================
-// STORAGE KEYS - Para persistência local de drafts
-// ==========================================
-const STORAGE_KEYS = {
-  companyDraft: 'ferraco_companyData_draft',
-  aiConfigDraft: 'ferraco_aiConfig_draft',
-} as const;
+// Removido: STORAGE_KEYS - sem localStorage, apenas banco de dados
 
 const AdminAI = () => {
   const [companyData, setCompanyData] = useState<CompanyData>({
@@ -85,97 +79,25 @@ const AdminAI = () => {
   });
 
   // ==========================================
-  // CARREGAR DADOS: Drafts primeiro, depois banco
+  // CARREGAR DADOS DO BANCO DE DADOS
   // ==========================================
   useEffect(() => {
-    // 1. Carregar drafts do localStorage primeiro (dados não salvos)
-    const loadDrafts = () => {
-      try {
-        const companyDraft = localStorage.getItem(STORAGE_KEYS.companyDraft);
-        const configDraft = localStorage.getItem(STORAGE_KEYS.aiConfigDraft);
-
-        if (companyDraft) {
-          const parsed = JSON.parse(companyDraft);
-          setCompanyData(parsed);
-        }
-
-        if (configDraft) {
-          const parsed = JSON.parse(configDraft);
-          setAIConfig(parsed);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar drafts do localStorage:', error);
-      }
-    };
-
-    loadDrafts();
-
-    // 2. Carregar dados salvos do banco (sobrescreve drafts se houver)
     loadData();
-  }, []);
-
-  // ==========================================
-  // AUTO-SAVE: Salvar drafts no localStorage
-  // ==========================================
-  useEffect(() => {
-    // Só salvar se tiver algum dado preenchido
-    if (companyData.name || companyData.description || companyData.industry) {
-      localStorage.setItem(STORAGE_KEYS.companyDraft, JSON.stringify(companyData));
-    }
-  }, [companyData]);
-
-  useEffect(() => {
-    // Só salvar se tiver algum dado preenchido
-    if (aiConfig.welcomeMessage || aiConfig.fallbackMessage) {
-      localStorage.setItem(STORAGE_KEYS.aiConfigDraft, JSON.stringify(aiConfig));
-    }
-  }, [aiConfig]);
-
-  // ==========================================
-  // WARNING: Avisar antes de sair com dados não salvos
-  // ==========================================
-  useEffect(() => {
-    const hasUnsavedChanges = () => {
-      const hasDraft =
-        localStorage.getItem(STORAGE_KEYS.companyDraft) ||
-        localStorage.getItem(STORAGE_KEYS.aiConfigDraft);
-      return !!hasDraft;
-    };
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges()) {
-        e.preventDefault();
-        e.returnValue = 'Você tem alterações não salvas. Deseja sair mesmo assim?';
-        return e.returnValue;
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   const loadData = async () => {
     try {
-      // Buscar dados individualmente para tratar erros separadamente
-      const company = await configApi.getCompanyData();
-      const prods = await configApi.getProducts();
-      const config = await configApi.getChatbotConfig();
-      const links = await configApi.getChatLinks();
-      const faqItems = await configApi.getFAQs();
+      const [company, prods, config, links, faqItems] = await Promise.all([
+        configApi.getCompanyData(),
+        configApi.getProducts(),
+        configApi.getChatbotConfig(),
+        configApi.getChatLinks(),
+        configApi.getFAQs()
+      ]);
 
-      // Apenas atualizar estado se receber dados válidos
-      // Isso preserva os valores do formulário se a API falhar no refresh
-      if (company && company.name) {
-        setCompanyData(company);
-        // ✅ Limpar draft apenas se banco retornou dados válidos
-        localStorage.removeItem(STORAGE_KEYS.companyDraft);
-      }
-
-      if (prods) {
-        setProducts(prods);
-      }
-
-      // ChatbotConfig com parse seguro de handoffTriggers
+      // Atualizar estados com dados do banco
+      if (company) setCompanyData(company);
+      if (prods) setProducts(prods);
       if (config) {
         setAIConfig({
           ...config,
@@ -184,35 +106,20 @@ const AdminAI = () => {
             : JSON.parse(config.handoffTriggers || '[]')
         });
       }
+      if (links) setChatLinks(links);
+      if (faqItems) setFAQs(faqItems);
 
-      if (links) {
-        setChatLinks(links);
-      }
-
-      if (faqItems) {
-        setFAQs(faqItems);
-      }
-
-      // ✅ CALCULAR PROGRESSO DENTRO DO TRY - Só se conseguiu buscar dados do banco
+      // Calcular progresso com dados reais do banco
       calculateProgress(company, prods, faqItems, config);
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
-      // Não mostrar erro se for 401 - usuário precisa fazer login
       if (error?.response?.status !== 401) {
-        toast.error('Erro ao carregar configurações do banco de dados');
+        toast.error('Erro ao carregar dados do banco');
       }
-      // ❌ NÃO calcular progresso se houve erro - preserva valor anterior
     }
   };
 
   const calculateProgress = (company: any, prods: any[], faqs: any[], config: any) => {
-    // ✅ VALIDAÇÃO: Só calcular se recebeu dados válidos do banco
-    // Se todos forem null/undefined, não atualizar (preserva progresso anterior)
-    if (!company && !prods && !faqs && !config) {
-      console.warn('Nenhum dado válido para calcular progresso - mantendo valor anterior');
-      return;
-    }
-
     const steps: any[] = [];
     let completed = 0;
 
@@ -254,24 +161,12 @@ const AdminAI = () => {
     }
 
     try {
-      const savedCompany = await configApi.saveCompanyData(companyData);
-      setCompanyData(savedCompany); // Atualizar state com dados retornados da API
-
-      // ✅ LIMPAR draft do localStorage após salvar com sucesso
-      localStorage.removeItem(STORAGE_KEYS.companyDraft);
-
-      toast.success('Dados da empresa salvos no banco de dados!');
-
-      // Recalcular progresso
-      const [prods, faqItems, config] = await Promise.all([
-        configApi.getProducts(),
-        configApi.getFAQs(),
-        configApi.getChatbotConfig()
-      ]);
-      calculateProgress(savedCompany, prods, faqItems, config);
+      await configApi.saveCompanyData(companyData);
+      toast.success('Dados salvos com sucesso!');
+      await loadData(); // Recarregar tudo do banco
     } catch (error) {
       console.error('Erro ao salvar empresa:', error);
-      toast.error('Erro ao salvar dados da empresa');
+      toast.error('Erro ao salvar dados');
     }
   };
 
@@ -279,21 +174,9 @@ const AdminAI = () => {
     if (!aiConfig) return;
 
     try {
-      const savedConfig = await configApi.saveChatbotConfig(aiConfig);
-      setAIConfig(savedConfig); // Atualizar state com dados retornados da API
-
-      // ✅ LIMPAR draft do localStorage após salvar com sucesso
-      localStorage.removeItem(STORAGE_KEYS.aiConfigDraft);
-
-      toast.success('Configuração salva no banco de dados!');
-
-      // Recalcular progresso
-      const [company, prods, faqItems] = await Promise.all([
-        configApi.getCompanyData(),
-        configApi.getProducts(),
-        configApi.getFAQs()
-      ]);
-      calculateProgress(company, prods, faqItems, savedConfig);
+      await configApi.saveChatbotConfig(aiConfig);
+      toast.success('Configuração salva com sucesso!');
+      await loadData(); // Recarregar tudo do banco
     } catch (error) {
       console.error('Erro ao salvar config:', error);
       toast.error('Erro ao salvar configuração');
@@ -315,7 +198,7 @@ const AdminAI = () => {
       : [];
 
     try {
-      const created = await configApi.createProduct({
+      await configApi.createProduct({
         name: newProduct.name,
         description: newProduct.description,
         category: newProduct.category || 'Geral',
@@ -325,19 +208,9 @@ const AdminAI = () => {
         isActive: true,
       });
 
-      // Adicionar ao state imediatamente
-      setProducts(prev => [created, ...prev]);
       setNewProduct({ name: '', description: '', category: '', price: '', keywords: '', benefits: '' });
       toast.success('Produto adicionado!');
-
-      // ✅ RECALCULAR PROGRESSO consultando banco de dados
-      const [company, prods, faqItems, config] = await Promise.all([
-        configApi.getCompanyData(),
-        configApi.getProducts(),
-        configApi.getFAQs(),
-        configApi.getChatbotConfig()
-      ]);
-      calculateProgress(company, prods, faqItems, config);
+      await loadData(); // Recarregar tudo do banco
     } catch (error) {
       console.error('Erro ao adicionar produto:', error);
       toast.error('Erro ao adicionar produto');
@@ -382,26 +255,16 @@ const AdminAI = () => {
       : [];
 
     try {
-      const created = await configApi.createFAQ({
+      await configApi.createFAQ({
         question: newFAQ.question,
         answer: newFAQ.answer,
         category: newFAQ.category,
         keywords
       });
 
-      // Adicionar ao state imediatamente
-      setFAQs(prev => [created, ...prev]);
       setNewFAQ({ question: '', answer: '', category: 'Geral', keywords: '' });
       toast.success('FAQ adicionado!');
-
-      // ✅ RECALCULAR PROGRESSO consultando banco de dados
-      const [company, prods, faqItems, config] = await Promise.all([
-        configApi.getCompanyData(),
-        configApi.getProducts(),
-        configApi.getFAQs(),
-        configApi.getChatbotConfig()
-      ]);
-      calculateProgress(company, prods, faqItems, config);
+      await loadData(); // Recarregar tudo do banco
     } catch (error) {
       console.error('Erro ao adicionar FAQ:', error);
       toast.error('Erro ao adicionar FAQ');
@@ -678,17 +541,8 @@ const AdminAI = () => {
                               onClick={async () => {
                                 try {
                                   await configApi.deleteProduct(product.id!);
-                                  toast.success('Produto removido do banco de dados');
-
-                                  // ✅ RECALCULAR PROGRESSO consultando banco de dados
-                                  const [company, prods, faqItems, config] = await Promise.all([
-                                    configApi.getCompanyData(),
-                                    configApi.getProducts(),
-                                    configApi.getFAQs(),
-                                    configApi.getChatbotConfig()
-                                  ]);
-                                  setProducts(prods);
-                                  calculateProgress(company, prods, faqItems, config);
+                                  toast.success('Produto removido!');
+                                  await loadData(); // Recarregar tudo do banco
                                 } catch (error) {
                                   toast.error('Erro ao remover produto');
                                 }
@@ -784,17 +638,8 @@ const AdminAI = () => {
                               onClick={async () => {
                                 try {
                                   await configApi.deleteFAQ(faq.id!);
-                                  toast.success('FAQ removido do banco de dados');
-
-                                  // ✅ RECALCULAR PROGRESSO consultando banco de dados
-                                  const [company, prods, faqItems, config] = await Promise.all([
-                                    configApi.getCompanyData(),
-                                    configApi.getProducts(),
-                                    configApi.getFAQs(),
-                                    configApi.getChatbotConfig()
-                                  ]);
-                                  setFAQs(faqItems);
-                                  calculateProgress(company, prods, faqItems, config);
+                                  toast.success('FAQ removido!');
+                                  await loadData(); // Recarregar tudo do banco
                                 } catch (error) {
                                   toast.error('Erro ao remover FAQ');
                                 }
