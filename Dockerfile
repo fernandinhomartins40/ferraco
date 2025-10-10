@@ -30,15 +30,9 @@ WORKDIR /app
 # Instalar Nginx
 RUN apk add --no-cache nginx
 
-# Copiar apenas dependências de produção do backend
-COPY --from=builder /app/apps/backend/package*.json ./backend/
-WORKDIR /app/backend
-RUN npm ci --omit=dev
-
-# Copiar código do backend e Prisma Client
-WORKDIR /app
+# Copiar backend completo com node_modules do builder
 COPY --from=builder /app/apps/backend ./backend
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules ./backend/node_modules
 
 # Copiar frontend buildado
 COPY --from=builder /app/apps/frontend/dist ./frontend/dist
