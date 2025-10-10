@@ -1287,7 +1287,7 @@ model Product {
   isActive    Boolean  @default(true)
 
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
   @@index([isActive])
   @@index([category])
@@ -1302,7 +1302,7 @@ model FAQItem {
   keywords String   // JSON array de palavras-chave
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([category])
   @@map("faq_items")
@@ -1320,7 +1320,8 @@ model CompanyData {
   phone           String?
   website         String?
 
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
   @@map("company_data")
 }
