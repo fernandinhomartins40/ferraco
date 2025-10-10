@@ -36,22 +36,34 @@ jobs:
         sudo apt-get install -y sshpass
         echo "✅ Ferramentas SSH instaladas"
 
+    - name: 🔐 Validate Secrets
+      run: |
+        echo "🔐 Validando secrets obrigatórios..."
+        if [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
+          echo "❌ ERRO: VPS_PASSWORD não configurado!"
+          echo "Configure em: Settings > Secrets and variables > Actions"
+          exit 1
+        fi
+        if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+          echo "❌ ERRO: DATABASE_URL não configurado!"
+          exit 1
+        fi
+        echo "✅ Secrets validados!"
+
     - name: 🔍 Pre-Deploy Validation
       run: |
         echo "🔍 Validando estrutura do projeto FERRACO CRM..."
-        echo "📋 Arquitetura: Monorepo (apps/backend + apps/frontend)"
+        echo "📋 Arquitetura: Raiz única (src/ + prisma/)"
         echo ""
-        echo "📦 Arquivos essenciais:"
+        echo "📦 Arquivos Docker essenciais:"
         ls -la Dockerfile docker-compose.vps.yml || { echo "❌ Docker files faltando!"; exit 1; }
         ls -la docker/nginx.conf docker/startup.sh || { echo "❌ Nginx/startup faltando!"; exit 1; }
         echo ""
-        echo "📋 Frontend (React - apps/frontend):"
-        ls -la apps/frontend/package.json apps/frontend/vite.config.ts apps/frontend/src/ || { echo "❌ Frontend incompleto!"; exit 1; }
+        echo "📋 Backend (Node.js - raiz do projeto):"
+        ls -la package.json src/ prisma/ || { echo "❌ Backend incompleto!"; exit 1; }
+        ls -la src/server.ts prisma/schema.prisma || { echo "❌ Arquivos principais faltando!"; exit 1; }
         echo ""
-        echo "📋 Backend (Node.js - apps/backend):"
-        ls -la apps/backend/package.json apps/backend/src/ apps/backend/prisma/ || { echo "❌ Backend incompleto!"; exit 1; }
-        echo ""
-        echo "✅ Estrutura monorepo validada com sucesso!"
+        echo "✅ Estrutura do projeto validada!"
 
     - name: 📦 Prepare Deployment Package
       run: |
@@ -111,7 +123,7 @@ jobs:
           echo "🌿 Branch: ${{ github.ref_name }}"
           echo "👤 Actor: ${{ github.actor }}"
           echo "🕐 Timestamp: $(date)"
-          echo "🎯 Arquitetura: Monorepo - Container Único"
+          echo "🎯 Arquitetura: Container Único - Raiz do Projeto"
           echo "🐳 Porta VPS: ${{ env.APP_PORT }}"
           echo "========================================="
           echo ""
@@ -120,7 +132,7 @@ jobs:
           echo "📦 Atualizando sistema..."
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y curl wget ca-certificates lsb-release >/dev/null 2>&1
+          apt-get install -y curl wget ca-certificates lsb-release fuser >/dev/null 2>&1
 
           # Instalar/Atualizar Docker
           echo "🐳 Configurando Docker..."
@@ -192,25 +204,24 @@ jobs:
           tar -xzf /tmp/deploy.tar.gz
           rm -f /tmp/deploy.tar.gz
 
-          # Validar estrutura monorepo
-          echo "🔍 Validando estrutura monorepo..."
+          # Validar estrutura do projeto
+          echo "🔍 Validando estrutura do projeto..."
           [ -f "Dockerfile" ] || { echo "❌ Dockerfile não encontrado!"; exit 1; }
           [ -f "docker-compose.vps.yml" ] || { echo "❌ docker-compose.vps.yml não encontrado!"; exit 1; }
-          [ -d "docker" ] || { echo "❌ Pasta docker não encontrada!"; exit 1; }
+          [ -d "docker" ] || { echo "❌ Pasta docker/ não encontrada!"; exit 1; }
           [ -f "docker/startup.sh" ] || { echo "❌ docker/startup.sh não encontrado!"; exit 1; }
           [ -f "docker/nginx.conf" ] || { echo "❌ docker/nginx.conf não encontrado!"; exit 1; }
-          [ -d "apps/backend" ] || { echo "❌ Backend (apps/backend) não encontrado!"; exit 1; }
-          [ -d "apps/frontend" ] || { echo "❌ Frontend (apps/frontend) não encontrado!"; exit 1; }
+          [ -d "src" ] || { echo "❌ Pasta src/ não encontrada!"; exit 1; }
+          [ -d "prisma" ] || { echo "❌ Pasta prisma/ não encontrada!"; exit 1; }
+          [ -f "package.json" ] || { echo "❌ package.json não encontrado!"; exit 1; }
+          [ -f "src/server.ts" ] || { echo "❌ src/server.ts não encontrado!"; exit 1; }
+          [ -f "prisma/schema.prisma" ] || { echo "❌ prisma/schema.prisma não encontrado!"; exit 1; }
 
           # Corrigir permissões dos scripts
           echo "🔧 Corrigindo permissões dos scripts..."
-          chmod +x docker/startup.sh docker/setup-ssl.sh 2>/dev/null || true
+          chmod +x docker/startup.sh 2>/dev/null || true
 
-          # Debug: listar conteúdo da pasta docker
-          echo "📋 Conteúdo da pasta docker:"
-          ls -la docker/
-
-          echo "✅ Estrutura monorepo validada!"
+          echo "✅ Estrutura do projeto validada!"
 
           # Criar diretórios persistentes (volumes Docker usarão esses diretórios)
           echo "🗄️  Criando diretórios persistentes para volumes Docker..."
@@ -220,35 +231,53 @@ jobs:
           # Configurar variáveis de ambiente para Docker
           echo "⚙️  Configurando ambiente Docker..."
           export BUILD_TIMESTAMP=$(date +%s)
+          export DATABASE_URL="${{ secrets.DATABASE_URL }}"
           export JWT_SECRET="ferraco-vps-jwt-${{ github.sha }}"
           export CORS_ORIGIN="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export ALLOWED_ORIGINS="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export LOG_LEVEL=info
+          export NODE_ENV=production
 
           # Build da imagem
           echo "🏗️  Building imagem Docker (isso pode levar alguns minutos)..."
           DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
             --no-cache \
             --pull \
-            --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP
+            --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
+            --build-arg DATABASE_URL="${{ secrets.DATABASE_URL }}"
 
           # Iniciar aplicação
           echo "🚀 Iniciando aplicação..."
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} up -d
 
-          # Aguardar inicialização
-          echo "⏳ Aguardando aplicação inicializar (45 segundos)..."
-          sleep 45
+          # Aguardar container iniciar
+          echo "⏳ Aguardando container iniciar (30 segundos)..."
+          sleep 30
+
+          # Mostrar logs iniciais
+          echo "📋 Logs iniciais do container:"
+          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} logs --tail 30
+
+          # Aguardar serviços internos (Nginx + Backend)
+          echo "⏳ Aguardando serviços internos (60 segundos)..."
+          sleep 60
 
           # Verificar containers
           echo "🔍 Verificando containers..."
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} ps
 
-          # Health check
-          echo "🩺 Executando health check..."
-          MAX_TRIES=15
+          # Health check - USAR 127.0.0.1 NO ALPINE (localhost não funciona)
+          echo "🩺 Executando health checks..."
+          echo "⚠️  Usando 127.0.0.1 (Alpine Linux não resolve 'localhost')"
+
+          MAX_TRIES=20
+          FRONTEND_OK=false
+          BACKEND_OK=false
+
+          echo ""
+          echo "🔍 Health check Frontend..."
           for i in $(seq 1 $MAX_TRIES); do
-            if curl -f -s http://localhost:${{ env.APP_PORT }}/health >/dev/null 2>&1; then
+            if curl -f -s http://127.0.0.1:${{ env.APP_PORT }}/health >/dev/null 2>&1; then
               echo "✅ Frontend health check OK!"
               FRONTEND_OK=true
               break
@@ -257,8 +286,10 @@ jobs:
             sleep 5
           done
 
+          echo ""
+          echo "🔍 Health check Backend API..."
           for i in $(seq 1 $MAX_TRIES); do
-            if curl -f -s http://localhost:${{ env.APP_PORT }}/api/health >/dev/null 2>&1; then
+            if curl -f -s http://127.0.0.1:${{ env.APP_PORT }}/api/health >/dev/null 2>&1; then
               echo "✅ Backend API health check OK!"
               BACKEND_OK=true
               break
@@ -268,48 +299,69 @@ jobs:
           done
 
           # Verificação final
+          echo ""
+          echo "========================================="
           if [ "$FRONTEND_OK" = true ] && [ "$BACKEND_OK" = true ]; then
-            echo ""
-            echo "========================================="
             echo "✅ DEPLOY CONCLUÍDO COM SUCESSO!"
-            echo "========================================="
+          elif [ "$FRONTEND_OK" = true ]; then
+            echo "⚠️  DEPLOY PARCIAL - Apenas Frontend OK"
+            echo "❌ Backend API não respondeu aos health checks"
+          elif [ "$BACKEND_OK" = true ]; then
+            echo "⚠️  DEPLOY PARCIAL - Apenas Backend OK"
+            echo "❌ Frontend não respondeu aos health checks"
+          else
+            echo "❌ FALHA NO DEPLOY - Ambos health checks falharam!"
+          fi
+          echo "========================================="
 
-            # Validar que está rodando VIA DOCKER (não PM2)
+          # Validar container Docker
+          echo ""
+          echo "🔍 Validando container Docker..."
+          CONTAINER_COUNT=$(docker ps --filter "name=ferraco-crm-vps" --format "{{.Names}}" | wc -l)
+          if [ "$CONTAINER_COUNT" -eq "1" ]; then
+            echo "✅ Container ferraco-crm-vps rodando"
+
+            # Mostrar informações do container
             echo ""
-            echo "🔍 Validando isolamento Docker..."
-            CONTAINER_COUNT=$(docker ps --filter "name=ferraco-crm-vps" --format "{{.Names}}" | wc -l)
-            if [ "$CONTAINER_COUNT" -eq "1" ]; then
-              echo "✅ Container ferraco-crm-vps rodando corretamente"
-            else
-              echo "❌ ERRO: Container não encontrado!"
-              exit 1
-            fi
+            echo "📦 Status do Container:"
+            docker ps --filter "name=ferraco-crm-vps" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
-            # Verificar que não há processos PM2 do Ferraco
-            PM2_COUNT=$(pm2 list | grep -c "ferraco" || true)
+            # Mostrar logs completos se health check falhou
+            if [ "$FRONTEND_OK" != true ] || [ "$BACKEND_OK" != true ]; then
+              echo ""
+              echo "📋 Logs completos do container (últimas 100 linhas):"
+              docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} logs --tail 100
+            fi
+          else
+            echo "❌ ERRO: Container não encontrado ou múltiplos containers!"
+            echo "Containers ativos:"
+            docker ps
+          fi
+
+          # Verificar processos PM2 (não deveria ter)
+          if command -v pm2 &> /dev/null; then
+            PM2_COUNT=$(pm2 list 2>/dev/null | grep -c "ferraco" || true)
             if [ "$PM2_COUNT" -eq "0" ]; then
               echo "✅ Nenhum processo PM2 do Ferraco (isolamento correto)"
             else
               echo "⚠️  AVISO: Existem $PM2_COUNT processos PM2 do Ferraco"
-              echo "   Isso quebra o isolamento Docker!"
+              echo "   Isso pode interferir com o Docker!"
+              pm2 list
             fi
+          fi
 
-            # Mostrar informações do container
-            echo ""
-            echo "📦 Informações do Container:"
-            docker ps --filter "name=ferraco-crm-vps" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "🔗 Links de Acesso:"
+          echo "  🌐 Frontend: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
+          echo "  🔌 Backend API: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api"
+          echo "  🩺 Health: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/health"
+          echo "  👨‍💼 Admin: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin"
+          echo "========================================="
 
+          # Falhar se health checks não passaram
+          if [ "$FRONTEND_OK" != true ] || [ "$BACKEND_OK" != true ]; then
             echo ""
-            echo "🌐 Frontend: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
-            echo "🔌 Backend API: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api"
-            echo "🩺 Health: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/health"
-            echo "👨‍💼 Admin: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin"
-            echo "========================================="
-          else
-            echo ""
-            echo "❌ FALHA NO DEPLOY - Health checks falharam!"
-            echo "📋 Logs dos containers:"
-            docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} logs --tail 50
+            echo "❌ Deploy falhou - health checks não passaram!"
             exit 1
           fi
         DEPLOY_SCRIPT
@@ -337,9 +389,14 @@ jobs:
         echo "🏗️  Stack Tecnológica:"
         echo "  🎯 Backend: Node.js + Express + Prisma + PostgreSQL"
         echo "  🎨 Frontend: React + Vite + TypeScript + Tailwind"
-        echo "  🌐 Proxy: Nginx"
-        echo "  🐳 Deploy: Docker (Container Único - Monorepo)"
+        echo "  🌐 Proxy: Nginx (Alpine Linux)"
+        echo "  🐳 Deploy: Docker (Container Único)"
         echo "  🔐 Auth: JWT + Bcrypt"
+        echo ""
+        echo "📌 Notas Importantes:"
+        echo "  • Health checks usam 127.0.0.1 (Alpine não resolve localhost)"
+        echo "  • Container isolado - sem PM2 no host"
+        echo "  • Build completo com --no-cache"
         echo ""
         echo "✅ Sistema pronto para uso!"
         echo "========================================="
