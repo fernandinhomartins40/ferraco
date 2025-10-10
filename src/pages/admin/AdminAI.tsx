@@ -330,66 +330,101 @@ export default function AdminAI() {
 
         {/* ABA EMPRESA */}
         <TabsContent value="empresa">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados da Empresa</CardTitle>
-              <CardDescription>Informações básicas sobre sua empresa</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Nome da Empresa *</Label>
-                  <Input
-                    value={company.name}
-                    onChange={e => setCompany({ ...company, name: e.target.value })}
-                    placeholder="Ex: Ferraco Indústria"
-                  />
-                </div>
-                <div>
-                  <Label>Ramo de Atividade *</Label>
-                  <Input
-                    value={company.industry}
-                    onChange={e => setCompany({ ...company, industry: e.target.value })}
-                    placeholder="Ex: Metalurgia"
-                  />
-                </div>
-              </div>
+          <div className="space-y-6">
+            {/* Card com dados salvos */}
+            {company.name ? (
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{company.name}</CardTitle>
+                      <CardDescription>{company.industry}</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setCompany({
+                      name: '',
+                      industry: '',
+                      description: '',
+                      differentials: [],
+                      targetAudience: '',
+                      location: '',
+                      workingHours: '',
+                      phone: '',
+                      website: ''
+                    })}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm">{company.description}</p>
+                  {company.location && <p className="text-sm text-muted-foreground">📍 {company.location}</p>}
+                  {company.phone && <p className="text-sm text-muted-foreground">📞 {company.phone}</p>}
+                </CardContent>
+              </Card>
+            ) : null}
 
-              <div>
-                <Label>Descrição *</Label>
-                <Textarea
-                  value={company.description}
-                  onChange={e => setCompany({ ...company, description: e.target.value })}
-                  placeholder="Descreva o que sua empresa faz..."
-                  rows={4}
-                />
-              </div>
+            {/* Formulário para adicionar/editar */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{company.name ? 'Editar Dados da Empresa' : 'Adicionar Dados da Empresa'}</CardTitle>
+                <CardDescription>Informações básicas sobre sua empresa</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nome da Empresa *</Label>
+                    <Input
+                      value={company.name}
+                      onChange={e => setCompany({ ...company, name: e.target.value })}
+                      placeholder="Ex: Ferraco Indústria"
+                    />
+                  </div>
+                  <div>
+                    <Label>Ramo de Atividade *</Label>
+                    <Input
+                      value={company.industry}
+                      onChange={e => setCompany({ ...company, industry: e.target.value })}
+                      placeholder="Ex: Metalurgia"
+                    />
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Localização</Label>
-                  <Input
-                    value={company.location}
-                    onChange={e => setCompany({ ...company, location: e.target.value })}
-                    placeholder="Ex: São Paulo, SP"
+                  <Label>Descrição *</Label>
+                  <Textarea
+                    value={company.description}
+                    onChange={e => setCompany({ ...company, description: e.target.value })}
+                    placeholder="Descreva o que sua empresa faz..."
+                    rows={4}
                   />
                 </div>
-                <div>
-                  <Label>Telefone</Label>
-                  <Input
-                    value={company.phone || ''}
-                    onChange={e => setCompany({ ...company, phone: e.target.value })}
-                    placeholder="Ex: (11) 99999-9999"
-                  />
-                </div>
-              </div>
 
-              <Button onClick={saveCompany} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Salvar Dados da Empresa
-              </Button>
-            </CardContent>
-          </Card>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Localização</Label>
+                    <Input
+                      value={company.location}
+                      onChange={e => setCompany({ ...company, location: e.target.value })}
+                      placeholder="Ex: São Paulo, SP"
+                    />
+                  </div>
+                  <div>
+                    <Label>Telefone</Label>
+                    <Input
+                      value={company.phone || ''}
+                      onChange={e => setCompany({ ...company, phone: e.target.value })}
+                      placeholder="Ex: (11) 99999-9999"
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={saveCompany} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Salvar Dados da Empresa
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ABA PRODUTOS */}
@@ -504,38 +539,73 @@ export default function AdminAI() {
 
         {/* ABA COMPORTAMENTO */}
         <TabsContent value="comportamento">
-          <Card>
-            <CardHeader>
-              <CardTitle>Comportamento da IA</CardTitle>
-              <CardDescription>Configure as mensagens e personalidade do chatbot</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Mensagem de Boas-vindas *</Label>
-                <Textarea
-                  value={config.welcomeMessage}
-                  onChange={e => setConfig({ ...config, welcomeMessage: e.target.value })}
-                  placeholder="Olá! Como posso ajudar você hoje?"
-                  rows={3}
-                />
-              </div>
+          <div className="space-y-6">
+            {/* Card com configuração salva */}
+            {config.welcomeMessage ? (
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>Configuração Atual</CardTitle>
+                      <CardDescription>Mensagens configuradas do chatbot</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setConfig({
+                      isEnabled: false,
+                      welcomeMessage: '',
+                      fallbackMessage: '',
+                      handoffTriggers: []
+                    })}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground">Mensagem de Boas-vindas:</p>
+                    <p className="text-sm mt-1 p-3 bg-secondary rounded">{config.welcomeMessage}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground">Mensagem de Fallback:</p>
+                    <p className="text-sm mt-1 p-3 bg-secondary rounded">{config.fallbackMessage}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
 
-              <div>
-                <Label>Mensagem de Fallback *</Label>
-                <Textarea
-                  value={config.fallbackMessage}
-                  onChange={e => setConfig({ ...config, fallbackMessage: e.target.value })}
-                  placeholder="Desculpe, não entendi. Pode reformular?"
-                  rows={3}
-                />
-              </div>
+            {/* Formulário para adicionar/editar */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{config.welcomeMessage ? 'Editar Comportamento da IA' : 'Configurar Comportamento da IA'}</CardTitle>
+                <CardDescription>Configure as mensagens e personalidade do chatbot</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Mensagem de Boas-vindas *</Label>
+                  <Textarea
+                    value={config.welcomeMessage}
+                    onChange={e => setConfig({ ...config, welcomeMessage: e.target.value })}
+                    placeholder="Olá! Como posso ajudar você hoje?"
+                    rows={3}
+                  />
+                </div>
 
-              <Button onClick={saveConfig} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Salvar Configuração
-              </Button>
-            </CardContent>
-          </Card>
+                <div>
+                  <Label>Mensagem de Fallback *</Label>
+                  <Textarea
+                    value={config.fallbackMessage}
+                    onChange={e => setConfig({ ...config, fallbackMessage: e.target.value })}
+                    placeholder="Desculpe, não entendi. Pode reformular?"
+                    rows={3}
+                  />
+                </div>
+
+                <Button onClick={saveConfig} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Salvar Configuração
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
       </div>
