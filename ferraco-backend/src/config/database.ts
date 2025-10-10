@@ -41,19 +41,10 @@ export async function disconnectDatabase(): Promise<void> {
   }
 }
 
-// Event handlers para graceful shutdown
-process.on('beforeExit', async () => {
-  await disconnectDatabase();
-});
-
-process.on('SIGINT', async () => {
-  await disconnectDatabase();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await disconnectDatabase();
-  process.exit(0);
-});
+// ==========================================
+// NOTA: Event handlers de shutdown removidos daqui
+// Eles estão centralizados em server.ts para evitar
+// race conditions e handlers duplicados
+// ==========================================
 
 export default getPrismaClient();

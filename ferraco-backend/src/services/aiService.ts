@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../config/database';
+import { logger } from '../utils/logger';
+import { AppError } from '../middleware/errorHandler';
 
 interface ConversationContext {
   leadId: string;
@@ -106,8 +106,8 @@ IMPORTANTE:
       const extracted = JSON.parse(result);
       return extracted;
     } catch (error) {
-      console.error('Erro ao extrair dados com IA:', error);
-      throw new Error('Falha ao processar texto com IA');
+      logger.error('Erro ao extrair dados com IA:', error);
+      throw new AppError(500, 'Falha ao processar texto com IA. Verifique se o Ollama está rodando.');
     }
   }
 
@@ -217,9 +217,9 @@ R: "Sou especializado apenas em produtos da Ferraco. Mas posso ajudar com portõ
         { role: 'user', content: userMessage }
       ];
 
-      console.log('🤖 Chamando Ollama...');
-      console.log(`📝 Modelo: ${this.model}`);
-      console.log(`💬 Mensagem: ${userMessage}`);
+      logger.info('🤖 Chamando Ollama...');
+      logger.info(`📝 Modelo: ${this.model}`);
+      logger.info(`💬 Mensagem: ${userMessage}`);
 
       // Chamar Ollama
       const response = await axios.post(`${this.ollamaUrl}/api/chat`, {
@@ -236,7 +236,7 @@ R: "Sou especializado apenas em produtos da Ferraco. Mas posso ajudar com portõ
       });
 
       const aiMessage = response.data.message.content;
-      console.log(`✅ Resposta recebida: ${aiMessage.substring(0, 50)}...`);
+      logger.info(`✅ Resposta recebida: ${aiMessage.substring(0, 50)}...`);
 
       // Extrair dados estruturados
       const extractedData = this.extractStructuredData(userMessage, aiMessage);
@@ -255,11 +255,11 @@ R: "Sou especializado apenas em produtos da Ferraco. Mas posso ajudar com portõ
       };
 
     } catch (error: any) {
-      console.error('❌ Erro ao chamar Ollama:', error.message);
+      logger.error('❌ Erro ao chamar Ollama:', error.message);
 
       // Verificar se Ollama está rodando
       if (error.code === 'ECONNREFUSED') {
-        console.error('⚠️  Ollama não está rodando. Execute: ollama serve');
+        logger.error('⚠️  Ollama não está rodando. Execute: ollama serve');
       }
 
       // Fallback

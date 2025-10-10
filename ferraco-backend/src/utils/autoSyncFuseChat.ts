@@ -1,4 +1,5 @@
 import fusechatService from '../services/fusechatService';
+import { logger } from './logger';
 
 /**
  * Utilitário para sincronização automática com FuseChat
@@ -34,7 +35,7 @@ async function processSyncQueue() {
       try {
         await syncFn();
       } catch (error) {
-        console.error('❌ Erro na sincronização automática:', error);
+        logger.error('❌ Erro na sincronização automática:', error);
       }
     }
   }
@@ -50,18 +51,18 @@ export async function autoSyncKnowledgeBase(apiKey?: string): Promise<void> {
   const key = apiKey || process.env.FUSECHAT_API_KEY;
 
   if (!key) {
-    console.warn('⚠️  FuseChat API Key não configurada. Sincronização automática desabilitada.');
+    logger.warn('⚠️  FuseChat API Key não configurada. Sincronização automática desabilitada.');
     return;
   }
 
   await queueSync(async () => {
-    console.log('🔄 Sincronização automática: Knowledge Base...');
+    logger.info('🔄 Sincronização automática: Knowledge Base...');
     const result = await fusechatService.syncKnowledgeBase(key);
 
     if (result.success) {
-      console.log(`✅ ${result.message}`);
+      logger.info(`✅ ${result.message}`);
     } else {
-      console.error(`❌ Falha na sincronização: ${result.message}`);
+      logger.error(`❌ Falha na sincronização: ${result.message}`);
     }
   });
 }
@@ -73,18 +74,18 @@ export async function autoSyncGuardrails(apiKey?: string): Promise<void> {
   const key = apiKey || process.env.FUSECHAT_API_KEY;
 
   if (!key) {
-    console.warn('⚠️  FuseChat API Key não configurada. Sincronização automática desabilitada.');
+    logger.warn('⚠️  FuseChat API Key não configurada. Sincronização automática desabilitada.');
     return;
   }
 
   await queueSync(async () => {
-    console.log('🔄 Sincronização automática: Guardrails...');
+    logger.info('🔄 Sincronização automática: Guardrails...');
     const result = await fusechatService.syncGuardrails(key);
 
     if (result.success) {
-      console.log(`✅ ${result.message}`);
+      logger.info(`✅ ${result.message}`);
     } else {
-      console.error(`❌ Falha na sincronização: ${result.message}`);
+      logger.error(`❌ Falha na sincronização: ${result.message}`);
     }
   });
 }

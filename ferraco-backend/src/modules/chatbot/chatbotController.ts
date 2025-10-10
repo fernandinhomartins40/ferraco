@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import aiService from '../../services/aiService';
 import fusechatService from '../../services/fusechatService';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../config/database';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import { logger } from '../../utils/logger';
+import { AppError } from '../../middleware/errorHandler';
 
 // Validação com Zod
 const MessageSchema = z.object({
@@ -25,7 +25,7 @@ export class ChatbotController {
     try {
       const { message, leadId } = MessageSchema.parse(req.body);
 
-      console.log(`📨 Mensagem recebida do lead ${leadId}: ${message}`);
+      logger.info(`📨 Mensagem recebida do lead ${leadId}: ${message}`);
 
       // Buscar lead
       const lead = await prisma.lead.findUnique({
@@ -33,7 +33,7 @@ export class ChatbotController {
       });
 
       if (!lead) {
-        return res.status(404).json({ error: 'Lead não encontrado' });
+        throw new AppError(404, 'Lead não encontrado');
       }
 
       // Buscar histórico
@@ -66,7 +66,7 @@ export class ChatbotController {
         }
 
         if (Object.keys(updates).length > 0) {
-          console.log(`✏️  Atualizando lead com novos dados:`, updates);
+          logger.info(`✏️  Atualizando lead com novos dados:`, updates);
           await prisma.lead.update({
             where: { id: leadId },
             data: updates
@@ -76,7 +76,7 @@ export class ChatbotController {
 
       // Se deve qualificar, atualizar status
       if (result.shouldQualify && lead.status === 'NOVO') {
-        console.log(`⭐ Lead qualificado!`);
+        logger.info(`⭐ Lead qualificado!`);
         await prisma.lead.update({
           where: { id: leadId },
           data: {
@@ -93,7 +93,7 @@ export class ChatbotController {
       });
 
     } catch (error: any) {
-      console.error('❌ Erro em sendMessage:', error);
+      logger.error('❌ Erro em sendMessage:', error);
 
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: 'Dados inválidos', details: error.errors });
@@ -124,7 +124,7 @@ export class ChatbotController {
       return res.json({ messages });
 
     } catch (error: any) {
-      console.error('❌ Erro em getHistory:', error);
+      logger.error('❌ Erro em getHistory:', error);
       return res.status(500).json({ error: 'Erro ao buscar histórico' });
     }
   }
@@ -138,7 +138,7 @@ export class ChatbotController {
       const context = await aiService.loadCompanyContext();
       return res.json({ context });
     } catch (error: any) {
-      console.error('❌ Erro em getContext:', error);
+      logger.error('❌ Erro em getContext:', error);
       return res.status(500).json({ error: 'Erro ao carregar contexto' });
     }
   }
@@ -181,16 +181,16 @@ export class ChatbotController {
     try {
       const { text } = ExtractDataSchema.parse(req.body);
 
-      console.log('🤖 Iniciando extração de dados com IA...');
+      logger.info('🤖 Iniciando extração de dados com IA...');
 
       const extractedData = await aiService.extractCompanyDataFromText(text);
 
-      console.log('✅ Dados extraídos com sucesso:', extractedData);
+      logger.info('✅ Dados extraídos com sucesso:', extractedData);
 
       return res.json(extractedData);
 
     } catch (error: any) {
-      console.error('❌ Erro ao extrair dados:', error);
+      logger.error('❌ Erro ao extrair dados:', error);
 
       if (error.name === 'ZodError') {
         return res.status(400).json({
@@ -219,18 +219,18 @@ export class ChatbotController {
         return res.status(400).json({ error: 'message e apiKey são obrigatórios' });
       }
 
-      console.log('🔄 Proxy FuseChat: enviando requisição...');
-      console.log(`💬 Mensagem: ${message.substring(0, 50)}...`);
+      logger.info('🔄 Proxy FuseChat: enviando requisição...');
+      logger.info(`💬 Mensagem: ${message.substring(0, 50)}...`);
 
       // Enviar mensagem simples - FuseChat usa RAG automaticamente
       const response = await fusechatService.chat(message, session_id, apiKey);
 
-      console.log('✅ Resposta FuseChat recebida');
+      logger.info('✅ Resposta FuseChat recebida');
 
       return res.json(response);
 
     } catch (error: any) {
-      console.error('❌ Erro no proxy FuseChat:', error);
+      logger.error('❌ Erro no proxy FuseChat:', error);
 
       if (error.response) {
         return res.status(error.response.status).json({
@@ -255,20 +255,20 @@ export class ChatbotController {
     try {
       const { apiKey, companyData, products, faqs } = req.body;
 
-      console.log('📚 Requisição de sincronização recebida');
-      console.log('🔑 API Key presente:', !!apiKey);
-      console.log('🏢 CompanyData presente:', !!companyData);
-      console.log('📦 Products:', products?.length || 0);
-      console.log('❓ FAQs:', faqs?.length || 0);
+      logger.info('📚 Requisição de sincronização recebida');
+      logger.info('🔑 API Key presente:', !!apiKey);
+      logger.info('🏢 CompanyData presente:', !!companyData);
+      logger.info('📦 Products:', products?.length || 0);
+      logger.info('❓ FAQs:', faqs?.length || 0);
 
       if (!apiKey) {
-        console.error('❌ API Key não fornecida');
+        logger.error('❌ API Key não fornecida');
         return res.status(400).json({ error: 'apiKey é obrigatória' });
       }
 
       // Se recebeu dados do frontend, usar eles
       if (companyData || products || faqs) {
-        console.log('📦 Usando dados enviados pelo frontend (localStorage)');
+        logger.info('📦 Usando dados enviados pelo frontend (localStorage)');
 
         try {
           const result = await fusechatService.syncKnowledgeBaseFromData(
@@ -278,7 +278,7 @@ export class ChatbotController {
             faqs || []
           );
 
-          console.log('✅ Resultado da sincronização:', result);
+          logger.info('✅ Resultado da sincronização:', result);
 
           if (result.success) {
             return res.json({
@@ -287,15 +287,15 @@ export class ChatbotController {
               stats: result.stats
             });
           } else {
-            console.error('❌ Sincronização falhou:', result.message);
+            logger.error('❌ Sincronização falhou:', result.message);
             return res.status(500).json({
               success: false,
               error: result.message
             });
           }
         } catch (syncError: any) {
-          console.error('❌ Erro durante syncKnowledgeBaseFromData:', syncError);
-          console.error('Stack:', syncError.stack);
+          logger.error('❌ Erro durante syncKnowledgeBaseFromData:', syncError);
+          logger.error('Stack:', syncError.stack);
           return res.status(500).json({
             success: false,
             error: `Erro ao sincronizar: ${syncError.message}`
@@ -303,7 +303,7 @@ export class ChatbotController {
         }
       } else {
         // Fallback: buscar do Prisma (modo antigo)
-        console.log('🗄️  Buscando dados do Prisma');
+        logger.info('🗄️  Buscando dados do Prisma');
         const result = await fusechatService.syncKnowledgeBase(apiKey);
 
         if (result.success) {
@@ -321,8 +321,8 @@ export class ChatbotController {
       }
 
     } catch (error: any) {
-      console.error('❌ Erro geral ao sincronizar Knowledge Base:', error);
-      console.error('Stack trace:', error.stack);
+      logger.error('❌ Erro geral ao sincronizar Knowledge Base:', error);
+      logger.error('Stack trace:', error.stack);
       return res.status(500).json({
         success: false,
         error: error.message || 'Erro desconhecido'
@@ -342,7 +342,7 @@ export class ChatbotController {
         return res.status(400).json({ error: 'apiKey é obrigatória' });
       }
 
-      console.log('🛡️ Configurando Guardrails...');
+      logger.info('🛡️ Configurando Guardrails...');
 
       const result = await fusechatService.syncGuardrails(apiKey);
 
@@ -359,7 +359,7 @@ export class ChatbotController {
       }
 
     } catch (error: any) {
-      console.error('❌ Erro ao configurar Guardrails:', error);
+      logger.error('❌ Erro ao configurar Guardrails:', error);
       return res.status(500).json({
         success: false,
         error: error.message
@@ -383,7 +383,7 @@ export class ChatbotController {
       return res.json(knowledge);
 
     } catch (error: any) {
-      console.error('❌ Erro ao buscar Knowledge Base:', error);
+      logger.error('❌ Erro ao buscar Knowledge Base:', error);
       return res.status(500).json({ error: error.message });
     }
   }
@@ -404,7 +404,7 @@ export class ChatbotController {
       return res.json(guardrails);
 
     } catch (error: any) {
-      console.error('❌ Erro ao buscar Guardrails:', error);
+      logger.error('❌ Erro ao buscar Guardrails:', error);
       return res.status(500).json({ error: error.message });
     }
   }
@@ -425,7 +425,7 @@ export class ChatbotController {
       return res.json(stats);
 
     } catch (error: any) {
-      console.error('❌ Erro ao buscar estatísticas:', error);
+      logger.error('❌ Erro ao buscar estatísticas:', error);
       return res.status(500).json({ error: error.message });
     }
   }

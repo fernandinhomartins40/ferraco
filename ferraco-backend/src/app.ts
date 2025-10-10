@@ -8,6 +8,7 @@ import { CORS_CONFIG, RATE_LIMIT_CONFIG, APP_CONFIG } from './config/constants';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/logger';
 import { logger } from './utils/logger';
+import prisma from './config/database';
 
 // Importar rotas
 import authRoutes from './modules/auth/auth.routes';
@@ -72,33 +73,67 @@ export function createApp(): Application {
   app.use('/api/', limiter);
 
   // ==========================================
-  // HEALTH CHECK
+  // HEALTH CHECK - COM VERIFICAÇÃO DO BANCO
   // ==========================================
 
-  app.get('/api/health', (_req, res) => {
-    res.json({
-      success: true,
-      message: 'Ferraco CRM API is running',
-      data: {
-        service: APP_CONFIG.name,
-        version: APP_CONFIG.version,
-        environment: APP_CONFIG.env,
-        timestamp: new Date().toISOString(),
-      },
-    });
+  app.get('/api/health', async (_req, res) => {
+    try {
+      // Verificar conexão com banco de dados
+      await prisma.$queryRaw`SELECT 1`;
+
+      res.json({
+        success: true,
+        message: 'Ferraco CRM API is running',
+        data: {
+          service: APP_CONFIG.name,
+          version: APP_CONFIG.version,
+          environment: APP_CONFIG.env,
+          timestamp: new Date().toISOString(),
+          database: 'connected', // ✅ Banco OK
+        },
+      });
+    } catch (error) {
+      logger.error('Health check failed - database disconnected:', error);
+      res.status(503).json({
+        success: false,
+        message: 'Service degraded - database unavailable',
+        data: {
+          service: APP_CONFIG.name,
+          version: APP_CONFIG.version,
+          environment: APP_CONFIG.env,
+          timestamp: new Date().toISOString(),
+          database: 'disconnected', // ❌ Banco offline
+        },
+      });
+    }
   });
 
-  app.get('/health', (_req, res) => {
-    res.json({
-      success: true,
-      message: 'Ferraco CRM API is running',
-      data: {
-        service: APP_CONFIG.name,
-        version: APP_CONFIG.version,
-        environment: APP_CONFIG.env,
-        timestamp: new Date().toISOString(),
-      },
-    });
+  app.get('/health', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+
+      res.json({
+        success: true,
+        message: 'Ferraco CRM API is running',
+        data: {
+          service: APP_CONFIG.name,
+          version: APP_CONFIG.version,
+          environment: APP_CONFIG.env,
+          timestamp: new Date().toISOString(),
+          database: 'connected',
+        },
+      });
+    } catch (error) {
+      logger.error('Health check failed:', error);
+      res.status(503).json({
+        success: false,
+        message: 'Service degraded',
+        data: {
+          service: APP_CONFIG.name,
+          database: 'disconnected',
+        },
+      });
+    }
   });
 
   // ==========================================

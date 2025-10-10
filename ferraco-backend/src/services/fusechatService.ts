@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../config/database';
+import { logger } from '../utils/logger';
+import { AppError } from '../middleware/errorHandler';
 
 interface FuseChatDocument {
   doc_type: 'produto' | 'faq' | 'politica' | 'script';
@@ -62,13 +62,13 @@ class FuseChatService {
     try {
       // VALIDAÇÃO CRÍTICA: API Key não pode ser vazia
       if (!apiKey || apiKey.trim() === '') {
-        throw new Error('API Key é obrigatória e não pode ser vazia');
+        throw new AppError(400, 'API Key é obrigatória e não pode ser vazia');
       }
 
       this.setApiKey(apiKey);
 
-      console.log('📚 Sincronizando Knowledge Base com dados do frontend...');
-      console.log('🔑 API Key válida:', apiKey.substring(0, 10) + '...');
+      logger.info('📚 Sincronizando Knowledge Base com dados do frontend...');
+      logger.info('🔑 API Key válida:', apiKey.substring(0, 10) + '...');
 
       const documents: FuseChatDocument[] = [];
 
@@ -149,7 +149,7 @@ COMO RESPONDER SOBRE ESTE PRODUTO:
       faqs.forEach(faq => {
         // Validar FAQ
         if (!faq.question || !faq.answer) {
-          console.warn('⚠️ FAQ inválido ignorado:', faq);
+          logger.warn('⚠️ FAQ inválido ignorado:', faq);
           return; // Pula este FAQ
         }
 
@@ -206,7 +206,7 @@ QUALIFICAÇÃO DE LEAD:
 
       // Validar dados antes de enviar
       if (documents.length === 0) {
-        throw new Error('Nenhum documento para sincronizar');
+        throw new AppError(400, 'Nenhum documento para sincronizar');
       }
 
       // Criar Knowledge Base no FuseChat
@@ -216,15 +216,15 @@ QUALIFICAÇÃO DE LEAD:
         documents
       };
 
-      console.log(`📤 Enviando ${documents.length} documentos para FuseChat...`);
-      console.log(`🔑 API Key: ${this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'NÃO DEFINIDA'}`);
-      console.log(`🌐 URL: ${this.baseUrl}/api/rag/knowledge`);
-      console.log(`📋 Payload:`, JSON.stringify(kbConfig, null, 2).substring(0, 500) + '...');
+      logger.info(`📤 Enviando ${documents.length} documentos para FuseChat...`);
+      logger.info(`🔑 API Key: ${this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'NÃO DEFINIDA'}`);
+      logger.info(`🌐 URL: ${this.baseUrl}/api/rag/knowledge`);
+      logger.info(`📋 Payload:`, JSON.stringify(kbConfig, null, 2).substring(0, 500) + '...');
 
       const response = await this.client.post('/api/rag/knowledge', kbConfig);
 
-      console.log('✅ Knowledge Base sincronizada com sucesso!');
-      console.log('📊 Status:', response.status, response.statusText);
+      logger.info('✅ Knowledge Base sincronizada com sucesso!');
+      logger.info('📊 Status:', response.status, response.statusText);
 
       return {
         success: true,
@@ -239,13 +239,13 @@ QUALIFICAÇÃO DE LEAD:
       };
 
     } catch (error: any) {
-      console.error('❌ ERRO DETALHADO ao sincronizar Knowledge Base:');
-      console.error('▶ Status HTTP:', error.response?.status);
-      console.error('▶ Status Text:', error.response?.statusText);
-      console.error('▶ Response Data:', JSON.stringify(error.response?.data, null, 2));
-      console.error('▶ Error Message:', error.message);
-      console.error('▶ Error Code:', error.code);
-      console.error('▶ Stack:', error.stack);
+      logger.error('❌ ERRO DETALHADO ao sincronizar Knowledge Base:');
+      logger.error('▶ Status HTTP:', error.response?.status);
+      logger.error('▶ Status Text:', error.response?.statusText);
+      logger.error('▶ Response Data:', JSON.stringify(error.response?.data, null, 2));
+      logger.error('▶ Error Message:', error.message);
+      logger.error('▶ Error Code:', error.code);
+      logger.error('▶ Stack:', error.stack);
 
       return {
         success: false,
@@ -261,7 +261,7 @@ QUALIFICAÇÃO DE LEAD:
     try {
       if (apiKey) this.setApiKey(apiKey);
 
-      console.log('📚 Iniciando sincronização da Knowledge Base com FuseChat (Prisma)...');
+      logger.info('📚 Iniciando sincronização da Knowledge Base com FuseChat (Prisma)...');
 
       // Buscar dados do banco
       const companyData = await prisma.companyData.findFirst();
@@ -391,11 +391,11 @@ QUALIFICAÇÃO DE LEAD:
         documents
       };
 
-      console.log(`📤 Enviando ${documents.length} documentos para FuseChat...`);
+      logger.info(`📤 Enviando ${documents.length} documentos para FuseChat...`);
 
       await this.client.post('/api/rag/knowledge', kbConfig);
 
-      console.log('✅ Knowledge Base sincronizada com sucesso!');
+      logger.info('✅ Knowledge Base sincronizada com sucesso!');
 
       return {
         success: true,
@@ -410,7 +410,7 @@ QUALIFICAÇÃO DE LEAD:
       };
 
     } catch (error: any) {
-      console.error('❌ Erro ao sincronizar Knowledge Base:', error.response?.data || error.message);
+      logger.error('❌ Erro ao sincronizar Knowledge Base:', error.response?.data || error.message);
 
       return {
         success: false,
@@ -426,7 +426,7 @@ QUALIFICAÇÃO DE LEAD:
     try {
       if (apiKey) this.setApiKey(apiKey);
 
-      console.log('🛡️ Configurando Guardrails no FuseChat...');
+      logger.info('🛡️ Configurando Guardrails no FuseChat...');
 
       const companyData = await prisma.companyData.findFirst();
       const products = await prisma.product.findMany({ where: { isActive: true } });
@@ -473,7 +473,7 @@ QUALIFICAÇÃO DE LEAD:
 
       await this.client.post('/api/rag/guardrails', guardrails);
 
-      console.log('✅ Guardrails configurados com sucesso!');
+      logger.info('✅ Guardrails configurados com sucesso!');
 
       return {
         success: true,
@@ -481,7 +481,7 @@ QUALIFICAÇÃO DE LEAD:
       };
 
     } catch (error: any) {
-      console.error('❌ Erro ao configurar Guardrails:', error.response?.data || error.message);
+      logger.error('❌ Erro ao configurar Guardrails:', error.response?.data || error.message);
 
       return {
         success: false,
@@ -500,7 +500,7 @@ QUALIFICAÇÃO DE LEAD:
       const response = await this.client.get('/api/rag/knowledge');
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao buscar Knowledge Base:', error.response?.data || error.message);
+      logger.error('❌ Erro ao buscar Knowledge Base:', error.response?.data || error.message);
       throw error;
     }
   }
@@ -515,7 +515,7 @@ QUALIFICAÇÃO DE LEAD:
       const response = await this.client.get('/api/rag/guardrails');
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao buscar Guardrails:', error.response?.data || error.message);
+      logger.error('❌ Erro ao buscar Guardrails:', error.response?.data || error.message);
       throw error;
     }
   }
@@ -530,7 +530,7 @@ QUALIFICAÇÃO DE LEAD:
       const response = await this.client.get('/api/rag/stats');
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro ao buscar estatísticas:', error.response?.data || error.message);
+      logger.error('❌ Erro ao buscar estatísticas:', error.response?.data || error.message);
       throw error;
     }
   }
@@ -551,7 +551,7 @@ QUALIFICAÇÃO DE LEAD:
 
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro no chat FuseChat:', error.response?.data || error.message);
+      logger.error('❌ Erro no chat FuseChat:', error.response?.data || error.message);
       throw error;
     }
   }

@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../config/database';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import { logger } from '../../utils/logger';
 
 // Schemas de validação
 const ProductSchema = z.object({
@@ -50,7 +49,7 @@ export class ProductsController {
 
       return res.json({ products: formattedProducts });
     } catch (error: any) {
-      console.error('Erro ao listar produtos:', error);
+      logger.error('Erro ao listar produtos:', error);
       return res.status(500).json({ error: 'Erro ao listar produtos' });
     }
   }
@@ -74,7 +73,7 @@ export class ProductsController {
         }
       });
 
-      console.log(`✅ Produto criado: ${product.name}`);
+      logger.info(`✅ Produto criado: ${product.name}`);
 
       return res.json({
         product: {
@@ -83,7 +82,7 @@ export class ProductsController {
         }
       });
     } catch (error: any) {
-      console.error('Erro ao criar produto:', error);
+      logger.error('Erro ao criar produto:', error);
 
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -116,7 +115,7 @@ export class ProductsController {
         }
       });
 
-      console.log(`✏️  Produto atualizado: ${product.name}`);
+      logger.info(`✏️  Produto atualizado: ${product.name}`);
 
       return res.json({
         product: {
@@ -125,7 +124,7 @@ export class ProductsController {
         }
       });
     } catch (error: any) {
-      console.error('Erro ao atualizar produto:', error);
+      logger.error('Erro ao atualizar produto:', error);
 
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -150,11 +149,11 @@ export class ProductsController {
         where: { id }
       });
 
-      console.log(`🗑️  Produto removido: ${id}`);
+      logger.info(`🗑️  Produto removido: ${id}`);
 
       return res.json({ success: true });
     } catch (error: any) {
-      console.error('Erro ao remover produto:', error);
+      logger.error('Erro ao remover produto:', error);
       return res.status(500).json({ error: 'Erro ao remover produto' });
     }
   }
@@ -177,7 +176,7 @@ export class ProductsController {
         data: { isActive: !product.isActive }
       });
 
-      console.log(`🔄 Produto ${updated.isActive ? 'ativado' : 'desativado'}: ${updated.name}`);
+      logger.info(`🔄 Produto ${updated.isActive ? 'ativado' : 'desativado'}: ${updated.name}`);
 
       return res.json({
         product: {
@@ -186,7 +185,7 @@ export class ProductsController {
         }
       });
     } catch (error: any) {
-      console.error('Erro ao alternar produto:', error);
+      logger.error('Erro ao alternar produto:', error);
       return res.status(500).json({ error: 'Erro ao alternar produto' });
     }
   }
@@ -212,7 +211,7 @@ export class ProductsController {
 
       return res.json({ faqs: formattedFAQs });
     } catch (error: any) {
-      console.error('Erro ao listar FAQs:', error);
+      logger.error('Erro ao listar FAQs:', error);
       return res.status(500).json({ error: 'Erro ao listar FAQs' });
     }
   }
@@ -234,7 +233,7 @@ export class ProductsController {
         }
       });
 
-      console.log(`✅ FAQ criada: ${faq.question}`);
+      logger.info(`✅ FAQ criada: ${faq.question}`);
 
       return res.json({
         faq: {
@@ -243,7 +242,7 @@ export class ProductsController {
         }
       });
     } catch (error: any) {
-      console.error('Erro ao criar FAQ:', error);
+      logger.error('Erro ao criar FAQ:', error);
 
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -275,7 +274,7 @@ export class ProductsController {
         }
       });
 
-      console.log(`✏️  FAQ atualizada: ${faq.question}`);
+      logger.info(`✏️  FAQ atualizada: ${faq.question}`);
 
       return res.json({
         faq: {
@@ -284,7 +283,7 @@ export class ProductsController {
         }
       });
     } catch (error: any) {
-      console.error('Erro ao atualizar FAQ:', error);
+      logger.error('Erro ao atualizar FAQ:', error);
 
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -309,11 +308,11 @@ export class ProductsController {
         where: { id }
       });
 
-      console.log(`🗑️  FAQ removida: ${id}`);
+      logger.info(`🗑️  FAQ removida: ${id}`);
 
       return res.json({ success: true });
     } catch (error: any) {
-      console.error('Erro ao remover FAQ:', error);
+      logger.error('Erro ao remover FAQ:', error);
       return res.status(500).json({ error: 'Erro ao remover FAQ' });
     }
   }
@@ -341,7 +340,7 @@ export class ProductsController {
         }
       });
     } catch (error: any) {
-      console.error('Erro ao buscar empresa:', error);
+      logger.error('Erro ao buscar empresa:', error);
       return res.status(500).json({ error: 'Erro ao buscar dados da empresa' });
     }
   }
@@ -373,7 +372,7 @@ export class ProductsController {
             website: data.website,
           }
         });
-        console.log(`✏️  Dados da empresa atualizados`);
+        logger.info(`✏️  Dados da empresa atualizados`);
       } else {
         company = await prisma.companyData.create({
           data: {
@@ -388,7 +387,7 @@ export class ProductsController {
             website: data.website,
           }
         });
-        console.log(`✅ Dados da empresa criados`);
+        logger.info(`✅ Dados da empresa criados`);
       }
 
       return res.json({
@@ -398,7 +397,7 @@ export class ProductsController {
         }
       });
     } catch (error: any) {
-      console.error('Erro ao salvar empresa:', error);
+      logger.error('Erro ao salvar empresa:', error);
 
       if (error instanceof z.ZodError) {
         return res.status(400).json({

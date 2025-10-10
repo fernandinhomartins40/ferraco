@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from './auth.service';
 import { AuthenticatedRequest } from '../../middleware/auth';
+import refreshTokenService from './refresh-token.service';
 
 const authService = new AuthService();
 
@@ -62,13 +63,51 @@ export class AuthController {
 
   /**
    * POST /auth/logout
+   * 🔐 ATUALIZADO: Revoga refresh token
    */
-  async logout(_req: Request, res: Response): Promise<void> {
-    // Frontend limpa localStorage - backend apenas confirma
-    res.json({
-      success: true,
-      message: 'Logout realizado com sucesso',
-    });
+  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+
+      if (refreshToken) {
+        await refreshTokenService.revoke(refreshToken);
+      }
+
+      res.json({
+        success: true,
+        message: 'Logout realizado com sucesso',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /auth/refresh
+   * 🔐 NOVO: Endpoint para renovar access token
+   */
+  async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        res.status(400).json({
+          success: false,
+          message: 'Refresh token é obrigatório',
+        });
+        return;
+      }
+
+      const result = await refreshTokenService.refresh(refreshToken);
+
+      res.json({
+        success: true,
+        message: 'Token renovado com sucesso',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 
   /**

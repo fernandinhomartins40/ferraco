@@ -5,6 +5,8 @@ import prisma from '../../config/database';
 import { jwtConfig } from '../../config/jwt';
 import { PASSWORD } from '../../config/constants';
 import { AppError } from '../../middleware/errorHandler';
+import { logger } from '../../utils/logger';
+import refreshTokenService from './refresh-token.service';
 
 export class AuthService {
   /**
@@ -21,15 +23,29 @@ export class AuthService {
     });
 
     if (!user) {
+      // 🔒 LOG DE SEGURANÇA: Tentativa de login com email inexistente
+      logger.warn('Login attempt failed - user not found', { email });
       throw new AppError(401, 'Credenciais inválidas');
     }
 
     if (!user.isActive) {
+      // 🔒 LOG DE SEGURANÇA: Tentativa de login com usuário inativo
+      logger.warn('Login attempt failed - user inactive', {
+        email,
+        userId: user.id,
+        username: user.username
+      });
       throw new AppError(401, 'Usuário inativo');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      // 🔒 LOG DE SEGURANÇA: Tentativa de login com senha incorreta
+      logger.warn('Login attempt failed - invalid password', {
+        email,
+        userId: user.id,
+        username: user.username
+      });
       throw new AppError(401, 'Credenciais inválidas');
     }
 
@@ -54,8 +70,20 @@ export class AuthService {
       data: { lastLogin: new Date() },
     });
 
+    // ✅ LOG DE SEGURANÇA: Login bem-sucedido
+    logger.info('Login successful', {
+      email,
+      userId: user.id,
+      username: user.username,
+      role: user.role
+    });
+
+    // 🔐 Gerar refresh token
+    const refreshToken = await refreshTokenService.generate(user.id);
+
     return {
       token,
+      refreshToken, // 🔐 NOVO
       expiresIn: jwtConfig.expiresIn,
       user: {
         id: user.id,

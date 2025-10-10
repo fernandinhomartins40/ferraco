@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../config/database';
 import { AppError } from '../../middleware/errorHandler';
-
-const prisma = new PrismaClient();
+import { logger } from '../../utils/logger';
 
 export class ConfigController {
   // ============================================
@@ -99,7 +98,7 @@ export class ConfigController {
         data: parsedCompany
       });
     } catch (error: any) {
-      console.error('Erro ao salvar dados da empresa:', error);
+      logger.error('Erro ao salvar dados da empresa:', error);
       // Retornar erro mais detalhado
       const errorMessage = error.message || 'Erro ao salvar dados da empresa';
       next(new AppError(500, errorMessage));
@@ -166,7 +165,7 @@ export class ConfigController {
         }
       });
     } catch (error) {
-      console.error('Erro ao criar produto:', error);
+      logger.error('Erro ao criar produto:', error);
       next(new AppError(500, 'Erro ao criar produto'));
     }
   }
@@ -207,7 +206,7 @@ export class ConfigController {
         }
       });
     } catch (error) {
-      console.error('Erro ao atualizar produto:', error);
+      logger.error('Erro ao atualizar produto:', error);
       next(new AppError(500, 'Erro ao atualizar produto'));
     }
   }
@@ -225,7 +224,7 @@ export class ConfigController {
         message: 'Produto deletado com sucesso'
       });
     } catch (error) {
-      console.error('Erro ao deletar produto:', error);
+      logger.error('Erro ao deletar produto:', error);
       next(new AppError(500, 'Erro ao deletar produto'));
     }
   }
@@ -282,7 +281,7 @@ export class ConfigController {
         }
       });
     } catch (error) {
-      console.error('Erro ao criar FAQ:', error);
+      logger.error('Erro ao criar FAQ:', error);
       next(new AppError(500, 'Erro ao criar FAQ'));
     }
   }
@@ -316,7 +315,7 @@ export class ConfigController {
         }
       });
     } catch (error) {
-      console.error('Erro ao atualizar FAQ:', error);
+      logger.error('Erro ao atualizar FAQ:', error);
       next(new AppError(500, 'Erro ao atualizar FAQ'));
     }
   }
@@ -334,7 +333,7 @@ export class ConfigController {
         message: 'FAQ deletado com sucesso'
       });
     } catch (error) {
-      console.error('Erro ao deletar FAQ:', error);
+      logger.error('Erro ao deletar FAQ:', error);
       next(new AppError(500, 'Erro ao deletar FAQ'));
     }
   }
@@ -415,7 +414,7 @@ export class ConfigController {
         data: parsedConfig
       });
     } catch (error) {
-      console.error('Erro ao salvar configuração:', error);
+      logger.error('Erro ao salvar configuração:', error);
       next(new AppError(500, 'Erro ao salvar configuração do chatbot'));
     }
   }
@@ -461,7 +460,7 @@ export class ConfigController {
         data: link
       });
     } catch (error) {
-      console.error('Erro ao criar link:', error);
+      logger.error('Erro ao criar link:', error);
       next(new AppError(500, 'Erro ao criar link de chat'));
     }
   }
@@ -479,7 +478,7 @@ export class ConfigController {
         message: 'Link deletado com sucesso'
       });
     } catch (error) {
-      console.error('Erro ao deletar link:', error);
+      logger.error('Erro ao deletar link:', error);
       next(new AppError(500, 'Erro ao deletar link'));
     }
   }
@@ -529,7 +528,7 @@ export class ConfigController {
         }
       });
     } catch (error) {
-      console.error('Erro ao buscar dados do chatbot:', error);
+      logger.error('Erro ao buscar dados do chatbot:', error);
       next(new AppError(500, 'Erro ao buscar dados do chatbot'));
     }
   }

@@ -69,4 +69,16 @@ if (process.env.NODE_ENV === 'production') {
   );
 }
 
+// ==========================================
+// ERROR HANDLER - Previne crashes do Winston
+// ==========================================
+logger.on('error', (error: any) => {
+  // Ignorar erro EPIPE (broken pipe) durante shutdown
+  if (error.code === 'EPIPE' || error.errno === -4047 || error.syscall === 'write') {
+    return;
+  }
+  // Log outros erros no console como fallback
+  console.error('[Winston Error]:', error.message);
+});
+
 export default logger;

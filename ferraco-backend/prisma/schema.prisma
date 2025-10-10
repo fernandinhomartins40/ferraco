@@ -34,6 +34,7 @@ model User {
   assignedLeads Lead[]    @relation("AssignedTo")
   notes         LeadNote[] @relation("NoteAuthor")
   auditLogs     AuditLog[]
+  refreshTokens RefreshToken[] // 🔐 NOVO: Tokens de refresh
 
   // Phase 3 Relations
   preferences       UserPreferences?
@@ -71,6 +72,21 @@ model UserPermission {
 
   @@unique([userId, permissionId])
   @@map("user_permissions")
+}
+
+// 🔐 NOVO: Refresh Tokens para autenticação segura
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
 }
 
 model Team {

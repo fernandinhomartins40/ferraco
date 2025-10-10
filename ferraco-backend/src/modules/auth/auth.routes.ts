@@ -38,6 +38,13 @@ router.get('/me', authMiddleware, authController.me.bind(authController));
 router.post('/logout', authMiddleware, authController.logout.bind(authController));
 
 /**
+ * @route POST /api/auth/refresh
+ * @desc 🔐 Renovar access token usando refresh token
+ * @access Public
+ */
+router.post('/refresh', authController.refresh.bind(authController));
+
+/**
  * @route POST /api/auth/change-password
  * @desc Alterar senha do usuário
  * @access Private
