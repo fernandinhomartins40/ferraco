@@ -95,16 +95,29 @@ const AdminAI = () => {
         configApi.getFAQs()
       ]);
 
+      console.log('📊 Dados carregados do banco:', { company, prods, config, links, faqItems });
+
       // Atualizar estados com dados do banco
-      if (company) setCompanyData(company);
-      if (prods) setProducts(prods);
+      if (company) {
+        console.log('✅ Company data recebido:', company);
+        setCompanyData(company);
+      }
+      if (prods) {
+        console.log('✅ Products recebidos:', prods.length);
+        setProducts(prods);
+      }
       if (config) {
-        setAIConfig({
+        console.log('✅ ChatbotConfig recebido:', config);
+        const parsedConfig = {
           ...config,
           handoffTriggers: Array.isArray(config.handoffTriggers)
             ? config.handoffTriggers
             : JSON.parse(config.handoffTriggers || '[]')
-        });
+        };
+        console.log('✅ Config parseado:', parsedConfig);
+        setAIConfig(parsedConfig);
+      } else {
+        console.warn('⚠️ Nenhum ChatbotConfig retornado do banco');
       }
       if (links) setChatLinks(links);
       if (faqItems) setFAQs(faqItems);
@@ -112,7 +125,7 @@ const AdminAI = () => {
       // Calcular progresso com dados reais do banco
       calculateProgress(company, prods, faqItems, config);
     } catch (error: any) {
-      console.error('Erro ao carregar dados:', error);
+      console.error('❌ Erro ao carregar dados:', error);
       if (error?.response?.status !== 401) {
         toast.error('Erro ao carregar dados do banco');
       }
