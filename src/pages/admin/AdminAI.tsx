@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2, Building2, Package, MessageSquare, Settings, Trash2, Plus } from 'lucide-react';
 import { configApi, type CompanyData, type Product, type FAQItem, type ChatbotConfig } from '@/utils/configApiClient';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 export default function AdminAI() {
   // ==========================================
@@ -265,14 +266,17 @@ export default function AdminAI() {
   // ==========================================
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <AdminLayout>
+      <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Configuração do Chatbot IA</h1>
@@ -534,6 +538,7 @@ export default function AdminAI() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
