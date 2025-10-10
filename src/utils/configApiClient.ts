@@ -140,10 +140,17 @@ export const configApi = {
 
   async getChatbotConfig(): Promise<ChatbotConfig | null> {
     try {
+      console.log('🔍 Buscando ChatbotConfig da API...');
       const response = await apiClient.get('/config/chatbot-config');
-      return response.data?.data || null;
+      console.log('📡 Response completo:', response);
+      console.log('📦 response.data:', response.data);
+      console.log('✅ response.data?.data:', response.data?.data);
+
+      const result = response.data?.data || null;
+      console.log('🎯 Retornando:', result);
+      return result;
     } catch (error) {
-      console.error('Erro ao buscar config do chatbot:', error);
+      console.error('❌ Erro ao buscar config do chatbot:', error);
       return null;
     }
   },
