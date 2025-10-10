@@ -2,11 +2,14 @@ import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 // Singleton instance do Prisma Client
-let prisma: PrismaClient;
+let prisma: PrismaClient | null = null;
+let isConnecting = false;
+let connectionPromise: Promise<void> | null = null;
 
 /**
  * Obtém a instância do Prisma Client
  * Implementa o padrão Singleton para evitar múltiplas conexões
+ * IMPORTANTE: O cliente já está conectado e pronto para uso
  */
 export function getPrismaClient(): PrismaClient {
   if (!prisma) {
@@ -15,19 +18,41 @@ export function getPrismaClient(): PrismaClient {
         ? ['query', 'info', 'warn', 'error']
         : ['error'],
     });
-
-    // Log de conexão bem-sucedida
-    prisma.$connect()
-      .then(() => {
-        logger.info('✅ Database connected successfully');
-      })
-      .catch((error) => {
-        logger.error('❌ Database connection failed:', error);
-        process.exit(1);
-      });
   }
 
   return prisma;
+}
+
+/**
+ * Conecta o Prisma Client ao banco de dados
+ * DEVE ser chamado antes de usar o cliente
+ */
+export async function connectDatabase(): Promise<void> {
+  // Evita múltiplas tentativas de conexão simultâneas
+  if (isConnecting && connectionPromise) {
+    return connectionPromise;
+  }
+
+  if (prisma) {
+    // Já conectado
+    return Promise.resolve();
+  }
+
+  isConnecting = true;
+  connectionPromise = (async () => {
+    try {
+      const client = getPrismaClient();
+      await client.$connect();
+      logger.info('✅ Database connected successfully');
+      isConnecting = false;
+    } catch (error) {
+      isConnecting = false;
+      logger.error('❌ Database connection failed:', error);
+      throw error;
+    }
+  })();
+
+  return connectionPromise;
 }
 
 /**
@@ -37,6 +62,9 @@ export function getPrismaClient(): PrismaClient {
 export async function disconnectDatabase(): Promise<void> {
   if (prisma) {
     await prisma.$disconnect();
+    prisma = null;
+    isConnecting = false;
+    connectionPromise = null;
     logger.info('Database disconnected');
   }
 }
@@ -47,4 +75,5 @@ export async function disconnectDatabase(): Promise<void> {
 // race conditions e handlers duplicados
 // ==========================================
 
+// Exporta a instância do cliente (será conectado pelo server.ts)
 export default getPrismaClient();
