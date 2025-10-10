@@ -32,6 +32,14 @@ import { configApi, CompanyData, Product, ChatbotConfig as AIConfig, ChatLink, F
 
 const generateShortCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
+// ==========================================
+// STORAGE KEYS - Para persistência local de drafts
+// ==========================================
+const STORAGE_KEYS = {
+  companyDraft: 'ferraco_companyData_draft',
+  aiConfigDraft: 'ferraco_aiConfig_draft',
+} as const;
+
 const AdminAI = () => {
   const [companyData, setCompanyData] = useState<CompanyData>({
     name: '',
@@ -76,8 +84,74 @@ const AdminAI = () => {
     keywords: ''
   });
 
+  // ==========================================
+  // CARREGAR DADOS: Drafts primeiro, depois banco
+  // ==========================================
   useEffect(() => {
+    // 1. Carregar drafts do localStorage primeiro (dados não salvos)
+    const loadDrafts = () => {
+      try {
+        const companyDraft = localStorage.getItem(STORAGE_KEYS.companyDraft);
+        const configDraft = localStorage.getItem(STORAGE_KEYS.aiConfigDraft);
+
+        if (companyDraft) {
+          const parsed = JSON.parse(companyDraft);
+          setCompanyData(parsed);
+        }
+
+        if (configDraft) {
+          const parsed = JSON.parse(configDraft);
+          setAIConfig(parsed);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar drafts do localStorage:', error);
+      }
+    };
+
+    loadDrafts();
+
+    // 2. Carregar dados salvos do banco (sobrescreve drafts se houver)
     loadData();
+  }, []);
+
+  // ==========================================
+  // AUTO-SAVE: Salvar drafts no localStorage
+  // ==========================================
+  useEffect(() => {
+    // Só salvar se tiver algum dado preenchido
+    if (companyData.name || companyData.description || companyData.industry) {
+      localStorage.setItem(STORAGE_KEYS.companyDraft, JSON.stringify(companyData));
+    }
+  }, [companyData]);
+
+  useEffect(() => {
+    // Só salvar se tiver algum dado preenchido
+    if (aiConfig.welcomeMessage || aiConfig.fallbackMessage) {
+      localStorage.setItem(STORAGE_KEYS.aiConfigDraft, JSON.stringify(aiConfig));
+    }
+  }, [aiConfig]);
+
+  // ==========================================
+  // WARNING: Avisar antes de sair com dados não salvos
+  // ==========================================
+  useEffect(() => {
+    const hasUnsavedChanges = () => {
+      const hasDraft =
+        localStorage.getItem(STORAGE_KEYS.companyDraft) ||
+        localStorage.getItem(STORAGE_KEYS.aiConfigDraft);
+      return !!hasDraft;
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = 'Você tem alterações não salvas. Deseja sair mesmo assim?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   const loadData = async () => {
@@ -91,8 +165,10 @@ const AdminAI = () => {
 
       // Apenas atualizar estado se receber dados válidos
       // Isso preserva os valores do formulário se a API falhar no refresh
-      if (company) {
+      if (company && company.name) {
         setCompanyData(company);
+        // ✅ Limpar draft apenas se banco retornou dados válidos
+        localStorage.removeItem(STORAGE_KEYS.companyDraft);
       }
 
       if (prods) {
@@ -172,6 +248,10 @@ const AdminAI = () => {
     try {
       const savedCompany = await configApi.saveCompanyData(companyData);
       setCompanyData(savedCompany); // Atualizar state com dados retornados da API
+
+      // ✅ LIMPAR draft do localStorage após salvar com sucesso
+      //       localStorage.removeItem(STORAGE_KEYS.companyDraft);
+
       toast.success('Dados da empresa salvos no banco de dados!');
 
       // Recalcular progresso
@@ -193,6 +273,10 @@ const AdminAI = () => {
     try {
       const savedConfig = await configApi.saveChatbotConfig(aiConfig);
       setAIConfig(savedConfig); // Atualizar state com dados retornados da API
+
+      // ✅ LIMPAR draft do localStorage após salvar com sucesso
+      //       localStorage.removeItem(STORAGE_KEYS.aiConfigDraft);
+
       toast.success('Configuração salva no banco de dados!');
 
       // Recalcular progresso
