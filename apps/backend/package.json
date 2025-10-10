@@ -55,6 +55,6 @@
     "node": ">=18.0.0"
   },
   "prisma": {
-    "seed": "node --loader tsx/esm prisma/seed.ts"
+    "seed": "npx tsx prisma/seed.ts"
   }
 }

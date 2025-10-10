@@ -28,10 +28,10 @@ fi
 echo "🌐 Iniciando Nginx..."
 nginx
 
-# Iniciar Backend (Node.js) como usuário node (segurança)
+# Iniciar Backend (TypeScript via tsx) como usuário node (segurança)
 echo "⚙️  Iniciando Backend API..."
 cd /app/backend
-su node -s /bin/sh -c "node src/server.js" &
+su node -s /bin/sh -c "npx tsx src/server.ts" &
 BACKEND_PID=$!
 
 echo ""
