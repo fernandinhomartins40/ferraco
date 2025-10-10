@@ -193,18 +193,26 @@ const AdminAI = () => {
         setFAQs(faqItems);
       }
 
-      // Calcular progresso apenas se temos dados válidos
+      // ✅ CALCULAR PROGRESSO DENTRO DO TRY - Só se conseguiu buscar dados do banco
       calculateProgress(company, prods, faqItems, config);
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
       // Não mostrar erro se for 401 - usuário precisa fazer login
       if (error?.response?.status !== 401) {
-        toast.error('Erro ao carregar configurações');
+        toast.error('Erro ao carregar configurações do banco de dados');
       }
+      // ❌ NÃO calcular progresso se houve erro - preserva valor anterior
     }
   };
 
   const calculateProgress = (company: any, prods: any[], faqs: any[], config: any) => {
+    // ✅ VALIDAÇÃO: Só calcular se recebeu dados válidos do banco
+    // Se todos forem null/undefined, não atualizar (preserva progresso anterior)
+    if (!company && !prods && !faqs && !config) {
+      console.warn('Nenhum dado válido para calcular progresso - mantendo valor anterior');
+      return;
+    }
+
     const steps: any[] = [];
     let completed = 0;
 
