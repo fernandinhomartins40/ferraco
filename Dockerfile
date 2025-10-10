@@ -27,8 +27,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Instalar Nginx
-RUN apk add --no-cache nginx
+# Instalar Nginx e OpenSSL (necessário para Prisma)
+RUN apk add --no-cache nginx openssl
 
 # Copiar backend completo com node_modules do builder
 COPY --from=builder /app/apps/backend ./backend
@@ -42,19 +42,21 @@ COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/startup.sh /app/startup.sh
 
 # Criar diretórios necessários e ajustar permissões
-RUN mkdir -p /run/nginx /var/log/nginx /app/data /app/logs && \
+RUN mkdir -p /run/nginx /var/log/nginx /var/lib/nginx/tmp/client_body /app/data /app/logs && \
     chmod +x /app/startup.sh && \
-    chown -R node:node /app /run/nginx /var/log/nginx
+    chown -R nginx:nginx /var/log/nginx /var/lib/nginx /run/nginx && \
+    chown -R node:node /app
 
 # Expor porta
 EXPOSE 3050
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3050/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))" || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3050/health || exit 1
 
-# Usuário não-root
-USER node
+# Rodar como root (Nginx precisa de root para iniciar)
+# O startup.sh vai dropar privilégios para o backend Node.js
+USER root
 
 # Comando de inicialização
 CMD ["/app/startup.sh"]

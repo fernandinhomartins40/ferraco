@@ -9,25 +9,29 @@ echo "🐳 Porta: $PORT"
 echo "========================================="
 
 # Criar diretórios necessários
-mkdir -p /app/data /app/logs /run/nginx /var/log/nginx
+mkdir -p /app/data /app/logs
 
-# Migrar banco de dados (Prisma)
-echo "📊 Executando migrações do banco de dados..."
-cd /app/backend
-npx prisma migrate deploy || echo "⚠️  Aviso: Falha na migração (pode ser normal em primeira execução)"
+# Migrar banco de dados (Prisma) - pular se DATABASE_URL não estiver configurado
+if [ -n "$DATABASE_URL" ]; then
+  echo "📊 Executando migrações do banco de dados..."
+  cd /app/backend
+  npx prisma migrate deploy 2>&1 || echo "⚠️  Aviso: Falha na migração (pode ser normal se banco não estiver acessível)"
 
-# Seed do banco (apenas se estiver vazio)
-echo "🌱 Verificando se precisa popular banco de dados..."
-npx prisma db seed || echo "ℹ️  Seed não executado (banco já populado ou seed não configurado)"
+  # Seed do banco (apenas se estiver vazio)
+  echo "🌱 Verificando se precisa popular banco de dados..."
+  npx prisma db seed 2>&1 || echo "ℹ️  Seed não executado (banco já populado ou seed não configurado)"
+else
+  echo "⚠️  DATABASE_URL não configurado - pulando migrações"
+fi
 
-# Iniciar Nginx
+# Iniciar Nginx (como root - necessário)
 echo "🌐 Iniciando Nginx..."
 nginx
 
-# Iniciar Backend (Node.js)
+# Iniciar Backend (Node.js) como usuário node (segurança)
 echo "⚙️  Iniciando Backend API..."
 cd /app/backend
-node src/server.js &
+su node -s /bin/sh -c "node src/server.js" &
 BACKEND_PID=$!
 
 echo ""
