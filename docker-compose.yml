@@ -1,67 +1,56 @@
 version: '3.8'
 
 services:
-  # Single Container: Frontend + Backend + Nginx
-  ferraco-app:
+  backend:
     build:
-      context: .
+      context: ./apps/backend
       dockerfile: Dockerfile
-    container_name: ferraco-crm
+      target: dev
+    container_name: ferraco-backend
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "3000:3000"
     environment:
-      # Node.js Environment
-      - NODE_ENV=production
-      - PORT=3002
-
-      # Database Configuration
-      - DATABASE_URL=file:/app/backend/data/ferraco.db
-
-      # JWT Configuration (CHANGE IN PRODUCTION!)
-      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production-minimum-32-characters}
-
-      # Logging
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-
-      # Application Settings
-      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
-      - LOGIN_TIMEOUT_MINUTES=${LOGIN_TIMEOUT_MINUTES:-15}
-      - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-60}
-
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=file:./dev.db
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - CORS_ORIGIN=http://localhost:5173,http://localhost:3000
     volumes:
-      # Persistent data storage
-      - ferraco-data:/app/backend/data
-      - ferraco-logs:/app/backend/logs
-
-      # SSL certificates (optional - uncomment when needed)
-      # - ./ssl:/etc/nginx/ssl:ro
-
+      - ./apps/backend:/app
+      - /app/node_modules
+      - backend-data:/app/prisma
     networks:
       - ferraco-network
-
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
-      timeout: 10s
+      timeout: 3s
       retries: 3
       start_period: 40s
 
-    labels:
-      - "com.ferraco.app=crm"
-      - "com.ferraco.version=2.0.0"
-      - "com.ferraco.description=Ferraco CRM - Full Stack Application"
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: ferraco-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000/api
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+    networks:
+      - ferraco-network
+    depends_on:
+      - backend
 
 networks:
   ferraco-network:
     driver: bridge
-    name: ferraco-network
 
 volumes:
-  ferraco-data:
-    name: ferraco-data
-    driver: local
-  ferraco-logs:
-    name: ferraco-logs
-    driver: local
+  backend-data:

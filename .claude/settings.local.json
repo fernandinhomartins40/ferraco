@@ -98,7 +98,11 @@
       "Bash(git restore:*)",
       "Bash(gh run list:*)",
       "Bash(sqlite3:*)",
-      "Bash(python -c \"import yaml; yaml.safe_load(open(''.github/workflows/deploy.yml''))\")"
+      "Bash(python -c \"import yaml; yaml.safe_load(open(''.github/workflows/deploy.yml''))\")",
+      "Bash(git show:*)",
+      "Bash(npx vite build:*)",
+      "Bash(if [ ! -f \"docs/backend/FASE-11-VALIDACOES.md\" ])",
+      "Bash(then echo \"File does not exist, creating...\")"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,1259 @@
+// ============================================================================
+// FERRACO CRM - PRISMA SCHEMA
+// Database: SQLite (Development)
+// Total Tables: 45
+// Total Enums: 21
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  SALES
+  CONSULTANT
+  MANAGER
+  SUPPORT
+}
+
+enum LeadStatus {
+  NOVO
+  EM_ANDAMENTO
+  CONCLUIDO
+  PERDIDO
+  ARQUIVADO
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum CommunicationType {
+  WHATSAPP
+  EMAIL
+  SMS
+  CALL
+}
+
+enum CommunicationDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CommunicationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum InteractionType {
+  CALL
+  EMAIL
+  MEETING
+  WHATSAPP
+  SMS
+  NOTE
+  TASK
+}
+
+enum InteractionOutcome {
+  SUCCESSFUL
+  NO_ANSWER
+  BUSY
+  CALLBACK_REQUESTED
+  NOT_INTERESTED
+  INTERESTED
+}
+
+enum AutomationTriggerType {
+  LEAD_CREATED
+  STATUS_CHANGED
+  TIME_BASED
+  TAG_ADDED
+  NOTE_ADDED
+  INTERACTION_CREATED
+}
+
+enum AutomationActionType {
+  SEND_MESSAGE
+  CHANGE_STATUS
+  ADD_TAG
+  REMOVE_TAG
+  ADD_NOTE
+  SET_FOLLOW_UP
+  ASSIGN_USER
+  CREATE_TASK
+}
+
+enum IntegrationType {
+  ZAPIER
+  MAKE
+  GOOGLE_ANALYTICS
+  FACEBOOK_ADS
+  INSTAGRAM_ADS
+  HUBSPOT
+  PIPEDRIVE
+  MAILCHIMP
+  CUSTOM
+}
+
+enum IntegrationSyncStatus {
+  SUCCESS
+  ERROR
+  PENDING
+  DISABLED
+}
+
+enum IntegrationSyncFrequency {
+  REALTIME
+  HOURLY
+  DAILY
+  WEEKLY
+}
+
+enum ReportType {
+  LEADS_OVERVIEW
+  CONVERSION_FUNNEL
+  TAG_PERFORMANCE
+  AUTOMATION_STATS
+  TEAM_PERFORMANCE
+  CUSTOM
+}
+
+enum ReportScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ReportExportFormat {
+  PDF
+  EXCEL
+  JSON
+  CSV
+}
+
+enum MessageTemplateCategory {
+  WELCOME
+  FOLLOW_UP
+  REMINDER
+  PROMOTIONAL
+  CUSTOM
+}
+
+enum AISentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum AIUrgencyLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DuplicateDetectionStatus {
+  PENDING
+  CONFIRMED
+  DISMISSED
+}
+
+enum DuplicateSuggestedAction {
+  MERGE
+  KEEP_SEPARATE
+  NEEDS_REVIEW
+}
+
+enum DocumentType {
+  CONTRACT
+  PROPOSAL
+  AGREEMENT
+  NDA
+  CUSTOM
+}
+
+enum NotificationChannel {
+  EMAIL
+  PUSH
+  IN_APP
+  SMS
+}
+
+// ============================================================================
+// TABELA: User (Usuários do Sistema)
+// ============================================================================
+
+model User {
+  id                String    @id @default(cuid())
+  username          String    @unique
+  email             String    @unique
+  password          String    // Hash bcrypt
+  name              String
+  role              UserRole  @default(CONSULTANT)
+  avatar            String?
+  isActive          Boolean   @default(true)
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastLogin         DateTime?
+
+  // Relações
+  permissions       UserPermission[]
+  teamMemberships   TeamMember[]
+  preferences       UserPreferences?
+  refreshTokens     RefreshToken[]
+  assignedLeads     Lead[]       @relation("AssignedTo")
+  createdLeads      Lead[]       @relation("CreatedBy")
+  notes             Note[]
+  interactions      Interaction[]
+  opportunitiesCreated Opportunity[] @relation("OpportunityCreatedBy")
+  opportunitiesAssigned Opportunity[] @relation("OpportunityAssignedTo")
+  automationsCreated Automation[] @relation("AutomationCreatedBy")
+  pipelinesCreated  Pipeline[]   @relation("PipelineCreatedBy")
+  integrationsCreated Integration[] @relation("IntegrationCreatedBy")
+  reportsCreated    Report[]     @relation("ReportCreatedBy")
+  auditLogs         AuditLog[]
+  signatures        DigitalSignature[]
+  dashboardConfigs  DashboardConfig[]
+  notifications     Notification[]
+
+  @@index([email])
+  @@index([username])
+  @@index([isActive])
+  @@map("users")
+}
+
+// ============================================================================
+// TABELA: UserPermission (Permissões Granulares)
+// ============================================================================
+
+model UserPermission {
+  id         String   @id @default(cuid())
+  userId     String
+  resource   String   // 'leads', 'reports', 'automations', etc
+  actions    String   // JSON array: ['create', 'read', 'update', 'delete']
+  conditions String?  // JSON: condições especiais
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resource])
+  @@index([userId])
+  @@map("user_permissions")
+}
+
+// ============================================================================
+// TABELA: UserPreferences (Preferências do Usuário)
+// ============================================================================
+
+model UserPreferences {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  theme                String   @default("light") // 'light', 'dark', 'auto'
+  language             String   @default("pt-BR")
+  timezone             String   @default("America/Sao_Paulo")
+
+  // Notificações
+  emailNewLeads        Boolean  @default(true)
+  emailLeadUpdates     Boolean  @default(true)
+  emailAutomations     Boolean  @default(true)
+  emailWeeklyReports   Boolean  @default(true)
+  emailSystemAlerts    Boolean  @default(true)
+
+  pushEnabled          Boolean  @default(true)
+  pushUrgentLeads      Boolean  @default(true)
+  pushAssignedTasks    Boolean  @default(true)
+  pushDeadlines        Boolean  @default(true)
+
+  inAppEnabled         Boolean  @default(true)
+  inAppSound           Boolean  @default(true)
+  inAppDesktop         Boolean  @default(true)
+
+  // Dashboard padrão
+  defaultDashboardId   String?
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultDashboard     DashboardConfig? @relation(fields: [defaultDashboardId], references: [id])
+
+  @@map("user_preferences")
+}
+
+// ============================================================================
+// TABELA: RefreshToken (Tokens de Refresh JWT)
+// ============================================================================
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  revokedAt  DateTime?
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// TABELA: Team (Times/Equipes)
+// ============================================================================
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     TeamMember[]
+  leads       Lead[]
+
+  @@map("teams")
+}
+
+// ============================================================================
+// TABELA: TeamMember (Membros de Times)
+// ============================================================================
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  isLead    Boolean  @default(false) // Líder do time
+
+  joinedAt  DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+// ============================================================================
+// TABELA: Lead (Leads/Contatos)
+// ============================================================================
+
+model Lead {
+  id                String        @id @default(cuid())
+  name              String
+  email             String?
+  phone             String
+  status            LeadStatus    @default(NOVO)
+  priority          LeadPriority  @default(MEDIUM)
+  source            String?       // Website, Facebook, Instagram, etc
+
+  // Atribuição
+  assignedToId      String?
+  assignedAt        DateTime?
+  teamId            String?
+
+  // CRM
+  pipelineStageId   String?
+  leadScore         Float         @default(0)
+  isDuplicate       Boolean       @default(false)
+  duplicateOfId     String?
+
+  // Follow-up
+  nextFollowUpAt    DateTime?
+  lastContactedAt   DateTime?
+
+  // Metadados
+  metadata          String?       // JSON: dados adicionais
+
+  // Timestamps
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  createdById       String
+
+  // Relações
+  assignedTo        User?         @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy         User          @relation("CreatedBy", fields: [createdById], references: [id])
+  team              Team?         @relation(fields: [teamId], references: [id])
+  pipelineStage     PipelineStage? @relation(fields: [pipelineStageId], references: [id])
+  duplicateOf       Lead?         @relation("DuplicateLeads", fields: [duplicateOfId], references: [id])
+  duplicates        Lead[]        @relation("DuplicateLeads")
+
+  notes             Note[]
+  tags              LeadTag[]
+  communications    Communication[]
+  interactions      Interaction[]
+  opportunities     Opportunity[]
+  aiAnalysis        AIAnalysis?
+  conversionPrediction ConversionPrediction?
+  leadScoring       LeadScoring?
+  duplicateDetections DuplicateDetection[] @relation("DetectedLead")
+  potentialDuplicates DuplicateMatch[]
+  signatures        DigitalSignature[]
+  partialLeads      PartialLead[]
+  chatbotSessions   ChatbotSession[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([priority])
+  @@index([leadScore])
+  @@map("leads")
+}
+
+// ============================================================================
+// TABELA: PartialLead (Leads Parciais - Formulários Incompletos)
+// ============================================================================
+
+model PartialLead {
+  id               String    @id @default(cuid())
+  sessionId        String    @unique
+  name             String?
+  email            String?
+  phone            String?
+  source           String
+  url              String
+  userAgent        String
+  ipAddress        String?
+
+  // Tracking
+  firstInteraction DateTime  @default(now())
+  lastUpdate       DateTime  @updatedAt
+  interactions     Int       @default(1)
+
+  // Status
+  completed        Boolean   @default(false)
+  abandoned        Boolean   @default(false)
+  convertedToLeadId String?
+  completedAt      DateTime?
+
+  // Timestamps
+  createdAt        DateTime  @default(now())
+
+  // Relações
+  convertedToLead  Lead?     @relation(fields: [convertedToLeadId], references: [id])
+
+  @@index([sessionId])
+  @@index([completed])
+  @@index([abandoned])
+  @@index([createdAt])
+  @@map("partial_leads")
+}
+
+// ============================================================================
+// TABELA: Note (Notas/Comentários)
+// ============================================================================
+
+model Note {
+  id          String   @id @default(cuid())
+  content     String
+  important   Boolean  @default(false)
+  category    String?  // Ligação, Email, Reunião, etc
+
+  // Vinculação
+  leadId      String
+  createdById String
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relações
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([leadId])
+  @@index([createdById])
+  @@index([important])
+  @@index([createdAt])
+  @@map("notes")
+}
+
+// ============================================================================
+// TABELA: Tag (Tags/Etiquetas)
+// ============================================================================
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  color       String
+  description String?
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relações
+  leads       LeadTag[]
+  rules       TagRule[]
+
+  @@index([name])
+  @@index([isActive])
+  @@map("tags")
+}
+
+// ============================================================================
+// TABELA: LeadTag (Relação Many-to-Many: Lead <-> Tag)
+// ============================================================================
+
+model LeadTag {
+  id        String   @id @default(cuid())
+  leadId    String
+  tagId     String
+  addedAt   DateTime @default(now())
+  addedById String?
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, tagId])
+  @@index([leadId])
+  @@index([tagId])
+  @@map("lead_tags")
+}
+
+// ============================================================================
+// TABELA: TagRule (Regras de Aplicação Automática de Tags)
+// ============================================================================
+
+model TagRule {
+  id         String   @id @default(cuid())
+  tagId      String
+  condition  String   // 'status_change', 'time_based', 'source', 'keyword'
+  value      String   // JSON: valor da condição
+  action     String   // 'add_tag', 'remove_tag'
+  isActive   Boolean  @default(true)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@index([tagId])
+  @@index([isActive])
+  @@map("tag_rules")
+}
+
+// ============================================================================
+// TABELA: Communication (Comunicações)
+// ============================================================================
+
+model Communication {
+  id           String                  @id @default(cuid())
+  leadId       String
+  type         CommunicationType
+  direction    CommunicationDirection
+  status       CommunicationStatus     @default(PENDING)
+  content      String
+  templateId   String?
+
+  // Metadados
+  metadata     String?                 // JSON: dados adicionais (IDs externos, etc)
+
+  // Timestamps
+  timestamp    DateTime                @default(now())
+  deliveredAt  DateTime?
+  readAt       DateTime?
+
+  // Relações
+  lead         Lead                    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  template     MessageTemplate?        @relation(fields: [templateId], references: [id])
+
+  @@index([leadId])
+  @@index([type])
+  @@index([status])
+  @@index([timestamp])
+  @@map("communications")
+}
+
+// ============================================================================
+// TABELA: MessageTemplate (Templates de Mensagens)
+// ============================================================================
+
+model MessageTemplate {
+  id            String                    @id @default(cuid())
+  name          String
+  type          CommunicationType
+  category      MessageTemplateCategory
+  content       String
+  variables     String                    // JSON array: variáveis disponíveis
+  isActive      Boolean                   @default(true)
+
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  communications Communication[]
+
+  @@index([type])
+  @@index([category])
+  @@index([isActive])
+  @@map("message_templates")
+}
+
+// ============================================================================
+// TABELA: Interaction (Interações com Leads)
+// ============================================================================
+
+model Interaction {
+  id              String             @id @default(cuid())
+  leadId          String
+  type            InteractionType
+  title           String
+  description     String
+  duration        Int?               // minutos
+  outcome         InteractionOutcome?
+  nextAction      String?
+  nextActionDate  DateTime?
+
+  // Participantes
+  participants    String             // JSON array: IDs de usuários
+
+  // Timestamps
+  createdAt       DateTime           @default(now())
+  createdById     String
+
+  // Relações
+  lead            Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy       User               @relation(fields: [createdById], references: [id])
+  files           InteractionFile[]
+
+  @@index([leadId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([createdById])
+  @@map("interactions")
+}
+
+// ============================================================================
+// TABELA: InteractionFile (Arquivos de Interações)
+// ============================================================================
+
+model InteractionFile {
+  id            String      @id @default(cuid())
+  interactionId String
+  name          String
+  url           String
+  type          String
+  size          Int
+  uploadedAt    DateTime    @default(now())
+
+  interaction   Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+
+  @@index([interactionId])
+  @@map("interaction_files")
+}
+
+// ============================================================================
+// TABELA: Pipeline (Pipelines de Vendas)
+// ============================================================================
+
+model Pipeline {
+  id           String          @id @default(cuid())
+  name         String
+  description  String?
+  businessType String
+  isDefault    Boolean         @default(false)
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  createdById  String
+
+  createdBy    User            @relation("PipelineCreatedBy", fields: [createdById], references: [id])
+  stages       PipelineStage[]
+
+  @@index([isDefault])
+  @@map("pipelines")
+}
+
+// ============================================================================
+// TABELA: PipelineStage (Estágios do Pipeline)
+// ============================================================================
+
+model PipelineStage {
+  id               String   @id @default(cuid())
+  pipelineId       String
+  name             String
+  description      String?
+  color            String
+  order            Int
+  expectedDuration Int      // dias
+  conversionRate   Float    @default(0)
+  isClosedWon      Boolean  @default(false)
+  isClosedLost     Boolean  @default(false)
+
+  // Automações vinculadas
+  automations      String?  // JSON array: IDs de automações
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  pipeline         Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads            Lead[]
+
+  @@unique([pipelineId, order])
+  @@index([pipelineId])
+  @@map("pipeline_stages")
+}
+
+// ============================================================================
+// TABELA: Opportunity (Oportunidades de Venda)
+// ============================================================================
+
+model Opportunity {
+  id                String    @id @default(cuid())
+  leadId            String
+  title             String
+  description       String
+  value             Float
+  currency          String    @default("BRL")
+  probability       Int       // 0-100
+  stage             String
+  source            String
+  competitors       String?   // JSON array
+  notes             String?
+
+  expectedCloseDate DateTime
+  actualCloseDate   DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdById       String
+  assignedToId      String
+
+  lead              Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy         User      @relation("OpportunityCreatedBy", fields: [createdById], references: [id])
+  assignedTo        User      @relation("OpportunityAssignedTo", fields: [assignedToId], references: [id])
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@map("opportunities")
+}
+
+// ============================================================================
+// TABELA: Automation (Regras de Automação)
+// ============================================================================
+
+model Automation {
+  id             String                  @id @default(cuid())
+  name           String
+  description    String
+  isActive       Boolean                 @default(true)
+  triggerType    AutomationTriggerType
+  triggerValue   String?                 // JSON: valor do trigger
+
+  conditions     String                  // JSON array: condições
+  actions        String                  // JSON array: ações
+
+  executionCount Int                     @default(0)
+  lastExecutedAt DateTime?
+
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  createdById    String
+
+  createdBy      User                    @relation("AutomationCreatedBy", fields: [createdById], references: [id])
+  executions     AutomationExecution[]
+
+  @@index([isActive])
+  @@index([triggerType])
+  @@map("automations")
+}
+
+// ============================================================================
+// TABELA: AutomationExecution (Histórico de Execuções)
+// ============================================================================
+
+model AutomationExecution {
+  id            String     @id @default(cuid())
+  automationId  String
+  leadId        String?
+  status        String     // 'success', 'failed', 'partial'
+  result        String?    // JSON: resultado da execução
+  error         String?
+
+  executedAt    DateTime   @default(now())
+
+  automation    Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([automationId])
+  @@index([executedAt])
+  @@map("automation_executions")
+}
+
+// ============================================================================
+// TABELA: Integration (Integrações Externas)
+// ============================================================================
+
+model Integration {
+  id            String                    @id @default(cuid())
+  name          String
+  type          IntegrationType
+  isEnabled     Boolean                   @default(true)
+
+  // Configurações
+  config        String                    // JSON: configurações da integração
+  credentials   String                    // JSON ENCRYPTED: credenciais
+
+  // Sync
+  syncFrequency IntegrationSyncFrequency
+  syncStatus    IntegrationSyncStatus     @default(PENDING)
+  lastSync      DateTime?
+  errorMessage  String?
+
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  createdById   String
+
+  createdBy     User                      @relation("IntegrationCreatedBy", fields: [createdById], references: [id])
+  syncLogs      IntegrationSyncLog[]
+
+  @@index([type])
+  @@index([isEnabled])
+  @@index([syncStatus])
+  @@map("integrations")
+}
+
+// ============================================================================
+// TABELA: IntegrationSyncLog (Logs de Sincronização)
+// ============================================================================
+
+model IntegrationSyncLog {
+  id            String      @id @default(cuid())
+  integrationId String
+  status        String      // 'success', 'error'
+  recordsSynced Int         @default(0)
+  error         String?
+  details       String?     // JSON
+
+  syncedAt      DateTime    @default(now())
+
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@index([syncedAt])
+  @@map("integration_sync_logs")
+}
+
+// ============================================================================
+// TABELA: Report (Relatórios)
+// ============================================================================
+
+model Report {
+  id              String                  @id @default(cuid())
+  name            String
+  type            ReportType
+  filters         String                  // JSON: filtros do relatório
+  widgets         String                  // JSON array: widgets
+
+  isScheduled     Boolean                 @default(false)
+  scheduleFrequency ReportScheduleFrequency?
+  scheduleTime    String?                 // HH:mm
+  scheduleRecipients String?              // JSON array: emails
+  scheduleFormat  ReportExportFormat?
+
+  lastGenerated   DateTime?
+
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  createdById     String
+
+  createdBy       User                    @relation("ReportCreatedBy", fields: [createdById], references: [id])
+  generations     ReportGeneration[]
+
+  @@index([type])
+  @@index([isScheduled])
+  @@map("reports")
+}
+
+// ============================================================================
+// TABELA: ReportGeneration (Gerações de Relatórios)
+// ============================================================================
+
+model ReportGeneration {
+  id          String   @id @default(cuid())
+  reportId    String
+  format      String
+  fileUrl     String?
+  status      String   // 'generating', 'completed', 'failed'
+  error       String?
+
+  generatedAt DateTime @default(now())
+
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([generatedAt])
+  @@map("report_generations")
+}
+
+// ============================================================================
+// TABELA: DashboardConfig (Configurações de Dashboard)
+// ============================================================================
+
+model DashboardConfig {
+  id         String   @id @default(cuid())
+  userId     String?  // null = dashboard global
+  name       String
+  layout     String   @default("grid") // 'grid', 'list'
+  widgets    String   // JSON array: configuração dos widgets
+  isDefault  Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userPreferences UserPreferences[]
+
+  @@index([userId])
+  @@index([isDefault])
+  @@map("dashboard_configs")
+}
+
+// ============================================================================
+// TABELA: AIAnalysis (Análises de IA)
+// ============================================================================
+
+model AIAnalysis {
+  id                String         @id @default(cuid())
+  leadId            String         @unique
+  sentimentScore    Float          // -1 to 1
+  sentiment         AISentiment
+  keyTopics         String         // JSON array
+  urgencyLevel      AIUrgencyLevel
+  confidenceScore   Float          // 0-100
+
+  lastAnalyzed      DateTime       @default(now())
+
+  lead              Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  recommendations   AIRecommendation[]
+
+  @@index([leadId])
+  @@index([sentiment])
+  @@index([urgencyLevel])
+  @@map("ai_analyses")
+}
+
+// ============================================================================
+// TABELA: AIRecommendation (Recomendações de IA)
+// ============================================================================
+
+model AIRecommendation {
+  id              String      @id @default(cuid())
+  aiAnalysisId    String
+  type            String      // 'call', 'email', 'whatsapp', etc
+  priority        String      // 'low', 'medium', 'high'
+  title           String
+  description     String
+  suggestedAction String
+  expectedImpact  String
+  confidence      Float       // 0-100
+  isImplemented   Boolean     @default(false)
+
+  createdAt       DateTime    @default(now())
+
+  aiAnalysis      AIAnalysis  @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([aiAnalysisId])
+  @@index([isImplemented])
+  @@map("ai_recommendations")
+}
+
+// ============================================================================
+// TABELA: ConversionPrediction (Predição de Conversão)
+// ============================================================================
+
+model ConversionPrediction {
+  id                        String   @id @default(cuid())
+  leadId                    String   @unique
+  probability               Float    // 0-100
+  confidence                Float    // 0-100
+  estimatedTimeToConversion Int      // dias
+  suggestedActions          String   // JSON array
+  factors                   String   // JSON array: fatores de conversão
+
+  lastUpdated               DateTime @default(now())
+
+  lead                      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([probability])
+  @@map("conversion_predictions")
+}
+
+// ============================================================================
+// TABELA: LeadScoring (Pontuação de Leads)
+// ============================================================================
+
+model LeadScoring {
+  id             String   @id @default(cuid())
+  leadId         String   @unique
+  score          Float
+  factors        String   // JSON array: fatores da pontuação
+  history        String   // JSON array: histórico de mudanças
+
+  lastCalculated DateTime @default(now())
+
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([score])
+  @@map("lead_scoring")
+}
+
+// ============================================================================
+// TABELA: DuplicateDetection (Detecção de Duplicatas)
+// ============================================================================
+
+model DuplicateDetection {
+  id          String                    @id @default(cuid())
+  leadId      String
+  confidence  Float                     // 0-100
+  status      DuplicateDetectionStatus
+
+  resolvedAt  DateTime?
+  resolvedBy  String?
+
+  createdAt   DateTime                  @default(now())
+
+  lead        Lead                      @relation("DetectedLead", fields: [leadId], references: [id], onDelete: Cascade)
+  matches     DuplicateMatch[]
+
+  @@index([leadId])
+  @@index([status])
+  @@map("duplicate_detections")
+}
+
+// ============================================================================
+// TABELA: DuplicateMatch (Matches de Duplicatas)
+// ============================================================================
+
+model DuplicateMatch {
+  id                   String              @id @default(cuid())
+  duplicateDetectionId String
+  potentialDuplicateId String
+  similarity           Float               // 0-100
+  matchingFields       String              // JSON array: campos que batem
+  suggestedAction      DuplicateSuggestedAction
+
+  createdAt            DateTime            @default(now())
+
+  duplicateDetection   DuplicateDetection  @relation(fields: [duplicateDetectionId], references: [id], onDelete: Cascade)
+  potentialDuplicate   Lead                @relation(fields: [potentialDuplicateId], references: [id], onDelete: Cascade)
+
+  @@index([duplicateDetectionId])
+  @@index([potentialDuplicateId])
+  @@map("duplicate_matches")
+}
+
+// ============================================================================
+// TABELA: ChatbotSession (Sessões do Chatbot)
+// ============================================================================
+
+model ChatbotSession {
+  id             String            @id @default(cuid())
+  leadId         String?
+  sessionId      String            @unique
+  isActive       Boolean           @default(true)
+  isQualified    Boolean           @default(false)
+  conversationData String           // JSON: dados da conversa
+
+  startedAt      DateTime          @default(now())
+  endedAt        DateTime?
+
+  lead           Lead?             @relation(fields: [leadId], references: [id])
+  messages       ChatbotMessage[]
+
+  @@index([leadId])
+  @@index([sessionId])
+  @@map("chatbot_sessions")
+}
+
+// ============================================================================
+// TABELA: ChatbotMessage (Mensagens do Chatbot)
+// ============================================================================
+
+model ChatbotMessage {
+  id               String          @id @default(cuid())
+  chatbotSessionId String
+  sender           String          // 'user', 'bot'
+  content          String
+  intent           String?
+  confidence       Float?
+
+  timestamp        DateTime        @default(now())
+
+  chatbotSession   ChatbotSession  @relation(fields: [chatbotSessionId], references: [id], onDelete: Cascade)
+
+  @@index([chatbotSessionId])
+  @@index([timestamp])
+  @@map("chatbot_messages")
+}
+
+// ============================================================================
+// TABELA: ChatbotConfig (Configuração do Chatbot)
+// ============================================================================
+
+model ChatbotConfig {
+  id                  String   @id @default(cuid())
+  isEnabled           Boolean  @default(true)
+  welcomeMessage      String
+  fallbackMessage     String
+  qualificationQuestions String  // JSON array
+  handoffTriggers     String   // JSON array
+  businessHours       String   // JSON: horários de funcionamento
+
+  updatedAt           DateTime @updatedAt
+
+  @@map("chatbot_config")
+}
+
+// ============================================================================
+// TABELA: DigitalSignature (Assinaturas Digitais)
+// ============================================================================
+
+model DigitalSignature {
+  id             String       @id @default(cuid())
+  userId         String
+  leadId         String
+  documentType   DocumentType
+  signatureData  String       // base64
+  ipAddress      String
+  isValid        Boolean      @default(true)
+  certificateId  String?
+
+  timestamp      DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id])
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([timestamp])
+  @@map("digital_signatures")
+}
+
+// ============================================================================
+// TABELA: AuditLog (Logs de Auditoria)
+// ============================================================================
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String
+  userName     String
+  action       String
+  resource     String
+  resourceId   String
+  details      String?  // JSON
+  ipAddress    String
+  userAgent    String
+  success      Boolean  @default(true)
+  errorMessage String?
+
+  timestamp    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([resource])
+  @@index([resourceId])
+  @@index([timestamp])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// TABELA: Notification (Notificações)
+// ============================================================================
+
+model Notification {
+  id          String              @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  channel     NotificationChannel
+  isRead      Boolean             @default(false)
+  readAt      DateTime?
+  data        String?             // JSON: dados adicionais
+
+  createdAt   DateTime            @default(now())
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================================================
+// TABELA: SystemConfig (Configurações do Sistema)
+// ============================================================================
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   // JSON
+  isPublic  Boolean  @default(false) // Se pode ser exposto ao frontend
+
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@map("system_config")
+}
+
+// ============================================================================
+// TABELA: FileUpload (Uploads de Arquivos)
+// ============================================================================
+
+model FileUpload {
+  id          String   @id @default(cuid())
+  fileName    String
+  originalName String
+  mimeType    String
+  size        Int
+  path        String
+  url         String
+  uploadedById String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([uploadedById])
+  @@index([createdAt])
+  @@map("file_uploads")
+}
+
+// ============================================================================
+// FIM DO SCHEMA
+// ============================================================================
