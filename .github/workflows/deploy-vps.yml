@@ -17,7 +17,7 @@ env:
   APP_DIR: '/root/ferraco-crm'
   APP_PORT: '3050'
   COMPOSE_PROJECT: 'ferraco'
-  DOMAIN: 'painelcheckar.com.br'
+  DOMAIN: 'metalurgicaferraco.com'
 
 jobs:
   deploy:
@@ -39,19 +39,19 @@ jobs:
     - name: 🔍 Pre-Deploy Validation
       run: |
         echo "🔍 Validando estrutura do projeto FERRACO CRM..."
-        echo "📋 Arquitetura: Container Único (Frontend + Backend + Nginx)"
+        echo "📋 Arquitetura: Monorepo (apps/backend + apps/frontend)"
         echo ""
         echo "📦 Arquivos essenciais:"
         ls -la Dockerfile docker-compose.vps.yml || { echo "❌ Docker files faltando!"; exit 1; }
         ls -la docker/nginx.conf docker/startup.sh || { echo "❌ Nginx/startup faltando!"; exit 1; }
         echo ""
-        echo "📋 Frontend (React):"
-        ls -la package.json vite.config.ts src/components/ src/pages/ || { echo "❌ Frontend incompleto!"; exit 1; }
+        echo "📋 Frontend (React - apps/frontend):"
+        ls -la apps/frontend/package.json apps/frontend/vite.config.ts apps/frontend/src/ || { echo "❌ Frontend incompleto!"; exit 1; }
         echo ""
-        echo "📋 Backend (Node.js):"
-        ls -la ferraco-backend/package.json ferraco-backend/src/ ferraco-backend/prisma/ || { echo "❌ Backend incompleto!"; exit 1; }
+        echo "📋 Backend (Node.js - apps/backend):"
+        ls -la apps/backend/package.json apps/backend/src/ apps/backend/prisma/ || { echo "❌ Backend incompleto!"; exit 1; }
         echo ""
-        echo "✅ Estrutura validada com sucesso!"
+        echo "✅ Estrutura monorepo validada com sucesso!"
 
     - name: 📦 Prepare Deployment Package
       run: |
@@ -111,7 +111,7 @@ jobs:
           echo "🌿 Branch: ${{ github.ref_name }}"
           echo "👤 Actor: ${{ github.actor }}"
           echo "🕐 Timestamp: $(date)"
-          echo "🎯 Arquitetura: Container Único"
+          echo "🎯 Arquitetura: Monorepo - Container Único"
           echo "🐳 Porta VPS: ${{ env.APP_PORT }}"
           echo "========================================="
           echo ""
@@ -134,7 +134,7 @@ jobs:
           fi
           docker --version
 
-          # Verificar Docker Compose v2 (PROBLEMA #8)
+          # Verificar Docker Compose v2
           if ! docker compose version &> /dev/null; then
             echo "Instalando Docker Compose v2..."
             apt-get update -qq
@@ -142,15 +142,13 @@ jobs:
           fi
           docker compose version
 
-          # Parar containers anteriores (SEM remover volumes - mantém dados persistentes)
+          # Parar containers anteriores
           echo "⏹️  Parando containers anteriores..."
           cd ${{ env.APP_DIR }} 2>/dev/null || true
-          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --remove-orphans 2>/dev/null || true
+          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --volumes --remove-orphans 2>/dev/null || true
 
           # Remover container se ainda existir
           docker rm -f ferraco-crm-vps 2>/dev/null || true
-
-          echo "✅ Volumes de dados preservados (dados do banco permanecem intactos)"
 
           # Liberar porta
           echo "🔓 Liberando porta ${{ env.APP_PORT }}..."
@@ -194,17 +192,17 @@ jobs:
           tar -xzf /tmp/deploy.tar.gz
           rm -f /tmp/deploy.tar.gz
 
-          # Validar estrutura
-          echo "🔍 Validando estrutura..."
+          # Validar estrutura monorepo
+          echo "🔍 Validando estrutura monorepo..."
           [ -f "Dockerfile" ] || { echo "❌ Dockerfile não encontrado!"; exit 1; }
           [ -f "docker-compose.vps.yml" ] || { echo "❌ docker-compose.vps.yml não encontrado!"; exit 1; }
           [ -d "docker" ] || { echo "❌ Pasta docker não encontrada!"; exit 1; }
           [ -f "docker/startup.sh" ] || { echo "❌ docker/startup.sh não encontrado!"; exit 1; }
           [ -f "docker/nginx.conf" ] || { echo "❌ docker/nginx.conf não encontrado!"; exit 1; }
-          [ -d "ferraco-backend" ] || { echo "❌ Backend não encontrado!"; exit 1; }
-          [ -d "src" ] || { echo "❌ Frontend não encontrado!"; exit 1; }
+          [ -d "apps/backend" ] || { echo "❌ Backend (apps/backend) não encontrado!"; exit 1; }
+          [ -d "apps/frontend" ] || { echo "❌ Frontend (apps/frontend) não encontrado!"; exit 1; }
 
-          # Corrigir permissões dos scripts (PROBLEMA #5)
+          # Corrigir permissões dos scripts
           echo "🔧 Corrigindo permissões dos scripts..."
           chmod +x docker/startup.sh docker/setup-ssl.sh 2>/dev/null || true
 
@@ -212,7 +210,7 @@ jobs:
           echo "📋 Conteúdo da pasta docker:"
           ls -la docker/
 
-          echo "✅ Estrutura validada!"
+          echo "✅ Estrutura monorepo validada!"
 
           # Criar diretórios persistentes (volumes Docker usarão esses diretórios)
           echo "🗄️  Criando diretórios persistentes para volumes Docker..."
@@ -337,10 +335,10 @@ jobs:
         echo "  👨‍💼 Admin: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin"
         echo ""
         echo "🏗️  Stack Tecnológica:"
-        echo "  🎯 Backend: Node.js + Express + Prisma + SQLite"
+        echo "  🎯 Backend: Node.js + Express + Prisma + PostgreSQL"
         echo "  🎨 Frontend: React + Vite + TypeScript + Tailwind"
         echo "  🌐 Proxy: Nginx"
-        echo "  🐳 Deploy: Docker (Container Único)"
+        echo "  🐳 Deploy: Docker (Container Único - Monorepo)"
         echo "  🔐 Auth: JWT + Bcrypt"
         echo ""
         echo "✅ Sistema pronto para uso!"
