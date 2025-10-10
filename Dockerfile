@@ -33,7 +33,7 @@ RUN apk add --no-cache nginx
 # Copiar apenas dependências de produção do backend
 COPY --from=builder /app/apps/backend/package*.json ./backend/
 WORKDIR /app/backend
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copiar código do backend e Prisma Client
 WORKDIR /app
