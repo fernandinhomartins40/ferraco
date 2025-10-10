@@ -23,9 +23,12 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
+# Copiar arquivos de configuração base
+COPY tsconfig.base.json ./
+COPY package*.json ./
+
 # Copiar package files do frontend
 COPY apps/frontend/package*.json ./apps/frontend/
-COPY package*.json ./
 
 # Instalar dependências do frontend
 WORKDIR /app/apps/frontend
@@ -34,7 +37,8 @@ RUN npm ci
 # Copiar código do frontend
 COPY apps/frontend ./
 
-# Build do frontend
+# Build do frontend (NODE_ENV=production desabilita lovable-tagger automaticamente)
+ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 3: Runtime - Container Único
