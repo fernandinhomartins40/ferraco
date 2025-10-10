@@ -1,0 +1,63 @@
+# Git
+.git
+.gitignore
+.github
+
+# Node modules
+**/node_modules
+**/dist
+**/build
+
+# Logs
+**/*.log
+**/logs
+
+# Environment
+.env.local
+.env.*.local
+**/.env
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing
+**/coverage
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+**/tests
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Temp files
+*.tmp
+*.bak
+*.old
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+!docker-compose.vps.yml
+
+# Backend specific
+apps/backend/prisma/migrations
+
+# Frontend specific
+apps/frontend/dist
+apps/frontend/.vite
+
+# Package manager
+.pnpm-store
+.yarn
+bun.lockb
