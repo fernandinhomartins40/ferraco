@@ -321,6 +321,15 @@ const AdminAI = () => {
       setProducts(prev => [created, ...prev]);
       setNewProduct({ name: '', description: '', category: '', price: '', keywords: '', benefits: '' });
       toast.success('Produto adicionado!');
+
+      // ✅ RECALCULAR PROGRESSO consultando banco de dados
+      const [company, prods, faqItems, config] = await Promise.all([
+        configApi.getCompanyData(),
+        configApi.getProducts(),
+        configApi.getFAQs(),
+        configApi.getChatbotConfig()
+      ]);
+      calculateProgress(company, prods, faqItems, config);
     } catch (error) {
       console.error('Erro ao adicionar produto:', error);
       toast.error('Erro ao adicionar produto');
@@ -376,6 +385,15 @@ const AdminAI = () => {
       setFAQs(prev => [created, ...prev]);
       setNewFAQ({ question: '', answer: '', category: 'Geral', keywords: '' });
       toast.success('FAQ adicionado!');
+
+      // ✅ RECALCULAR PROGRESSO consultando banco de dados
+      const [company, prods, faqItems, config] = await Promise.all([
+        configApi.getCompanyData(),
+        configApi.getProducts(),
+        configApi.getFAQs(),
+        configApi.getChatbotConfig()
+      ]);
+      calculateProgress(company, prods, faqItems, config);
     } catch (error) {
       console.error('Erro ao adicionar FAQ:', error);
       toast.error('Erro ao adicionar FAQ');
@@ -652,8 +670,17 @@ const AdminAI = () => {
                               onClick={async () => {
                                 try {
                                   await configApi.deleteProduct(product.id!);
-                                  loadData();
                                   toast.success('Produto removido do banco de dados');
+
+                                  // ✅ RECALCULAR PROGRESSO consultando banco de dados
+                                  const [company, prods, faqItems, config] = await Promise.all([
+                                    configApi.getCompanyData(),
+                                    configApi.getProducts(),
+                                    configApi.getFAQs(),
+                                    configApi.getChatbotConfig()
+                                  ]);
+                                  setProducts(prods);
+                                  calculateProgress(company, prods, faqItems, config);
                                 } catch (error) {
                                   toast.error('Erro ao remover produto');
                                 }
@@ -749,8 +776,17 @@ const AdminAI = () => {
                               onClick={async () => {
                                 try {
                                   await configApi.deleteFAQ(faq.id!);
-                                  loadData();
                                   toast.success('FAQ removido do banco de dados');
+
+                                  // ✅ RECALCULAR PROGRESSO consultando banco de dados
+                                  const [company, prods, faqItems, config] = await Promise.all([
+                                    configApi.getCompanyData(),
+                                    configApi.getProducts(),
+                                    configApi.getFAQs(),
+                                    configApi.getChatbotConfig()
+                                  ]);
+                                  setFAQs(faqItems);
+                                  calculateProgress(company, prods, faqItems, config);
                                 } catch (error) {
                                   toast.error('Erro ao remover FAQ');
                                 }
