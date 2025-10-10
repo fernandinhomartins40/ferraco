@@ -429,112 +429,209 @@ export default function AdminAI() {
 
         {/* ABA PRODUTOS */}
         <TabsContent value="produtos">
-          <Card>
-            <CardHeader>
-              <CardTitle>Cadastro de Produtos</CardTitle>
-              <CardDescription>Produtos e serviços oferecidos</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Form novo produto */}
-              <div className="border rounded-lg p-4 space-y-4">
-                <h3 className="font-semibold">Adicionar Novo Produto</h3>
+          <div className="space-y-6">
+            {/* Lista de produtos cadastrados */}
+            {products.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">Produtos Cadastrados ({products.length})</h3>
+                <div className="grid gap-3">
+                  {products.map(product => (
+                    <Card key={product.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <CardTitle className="text-base">{product.name}</CardTitle>
+                            <CardDescription>{product.category || 'Sem categoria'}</CardDescription>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => product.id && deleteProduct(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{product.description}</p>
+                        {product.price && (
+                          <p className="text-sm font-semibold mt-2">💰 {product.price}</p>
+                        )}
+                        {product.keywords && product.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {product.keywords.map((kw, i) => (
+                              <span key={i} className="text-xs bg-secondary px-2 py-1 rounded">
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Formulário para adicionar produto */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Adicionar Novo Produto</CardTitle>
+                <CardDescription>Cadastre produtos e serviços oferecidos</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    placeholder="Nome do produto *"
-                    value={newProduct.name}
-                    onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Categoria"
-                    value={newProduct.category}
-                    onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+                  <div>
+                    <Label>Nome do Produto *</Label>
+                    <Input
+                      placeholder="Ex: Parafuso M10"
+                      value={newProduct.name}
+                      onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Categoria</Label>
+                    <Input
+                      placeholder="Ex: Fixação"
+                      value={newProduct.category}
+                      onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Descrição *</Label>
+                  <Textarea
+                    placeholder="Descreva o produto..."
+                    value={newProduct.description}
+                    onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                    rows={3}
                   />
                 </div>
-                <Textarea
-                  placeholder="Descrição *"
-                  value={newProduct.description}
-                  onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
-                  rows={3}
-                />
-                <Button onClick={addProduct} size="sm">
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Preço (opcional)</Label>
+                    <Input
+                      placeholder="Ex: R$ 10,00"
+                      value={newProduct.price}
+                      onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Palavras-chave (separadas por vírgula)</Label>
+                    <Input
+                      placeholder="Ex: metal, rosca, industrial"
+                      value={newProduct.keywords}
+                      onChange={e => setNewProduct({ ...newProduct, keywords: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={addProduct}>
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Produto
                 </Button>
-              </div>
-
-              {/* Lista de produtos */}
-              <div className="space-y-2">
-                <h3 className="font-semibold">Produtos Cadastrados ({products.length})</h3>
-                {products.map(product => (
-                  <div key={product.id} className="border rounded-lg p-4 flex justify-between items-start">
-                    <div className="flex-1">
-                      <h4 className="font-semibold">{product.name}</h4>
-                      <p className="text-sm text-muted-foreground">{product.category}</p>
-                      <p className="text-sm mt-2">{product.description}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => product.id && deleteProduct(product.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ABA FAQs */}
         <TabsContent value="faqs">
-          <Card>
-            <CardHeader>
-              <CardTitle>Perguntas Frequentes</CardTitle>
-              <CardDescription>Respostas automáticas para dúvidas comuns</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Form novo FAQ */}
-              <div className="border rounded-lg p-4 space-y-4">
-                <h3 className="font-semibold">Adicionar Nova FAQ</h3>
-                <Input
-                  placeholder="Pergunta *"
-                  value={newFaq.question}
-                  onChange={e => setNewFaq({ ...newFaq, question: e.target.value })}
-                />
-                <Textarea
-                  placeholder="Resposta *"
-                  value={newFaq.answer}
-                  onChange={e => setNewFaq({ ...newFaq, answer: e.target.value })}
-                  rows={3}
-                />
-                <Button onClick={addFaq} size="sm">
+          <div className="space-y-6">
+            {/* Lista de FAQs cadastradas */}
+            {faqs.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">FAQs Cadastradas ({faqs.length})</h3>
+                <div className="grid gap-3">
+                  {faqs.map(faq => (
+                    <Card key={faq.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <CardTitle className="text-base">❓ {faq.question}</CardTitle>
+                            <CardDescription>{faq.category || 'Geral'}</CardDescription>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => faq.id && deleteFaq(faq.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">💬 {faq.answer}</p>
+                        {faq.keywords && faq.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {faq.keywords.map((kw, i) => (
+                              <span key={i} className="text-xs bg-secondary px-2 py-1 rounded">
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Formulário para adicionar FAQ */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Adicionar Nova FAQ</CardTitle>
+                <CardDescription>Cadastre perguntas frequentes e suas respostas</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Pergunta *</Label>
+                  <Input
+                    placeholder="Ex: Qual o prazo de entrega?"
+                    value={newFaq.question}
+                    onChange={e => setNewFaq({ ...newFaq, question: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label>Resposta *</Label>
+                  <Textarea
+                    placeholder="Digite a resposta completa..."
+                    value={newFaq.answer}
+                    onChange={e => setNewFaq({ ...newFaq, answer: e.target.value })}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Categoria</Label>
+                    <Input
+                      placeholder="Ex: Entrega, Pagamento, Produto"
+                      value={newFaq.category}
+                      onChange={e => setNewFaq({ ...newFaq, category: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Palavras-chave (separadas por vírgula)</Label>
+                    <Input
+                      placeholder="Ex: prazo, envio, tempo"
+                      value={newFaq.keywords}
+                      onChange={e => setNewFaq({ ...newFaq, keywords: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={addFaq}>
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar FAQ
                 </Button>
-              </div>
-
-              {/* Lista de FAQs */}
-              <div className="space-y-2">
-                <h3 className="font-semibold">FAQs Cadastradas ({faqs.length})</h3>
-                {faqs.map(faq => (
-                  <div key={faq.id} className="border rounded-lg p-4 flex justify-between items-start">
-                    <div className="flex-1">
-                      <h4 className="font-semibold">{faq.question}</h4>
-                      <p className="text-sm text-muted-foreground mt-2">{faq.answer}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => faq.id && deleteFaq(faq.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ABA COMPORTAMENTO */}
