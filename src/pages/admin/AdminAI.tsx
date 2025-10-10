@@ -250,7 +250,7 @@ const AdminAI = () => {
       setCompanyData(savedCompany); // Atualizar state com dados retornados da API
 
       // ✅ LIMPAR draft do localStorage após salvar com sucesso
-      //       localStorage.removeItem(STORAGE_KEYS.companyDraft);
+      localStorage.removeItem(STORAGE_KEYS.companyDraft);
 
       toast.success('Dados da empresa salvos no banco de dados!');
 
@@ -275,7 +275,7 @@ const AdminAI = () => {
       setAIConfig(savedConfig); // Atualizar state com dados retornados da API
 
       // ✅ LIMPAR draft do localStorage após salvar com sucesso
-      //       localStorage.removeItem(STORAGE_KEYS.aiConfigDraft);
+      localStorage.removeItem(STORAGE_KEYS.aiConfigDraft);
 
       toast.success('Configuração salva no banco de dados!');
 
