@@ -11,8 +11,10 @@ async function main() {
   await prisma.auditLog.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.note.deleteMany();
+  await prisma.leadTag.deleteMany();
   await prisma.lead.deleteMany();
   await prisma.tag.deleteMany();
+  await prisma.teamMember.deleteMany();
   await prisma.user.deleteMany();
   await prisma.team.deleteMany();
 
