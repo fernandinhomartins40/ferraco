@@ -25,6 +25,9 @@ import aiRoutes from './modules/ai/ai.routes';
 export function createApp(): Application {
   const app = express();
 
+  // Trust proxy (necessário quando atrás de Nginx)
+  app.set('trust proxy', true);
+
   // Security middlewares
   app.use(helmet());
   app.use(cors(CORS_OPTIONS));
