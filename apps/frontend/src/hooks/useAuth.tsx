@@ -85,9 +85,9 @@ export const useAuth = (): AuthContextType => {
       logger.info('Attempting login', { email });
 
       const response = await axios.post(`${API_URL}/login`, { email, password });
-      const { user, token, refreshToken } = response.data;
+      const { user, accessToken, refreshToken } = response.data.data;
 
-      setAuth(user, token, refreshToken);
+      setAuth(user, accessToken, refreshToken);
       logger.info('Login successful', { userId: user.id });
     } catch (error) {
       logger.error('Login failed', { error });
@@ -118,8 +118,8 @@ export const useAuth = (): AuthContextType => {
         refreshToken: storedRefreshToken,
       });
 
-      const { user, token, refreshToken } = response.data;
-      setAuth(user, token, refreshToken);
+      const { user, accessToken, refreshToken } = response.data.data;
+      setAuth(user, accessToken, refreshToken);
 
       logger.info('Token refreshed successfully');
     } catch (error) {
