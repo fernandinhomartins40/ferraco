@@ -60,17 +60,19 @@ jobs:
     - name: 🔍 Pre-Deploy Validation
       run: |
         echo "🔍 Validando estrutura do projeto FERRACO CRM..."
-        echo "📋 Arquitetura: Raiz única (src/ + prisma/)"
+        echo "📋 Arquitetura: Monorepo (apps/backend + apps/frontend)"
         echo ""
         echo "📦 Arquivos Docker essenciais:"
         ls -la Dockerfile docker-compose.vps.yml || { echo "❌ Docker files faltando!"; exit 1; }
         ls -la docker/nginx.conf docker/startup.sh || { echo "❌ Nginx/startup faltando!"; exit 1; }
         echo ""
-        echo "📋 Backend (Node.js - raiz do projeto):"
-        ls -la package.json src/ prisma/ || { echo "❌ Backend incompleto!"; exit 1; }
-        ls -la src/server.ts prisma/schema.prisma || { echo "❌ Arquivos principais faltando!"; exit 1; }
+        echo "📋 Backend (apps/backend/):"
+        ls -la apps/backend/package.json apps/backend/src/ apps/backend/prisma/ || { echo "❌ Backend incompleto!"; exit 1; }
         echo ""
-        echo "✅ Estrutura do projeto validada!"
+        echo "📋 Frontend (apps/frontend/):"
+        ls -la apps/frontend/package.json apps/frontend/src/ apps/frontend/vite.config.ts || { echo "❌ Frontend incompleto!"; exit 1; }
+        echo ""
+        echo "✅ Estrutura monorepo validada!"
 
     - name: 📦 Prepare Deployment Package
       run: |
@@ -130,7 +132,7 @@ jobs:
           echo "🌿 Branch: ${{ github.ref_name }}"
           echo "👤 Actor: ${{ github.actor }}"
           echo "🕐 Timestamp: $(date)"
-          echo "🎯 Arquitetura: Container Único - Raiz do Projeto"
+          echo "🎯 Arquitetura: Monorepo - Container Único"
           echo "🐳 Porta VPS: ${{ env.APP_PORT }}"
           echo "========================================="
           echo ""
@@ -211,24 +213,24 @@ jobs:
           tar -xzf /tmp/deploy.tar.gz
           rm -f /tmp/deploy.tar.gz
 
-          # Validar estrutura do projeto
-          echo "🔍 Validando estrutura do projeto..."
+          # Validar estrutura monorepo
+          echo "🔍 Validando estrutura monorepo..."
           [ -f "Dockerfile" ] || { echo "❌ Dockerfile não encontrado!"; exit 1; }
           [ -f "docker-compose.vps.yml" ] || { echo "❌ docker-compose.vps.yml não encontrado!"; exit 1; }
           [ -d "docker" ] || { echo "❌ Pasta docker/ não encontrada!"; exit 1; }
           [ -f "docker/startup.sh" ] || { echo "❌ docker/startup.sh não encontrado!"; exit 1; }
           [ -f "docker/nginx.conf" ] || { echo "❌ docker/nginx.conf não encontrado!"; exit 1; }
-          [ -d "src" ] || { echo "❌ Pasta src/ não encontrada!"; exit 1; }
-          [ -d "prisma" ] || { echo "❌ Pasta prisma/ não encontrada!"; exit 1; }
-          [ -f "package.json" ] || { echo "❌ package.json não encontrado!"; exit 1; }
-          [ -f "src/server.ts" ] || { echo "❌ src/server.ts não encontrado!"; exit 1; }
-          [ -f "prisma/schema.prisma" ] || { echo "❌ prisma/schema.prisma não encontrado!"; exit 1; }
+          [ -d "apps/backend" ] || { echo "❌ Backend (apps/backend) não encontrado!"; exit 1; }
+          [ -d "apps/frontend" ] || { echo "❌ Frontend (apps/frontend) não encontrado!"; exit 1; }
+          [ -f "apps/backend/package.json" ] || { echo "❌ apps/backend/package.json não encontrado!"; exit 1; }
+          [ -f "apps/frontend/package.json" ] || { echo "❌ apps/frontend/package.json não encontrado!"; exit 1; }
+          [ -d "apps/backend/prisma" ] || { echo "❌ apps/backend/prisma não encontrado!"; exit 1; }
 
           # Corrigir permissões dos scripts
           echo "🔧 Corrigindo permissões dos scripts..."
           chmod +x docker/startup.sh 2>/dev/null || true
 
-          echo "✅ Estrutura do projeto validada!"
+          echo "✅ Estrutura monorepo validada!"
 
           # Criar diretórios persistentes (volumes Docker usarão esses diretórios)
           echo "🗄️  Criando diretórios persistentes para volumes Docker..."
@@ -411,10 +413,11 @@ jobs:
         echo "  🎯 Backend: Node.js + Express + Prisma + PostgreSQL"
         echo "  🎨 Frontend: React + Vite + TypeScript + Tailwind"
         echo "  🌐 Proxy: Nginx (Alpine Linux)"
-        echo "  🐳 Deploy: Docker (Container Único)"
+        echo "  🐳 Deploy: Docker (Container Único - Monorepo)"
         echo "  🔐 Auth: JWT + Bcrypt"
         echo ""
         echo "📌 Notas Importantes:"
+        echo "  • Arquitetura: Monorepo (apps/backend + apps/frontend)"
         echo "  • Health checks usam 127.0.0.1 (Alpine não resolve localhost)"
         echo "  • Container isolado - sem PM2 no host"
         echo "  • Build completo com --no-cache"
