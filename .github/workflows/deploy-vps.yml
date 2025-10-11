@@ -39,16 +39,23 @@ jobs:
     - name: 🔐 Validate Secrets
       run: |
         echo "🔐 Validando secrets obrigatórios..."
+
+        # Validar VPS_PASSWORD (obrigatório)
         if [ -z "${{ secrets.VPS_PASSWORD }}" ]; then
           echo "❌ ERRO: VPS_PASSWORD não configurado!"
           echo "Configure em: Settings > Secrets and variables > Actions"
           exit 1
         fi
-        if [ -z "${{ secrets.DATABASE_URL }}" ]; then
-          echo "❌ ERRO: DATABASE_URL não configurado!"
-          exit 1
+        echo "✅ VPS_PASSWORD configurado"
+
+        # DATABASE_URL é opcional (pode ser configurado direto na VPS)
+        if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+          echo "✅ DATABASE_URL configurado (será usado no build)"
+        else
+          echo "⚠️  DATABASE_URL não configurado (use .env na VPS ou configure o secret)"
         fi
-        echo "✅ Secrets validados!"
+
+        echo "✅ Validação de secrets concluída!"
 
     - name: 🔍 Pre-Deploy Validation
       run: |
@@ -231,20 +238,34 @@ jobs:
           # Configurar variáveis de ambiente para Docker
           echo "⚙️  Configurando ambiente Docker..."
           export BUILD_TIMESTAMP=$(date +%s)
-          export DATABASE_URL="${{ secrets.DATABASE_URL }}"
           export JWT_SECRET="ferraco-vps-jwt-${{ github.sha }}"
           export CORS_ORIGIN="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export ALLOWED_ORIGINS="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export LOG_LEVEL=info
           export NODE_ENV=production
 
+          # DATABASE_URL (do secret ou do .env na VPS)
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            echo "✅ Usando DATABASE_URL do GitHub Secret"
+          else
+            echo "⚠️  DATABASE_URL não definido - aplicação usará .env na VPS"
+          fi
+
           # Build da imagem
           echo "🏗️  Building imagem Docker (isso pode levar alguns minutos)..."
-          DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
-            --no-cache \
-            --pull \
-            --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
-            --build-arg DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
+              --no-cache \
+              --pull \
+              --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
+              --build-arg DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          else
+            DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
+              --no-cache \
+              --pull \
+              --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP
+          fi
 
           # Iniciar aplicação
           echo "🚀 Iniciando aplicação..."
