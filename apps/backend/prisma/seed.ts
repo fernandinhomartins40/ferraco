@@ -174,7 +174,7 @@ async function main() {
       source: 'Website',
       status: 'NOVO',
       priority: 'HIGH',
-      score: 85,
+      leadScore: 85,
       assignedToId: salesUser.id,
       createdById: adminUser.id,
       tags: {
@@ -193,7 +193,7 @@ async function main() {
       source: 'Indicação',
       status: 'EM_ANDAMENTO',
       priority: 'MEDIUM',
-      score: 70,
+      leadScore: 70,
       assignedToId: salesUser.id,
       createdById: salesUser.id,
       tags: {
@@ -211,7 +211,7 @@ async function main() {
       source: 'Facebook Ads',
       status: 'NOVO',
       priority: 'LOW',
-      score: 45,
+      leadScore: 45,
       assignedToId: consultantUser.id,
       createdById: consultantUser.id,
       tags: {
@@ -230,7 +230,7 @@ async function main() {
       source: 'LinkedIn',
       status: 'QUALIFICADO',
       priority: 'HIGH',
-      score: 90,
+      leadScore: 90,
       assignedToId: salesUser.id,
       createdById: managerUser.id,
       tags: {
@@ -247,7 +247,7 @@ async function main() {
       source: 'WhatsApp',
       status: 'NOVO',
       priority: 'MEDIUM',
-      score: 60,
+      leadScore: 60,
       assignedToId: consultantUser.id,
       createdById: consultantUser.id,
     },
@@ -260,7 +260,7 @@ async function main() {
       leadId: lead1.id,
       content: 'Cliente interessado em sistema de bebedouros. Solicitou orçamento.',
       category: 'Comercial',
-      isImportant: true,
+      important: true,
       createdById: salesUser.id,
     },
   });
@@ -270,7 +270,7 @@ async function main() {
       leadId: lead1.id,
       content: 'Follow-up realizado. Cliente confirmou interesse.',
       category: 'Follow-up',
-      isImportant: false,
+      important: false,
       createdById: salesUser.id,
     },
   });
@@ -280,7 +280,7 @@ async function main() {
       leadId: lead2.id,
       content: 'Primeira reunião agendada para próxima semana.',
       category: 'Reunião',
-      isImportant: true,
+      important: true,
       createdById: salesUser.id,
     },
   });
@@ -290,7 +290,7 @@ async function main() {
       leadId: lead4.id,
       content: 'Cliente VIP - dar prioridade máxima. Budget aprovado.',
       category: 'VIP',
-      isImportant: true,
+      important: true,
       createdById: managerUser.id,
     },
   });
@@ -301,33 +301,40 @@ async function main() {
     data: {
       name: 'Pipeline de Vendas Principal',
       description: 'Pipeline padrão para vendas de equipamentos',
+      businessType: 'EQUIPAMENTOS',
       isDefault: true,
+      createdById: adminUser.id,
       stages: {
         create: [
           {
             name: 'Prospecção',
             order: 0,
             color: '#3B82F6',
+            expectedDuration: 7,
           },
           {
             name: 'Qualificação',
             order: 1,
             color: '#8B5CF6',
+            expectedDuration: 5,
           },
           {
             name: 'Proposta',
             order: 2,
             color: '#F59E0B',
+            expectedDuration: 10,
           },
           {
             name: 'Negociação',
             order: 3,
             color: '#10B981',
+            expectedDuration: 14,
           },
           {
             name: 'Fechamento',
             order: 4,
             color: '#059669',
+            expectedDuration: 7,
           },
         ],
       },
@@ -367,23 +374,26 @@ async function main() {
     },
   });
 
-  // Create Communication Templates
-  console.log('💬 Creating communication templates...');
-  await prisma.communicationTemplate.create({
+  // Create Message Templates
+  console.log('💬 Creating message templates...');
+  await prisma.messageTemplate.create({
     data: {
       name: 'Boas-vindas WhatsApp',
       type: 'WHATSAPP',
+      category: 'WELCOME',
       content: 'Olá {{nome}}! Obrigado pelo interesse na Ferraco. Como podemos ajudar?',
+      variables: '["nome"]',
       isActive: true,
     },
   });
 
-  await prisma.communicationTemplate.create({
+  await prisma.messageTemplate.create({
     data: {
       name: 'Email de Proposta',
       type: 'EMAIL',
-      subject: 'Proposta Comercial - Ferraco',
+      category: 'FOLLOW_UP',
       content: 'Prezado(a) {{nome}},\n\nSegue em anexo nossa proposta comercial.\n\nAtenciosamente,\nEquipe Ferraco',
+      variables: '["nome"]',
       isActive: true,
     },
   });
@@ -394,25 +404,24 @@ async function main() {
     data: {
       name: 'Tag Automática - Lead Hot',
       description: 'Adiciona tag "hot" para leads com score > 80',
-      trigger: {
-        type: 'LEAD_CREATED',
-      },
-      conditions: [
+      triggerType: 'LEAD_CREATED',
+      conditions: JSON.stringify([
         {
-          field: 'score',
+          field: 'leadScore',
           operator: 'greater_than',
           value: 80,
         },
-      ],
-      actions: [
+      ]),
+      actions: JSON.stringify([
         {
           type: 'ADD_TAG',
           config: {
             tagId: hotTag.id,
           },
         },
-      ],
+      ]),
       isActive: true,
+      createdById: adminUser.id,
     },
   });
 
