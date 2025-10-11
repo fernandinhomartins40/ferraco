@@ -1,5 +1,10 @@
 import { logger } from '@/lib/logger';
 import type { User } from '@ferraco/shared';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import axios from 'axios';
+
+const API_URL = '/api/auth';
 
 export type AuthContextType = {
   user: User | null;
@@ -12,41 +17,179 @@ export type AuthContextType = {
   updateUser: (userData: Partial<User>) => Promise<void>;
 };
 
+interface AuthStore {
+  user: User | null;
+  token: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  setAuth: (user: User, token: string, refreshToken: string) => void;
+  clearAuth: () => void;
+  setLoading: (loading: boolean) => void;
+  setUser: (user: User) => void;
+}
+
+const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      refreshToken: null,
+      isAuthenticated: false,
+      isLoading: false,
+
+      setAuth: (user, token, refreshToken) => {
+        set({
+          user,
+          token,
+          refreshToken,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+      },
+
+      clearAuth: () => {
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      },
+
+      setLoading: (loading) => set({ isLoading: loading }),
+      setUser: (user) => set({ user }),
+    }),
+    {
+      name: 'ferraco-auth-storage',
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+);
+
 /**
- * Custom hook for authentication (stub - sem backend)
+ * Hook de autenticação com integração real ao backend
  */
 export const useAuth = (): AuthContextType => {
-  const user: User = {
-    id: 'demo',
-    name: 'Demo User',
-    username: 'demo',
-    email: 'demo@ferraco.com',
-    role: 'admin',
-    permissions: ['admin:read', 'admin:write', 'leads:read', 'leads:write', 'tags:read', 'tags:write', 'notes:read', 'notes:write'],
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+  const { user, token, refreshToken: storedRefreshToken, isAuthenticated } = useAuthStore();
+  const { setAuth, clearAuth, setUser } = useAuthStore();
+
+  const login = async (email: string, password: string): Promise<void> => {
+    try {
+      logger.info('Attempting login', { email });
+
+      const response = await axios.post(`${API_URL}/login`, { email, password });
+      const { user, token, refreshToken } = response.data;
+
+      setAuth(user, token, refreshToken);
+      logger.info('Login successful', { userId: user.id });
+    } catch (error) {
+      logger.error('Login failed', { error });
+      throw error;
+    }
+  };
+
+  const logout = (): void => {
+    try {
+      logger.info('Logging out');
+      clearAuth();
+    } catch (error) {
+      logger.error('Logout error', { error });
+    }
+  };
+
+  const refreshTokenFn = async (): Promise<void> => {
+    if (!storedRefreshToken) {
+      logger.warn('No refresh token available');
+      clearAuth();
+      return;
+    }
+
+    try {
+      logger.info('Refreshing token');
+
+      const response = await axios.post(`${API_URL}/refresh`, {
+        refreshToken: storedRefreshToken,
+      });
+
+      const { user, token, refreshToken } = response.data;
+      setAuth(user, token, refreshToken);
+
+      logger.info('Token refreshed successfully');
+    } catch (error) {
+      logger.error('Token refresh failed', { error });
+      clearAuth();
+      throw error;
+    }
+  };
+
+  const checkAuth = async (): Promise<void> => {
+    if (!token) {
+      logger.debug('No token, user not authenticated');
+      clearAuth();
+      return;
+    }
+
+    try {
+      logger.info('Checking authentication');
+
+      const response = await axios.get(`${API_URL}/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setUser(response.data);
+      logger.info('Auth check successful');
+    } catch (error) {
+      logger.error('Auth check failed', { error });
+
+      // Tentar refresh token
+      if (storedRefreshToken) {
+        try {
+          await refreshTokenFn();
+        } catch {
+          clearAuth();
+        }
+      } else {
+        clearAuth();
+      }
+    }
+  };
+
+  const updateUser = async (userData: Partial<User>): Promise<void> => {
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      logger.info('Updating user', { userData });
+
+      const response = await axios.put(`${API_URL}/profile`, userData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setUser(response.data);
+      logger.info('User updated successfully');
+    } catch (error) {
+      logger.error('User update failed', { error });
+      throw error;
+    }
   };
 
   return {
     user,
-    isAuthenticated: true,
-    token: 'demo-token',
-    login: async () => {
-      logger.info('Login stub called');
-    },
-    logout: () => {
-      logger.info('Logout stub called');
-    },
-    refreshToken: async () => {
-      logger.info('Refresh token stub called');
-    },
-    checkAuth: async () => {
-      logger.info('Check auth stub called');
-    },
-    updateUser: async (userData: Partial<User>) => {
-      logger.info('Update user stub called', { userData });
-    },
+    isAuthenticated,
+    token,
+    login,
+    logout,
+    refreshToken: refreshTokenFn,
+    checkAuth,
+    updateUser,
   };
 };
 

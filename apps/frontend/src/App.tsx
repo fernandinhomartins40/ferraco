@@ -11,6 +11,8 @@ const queryClient = new QueryClient();
 // Lazy import para páginas
 const Index = lazy(() => import("./pages/Index"));
 const PublicChat = lazy(() => import("./pages/PublicChat"));
+const Login = lazy(() => import("./pages/Login"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminLeads = lazy(() => import("./pages/admin/AdminLeads"));
 const AdminWhatsApp = lazy(() => import("./pages/admin/AdminWhatsApp"));
@@ -18,6 +20,9 @@ const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminLandingPageEditor = lazy(() => import("./pages/admin/AdminLandingPageEditor"));
 const AdminChatbotConfig = lazy(() => import("./pages/admin/AdminChatbotConfig"));
+
+// Import ProtectedRoute
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const App = () => {
   return (
@@ -47,61 +52,95 @@ const App = () => {
             }
           />
 
-          {/* ADMIN ROUTES - Públicas (sem autenticação) */}
+          {/* Login */}
+          <Route
+            path="/login"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <Login />
+              </Suspense>
+            }
+          />
+
+          {/* Unauthorized */}
+          <Route
+            path="/unauthorized"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <Unauthorized />
+              </Suspense>
+            }
+          />
+
+          {/* ADMIN ROUTES - PROTEGIDAS (requerem autenticação) */}
           <Route
             path="/admin"
             element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminDashboard />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/admin/leads"
             element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminLeads />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminLeads />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/admin/whatsapp"
             element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminWhatsApp />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminWhatsApp />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/admin/reports"
             element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminReports />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminReports />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/admin/profile"
             element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminProfile />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminProfile />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/admin/landing-page"
             element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminLandingPageEditor />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminLandingPageEditor />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/admin/chatbot-config"
             element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminChatbotConfig />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminChatbotConfig />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
 
