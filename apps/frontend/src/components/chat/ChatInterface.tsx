@@ -107,7 +107,7 @@ export const ChatInterface = ({
   };
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-12rem)] max-h-[800px] overflow-hidden shadow-lg">
+    <Card className="flex flex-col h-full overflow-hidden shadow-none border-0 rounded-none">
       {/* Header do Chat */}
       <div className="flex items-center justify-between p-4 bg-[#075E54] text-white border-b">
         <div className="flex items-center gap-3">
