@@ -47,7 +47,12 @@ async function main() {
       name: 'Administrador',
       role: 'ADMIN',
       isActive: true,
-      teamId: salesTeam.id,
+      teamMemberships: {
+        create: {
+          teamId: salesTeam.id,
+          role: 'ADMIN',
+        },
+      },
     },
   });
 
@@ -59,7 +64,12 @@ async function main() {
       name: 'Gerente de Vendas',
       role: 'MANAGER',
       isActive: true,
-      teamId: salesTeam.id,
+      teamMemberships: {
+        create: {
+          teamId: salesTeam.id,
+          role: 'MANAGER',
+        },
+      },
     },
   });
 
@@ -71,7 +81,12 @@ async function main() {
       name: 'João Vendedor',
       role: 'SALES',
       isActive: true,
-      teamId: salesTeam.id,
+      teamMemberships: {
+        create: {
+          teamId: salesTeam.id,
+          role: 'MEMBER',
+        },
+      },
     },
   });
 
@@ -83,7 +98,12 @@ async function main() {
       name: 'Maria Consultora',
       role: 'CONSULTANT',
       isActive: true,
-      teamId: salesTeam.id,
+      teamMemberships: {
+        create: {
+          teamId: salesTeam.id,
+          role: 'MEMBER',
+        },
+      },
     },
   });
 
@@ -95,7 +115,12 @@ async function main() {
       name: 'Pedro Suporte',
       role: 'SUPPORT',
       isActive: true,
-      teamId: supportTeam.id,
+      teamMemberships: {
+        create: {
+          teamId: supportTeam.id,
+          role: 'MEMBER',
+        },
+      },
     },
   });
 
