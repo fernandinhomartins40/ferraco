@@ -8,6 +8,7 @@ export const apiLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false }, // Desabilita validação de trust proxy
   handler: (req, res) => {
     errorResponse(
       res,
@@ -22,6 +23,7 @@ export const authLimiter = rateLimit({
   max: RATE_LIMIT.authMax,
   message: 'Too many authentication attempts, please try again later.',
   skipSuccessfulRequests: true,
+  validate: { trustProxy: false }, // Desabilita validação de trust proxy
   handler: (req, res) => {
     errorResponse(
       res,
@@ -35,6 +37,7 @@ export const strictLimiter = rateLimit({
   windowMs: RATE_LIMIT.windowMs,
   max: RATE_LIMIT.strictMax,
   message: 'Rate limit exceeded for this sensitive operation.',
+  validate: { trustProxy: false }, // Desabilita validação de trust proxy
   handler: (req, res) => {
     errorResponse(
       res,
