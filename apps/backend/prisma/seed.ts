@@ -50,7 +50,7 @@ async function main() {
       teamMemberships: {
         create: {
           teamId: salesTeam.id,
-          role: 'ADMIN',
+          isLead: true,
         },
       },
     },
@@ -67,7 +67,7 @@ async function main() {
       teamMemberships: {
         create: {
           teamId: salesTeam.id,
-          role: 'MANAGER',
+          isLead: true,
         },
       },
     },
@@ -84,7 +84,7 @@ async function main() {
       teamMemberships: {
         create: {
           teamId: salesTeam.id,
-          role: 'MEMBER',
+          isLead: false,
         },
       },
     },
@@ -101,7 +101,7 @@ async function main() {
       teamMemberships: {
         create: {
           teamId: salesTeam.id,
-          role: 'MEMBER',
+          isLead: false,
         },
       },
     },
@@ -118,7 +118,7 @@ async function main() {
       teamMemberships: {
         create: {
           teamId: supportTeam.id,
-          role: 'MEMBER',
+          isLead: false,
         },
       },
     },
