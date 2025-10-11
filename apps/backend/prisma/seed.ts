@@ -180,7 +180,10 @@ async function main() {
       assignedToId: salesUser.id,
       createdById: adminUser.id,
       tags: {
-        connect: [{ id: hotTag.id }, { id: qualifiedTag.id }],
+        create: [
+          { tagId: hotTag.id },
+          { tagId: qualifiedTag.id },
+        ],
       },
     },
   });
@@ -199,7 +202,9 @@ async function main() {
       assignedToId: salesUser.id,
       createdById: salesUser.id,
       tags: {
-        connect: [{ id: qualifiedTag.id }],
+        create: [
+          { tagId: qualifiedTag.id },
+        ],
       },
     },
   });
@@ -217,7 +222,9 @@ async function main() {
       assignedToId: consultantUser.id,
       createdById: consultantUser.id,
       tags: {
-        connect: [{ id: coldTag.id }],
+        create: [
+          { tagId: coldTag.id },
+        ],
       },
     },
   });
@@ -236,7 +243,11 @@ async function main() {
       assignedToId: salesUser.id,
       createdById: managerUser.id,
       tags: {
-        connect: [{ id: hotTag.id }, { id: qualifiedTag.id }, { id: newCustomerTag.id }],
+        create: [
+          { tagId: hotTag.id },
+          { tagId: qualifiedTag.id },
+          { tagId: newCustomerTag.id },
+        ],
       },
     },
   });
