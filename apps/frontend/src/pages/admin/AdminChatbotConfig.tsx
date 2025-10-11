@@ -537,8 +537,304 @@ export const AdminChatbotConfig = () => {
             </Card>
           </TabsContent>
 
-          {/* ABAS 3, 4 e 5 - PRODUTOS, FAQ E LINKS MANTIDOS IDÊNTICOS... */}
-          {/* Devido ao limite de tamanho, vou usar o mesmo código que já existe */}
+          {/* ABA 3: Produtos */}
+          <TabsContent value="products" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Produtos e Serviços</CardTitle>
+                    <CardDescription>
+                      Cadastre os produtos que o chatbot pode apresentar aos clientes
+                    </CardDescription>
+                  </div>
+                  <Button onClick={addProduct} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Adicionar Produto
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {products.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Nenhum produto cadastrado</p>
+                    <p className="text-sm">Clique em "Adicionar Produto" para começar</p>
+                  </div>
+                ) : (
+                  products.map((product, index) => (
+                    <Card key={product.id} className="border-2">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">Produto {index + 1}</CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeProduct(product.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Nome do Produto *</Label>
+                            <Input
+                              value={product.name}
+                              onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
+                              placeholder="Ex: Bebedouro Automático"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Preço</Label>
+                            <Input
+                              value={product.price}
+                              onChange={(e) => updateProduct(product.id, 'price', e.target.value)}
+                              placeholder="Ex: R$ 1.200,00 ou Sob consulta"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Descrição *</Label>
+                          <Textarea
+                            value={product.description}
+                            onChange={(e) => updateProduct(product.id, 'description', e.target.value)}
+                            placeholder="Descreva o produto..."
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Características (uma por linha)</Label>
+                          <Textarea
+                            value={product.features.join('\n')}
+                            onChange={(e) =>
+                              updateProduct(product.id, 'features', e.target.value.split('\n').filter(f => f.trim()))
+                            }
+                            placeholder="Material resistente&#10;Fácil instalação&#10;Garantia de 2 anos"
+                            rows={3}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ABA 4: FAQ */}
+          <TabsContent value="faq" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Perguntas Frequentes (FAQ)</CardTitle>
+                    <CardDescription>
+                      Cadastre perguntas e respostas para o chatbot usar
+                    </CardDescription>
+                  </div>
+                  <Button onClick={addFAQ} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Adicionar Pergunta
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {faqs.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <HelpCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Nenhuma pergunta cadastrada</p>
+                    <p className="text-sm">Clique em "Adicionar Pergunta" para começar</p>
+                  </div>
+                ) : (
+                  faqs.map((faq, index) => (
+                    <Card key={faq.id} className="border-2">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">Pergunta {index + 1}</CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeFAQ(faq.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Pergunta *</Label>
+                          <Input
+                            value={faq.question}
+                            onChange={(e) => updateFAQ(faq.id, 'question', e.target.value)}
+                            placeholder="Ex: Qual o prazo de entrega?"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Resposta *</Label>
+                          <Textarea
+                            value={faq.answer}
+                            onChange={(e) => updateFAQ(faq.id, 'answer', e.target.value)}
+                            placeholder="Digite a resposta completa..."
+                            rows={4}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ABA 5: Links de Compartilhamento */}
+          <TabsContent value="links" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Links de Compartilhamento</CardTitle>
+                    <CardDescription>
+                      Gere links personalizados para rastrear a origem dos leads
+                    </CardDescription>
+                  </div>
+                  <Button onClick={addShareLink} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Criar Link
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {shareLinks.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Share2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Nenhum link criado</p>
+                    <p className="text-sm">Clique em "Criar Link" para começar</p>
+                  </div>
+                ) : (
+                  shareLinks.map((link) => (
+                    <Card key={link.id} className="border-2">
+                      <CardContent className="pt-6 space-y-4">
+                        <div className="flex items-start gap-4">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeShareLink(link.id)}
+                            className="text-destructive hover:text-destructive flex-shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+
+                          <div className="flex-1 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Nome da Campanha *</Label>
+                                <Input
+                                  value={link.name}
+                                  onChange={(e) => updateShareLink(link.id, 'name', e.target.value)}
+                                  placeholder="Ex: Promoção Black Friday"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Rede Social / Origem *</Label>
+                                <Select
+                                  value={link.platform}
+                                  onValueChange={(value) => updateShareLink(link.id, 'platform', value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="whatsapp">
+                                      <div className="flex items-center gap-2">
+                                        <MessageCircle className="h-4 w-4" />
+                                        WhatsApp
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="facebook">
+                                      <div className="flex items-center gap-2">
+                                        <Facebook className="h-4 w-4" />
+                                        Facebook
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="instagram">
+                                      <div className="flex items-center gap-2">
+                                        <Instagram className="h-4 w-4" />
+                                        Instagram
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="linkedin">
+                                      <div className="flex items-center gap-2">
+                                        <Linkedin className="h-4 w-4" />
+                                        LinkedIn
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="twitter">
+                                      <div className="flex items-center gap-2">
+                                        <Twitter className="h-4 w-4" />
+                                        Twitter
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="email">
+                                      <div className="flex items-center gap-2">
+                                        <Mail className="h-4 w-4" />
+                                        E-mail
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            {link.name && (
+                              <div className="space-y-2">
+                                <Label>Link Gerado</Label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={generateShareLink(link)}
+                                    readOnly
+                                    className="font-mono text-sm"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => copyToClipboard(generateShareLink(link), link.id)}
+                                    className="gap-2"
+                                  >
+                                    {copied === link.id ? (
+                                      <>
+                                        <CheckCircle className="h-4 w-4" />
+                                        Copiado!
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="h-4 w-4" />
+                                        Copiar
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Compartilhe este link em {link.platform} para rastrear leads desta origem
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {/* Footer com botão de salvar */}
