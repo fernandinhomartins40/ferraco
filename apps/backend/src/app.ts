@@ -21,6 +21,7 @@ import reportsRoutes from './modules/reports/reports.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import integrationsRoutes from './modules/integrations/integrations.routes';
 import aiRoutes from './modules/ai/ai.routes';
+import chatbotRoutes from './modules/chatbot/chatbot.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -65,6 +66,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
   app.use(`${API_PREFIX}/integrations`, integrationsRoutes);
   app.use(`${API_PREFIX}/ai`, aiRoutes);
+  app.use(`${API_PREFIX}/chatbot`, chatbotRoutes);
 
   logger.info('✅ All routes registered successfully');
 

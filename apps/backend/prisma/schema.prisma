@@ -1141,12 +1141,37 @@ model ChatbotMessage {
 model ChatbotConfig {
   id                  String   @id @default(cuid())
   isEnabled           Boolean  @default(true)
-  welcomeMessage      String
-  fallbackMessage     String
-  qualificationQuestions String  // JSON array
-  handoffTriggers     String   // JSON array
-  businessHours       String   // JSON: horários de funcionamento
 
+  // Behavior
+  botName             String   @default("Ferraco Bot")
+  welcomeMessage      String
+  tone                String   @default("friendly") // professional, friendly, casual, formal
+  captureLeads        Boolean  @default(true)
+  requireEmail        Boolean  @default(true)
+  requirePhone        Boolean  @default(true)
+  autoResponse        Boolean  @default(true)
+
+  // Company Data
+  companyName         String
+  companyDescription  String
+  companyAddress      String?
+  companyPhone        String?
+  companyEmail        String?
+  companyWebsite      String?
+  workingHours        String?
+
+  // Products and FAQ (stored as JSON)
+  products            String   @default("[]") // JSON array
+  faqs                String   @default("[]") // JSON array
+  shareLinks          String   @default("[]") // JSON array
+
+  // Legacy fields (manter compatibilidade)
+  fallbackMessage     String   @default("Desculpe, não entendi. Pode reformular sua pergunta?")
+  qualificationQuestions String  @default("[]") // JSON array
+  handoffTriggers     String   @default("[]") // JSON array
+  businessHours       String   @default("{}") // JSON: horários de funcionamento
+
+  createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   @@map("chatbot_config")
