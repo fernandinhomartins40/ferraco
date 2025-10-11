@@ -307,29 +307,19 @@ jobs:
           # Health check - USAR 127.0.0.1 NO ALPINE (localhost não funciona)
           echo "🩺 Executando health checks..."
           echo "⚠️  Usando 127.0.0.1 (Alpine Linux não resolve 'localhost')"
+          echo "ℹ️  Backend serve /health (não /api/health)"
 
           MAX_TRIES=20
-          FRONTEND_OK=false
-          BACKEND_OK=false
+          HEALTH_OK=false
 
           echo ""
-          echo "🔍 Health check Frontend..."
+          echo "🔍 Health check da aplicação..."
           for i in $(seq 1 $MAX_TRIES); do
             if curl -f -s http://127.0.0.1:${{ env.APP_PORT }}/health >/dev/null 2>&1; then
-              echo "✅ Frontend health check OK!"
-              FRONTEND_OK=true
-              break
-            fi
-            echo "  Tentativa $i/$MAX_TRIES - aguardando..."
-            sleep 5
-          done
-
-          echo ""
-          echo "🔍 Health check Backend API..."
-          for i in $(seq 1 $MAX_TRIES); do
-            if curl -f -s http://127.0.0.1:${{ env.APP_PORT }}/api/health >/dev/null 2>&1; then
-              echo "✅ Backend API health check OK!"
-              BACKEND_OK=true
+              RESPONSE=$(curl -s http://127.0.0.1:${{ env.APP_PORT }}/health)
+              echo "✅ Health check OK!"
+              echo "   Response: $RESPONSE"
+              HEALTH_OK=true
               break
             fi
             echo "  Tentativa $i/$MAX_TRIES - aguardando..."
@@ -339,16 +329,10 @@ jobs:
           # Verificação final
           echo ""
           echo "========================================="
-          if [ "$FRONTEND_OK" = true ] && [ "$BACKEND_OK" = true ]; then
+          if [ "$HEALTH_OK" = true ]; then
             echo "✅ DEPLOY CONCLUÍDO COM SUCESSO!"
-          elif [ "$FRONTEND_OK" = true ]; then
-            echo "⚠️  DEPLOY PARCIAL - Apenas Frontend OK"
-            echo "❌ Backend API não respondeu aos health checks"
-          elif [ "$BACKEND_OK" = true ]; then
-            echo "⚠️  DEPLOY PARCIAL - Apenas Backend OK"
-            echo "❌ Frontend não respondeu aos health checks"
           else
-            echo "❌ FALHA NO DEPLOY - Ambos health checks falharam!"
+            echo "❌ FALHA NO DEPLOY - Health check não passou!"
           fi
           echo "========================================="
 
@@ -365,7 +349,7 @@ jobs:
             docker ps --filter "name=ferraco-crm-vps" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
             # Mostrar logs completos se health check falhou
-            if [ "$FRONTEND_OK" != true ] || [ "$BACKEND_OK" != true ]; then
+            if [ "$HEALTH_OK" != true ]; then
               echo ""
               echo "📋 Logs completos do container (últimas 100 linhas):"
               docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} logs --tail 100
@@ -390,16 +374,16 @@ jobs:
 
           echo ""
           echo "🔗 Links de Acesso:"
-          echo "  🌐 Frontend: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
+          echo "  🌐 Aplicação: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           echo "  🔌 Backend API: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api"
           echo "  🩺 Health: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/health"
           echo "  👨‍💼 Admin: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin"
           echo "========================================="
 
-          # Falhar se health checks não passaram
-          if [ "$FRONTEND_OK" != true ] || [ "$BACKEND_OK" != true ]; then
+          # Falhar se health check não passou
+          if [ "$HEALTH_OK" != true ]; then
             echo ""
-            echo "❌ Deploy falhou - health checks não passaram!"
+            echo "❌ Deploy falhou - health check não passou!"
             exit 1
           fi
         DEPLOY_SCRIPT
