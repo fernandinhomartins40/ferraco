@@ -8,9 +8,16 @@ async function main() {
 
   // Clean existing data (optional - comment out if you want to keep existing data)
   console.log('🧹 Cleaning existing data...');
+
+  // Limpar em ordem respeitando foreign keys
   await prisma.auditLog.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.note.deleteMany();
+  await prisma.messageTemplate.deleteMany();
+  await prisma.automation.deleteMany();
+  await prisma.opportunity.deleteMany();
+  await prisma.pipelineStage.deleteMany();
+  await prisma.pipeline.deleteMany();
   await prisma.leadTag.deleteMany();
   await prisma.lead.deleteMany();
   await prisma.tag.deleteMany();
