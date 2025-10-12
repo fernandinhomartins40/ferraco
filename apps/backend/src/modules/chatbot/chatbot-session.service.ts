@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import {
   defaultConversationFlow,
   replaceVariables,
@@ -12,7 +12,7 @@ export class ChatbotSessionService {
    * Inicia uma nova sessão de chatbot
    */
   async startSession(data?: { userAgent?: string; ipAddress?: string }) {
-    const sessionId = uuidv4();
+    const sessionId = randomUUID();
 
     // Buscar config do chatbot
     const config = await prisma.chatbotConfig.findFirst();
