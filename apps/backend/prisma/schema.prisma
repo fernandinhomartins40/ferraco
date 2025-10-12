@@ -1102,6 +1102,25 @@ model ChatbotSession {
   isQualified    Boolean           @default(false)
   conversationData String           // JSON: dados da conversa
 
+  // Fluxo conversacional
+  currentStage   Int               @default(1) // Etapa atual (1-8)
+  currentStepId  String?           // ID do step atual no fluxo
+
+  // Dados capturados
+  capturedName   String?
+  capturedEmail  String?
+  capturedPhone  String?
+  interest       String?           // Interesse manifestado
+  segment        String?           // Segmento (empresa/pessoal)
+  userResponses  String            @default("{}") // JSON: todas as respostas
+
+  // Consentimentos
+  marketingOptIn Boolean           @default(false)
+
+  // Qualificação
+  qualificationScore Int           @default(0)
+  readyForHuman  Boolean           @default(false)
+
   startedAt      DateTime          @default(now())
   endedAt        DateTime?
 
@@ -1110,6 +1129,8 @@ model ChatbotSession {
 
   @@index([leadId])
   @@index([sessionId])
+  @@index([currentStage])
+  @@index([isQualified])
   @@map("chatbot_sessions")
 }
 
@@ -1164,6 +1185,9 @@ model ChatbotConfig {
   products            String   @default("[]") // JSON array
   faqs                String   @default("[]") // JSON array
   shareLinks          String   @default("[]") // JSON array
+
+  // Fluxo conversacional (stored as JSON)
+  conversationFlow    String   @default("[]") // JSON array: steps do fluxo
 
   // Legacy fields (manter compatibilidade)
   fallbackMessage     String   @default("Desculpe, não entendi. Pode reformular sua pergunta?")
