@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { ChatbotController } from './chatbot.controller';
-import { authenticate } from '../../middleware/auth';
-import { authorize } from '../../middleware/authorize';
+import { authenticate, requireRole } from '../../middleware/auth';
 
 const router = Router();
 const chatbotController = new ChatbotController();
@@ -9,15 +8,15 @@ const chatbotController = new ChatbotController();
 /**
  * GET /api/chatbot/config
  * Busca configuração do chatbot
- * Requer autenticação e permissão config:read
+ * Requer autenticação e role ADMIN
  */
-router.get('/config', authenticate, authorize(['config:read']), chatbotController.getConfig);
+router.get('/config', authenticate, requireRole('ADMIN'), chatbotController.getConfig);
 
 /**
  * PUT /api/chatbot/config
  * Atualiza configuração do chatbot
- * Requer autenticação e permissão config:update
+ * Requer autenticação e role ADMIN
  */
-router.put('/config', authenticate, authorize(['config:update']), chatbotController.updateConfig);
+router.put('/config', authenticate, requireRole('ADMIN'), chatbotController.updateConfig);
 
 export default router;
