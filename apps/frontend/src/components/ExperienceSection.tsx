@@ -1,11 +1,13 @@
 import { TrendingUp, Users, Globe, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { ExperienceConfig } from "@/types/landingPage";
 
 interface ExperienceSectionProps {
   onLeadModalOpen: () => void;
+  config?: ExperienceConfig;
 }
 
-const ExperienceSection = ({ onLeadModalOpen }: ExperienceSectionProps) => {
+const ExperienceSection = ({ onLeadModalOpen, config }: ExperienceSectionProps) => {
   const stats = [
     {
       icon: <TrendingUp className="w-12 h-12 text-secondary" />,

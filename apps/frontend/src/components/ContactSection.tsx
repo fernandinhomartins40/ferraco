@@ -1,12 +1,14 @@
 import { MapPin, Phone, Mail, Clock, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { ContactConfig } from "@/types/landingPage";
 
 interface ContactSectionProps {
   onLeadModalOpen: () => void;
+  config?: ContactConfig;
 }
 
-const ContactSection = ({ onLeadModalOpen }: ContactSectionProps) => {
+const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
   const contactInfo = [
     {
       icon: <Phone className="w-6 h-6 text-primary" />,

@@ -1,11 +1,13 @@
 import { Shield, Users, Award, Truck, CheckCircle, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { AboutConfig } from "@/types/landingPage";
 
 interface AboutSectionProps {
   onLeadModalOpen: () => void;
+  config?: AboutConfig;
 }
 
-const AboutSection = ({ onLeadModalOpen }: AboutSectionProps) => {
+const AboutSection = ({ onLeadModalOpen, config }: AboutSectionProps) => {
   const values = [
     {
       icon: <Shield className="w-8 h-8 text-primary" />,
@@ -46,29 +48,31 @@ const AboutSection = ({ onLeadModalOpen }: AboutSectionProps) => {
         {/* About Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Sobre a FerrAço
+            {config?.title?.text || "Sobre a FerrAço"}
           </h2>
           <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-            Fundada em 1998, a Metalúrgica FerrAço é referência nacional em soluções metalúrgicas, 
-            oferecendo produtos de alta qualidade e atendimento especializado para indústrias de todos os segmentos.
+            {config?.description?.text || "Fundada em 1998, a Metalúrgica FerrAço é referência nacional em soluções metalúrgicas, oferecendo produtos de alta qualidade e atendimento especializado para indústrias de todos os segmentos."}
           </p>
         </div>
 
         {/* Values Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-          {values.map((value, index) => (
-            <div key={index} className="text-center group">
-              <div className="bg-white rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center shadow-elegant group-hover:shadow-glow transition-smooth group-hover:scale-110">
-                {value.icon}
+          {(config?.features && config.features.length > 0 ? config.features : values).map((feature, index) => {
+            const value = 'icon' in feature ? feature : values[index];
+            return (
+              <div key={'id' in feature ? feature.id : index} className="text-center group">
+                <div className="bg-white rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center shadow-elegant group-hover:shadow-glow transition-smooth group-hover:scale-110">
+                  {value.icon}
+                </div>
+                <h3 className="text-xl font-bold text-foreground mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-muted-foreground">
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">
-                {value.title}
-              </h3>
-              <p className="text-muted-foreground">
-                {value.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Experience Section */}

@@ -2,21 +2,28 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoFerraco from "@/assets/logo-ferraco.webp";
+import type { HeaderConfig } from "@/types/landingPage";
 
 interface HeaderProps {
   onLeadModalOpen: () => void;
+  config?: HeaderConfig;
 }
 
-const Header = ({ onLeadModalOpen }: HeaderProps) => {
+const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const menuItems = [
+  // Fallback para valores padrão do conteúdo atual
+  const menuItems = config?.menu?.items || [
     { label: "Início", href: "#inicio" },
     { label: "Sobre", href: "#sobre" },
     { label: "Produtos", href: "#produtos" },
     { label: "Experiência", href: "#experiencia" },
     { label: "Contato", href: "#contato" },
   ];
+
+  const logoSrc = config?.logo?.image || logoFerraco;
+  const logoAlt = config?.logo?.alt || "Ferraco Equipamentos";
+  const ctaText = config?.cta?.text || "Solicitar Orçamento";
 
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href);
@@ -32,9 +39,9 @@ const Header = ({ onLeadModalOpen }: HeaderProps) => {
         <div className="flex items-center justify-between h-20 lg:h-24">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <img 
-              src={logoFerraco} 
-              alt="Metalúrgica FerrAço" 
+            <img
+              src={logoSrc}
+              alt={logoAlt}
               className="h-12 lg:h-16 w-auto transition-smooth hover:scale-105"
             />
           </div>
@@ -54,12 +61,12 @@ const Header = ({ onLeadModalOpen }: HeaderProps) => {
 
           {/* CTA Button Desktop */}
           <div className="hidden md:block">
-            <Button 
+            <Button
               onClick={onLeadModalOpen}
               variant="secondary"
               className="font-semibold transition-smooth hover:scale-105"
             >
-              Solicitar Orçamento
+              {ctaText}
             </Button>
           </div>
 
@@ -87,12 +94,12 @@ const Header = ({ onLeadModalOpen }: HeaderProps) => {
                   {item.label}
                 </button>
               ))}
-              <Button 
+              <Button
                 onClick={onLeadModalOpen}
                 variant="secondary"
                 className="w-full mt-4 font-semibold"
               >
-                Solicitar Orçamento
+                {ctaText}
               </Button>
             </nav>
           </div>

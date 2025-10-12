@@ -1,8 +1,13 @@
 import { MapPin, Phone, Mail, Facebook, Instagram, Linkedin, Youtube, Shield, LogIn } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoFerraco from "@/assets/logo-ferraco.webp";
+import type { FooterConfig } from "@/types/landingPage";
 
-const Footer = () => {
+interface FooterProps {
+  config?: FooterConfig;
+}
+
+const Footer = ({ config }: FooterProps) => {
   const { isAuthenticated, user } = useAuth();
 
   const quickLinks = [
