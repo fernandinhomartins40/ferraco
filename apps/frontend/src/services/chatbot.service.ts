@@ -2,6 +2,29 @@ import axios from 'axios';
 
 const API_URL = '/api/chatbot';
 
+/**
+ * Recupera o token de autenticação do storage
+ */
+const getAuthToken = (): string | null => {
+  const authStorage = localStorage.getItem('ferraco-auth-storage');
+  if (!authStorage) return null;
+
+  try {
+    const parsed = JSON.parse(authStorage);
+    return parsed.state?.token || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Cria headers com autenticação
+ */
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export interface Product {
   id: string;
   name: string;
@@ -75,7 +98,9 @@ export const chatbotService = {
    * Busca a configuração do chatbot
    */
   async getConfig(): Promise<ChatbotConfigResponse> {
-    const response = await axios.get(`${API_URL}/config`);
+    const response = await axios.get(`${API_URL}/config`, {
+      headers: getAuthHeaders(),
+    });
     return response.data.data;
   },
 
@@ -83,7 +108,9 @@ export const chatbotService = {
    * Atualiza a configuração do chatbot
    */
   async updateConfig(config: ChatbotConfigUpdate): Promise<ChatbotConfigResponse> {
-    const response = await axios.put(`${API_URL}/config`, config);
+    const response = await axios.put(`${API_URL}/config`, config, {
+      headers: getAuthHeaders(),
+    });
     return response.data.data;
   },
 };
