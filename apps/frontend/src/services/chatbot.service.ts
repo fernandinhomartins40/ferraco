@@ -1,29 +1,43 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 const API_URL = '/api/chatbot';
 
 /**
- * Recupera o token de autenticação do storage
+ * Cria instância do axios com interceptor para adicionar token
  */
-const getAuthToken = (): string | null => {
-  const authStorage = localStorage.getItem('ferraco-auth-storage');
-  if (!authStorage) return null;
+const createApiClient = (): AxiosInstance => {
+  const client = axios.create({
+    baseURL: API_URL,
+  });
 
-  try {
-    const parsed = JSON.parse(authStorage);
-    return parsed.state?.token || null;
-  } catch {
-    return null;
-  }
+  // Interceptor para adicionar token em todas as requisições
+  client.interceptors.request.use(
+    (config) => {
+      // Lê o token do localStorage do Zustand
+      const authStorage = localStorage.getItem('ferraco-auth-storage');
+
+      if (authStorage) {
+        try {
+          const parsed = JSON.parse(authStorage);
+          const token = parsed.state?.token;
+
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        } catch (error) {
+          console.error('Erro ao ler token de autenticação:', error);
+        }
+      }
+
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  return client;
 };
 
-/**
- * Cria headers com autenticação
- */
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+const apiClient = createApiClient();
 
 export interface Product {
   id: string;
@@ -98,9 +112,7 @@ export const chatbotService = {
    * Busca a configuração do chatbot
    */
   async getConfig(): Promise<ChatbotConfigResponse> {
-    const response = await axios.get(`${API_URL}/config`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await apiClient.get('/config');
     return response.data.data;
   },
 
@@ -108,9 +120,7 @@ export const chatbotService = {
    * Atualiza a configuração do chatbot
    */
   async updateConfig(config: ChatbotConfigUpdate): Promise<ChatbotConfigResponse> {
-    const response = await axios.put(`${API_URL}/config`, config, {
-      headers: getAuthHeaders(),
-    });
+    const response = await apiClient.put('/config', config);
     return response.data.data;
   },
 };
