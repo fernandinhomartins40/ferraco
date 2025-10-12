@@ -46,19 +46,12 @@ import {
   Phone,
   Mail,
   Building,
-  LayoutGrid,
-  List,
 } from 'lucide-react';
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
-import KanbanView from '@/components/admin/KanbanView';
-import { useToast } from '@/hooks/use-toast';
 
 const AdminLeads = () => {
-  const { toast } = useToast();
-
   // State
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -134,25 +127,6 @@ const AdminLeads = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateStatus = async (leadId: string, newStatus: Lead['status']) => {
-    try {
-      await updateLead.mutateAsync({
-        id: leadId,
-        data: { status: newStatus },
-      });
-      toast({
-        title: 'Status atualizado',
-        description: 'O status do lead foi atualizado com sucesso.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar o status do lead.',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -207,36 +181,13 @@ const AdminLeads = () => {
               Gerencie seus leads do banco de dados PostgreSQL
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Toggle View Mode */}
-            <div className="flex items-center gap-1 border rounded-lg p-1">
-              <Button
-                variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('kanban')}
-                className="gap-2"
-              >
-                <LayoutGrid className="h-4 w-4" />
-                Kanban
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => resetForm()}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Lead
               </Button>
-              <Button
-                variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('table')}
-                className="gap-2"
-              >
-                <List className="h-4 w-4" />
-                Tabela
-              </Button>
-            </div>
-
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => resetForm()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Lead
-                </Button>
-              </DialogTrigger>
+            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Criar Novo Lead</DialogTitle>
@@ -379,46 +330,33 @@ const AdminLeads = () => {
           </CardContent>
         </Card>
 
-        {/* Kanban / Table View */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : leads.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">Nenhum lead encontrado</p>
-              <p className="text-sm">Crie seu primeiro lead para começar</p>
-              <Button
-                className="mt-4"
-                onClick={() => setIsCreateDialogOpen(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Primeiro Lead
-              </Button>
-            </CardContent>
-          </Card>
-        ) : viewMode === 'kanban' ? (
-          <KanbanView
-            leads={leads}
-            onUpdateLeadStatus={handleUpdateStatus}
-            onEditLead={openEditDialog}
-            onDeleteLead={(id) => {
-              if (window.confirm('Tem certeza que deseja excluir este lead?')) {
-                deleteLead.mutate(id);
-              }
-            }}
-          />
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Lista de Leads ({leads.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+        {/* Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Lista de Leads ({leads.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : leads.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">Nenhum lead encontrado</p>
+                <p className="text-sm">Crie seu primeiro lead para começar</p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setIsCreateDialogOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar Primeiro Lead
+                </Button>
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -493,9 +431,9 @@ const AdminLeads = () => {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -562,7 +500,6 @@ const AdminLeads = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
       </div>
     </AdminLayout>
   );
