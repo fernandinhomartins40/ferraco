@@ -1,4 +1,9 @@
-import { useState } from 'react';
+/**
+ * AdminWhatsApp - Conectar WhatsApp com dados REAIS do PostgreSQL
+ * MIGRADO de localStorage para API real
+ */
+
+import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,38 +20,97 @@ import {
   Copy,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  useIntegrationByType,
+  useCreateIntegration,
+  useUpdateIntegration,
+} from '@/hooks/api/useIntegrations';
 
 const AdminWhatsApp = () => {
   const [apiKey, setApiKey] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const handleConnect = () => {
+  // Buscar integração WhatsApp existente do PostgreSQL
+  const { data: whatsappIntegration, isLoading } = useIntegrationByType('WHATSAPP');
+  const createIntegration = useCreateIntegration();
+  const updateIntegration = useUpdateIntegration();
+
+  const isConnected = whatsappIntegration?.isActive || false;
+
+  // Carregar API key ao montar
+  useEffect(() => {
+    if (whatsappIntegration?.credentials?.apiKey) {
+      setApiKey(whatsappIntegration.credentials.apiKey);
+    }
+  }, [whatsappIntegration]);
+
+  const handleConnect = async () => {
     if (!apiKey.trim()) {
       toast.error('Digite a API Key para conectar');
       return;
     }
 
-    // TODO: Implementar validação real da API
-    setIsConnected(true);
-    localStorage.setItem('whatsapp_api_key', apiKey);
-    toast.success('WhatsApp conectado com sucesso!');
+    try {
+      if (whatsappIntegration) {
+        await updateIntegration.mutateAsync({
+          id: whatsappIntegration.id,
+          data: {
+            credentials: { apiKey },
+            isActive: true,
+            config: { provider: 'evolution-api', baseUrl: 'http://localhost:8080' },
+          },
+        });
+      } else {
+        await createIntegration.mutateAsync({
+          name: 'WhatsApp - Evolution API',
+          type: 'WHATSAPP',
+          credentials: { apiKey },
+          config: { provider: 'evolution-api', baseUrl: 'http://localhost:8080' },
+          isActive: true,
+        });
+      }
+      toast.success('WhatsApp conectado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao conectar WhatsApp:', error);
+    }
   };
 
-  const handleDisconnect = () => {
-    setIsConnected(false);
-    setApiKey('');
-    localStorage.removeItem('whatsapp_api_key');
-    toast.success('WhatsApp desconectado');
+  const handleDisconnect = async () => {
+    if (!whatsappIntegration) return;
+
+    try {
+      await updateIntegration.mutateAsync({
+        id: whatsappIntegration.id,
+        data: { isActive: false },
+      });
+      setApiKey('');
+      toast.success('WhatsApp desconectado');
+    } catch (error) {
+      console.error('Erro ao desconectar WhatsApp:', error);
+    }
   };
 
   const copyCommand = (command: string) => {
     navigator.clipboard.writeText(command);
     toast.success('Comando copiado!');
   };
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary mb-4" />
+            <p className="text-muted-foreground">Carregando configurações do WhatsApp...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -62,6 +126,14 @@ const AdminWhatsApp = () => {
           </p>
         </div>
 
+        {/* Alert de dados reais */}
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            ✅ Configuração salva no PostgreSQL. Não usa localStorage.
+          </AlertDescription>
+        </Alert>
+
         {/* Status Card */}
         <Alert className={isConnected ? 'border-green-500 bg-green-50' : ''}>
           {isConnected ? (
@@ -73,8 +145,8 @@ const AdminWhatsApp = () => {
             {isConnected ? (
               <div className="flex items-center justify-between">
                 <span className="text-green-700 font-medium">✅ WhatsApp conectado e pronto para uso!</span>
-                <Button variant="outline" size="sm" onClick={handleDisconnect}>
-                  Desconectar
+                <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={updateIntegration.isPending}>
+                  {updateIntegration.isPending ? 'Desconectando...' : 'Desconectar'}
                 </Button>
               </div>
             ) : (
@@ -232,8 +304,12 @@ const AdminWhatsApp = () => {
                       onChange={(e) => setApiKey(e.target.value)}
                       className="font-mono"
                     />
-                    <Button onClick={handleConnect} className="bg-green-600 hover:bg-green-700">
-                      Conectar
+                    <Button
+                      onClick={handleConnect}
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={createIntegration.isPending || updateIntegration.isPending}
+                    >
+                      {createIntegration.isPending || updateIntegration.isPending ? 'Conectando...' : 'Conectar'}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">

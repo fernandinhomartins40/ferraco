@@ -1,357 +1,506 @@
-import { useState, useMemo, useEffect } from 'react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+/**
+ * AdminLeads - Gerenciamento de Leads com API Real
+ * MIGRADO de kanbanStorage para PostgreSQL API
+ */
+
+import { useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import KanbanColumn from '@/components/kanban/KanbanColumn';
-import SpecialSection from '@/components/kanban/SpecialSection';
-import ColumnModal from '@/components/kanban/ColumnModal';
-import QuickTagManager from '@/components/kanban/QuickTagManager';
-import TagSelector from '@/components/kanban/TagSelector';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { Plus, Search, Tag } from 'lucide-react';
-import { kanbanStorage, KanbanColumn as KanbanColumnType, SpecialSection as SpecialSectionType } from '@/utils/kanbanStorage';
-import { useLeads } from '@/hooks/api/useLeads';
-import { ApiLead } from '@/types/api';
-import { toast } from 'sonner';
-import { logger } from '@/lib/logger';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Users,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Loader2,
+  CheckCircle,
+  Phone,
+  Mail,
+  Building,
+} from 'lucide-react';
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/api/useLeads';
+import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
 
 const AdminLeads = () => {
-  const [columns, setColumns] = useState<KanbanColumnType[]>([]);
-  const [specialSections, setSpecialSections] = useState<SpecialSectionType[]>([]);
+  // State
   const [searchQuery, setSearchQuery] = useState('');
-  const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
-  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
-  const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
-  const [selectedLeadForTags, setSelectedLeadForTags] = useState<string | null>(null);
-  const [editingColumn, setEditingColumn] = useState<KanbanColumnType | null>(null);
-  const [leadTags, setLeadTags] = useState<Record<string, string[]>>({});
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  // Buscar todos os leads (modo demo com dados mockados)
-  const { data: leadsData } = useLeads({ limit: 100 });
+  // Form state
+  const [formData, setFormData] = useState<CreateLeadData>({
+    name: '',
+    phone: '',
+    email: '',
+    company: '',
+    source: 'website',
+    priority: 'MEDIUM',
+  });
 
-  // Carregar colunas, seções especiais e tags dos leads
-  useEffect(() => {
-    loadColumns();
-    loadSpecialSections();
-    loadLeadTags();
-  }, []);
+  // API Hooks
+  const { data: leadsData, isLoading } = useLeads({
+    search: searchQuery || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+  });
+  const createLead = useCreateLead();
+  const updateLead = useUpdateLead();
+  const deleteLead = useDeleteLead();
 
-  const loadLeadTags = () => {
-    const stored = localStorage.getItem('ferraco_lead_tags');
-    if (stored) {
-      setLeadTags(JSON.parse(stored));
-    }
-  };
-
-  const saveLeadTags = (tags: Record<string, string[]>) => {
-    localStorage.setItem('ferraco_lead_tags', JSON.stringify(tags));
-    setLeadTags(tags);
-  };
-
-  const loadColumns = () => {
-    const loadedColumns = kanbanStorage.getAllColumns();
-    setColumns(loadedColumns);
-    logger.info(`Colunas carregadas: ${loadedColumns.length}`);
-  };
-
-  const loadSpecialSections = () => {
-    const sections = kanbanStorage.getSpecialSections();
-    setSpecialSections(sections);
-    logger.info(`Seções especiais carregadas: ${sections.length}`);
-  };
-
-  // Organizar leads por coluna (incluindo seções especiais) e adicionar tags
-  const leadsByColumn = useMemo(() => {
-    if (!leadsData?.data) return {};
-
-    const result: Record<string, ApiLead[]> = {};
-    const data = leadsData.data as ApiLead[];
-
-    // Adicionar colunas normais
-    columns.forEach(column => {
-      const leadIdsInColumn = kanbanStorage.getLeadsInColumn(column.id);
-      result[column.id] = leadIdsInColumn
-        .map(leadId => {
-          const lead = data.find(l => l.id === leadId);
-          if (lead) {
-            return { ...lead, tags: leadTags[leadId] || [] };
-          }
-          return null;
-        })
-        .filter(Boolean) as unknown as ApiLead[];
-    });
-
-    // Adicionar seções especiais
-    specialSections.forEach(section => {
-      const leadIdsInSection = kanbanStorage.getLeadsInColumn(section.id);
-      result[section.id] = leadIdsInSection
-        .map(leadId => {
-          const lead = data.find(l => l.id === leadId);
-          if (lead) {
-            return { ...lead, tags: leadTags[leadId] || [] };
-          }
-          return null;
-        })
-        .filter(Boolean) as unknown as ApiLead[];
-    });
-
-    // Adicionar leads que não estão em nenhuma coluna na primeira coluna
-    const allAssignedLeadIds = new Set(
-      Object.values(result).flat().map(lead => lead.id)
-    );
-
-    const unassignedLeads = data.filter(
-      lead => !allAssignedLeadIds.has(lead.id)
-    );
-
-    if (unassignedLeads.length > 0 && columns.length > 0) {
-      const firstColumnId = columns[0].id;
-      unassignedLeads.forEach(lead => {
-        kanbanStorage.addNewLead(lead.id);
-      });
-      result[firstColumnId] = [
-        ...result[firstColumnId],
-        ...unassignedLeads
-      ];
-    }
-
-    return result;
-  }, [columns, specialSections, leadsData, leadTags]);
-
-  // Filtrar leads por busca
-  const filteredLeadsByColumn = useMemo(() => {
-    if (!searchQuery) return leadsByColumn;
-
-    const query = searchQuery.toLowerCase();
-    const filtered: Record<string, ApiLead[]> = {};
-
-    Object.entries(leadsByColumn).forEach(([columnId, leads]) => {
-      filtered[columnId] = leads.filter(lead =>
-        lead.name.toLowerCase().includes(query) ||
-        lead.phone.toLowerCase().includes(query) ||
-        lead.email?.toLowerCase().includes(query)
-      );
-    });
-
-    return filtered;
-  }, [leadsByColumn, searchQuery]);
+  const leads = leadsData?.data || [];
 
   // Handlers
-  const handleCreateColumn = () => {
-    setEditingColumn(null);
-    setIsColumnModalOpen(true);
-  };
-
-  const handleEditColumn = (column: KanbanColumnType) => {
-    setEditingColumn(column);
-    setIsColumnModalOpen(true);
-  };
-
-  const handleSaveColumn = (data: { name: string; color: string }) => {
-    if (editingColumn) {
-      // Editar coluna existente
-      kanbanStorage.updateColumn(editingColumn.id, data);
-      toast.success('Coluna atualizada com sucesso!');
-    } else {
-      // Criar nova coluna
-      kanbanStorage.createColumn(data);
-      toast.success('Coluna criada com sucesso!');
-    }
-
-    loadColumns();
-    setIsColumnModalOpen(false);
-    setEditingColumn(null);
-  };
-
-  const handleDeleteColumn = (columnId: string) => {
-    if (columns.length === 1) {
-      toast.error('Não é possível deletar a única coluna!');
+  const handleCreate = async () => {
+    if (!formData.name || !formData.phone) {
       return;
     }
 
-    const success = kanbanStorage.deleteColumn(columnId);
-    if (success) {
-      toast.success('Coluna deletada com sucesso!');
-      loadColumns();
+    await createLead.mutateAsync(formData);
+    setIsCreateDialogOpen(false);
+    resetForm();
+  };
+
+  const handleEdit = async () => {
+    if (!selectedLead) return;
+
+    const updateData: UpdateLeadData = {
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email,
+      company: formData.company,
+      source: formData.source,
+      priority: formData.priority,
+    };
+
+    await updateLead.mutateAsync({ id: selectedLead.id, data: updateData });
+    setIsEditDialogOpen(false);
+    setSelectedLead(null);
+    resetForm();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja deletar este lead?')) {
+      await deleteLead.mutateAsync(id);
     }
   };
 
-  const handleAddTag = (leadId: string) => {
-    setSelectedLeadForTags(leadId);
-    setIsTagSelectorOpen(true);
+  const openEditDialog = (lead: Lead) => {
+    setSelectedLead(lead);
+    setFormData({
+      name: lead.name,
+      phone: lead.phone,
+      email: lead.email || '',
+      company: lead.company || '',
+      source: lead.source || 'website',
+      priority: lead.priority,
+    });
+    setIsEditDialogOpen(true);
   };
 
-  const handleUpdateLeadTags = (leadId: string, tagNames: string[]) => {
-    const updatedTags = { ...leadTags, [leadId]: tagNames };
-    saveLeadTags(updatedTags);
-    toast.success('Tags atualizadas!');
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      company: '',
+      source: 'website',
+      priority: 'MEDIUM',
+    });
   };
 
-  const handleMoveLead = (leadId: string, targetColumnId: string, targetOrder: number) => {
-    const currentPosition = kanbanStorage.getLeadPosition(leadId);
-
-    if (currentPosition) {
-      // Movendo entre colunas
-      kanbanStorage.moveLeadBetweenColumns(
-        leadId,
-        currentPosition.columnId,
-        targetColumnId,
-        targetOrder
-      );
-    } else {
-      // Novo lead ou lead sem posição
-      kanbanStorage.moveLeadToColumn(leadId, targetColumnId, targetOrder);
-    }
-
-    // Recarregar dados
-    loadColumns();
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { label: string; className: string }> = {
+      NOVO: { label: 'Novo', className: 'bg-blue-100 text-blue-800' },
+      QUALIFICADO: { label: 'Qualificado', className: 'bg-green-100 text-green-800' },
+      EM_ANDAMENTO: { label: 'Em Andamento', className: 'bg-yellow-100 text-yellow-800' },
+      CONCLUIDO: { label: 'Concluído', className: 'bg-purple-100 text-purple-800' },
+      PERDIDO: { label: 'Perdido', className: 'bg-red-100 text-red-800' },
+      ARQUIVADO: { label: 'Arquivado', className: 'bg-gray-100 text-gray-800' },
+    };
+    const variant = variants[status] || variants.NOVO;
+    return (
+      <Badge className={variant.className} variant="outline">
+        {variant.label}
+      </Badge>
+    );
   };
 
-  const handleLeadClick = (lead: ApiLead) => {
-    // TODO: Abrir modal com detalhes do lead
-    logger.info('Lead clicado:', lead);
-    toast.info(`Lead: ${lead.name}`);
+  const getPriorityBadge = (priority: string) => {
+    const variants: Record<string, { label: string; className: string }> = {
+      LOW: { label: 'Baixa', className: 'bg-gray-100 text-gray-800' },
+      MEDIUM: { label: 'Média', className: 'bg-blue-100 text-blue-800' },
+      HIGH: { label: 'Alta', className: 'bg-orange-100 text-orange-800' },
+      URGENT: { label: 'Urgente', className: 'bg-red-100 text-red-800' },
+    };
+    const variant = variants[priority] || variants.MEDIUM;
+    return (
+      <Badge className={variant.className} variant="outline" size="sm">
+        {variant.label}
+      </Badge>
+    );
   };
 
   return (
     <AdminLayout>
-      <DndProvider backend={HTML5Backend}>
-        <div className="space-y-4 h-full flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Leads</h1>
-              <p className="text-muted-foreground">
-                Gerencie seus leads em um quadro Kanban
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" onClick={() => setIsTagManagerOpen(true)}>
-                <Tag className="mr-2 h-4 w-4" />
-                Gerenciar Tags
-              </Button>
-              <Button onClick={handleCreateColumn}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Leads</h1>
+            <p className="text-muted-foreground">
+              Gerencie seus leads do banco de dados PostgreSQL
+            </p>
+          </div>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => resetForm()}>
                 <Plus className="mr-2 h-4 w-4" />
-                Nova Coluna
+                Novo Lead
               </Button>
-            </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar leads por nome, telefone ou email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Kanban Board */}
-          <div className="flex-1 overflow-auto">
-            {/* Regular Columns */}
-            <div className="flex space-x-4 mb-6">
-              {columns.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center space-y-4">
-                    <p className="text-muted-foreground">
-                      Nenhuma coluna criada ainda
-                    </p>
-                    <Button onClick={handleCreateColumn}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Criar Primeira Coluna
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                columns.map(column => (
-                  <KanbanColumn
-                    key={column.id}
-                    column={column}
-                    leads={filteredLeadsByColumn[column.id] || []}
-                    onEditColumn={handleEditColumn}
-                    onDeleteColumn={handleDeleteColumn}
-                    onMoveLead={handleMoveLead}
-                    onLeadClick={handleLeadClick}
-                    onAddTag={handleAddTag}
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Novo Lead</DialogTitle>
+                <DialogDescription>
+                  Adicione um novo lead ao sistema. Os dados serão salvos no banco de dados.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nome *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Nome completo"
                   />
-                ))
-              )}
-            </div>
-
-            {/* Separator with Label */}
-            {columns.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center">
-                  <Separator className="flex-1" />
-                  <span className="px-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Seções Especiais
-                  </span>
-                  <Separator className="flex-1" />
                 </div>
-                <p className="text-center text-xs text-muted-foreground mt-2">
-                  Arraste leads para estas seções para ativar automações especiais
-                </p>
-              </div>
-            )}
-
-            {/* Special Sections */}
-            {columns.length > 0 && (
-              <div className="flex space-x-4">
-                {specialSections.map(section => (
-                  <SpecialSection
-                    key={section.id}
-                    section={section}
-                    leads={filteredLeadsByColumn[section.id] || []}
-                    onMoveLead={handleMoveLead}
-                    onLeadClick={handleLeadClick}
-                    onAddTag={handleAddTag}
+                <div>
+                  <Label htmlFor="phone">Telefone *</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="(00) 00000-0000"
                   />
-                ))}
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="company">Empresa</Label>
+                  <Input
+                    id="company"
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    placeholder="Nome da empresa"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="source">Origem</Label>
+                  <Select
+                    value={formData.source}
+                    onValueChange={(value) => setFormData({ ...formData, source: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="website">Website</SelectItem>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="indicacao">Indicação</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="priority">Prioridade</Label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value: any) => setFormData({ ...formData, priority: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="LOW">Baixa</SelectItem>
+                      <SelectItem value="MEDIUM">Média</SelectItem>
+                      <SelectItem value="HIGH">Alta</SelectItem>
+                      <SelectItem value="URGENT">Urgente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            )}
-          </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={createLead.isPending || !formData.name || !formData.phone}
+                >
+                  {createLead.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Criar Lead
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Column Modal */}
-        <ColumnModal
-          isOpen={isColumnModalOpen}
-          onClose={() => {
-            setIsColumnModalOpen(false);
-            setEditingColumn(null);
-          }}
-          onSave={handleSaveColumn}
-          column={editingColumn}
-        />
+        {/* Alert de dados reais */}
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            ✅ Todos os leads são REAIS e persistidos no PostgreSQL. Não há simulações.
+          </AlertDescription>
+        </Alert>
 
-        {/* Tag Manager */}
-        <QuickTagManager
-          isOpen={isTagManagerOpen}
-          onClose={() => setIsTagManagerOpen(false)}
-          onTagsChange={() => {
-            // Refresh leads to show updated tags
-            loadColumns();
-          }}
-        />
+        {/* Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, telefone ou email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="NOVO">Novo</SelectItem>
+                  <SelectItem value="QUALIFICADO">Qualificado</SelectItem>
+                  <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
+                  <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                  <SelectItem value="PERDIDO">Perdido</SelectItem>
+                  <SelectItem value="ARQUIVADO">Arquivado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Tag Selector */}
-        {selectedLeadForTags && (
-          <TagSelector
-            isOpen={isTagSelectorOpen}
-            onClose={() => {
-              setIsTagSelectorOpen(false);
-              setSelectedLeadForTags(null);
-            }}
-            leadId={selectedLeadForTags}
-            currentTags={leadTags[selectedLeadForTags] || []}
-            onTagsUpdate={handleUpdateLeadTags}
-          />
-        )}
-      </DndProvider>
+        {/* Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Lista de Leads ({leads.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : leads.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">Nenhum lead encontrado</p>
+                <p className="text-sm">Crie seu primeiro lead para começar</p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setIsCreateDialogOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar Primeiro Lead
+                </Button>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Prioridade</TableHead>
+                    <TableHead>Origem</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leads.map((lead) => (
+                    <TableRow key={lead.id}>
+                      <TableCell className="font-medium">{lead.name}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-sm">
+                            <Phone className="h-3 w-3" />
+                            {lead.phone}
+                          </div>
+                          {lead.email && (
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              {lead.email}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {lead.company ? (
+                          <div className="flex items-center gap-1">
+                            <Building className="h-3 w-3" />
+                            {lead.company}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(lead.status)}</TableCell>
+                      <TableCell>{getPriorityBadge(lead.priority)}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">
+                          {lead.source || 'N/A'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{lead.leadScore}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(lead)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(lead.id)}
+                            disabled={deleteLead.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Lead</DialogTitle>
+              <DialogDescription>
+                Atualize as informações do lead. As alterações serão salvas no banco de dados.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Nome *</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-phone">Telefone *</Label>
+                <Input
+                  id="edit-phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-company">Empresa</Label>
+                <Input
+                  id="edit-company"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedLead(null);
+                  resetForm();
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleEdit}
+                disabled={updateLead.isPending || !formData.name || !formData.phone}
+              >
+                {updateLead.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </AdminLayout>
   );
 };
