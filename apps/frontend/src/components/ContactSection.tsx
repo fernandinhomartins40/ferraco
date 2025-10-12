@@ -36,16 +36,19 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
     }
   ];
 
+  // Usar config ou fallback
+  const displayContactInfo = config?.contactMethods && config.contactMethods.length > 0 ? config.contactMethods : contactInfo;
+
   return (
     <section id="contato" className="py-20 bg-background">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Entre em Contato
+            {config?.title?.text || "Entre em Contato"}
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Nossa equipe está pronta para atender suas necessidades e fornecer as melhores soluções metalúrgicas
+            {config?.subtitle?.text || "Nossa equipe está pronta para atender suas necessidades e fornecer as melhores soluções"}
           </p>
         </div>
 
@@ -56,28 +59,33 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
               Informações de Contato
             </h3>
             <div className="space-y-6 mb-8">
-              {contactInfo.map((contact, index) => (
-                <Card key={index} className="shadow-elegant hover:shadow-glow transition-smooth">
-                  <CardContent className="p-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="bg-primary/10 rounded-full p-3">
-                        {contact.icon}
+              {displayContactInfo.map((contact, index) => {
+                const defaultContact = contactInfo[index];
+                return (
+                  <Card key={index} className="shadow-elegant hover:shadow-glow transition-smooth">
+                    <CardContent className="p-6">
+                      <div className="flex items-start space-x-4">
+                        <div className="bg-primary/10 rounded-full p-3">
+                          {defaultContact?.icon}
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-foreground mb-1">
+                            {contact.label || contact.title}
+                          </h4>
+                          <p className="text-muted-foreground font-medium">
+                            {contact.value || contact.info}
+                          </p>
+                          {contact.subInfo && (
+                            <p className="text-muted-foreground text-sm">
+                              {contact.subInfo}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-lg font-semibold text-foreground mb-1">
-                          {contact.title}
-                        </h4>
-                        <p className="text-muted-foreground font-medium">
-                          {contact.info}
-                        </p>
-                        <p className="text-muted-foreground text-sm">
-                          {contact.subInfo}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
 
             {/* WhatsApp CTA */}

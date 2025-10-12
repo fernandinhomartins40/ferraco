@@ -56,37 +56,43 @@ const ExperienceSection = ({ onLeadModalOpen, config }: ExperienceSectionProps) 
     }
   ];
 
+  // Usar config ou fallback para stats
+  const displayStats = config?.highlights && config.highlights.length > 0 ? config.highlights : stats;
+
   return (
     <section id="experiencia" className="py-20 bg-accent text-white">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Experiência Comprovada
+            {config?.title?.text || "Experiência Comprovada"}
           </h2>
           <p className="text-xl opacity-90 max-w-3xl mx-auto">
-            Números que refletem nossa dedicação à excelência e o compromisso com nossos clientes
+            {config?.subtitle?.text || "Números que refletem nossa dedicação à excelência e o compromisso com nossos clientes"}
           </p>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-          {stats.map((stat, index) => (
-            <div key={index} className="text-center group">
-              <div className="bg-white/10 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-smooth group-hover:scale-110">
-                {stat.icon}
+          {displayStats.map((stat, index) => {
+            const defaultStat = stats[index];
+            return (
+              <div key={'id' in stat ? stat.id : index} className="text-center group">
+                <div className="bg-white/10 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-smooth group-hover:scale-110">
+                  {defaultStat?.icon}
+                </div>
+                <div className="text-5xl font-bold mb-2 text-secondary">
+                  {stat.value || stat.number}
+                </div>
+                <h3 className="text-xl font-semibold mb-2">
+                  {stat.label}
+                </h3>
+                <p className="text-white/80 text-sm">
+                  {stat.description}
+                </p>
               </div>
-              <div className="text-5xl font-bold mb-2 text-secondary">
-                {stat.number}
-              </div>
-              <h3 className="text-xl font-semibold mb-2">
-                {stat.label}
-              </h3>
-              <p className="text-white/80 text-sm">
-                {stat.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Testimonials */}

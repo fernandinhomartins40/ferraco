@@ -39,20 +39,26 @@ const Footer = ({ config }: FooterProps) => {
     }
   };
 
+  // Usar config ou fallback
+  const logoSrc = config?.logo?.image || logoFerraco;
+  const logoAlt = config?.logo?.alt || "Ferraco Equipamentos";
+  const tagline = config?.tagline || "Há mais de 25 anos oferecendo soluções de qualidade superior para fazendas de todo o Brasil. Tradição, inovação e excelência em cada produto.";
+  const copyright = config?.copyright || `© ${new Date().getFullYear()} Ferraco Equipamentos. Todos os direitos reservados.`;
+  const displaySocialLinks = config?.social?.enabled ? config.social.links.filter(link => link.href) : socialLinks;
+
   return (
     <footer className="bg-accent text-white">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="lg:col-span-2">
-            <img 
-              src={logoFerraco} 
-              alt="Metalúrgica FerrAço" 
+            <img
+              src={logoSrc}
+              alt={logoAlt}
               className="h-16 w-auto mb-6"
             />
             <p className="text-primary-foreground/90 mb-6 max-w-md">
-              Há mais de 25 anos oferecendo soluções metalúrgicas de qualidade superior 
-              para indústrias de todo o Brasil. Tradição, inovação e excelência em cada produto.
+              {tagline}
             </p>
             
             {/* Contact Info */}
@@ -134,41 +140,48 @@ const Footer = ({ config }: FooterProps) => {
         </div>
 
         {/* Social Links */}
-        <div className="border-t border-primary-foreground/20 mt-12 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <h4 className="text-lg font-semibold mb-3 text-secondary">Siga-nos</h4>
-              <div className="flex space-x-4">
-                {socialLinks.map((social) => (
-                  <a
-                    key={social.label}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-primary-foreground/10 hover:bg-secondary hover:text-primary p-3 rounded-full transition-smooth hover:scale-110"
-                    aria-label={social.label}
-                  >
-                    {social.icon}
-                  </a>
-                ))}
+        {displaySocialLinks.length > 0 && (
+          <div className="border-t border-primary-foreground/20 mt-12 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="mb-4 md:mb-0">
+                <h4 className="text-lg font-semibold mb-3 text-secondary">
+                  {config?.social?.title || "Siga-nos"}
+                </h4>
+                <div className="flex space-x-4">
+                  {displaySocialLinks.map((social, index) => {
+                    const defaultSocial = socialLinks[index];
+                    return (
+                      <a
+                        key={social.id || social.label}
+                        href={social.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-primary-foreground/10 hover:bg-secondary hover:text-primary p-3 rounded-full transition-smooth hover:scale-110"
+                        aria-label={social.label}
+                      >
+                        {defaultSocial?.icon || social.icon}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="text-center md:text-right">
+                <p className="text-sm text-primary-foreground/70 mb-2">
+                  Horário de Atendimento:
+                </p>
+                <p className="text-sm text-primary-foreground/90">
+                  Segunda a Sexta: 7h às 18h | Sábado: 8h às 12h
+                </p>
               </div>
             </div>
-            
-            <div className="text-center md:text-right">
-              <p className="text-sm text-primary-foreground/70 mb-2">
-                Horário de Atendimento:
-              </p>
-              <p className="text-sm text-primary-foreground/90">
-                Segunda a Sexta: 7h às 18h | Sábado: 8h às 12h
-              </p>
-            </div>
           </div>
-        </div>
+        )}
 
         {/* Copyright */}
         <div className="border-t border-primary-foreground/20 mt-8 pt-8 text-center">
           <p className="text-sm text-primary-foreground/70">
-            © {new Date().getFullYear()} Metalúrgica FerrAço. Todos os direitos reservados.
+            {copyright}
           </p>
           <p className="text-xs text-primary-foreground/60 mt-2">
             CNPJ: 12.345.678/0001-90 | Desenvolvido com tecnologia Lovable
