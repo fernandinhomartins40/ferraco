@@ -18,7 +18,6 @@ import {
   Smartphone,
   Eye,
   EyeOff,
-  Palette,
   Layout,
   Rocket,
   Package,
@@ -27,7 +26,6 @@ import {
   Menu as MenuIcon,
 } from 'lucide-react';
 import {
-  ThemeEditor,
   HeaderEditor,
   HeroEditor,
   AboutEditor,
@@ -62,7 +60,6 @@ export const AdminLandingPageEditor = () => {
   const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
 
   const sections: Array<{ key: SectionKey; label: string; icon: any }> = [
-    { key: 'theme', label: 'Tema', icon: Palette },
     { key: 'header', label: 'Cabeçalho', icon: MenuIcon },
     { key: 'hero', label: 'Hero', icon: Rocket },
     { key: 'about', label: 'Sobre', icon: Layout },
@@ -188,14 +185,6 @@ export const AdminLandingPageEditor = () => {
 
                   <ScrollArea className="h-[600px]">
                     <div className="pr-4">
-                      {/* Theme Editor */}
-                      {currentSection === 'theme' && (
-                        <ThemeEditor
-                          config={config.theme}
-                          onChange={(updates) => updateSection('theme', updates)}
-                        />
-                      )}
-
                       {/* Header Editor */}
                       {currentSection === 'header' && (
                         <HeaderEditor
