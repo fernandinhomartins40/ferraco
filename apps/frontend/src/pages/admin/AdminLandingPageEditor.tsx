@@ -157,210 +157,204 @@ export const AdminLandingPageEditor = () => {
         )}
 
         {/* Main Layout */}
-        <div className="grid grid-cols-12 gap-6">
-          {/* Sidebar - Editor */}
-          <div className="col-span-4">
-            <Card className="sticky top-6">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-lg font-semibold mb-2">Seções</h2>
-                    <div className="grid grid-cols-2 gap-2">
-                      {sections.map((section) => {
-                        const Icon = section.icon;
-                        return (
-                          <Button
-                            key={section.key}
-                            variant={currentSection === section.key ? 'default' : 'outline'}
-                            size="sm"
-                            className="justify-start"
-                            onClick={() => setCurrentSection(section.key)}
-                          >
-                            <Icon className="h-4 w-4 mr-2" />
-                            {section.label}
-                          </Button>
-                        );
-                      })}
-                    </div>
+        <div className="space-y-6">
+          {/* Seções */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold mb-2">Seções</h2>
+                  <div className="grid grid-cols-4 gap-2">
+                    {sections.map((section) => {
+                      const Icon = section.icon;
+                      return (
+                        <Button
+                          key={section.key}
+                          variant={currentSection === section.key ? 'default' : 'outline'}
+                          size="sm"
+                          className="justify-start"
+                          onClick={() => setCurrentSection(section.key)}
+                        >
+                          <Icon className="h-4 w-4 mr-2" />
+                          {section.label}
+                        </Button>
+                      );
+                    })}
                   </div>
-
-                  <Separator />
-
-                  <ScrollArea className="h-[600px]">
-                    <div className="pr-4">
-                      {/* Header Editor */}
-                      {currentSection === 'header' && (
-                        <HeaderEditor
-                          config={config.header}
-                          onChange={(updates) => updateSection('header', updates)}
-                        />
-                      )}
-
-                      {/* Hero Editor */}
-                      {currentSection === 'hero' && (
-                        <HeroEditor
-                          config={config.hero}
-                          onChange={(updates) => updateSection('hero', updates)}
-                        />
-                      )}
-
-                      {/* Marquee Editor */}
-                      {currentSection === 'marquee' && config.marquee && (
-                        <MarqueeEditor
-                          config={config.marquee}
-                          onChange={(updates) => updateSection('marquee', updates)}
-                        />
-                      )}
-
-                      {currentSection === 'marquee' && !config.marquee && (
-                        <Card>
-                          <CardContent className="p-8 text-center">
-                            <p className="text-muted-foreground mb-4">
-                              Configuração de Marquee não encontrada. Clique em "Restaurar Padrões" para adicionar.
-                            </p>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* About Editor */}
-                      {currentSection === 'about' && (
-                        <AboutEditor
-                          config={config.about}
-                          onChange={(updates) => updateSection('about', updates)}
-                        />
-                      )}
-
-                      {/* Products Editor */}
-                      {currentSection === 'products' && (
-                        <ProductsEditor
-                          config={config.products}
-                          onChange={(updates) => updateSection('products', updates)}
-                        />
-                      )}
-
-                      {/* Experience Editor */}
-                      {currentSection === 'experience' && (
-                        <ExperienceEditor
-                          config={config.experience}
-                          onChange={(updates) => updateSection('experience', updates)}
-                        />
-                      )}
-
-                      {/* Contact Editor */}
-                      {currentSection === 'contact' && (
-                        <ContactEditor
-                          config={config.contact}
-                          onChange={(updates) => updateSection('contact', updates)}
-                        />
-                      )}
-
-                      {/* Footer Editor */}
-                      {currentSection === 'footer' && (
-                        <FooterEditor
-                          config={config.footer}
-                          onChange={(updates) => updateSection('footer', updates)}
-                        />
-                      )}
-
-                      {/* Meta Editor (futuro) */}
-                      {currentSection === 'meta' && (
-                        <Card>
-                          <CardContent className="p-8 text-center">
-                            <p className="text-muted-foreground">
-                              Editor de Meta Tags será implementado em breve
-                            </p>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  </ScrollArea>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Preview */}
-          <div className="col-span-8">
-            <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Preview Controls */}
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Preview</h2>
+                <Separator />
 
-                    <div className="flex gap-2">
-                      <Button
-                        variant={previewMode === 'desktop' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPreviewMode('desktop')}
-                      >
-                        <Monitor className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        variant={previewMode === 'tablet' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPreviewMode('tablet')}
-                      >
-                        <Tablet className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        variant={previewMode === 'mobile' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPreviewMode('mobile')}
-                      >
-                        <Smartphone className="h-4 w-4" />
-                      </Button>
-
-                      <Separator orientation="vertical" className="h-8" />
-
-                      <Button variant="outline" size="sm" onClick={togglePreview}>
-                        {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Preview Content */}
-                  {showPreview ? (
-                    <div
-                      className={`
-                        mx-auto border rounded-lg overflow-hidden bg-white transition-all
-                        ${previewMode === 'mobile' ? 'max-w-[375px]' : ''}
-                        ${previewMode === 'tablet' ? 'max-w-[768px]' : ''}
-                        ${previewMode === 'desktop' ? 'w-full' : ''}
-                      `}
-                    >
-                      <div className="aspect-[16/10] bg-muted flex items-center justify-center">
-                        <div className="text-center p-8">
-                          <p className="text-muted-foreground mb-4">
-                            Preview da Landing Page
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Seção atual: <strong>{currentSection}</strong>
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            O preview em tempo real será implementado integrando com os componentes
-                            da landing page
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="aspect-[16/10] bg-muted rounded-lg flex items-center justify-center">
-                      <p className="text-muted-foreground">Preview oculto</p>
-                    </div>
+                <div>
+                  {/* Header Editor */}
+                  {currentSection === 'header' && (
+                    <HeaderEditor
+                      config={config.header}
+                      onChange={(updates) => updateSection('header', updates)}
+                    />
                   )}
 
-                  {/* Preview Info */}
-                  <div className="text-xs text-muted-foreground text-center">
-                    Modo: {previewMode} • Última modificação:{' '}
-                    {new Date(config.lastModified).toLocaleString('pt-BR')}
+                  {/* Hero Editor */}
+                  {currentSection === 'hero' && (
+                    <HeroEditor
+                      config={config.hero}
+                      onChange={(updates) => updateSection('hero', updates)}
+                    />
+                  )}
+
+                  {/* Marquee Editor */}
+                  {currentSection === 'marquee' && config.marquee && (
+                    <MarqueeEditor
+                      config={config.marquee}
+                      onChange={(updates) => updateSection('marquee', updates)}
+                    />
+                  )}
+
+                  {currentSection === 'marquee' && !config.marquee && (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <p className="text-muted-foreground mb-4">
+                          Configuração de Marquee não encontrada. Clique em "Restaurar Padrões" para adicionar.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* About Editor */}
+                  {currentSection === 'about' && (
+                    <AboutEditor
+                      config={config.about}
+                      onChange={(updates) => updateSection('about', updates)}
+                    />
+                  )}
+
+                  {/* Products Editor */}
+                  {currentSection === 'products' && (
+                    <ProductsEditor
+                      config={config.products}
+                      onChange={(updates) => updateSection('products', updates)}
+                    />
+                  )}
+
+                  {/* Experience Editor */}
+                  {currentSection === 'experience' && (
+                    <ExperienceEditor
+                      config={config.experience}
+                      onChange={(updates) => updateSection('experience', updates)}
+                    />
+                  )}
+
+                  {/* Contact Editor */}
+                  {currentSection === 'contact' && (
+                    <ContactEditor
+                      config={config.contact}
+                      onChange={(updates) => updateSection('contact', updates)}
+                    />
+                  )}
+
+                  {/* Footer Editor */}
+                  {currentSection === 'footer' && (
+                    <FooterEditor
+                      config={config.footer}
+                      onChange={(updates) => updateSection('footer', updates)}
+                    />
+                  )}
+
+                  {/* Meta Editor (futuro) */}
+                  {currentSection === 'meta' && (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <p className="text-muted-foreground">
+                          Editor de Meta Tags será implementado em breve
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Preview */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {/* Preview Controls */}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">Preview</h2>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant={previewMode === 'desktop' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPreviewMode('desktop')}
+                    >
+                      <Monitor className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      variant={previewMode === 'tablet' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPreviewMode('tablet')}
+                    >
+                      <Tablet className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      variant={previewMode === 'mobile' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPreviewMode('mobile')}
+                    >
+                      <Smartphone className="h-4 w-4" />
+                    </Button>
+
+                    <Separator orientation="vertical" className="h-8" />
+
+                    <Button variant="outline" size="sm" onClick={togglePreview}>
+                      {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+
+                {/* Preview Content */}
+                {showPreview ? (
+                  <div
+                    className={`
+                      mx-auto border rounded-lg overflow-hidden bg-white transition-all
+                      ${previewMode === 'mobile' ? 'max-w-[375px]' : ''}
+                      ${previewMode === 'tablet' ? 'max-w-[768px]' : ''}
+                      ${previewMode === 'desktop' ? 'w-full' : ''}
+                    `}
+                  >
+                    <div className="aspect-[16/10] bg-muted flex items-center justify-center">
+                      <div className="text-center p-8">
+                        <p className="text-muted-foreground mb-4">
+                          Preview da Landing Page
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Seção atual: <strong>{currentSection}</strong>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          O preview em tempo real será implementado integrando com os componentes
+                          da landing page
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-[16/10] bg-muted rounded-lg flex items-center justify-center">
+                    <p className="text-muted-foreground">Preview oculto</p>
+                  </div>
+                )}
+
+                {/* Preview Info */}
+                <div className="text-xs text-muted-foreground text-center">
+                  Modo: {previewMode} • Última modificação:{' '}
+                  {new Date(config.lastModified).toLocaleString('pt-BR')}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Keyboard Shortcuts Help */}
