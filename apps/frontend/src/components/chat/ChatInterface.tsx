@@ -1,5 +1,5 @@
 /**
- * ChatInterface - Interface de chat completa estilo WhatsApp
+ * ChatInterface - Interface de chat com fluxo conversacional profissional
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -11,18 +11,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MoreVertical, Search, Phone, Video } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import axios from 'axios';
+
+interface ChatOption {
+  id: string;
+  label: string;
+}
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => void;
-  initialMessages?: Message[];
 }
 
-export const ChatInterface = ({
-  onSendMessage,
-  initialMessages = [],
-}: ChatInterfaceProps) => {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+export const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentOptions, setCurrentOptions] = useState<ChatOption[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -35,33 +40,104 @@ export const ChatInterface = ({
     scrollToBottom();
   }, [messages]);
 
-  // Simula mensagens iniciais
+  // Inicializar sessão do chatbot
   useEffect(() => {
-    if (messages.length === 0) {
-      const welcomeMessages: Message[] = [
-        {
-          id: '1',
-          content:
-            'Olá! 👋 Bem-vindo ao chat da Ferraco!\n\nSou o assistente virtual e estou aqui para ajudá-lo.',
-          sender: 'bot',
-          timestamp: new Date(Date.now() - 5000),
-          status: 'read',
-        },
-        {
-          id: '2',
-          content:
-            'Como posso ajudá-lo hoje? Você pode me perguntar sobre:\n\n• Nossos produtos\n• Preços e orçamentos\n• Formas de pagamento\n• Prazos de entrega\n• Suporte técnico',
-          sender: 'bot',
-          timestamp: new Date(Date.now() - 3000),
-          status: 'read',
-        },
-      ];
-      setMessages(welcomeMessages);
-    }
-  }, []);
+    const initSession = async () => {
+      try {
+        const response = await axios.post('/api/chatbot/session/start', {
+          userAgent: navigator.userAgent,
+        });
 
+        const { session, message, options } = response.data.data;
+
+        setSessionId(session.sessionId);
+        setCurrentOptions(options || []);
+
+        // Adicionar mensagem de boas-vindas
+        const welcomeMsg: Message = {
+          id: '1',
+          content: message,
+          sender: 'bot',
+          timestamp: new Date(),
+          status: 'read',
+        };
+
+        setMessages([welcomeMsg]);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Erro ao iniciar sessão do chatbot:', error);
+
+        // Fallback message
+        const fallbackMsg: Message = {
+          id: '1',
+          content: 'Desculpe, houve um erro ao iniciar o chat. Por favor, recarregue a página.',
+          sender: 'bot',
+          timestamp: new Date(),
+          status: 'read',
+        };
+        setMessages([fallbackMsg]);
+      }
+    };
+
+    if (!isInitialized) {
+      initSession();
+    }
+  }, [isInitialized]);
+
+  // Enviar mensagem para o backend
+  const sendMessageToBot = async (content: string, optionId?: string) => {
+    if (!sessionId) {
+      console.error('Sem sessionId');
+      return;
+    }
+
+    try {
+      setIsTyping(true);
+
+      const response = await axios.post(
+        `/api/chatbot/session/${sessionId}/message`,
+        {
+          message: content,
+          optionId,
+        }
+      );
+
+      const { message: botMessage, options } = response.data.data;
+
+      setIsTyping(false);
+
+      // Adicionar resposta do bot
+      const botMsg: Message = {
+        id: Date.now().toString(),
+        content: botMessage,
+        sender: 'bot',
+        timestamp: new Date(),
+        status: 'read',
+      };
+
+      setMessages((prev) => [...prev, botMsg]);
+      setCurrentOptions(options || []);
+    } catch (error: any) {
+      console.error('Erro ao enviar mensagem:', error);
+      setIsTyping(false);
+
+      const errorMsg: Message = {
+        id: Date.now().toString(),
+        content:
+          error.response?.data?.message ||
+          'Desculpe, houve um erro ao processar sua mensagem.',
+        sender: 'bot',
+        timestamp: new Date(),
+        status: 'read',
+      };
+
+      setMessages((prev) => [...prev, errorMsg]);
+    }
+  };
+
+  // Manipular envio de mensagem de texto
   const handleSendMessage = (content: string) => {
-    // Adiciona mensagem do usuário
+    // Adicionar mensagem do usuário
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -77,33 +153,31 @@ export const ChatInterface = ({
       onSendMessage(content);
     }
 
-    // Simula envio e resposta (será substituído pelo backend)
-    setTimeout(() => {
-      // Atualiza status da mensagem
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === userMessage.id ? { ...msg, status: 'delivered' as const } : msg
-        )
-      );
+    // Limpar opções
+    setCurrentOptions([]);
 
-      // Simula "digitando..."
-      setIsTyping(true);
+    // Enviar para o backend
+    sendMessageToBot(content);
+  };
 
-      setTimeout(() => {
-        setIsTyping(false);
+  // Manipular clique em botão de opção
+  const handleOptionClick = (option: ChatOption) => {
+    // Adicionar como mensagem do usuário
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: option.label,
+      sender: 'user',
+      timestamp: new Date(),
+      status: 'sending',
+    };
 
-        // Resposta automática (placeholder)
-        const botResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          content:
-            'Obrigado pela sua mensagem! 😊\n\nEm breve, nosso chatbot inteligente será implementado para responder suas perguntas automaticamente.\n\nPor enquanto, esta é uma mensagem de demonstração.',
-          sender: 'bot',
-          timestamp: new Date(),
-        };
+    setMessages((prev) => [...prev, userMessage]);
 
-        setMessages((prev) => [...prev, botResponse]);
-      }, 1500);
-    }, 500);
+    // Limpar opções
+    setCurrentOptions([]);
+
+    // Enviar para o backend com optionId
+    sendMessageToBot(option.label, option.id);
   };
 
   return (
@@ -208,12 +282,28 @@ export const ChatInterface = ({
             </div>
           )}
 
+          {/* Botões de Opções */}
+          {currentOptions.length > 0 && !isTyping && (
+            <div className="flex flex-col gap-2 mb-4 max-w-md">
+              {currentOptions.map((option) => (
+                <Button
+                  key={option.id}
+                  onClick={() => handleOptionClick(option)}
+                  variant="outline"
+                  className="w-full text-left justify-start bg-white hover:bg-gray-50 border-2 border-primary/20 hover:border-primary/40 transition-all"
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </ScrollArea>
       </div>
 
       {/* Input de Mensagem */}
-      <ChatInput onSendMessage={handleSendMessage} />
+      <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
     </Card>
   );
 };
