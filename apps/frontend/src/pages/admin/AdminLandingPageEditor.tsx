@@ -205,11 +205,21 @@ export const AdminLandingPageEditor = () => {
                       )}
 
                       {/* Marquee Editor */}
-                      {currentSection === 'marquee' && (
+                      {currentSection === 'marquee' && config.marquee && (
                         <MarqueeEditor
                           config={config.marquee}
                           onChange={(updates) => updateSection('marquee', updates)}
                         />
+                      )}
+
+                      {currentSection === 'marquee' && !config.marquee && (
+                        <Card>
+                          <CardContent className="p-8 text-center">
+                            <p className="text-muted-foreground mb-4">
+                              Configuração de Marquee não encontrada. Clique em "Restaurar Padrões" para adicionar.
+                            </p>
+                          </CardContent>
+                        </Card>
                       )}
 
                       {/* About Editor */}

@@ -807,7 +807,16 @@ export const loadConfig = (): LandingPageConfig => {
       return migrateConfig(parsed);
     }
 
-    return parsed;
+    // Merge com defaults para adicionar propriedades novas (como marquee)
+    const defaultConfig = getDefaultConfig();
+    const mergedConfig = {
+      ...defaultConfig,
+      ...parsed,
+      // Garantir que seções ausentes sejam adicionadas do default
+      marquee: parsed.marquee || defaultConfig.marquee,
+    };
+
+    return mergedConfig;
   } catch (error) {
     console.error('Erro ao carregar configuração:', error);
     return getDefaultConfig();
@@ -893,6 +902,7 @@ export const validateConfig = (config: LandingPageConfig): boolean => {
       config.theme &&
       config.header &&
       config.hero &&
+      config.marquee &&
       config.about &&
       config.products &&
       config.experience &&
