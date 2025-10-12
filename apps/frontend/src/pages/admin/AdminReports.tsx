@@ -83,26 +83,6 @@ const AdminReports = () => {
   const { data: funnelData, isLoading: funnelLoading } = useFunnelAnalytics(dateRange);
   const exportReport = useExportReport();
 
-  // Loading state
-  if (statsLoading || statusLoading || sourceLoading || timelineLoading || funnelLoading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary mb-4" />
-            <p className="text-muted-foreground">Carregando relatórios...</p>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  // Calcular métricas
-  const totalLeads = stats?.total || 0;
-  const leadsThisMonth = stats?.monthCount || 0;
-  const conversionRate = stats?.conversionRate || 0;
-  const avgResponseTime = '2h 15min'; // TODO: Implementar no backend
-
   // Preparar dados de fontes para gráfico de pizza
   const leadsBySource = useMemo(() => {
     if (!statsBySource) return [];
@@ -141,6 +121,26 @@ const AdminReports = () => {
       valor: item.value,
     }));
   }, [funnelData]);
+
+  // Loading state (DEVE vir DEPOIS de todos os hooks)
+  if (statsLoading || statusLoading || sourceLoading || timelineLoading || funnelLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary mb-4" />
+            <p className="text-muted-foreground">Carregando relatórios...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Calcular métricas
+  const totalLeads = stats?.total || 0;
+  const leadsThisMonth = stats?.monthCount || 0;
+  const conversionRate = stats?.conversionRate || 0;
+  const avgResponseTime = '2h 15min'; // TODO: Implementar no backend
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
