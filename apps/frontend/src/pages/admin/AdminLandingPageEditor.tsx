@@ -24,10 +24,12 @@ import {
   Trophy,
   Mail,
   Menu as MenuIcon,
+  List,
 } from 'lucide-react';
 import {
   HeaderEditor,
   HeroEditor,
+  MarqueeEditor,
   AboutEditor,
   ProductsEditor,
   ExperienceEditor,
@@ -62,6 +64,7 @@ export const AdminLandingPageEditor = () => {
   const sections: Array<{ key: SectionKey; label: string; icon: any }> = [
     { key: 'header', label: 'Cabeçalho', icon: MenuIcon },
     { key: 'hero', label: 'Hero', icon: Rocket },
+    { key: 'marquee', label: 'Marquee', icon: List },
     { key: 'about', label: 'Sobre', icon: Layout },
     { key: 'products', label: 'Produtos', icon: Package },
     { key: 'experience', label: 'Experiência', icon: Trophy },
@@ -198,6 +201,14 @@ export const AdminLandingPageEditor = () => {
                         <HeroEditor
                           config={config.hero}
                           onChange={(updates) => updateSection('hero', updates)}
+                        />
+                      )}
+
+                      {/* Marquee Editor */}
+                      {currentSection === 'marquee' && (
+                        <MarqueeEditor
+                          config={config.marquee}
+                          onChange={(updates) => updateSection('marquee', updates)}
                         />
                       )}
 

@@ -488,7 +488,27 @@ export interface ContactConfig {
 }
 
 // ============================================================================
-// 9. FOOTER CONFIG
+// 9. MARQUEE CONFIG
+// ============================================================================
+
+export interface MarqueeItem {
+  id: string;
+  icon: string;
+  text: string;
+}
+
+export interface MarqueeConfig {
+  enabled: boolean;
+  items: MarqueeItem[];
+  speed: number; // velocidade da animação em segundos
+  backgroundColor?: string;
+  textColor?: string;
+  iconColor?: string;
+  style: StyleConfig;
+}
+
+// ============================================================================
+// 10. FOOTER CONFIG
 // ============================================================================
 
 export interface FooterLink {
@@ -548,6 +568,7 @@ export interface LandingPageConfig {
   theme: ThemeConfig;
   header: HeaderConfig;
   hero: HeroConfig;
+  marquee: MarqueeConfig;
   about: AboutConfig;
   products: ProductsConfig;
   experience: ExperienceConfig;
@@ -559,7 +580,7 @@ export interface LandingPageConfig {
 // TIPOS PARA O EDITOR
 // ============================================================================
 
-export type SectionKey = 'meta' | 'theme' | 'header' | 'hero' | 'about' | 'products' | 'experience' | 'contact' | 'footer';
+export type SectionKey = 'meta' | 'theme' | 'header' | 'hero' | 'marquee' | 'about' | 'products' | 'experience' | 'contact' | 'footer';
 
 export interface EditorTab {
   id: SectionKey;

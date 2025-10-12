@@ -5,6 +5,7 @@
 export { ThemeEditor } from './ThemeEditor';
 export { HeaderEditor } from './HeaderEditor';
 export { HeroEditor } from './HeroEditor';
+export { MarqueeEditor } from './MarqueeEditor';
 export { AboutEditor } from './AboutEditor';
 export { ProductsEditor } from './ProductsEditor';
 export { ExperienceEditor } from './ExperienceEditor';

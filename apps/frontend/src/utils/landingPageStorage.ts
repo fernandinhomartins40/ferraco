@@ -255,6 +255,45 @@ export const getDefaultConfig = (): LandingPageConfig => ({
     },
   },
 
+  // MARQUEE
+  marquee: {
+    enabled: true,
+    items: [
+      {
+        id: 'item-1',
+        icon: 'Star',
+        text: 'Qualidade Garantida',
+      },
+      {
+        id: 'item-2',
+        icon: 'Truck',
+        text: 'Entrega Rápida',
+      },
+      {
+        id: 'item-3',
+        icon: 'Award',
+        text: '25+ Anos de Experiência',
+      },
+      {
+        id: 'item-4',
+        icon: 'Users',
+        text: 'Atendimento Especializado',
+      },
+      {
+        id: 'item-5',
+        icon: 'Star',
+        text: 'Melhores Produtos',
+      },
+    ],
+    speed: 30,
+    backgroundColor: '#f3f4f6',
+    textColor: '#1f2937',
+    iconColor: '#0ea5e9',
+    style: {
+      padding: '1rem 0',
+    },
+  },
+
   // ABOUT
   about: {
     enabled: true,
