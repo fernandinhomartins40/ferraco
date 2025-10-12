@@ -1,5 +1,6 @@
 /**
- * AboutEditor - Editor da seção Sobre
+ * AboutEditor - Editor simplificado da seção Sobre
+ * Apenas textos editáveis
  */
 
 import { AboutConfig } from '@/types/landingPage';
@@ -7,8 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { ColorPicker, FontSelector } from '../StyleControls';
+import { Button } from '@/components/ui/button';
+import { Plus, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 interface AboutEditorProps {
@@ -17,110 +18,160 @@ interface AboutEditorProps {
 }
 
 export const AboutEditor = ({ config, onChange }: AboutEditorProps) => {
-  const updateTitle = (updates: Partial<AboutConfig['title']>) => {
-    onChange({ title: { ...config.title, ...updates } });
+  const updateTitle = (text: string) => {
+    onChange({ title: { ...config.title, text } });
   };
 
-  const updateSubtitle = (updates: Partial<AboutConfig['subtitle']>) => {
-    onChange({ subtitle: config.subtitle ? { ...config.subtitle, ...updates } : undefined });
+  const updateSubtitle = (text: string) => {
+    if (config.subtitle) {
+      onChange({ subtitle: { ...config.subtitle, text } });
+    }
   };
 
-  const updateDescription = (updates: Partial<AboutConfig['description']>) => {
-    onChange({ description: { ...config.description, ...updates } });
+  const updateDescription = (text: string) => {
+    onChange({ description: { ...config.description, text } });
+  };
+
+  const updateFeature = (index: number, field: 'title' | 'description', value: string) => {
+    const newFeatures = [...config.features];
+    newFeatures[index] = { ...newFeatures[index], [field]: value };
+    onChange({ features: newFeatures });
+  };
+
+  const addFeature = () => {
+    const newFeature = {
+      id: `feature-${Date.now()}`,
+      icon: 'CheckCircle',
+      title: 'Nova Característica',
+      description: 'Descrição da característica',
+    };
+    onChange({ features: [...config.features, newFeature] });
+  };
+
+  const removeFeature = (index: number) => {
+    const newFeatures = config.features.filter((_, i) => i !== index);
+    onChange({ features: newFeatures });
   };
 
   return (
     <div className="space-y-6">
-      {/* Configurações Gerais */}
+      {/* Textos Principais */}
       <Card>
         <CardHeader>
-          <CardTitle>Configurações Gerais</CardTitle>
-          <CardDescription>Configure a visibilidade e conteúdo da seção Sobre</CardDescription>
+          <CardTitle>Textos da Seção Sobre</CardTitle>
+          <CardDescription>Edite os textos principais da seção</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Seção Ativa</Label>
-            <Switch
-              checked={config.enabled}
-              onCheckedChange={(enabled) => onChange({ enabled })}
-            />
-          </div>
-
-          <Separator />
-
           <div className="space-y-2">
             <Label>Título da Seção</Label>
             <Input
               value={config.title.text}
-              onChange={(e) => updateTitle({ text: e.target.value })}
+              onChange={(e) => updateTitle(e.target.value)}
               placeholder="Sobre a Ferraco"
             />
+            <p className="text-xs text-muted-foreground">
+              Título principal que aparece no topo da seção
+            </p>
           </div>
 
+          <Separator />
+
           {config.subtitle && (
-            <div className="space-y-2">
-              <Label>Subtítulo</Label>
-              <Input
-                value={config.subtitle.text}
-                onChange={(e) => updateSubtitle({ text: e.target.value })}
-                placeholder="Tradição e Inovação"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label>Subtítulo</Label>
+                <Input
+                  value={config.subtitle.text}
+                  onChange={(e) => updateSubtitle(e.target.value)}
+                  placeholder="Tradição e Inovação"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Subtítulo que aparece abaixo do título principal
+                </p>
+              </div>
+              <Separator />
+            </>
           )}
 
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea
               value={config.description.text}
-              onChange={(e) => updateDescription({ text: e.target.value })}
-              placeholder="Descrição da empresa"
-              rows={4}
+              onChange={(e) => updateDescription(e.target.value)}
+              placeholder="Descrição da empresa..."
+              rows={5}
             />
+            <p className="text-xs text-muted-foreground">
+              Texto descritivo sobre a empresa (pode ter várias linhas)
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Estilos */}
+      {/* Features/Características */}
       <Card>
         <CardHeader>
-          <CardTitle>Estilos</CardTitle>
-          <CardDescription>Personalize a aparência da seção</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Características</CardTitle>
+              <CardDescription>Edite os textos dos cards de características</CardDescription>
+            </div>
+            <Button onClick={addFeature} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <FontSelector
-            label="Tamanho do Título"
-            value={config.title.style.fontSize || '2.25rem'}
-            onChange={(fontSize) => updateTitle({ style: { ...config.title.style, fontSize } })}
-            type="size"
-          />
+        <CardContent>
+          <div className="space-y-4">
+            {config.features.map((feature, index) => (
+              <Card key={feature.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Título da Característica {index + 1}</Label>
+                        <Input
+                          value={feature.title}
+                          onChange={(e) => updateFeature(index, 'title', e.target.value)}
+                          placeholder="Ex: Qualidade Garantida"
+                        />
+                      </div>
 
-          <ColorPicker
-            label="Cor do Título"
-            value={config.title.style.textColor || '#000000'}
-            onChange={(textColor) => updateTitle({ style: { ...config.title.style, textColor } })}
-          />
+                      <div className="space-y-2">
+                        <Label className="text-sm">Descrição</Label>
+                        <Textarea
+                          value={feature.description}
+                          onChange={(e) => updateFeature(index, 'description', e.target.value)}
+                          placeholder="Descrição da característica..."
+                          rows={2}
+                        />
+                      </div>
+                    </div>
 
-          <FontSelector
-            label="Peso do Título"
-            value={config.title.style.fontWeight || '700'}
-            onChange={(fontWeight) => updateTitle({ style: { ...config.title.style, fontWeight } })}
-            type="weight"
-          />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeFeature(index)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
 
-          <Separator />
-
-          <ColorPicker
-            label="Cor de Fundo da Seção"
-            value={config.style.backgroundColor || '#ffffff'}
-            onChange={(backgroundColor) =>
-              onChange({ style: { ...config.style, backgroundColor } })
-            }
-          />
-
-          <p className="text-sm text-muted-foreground mt-4">
-            💡 Dica: Use o ArrayEditor em ProductsEditor como referência para adicionar cards de
-            valores, estatísticas e diferenciais dinamicamente.
-          </p>
+            {config.features.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="mb-4">Nenhuma característica adicionada</p>
+                <Button onClick={addFeature} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Primeira Característica
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

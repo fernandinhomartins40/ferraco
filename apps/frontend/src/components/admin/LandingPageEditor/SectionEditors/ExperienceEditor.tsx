@@ -1,5 +1,6 @@
 /**
- * ExperienceEditor - Editor da seção de Experiência
+ * ExperienceEditor - Editor simplificado da seção de Experiência
+ * Apenas textos editáveis
  */
 
 import { ExperienceConfig } from '@/types/landingPage';
@@ -7,9 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { ColorPicker, FontSelector } from '../StyleControls';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Plus, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 interface ExperienceEditorProps {
@@ -18,152 +18,165 @@ interface ExperienceEditorProps {
 }
 
 export const ExperienceEditor = ({ config, onChange }: ExperienceEditorProps) => {
-  const updateTitle = (updates: Partial<ExperienceConfig['title']>) => {
-    onChange({ title: { ...config.title, ...updates } });
+  const updateTitle = (text: string) => {
+    onChange({ title: { ...config.title, text } });
   };
 
-  const updateSubtitle = (updates: Partial<ExperienceConfig['subtitle']>) => {
-    onChange({ subtitle: config.subtitle ? { ...config.subtitle, ...updates } : undefined });
+  const updateSubtitle = (text: string) => {
+    if (config.subtitle) {
+      onChange({ subtitle: { ...config.subtitle, text } });
+    }
   };
 
-  const updateDescription = (updates: Partial<ExperienceConfig['description']>) => {
-    onChange({ description: { ...config.description, ...updates } });
+  const updateDescription = (text: string) => {
+    onChange({ description: { ...config.description, text } });
+  };
+
+  const updateHighlight = (index: number, field: 'value' | 'label', value: string) => {
+    const newHighlights = [...config.highlights];
+    newHighlights[index] = { ...newHighlights[index], [field]: value };
+    onChange({ highlights: newHighlights });
+  };
+
+  const addHighlight = () => {
+    const newHighlight = {
+      id: `highlight-${Date.now()}`,
+      value: '0',
+      label: 'Novo Destaque',
+      icon: 'Award',
+    };
+    onChange({ highlights: [...config.highlights, newHighlight] });
+  };
+
+  const removeHighlight = (index: number) => {
+    const newHighlights = config.highlights.filter((_, i) => i !== index);
+    onChange({ highlights: newHighlights });
   };
 
   return (
     <div className="space-y-6">
+      {/* Textos Principais */}
       <Card>
         <CardHeader>
-          <CardTitle>Configurações Gerais</CardTitle>
-          <CardDescription>Configure a seção de Experiência</CardDescription>
+          <CardTitle>Textos da Seção Experiência</CardTitle>
+          <CardDescription>Edite os textos principais da seção</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Seção Ativa</Label>
-            <Switch
-              checked={config.enabled}
-              onCheckedChange={(enabled) => onChange({ enabled })}
+          <div className="space-y-2">
+            <Label>Título da Seção</Label>
+            <Input
+              value={config.title.text}
+              onChange={(e) => updateTitle(e.target.value)}
+              placeholder="Nossa Experiência"
             />
+            <p className="text-xs text-muted-foreground">
+              Título principal que aparece no topo da seção
+            </p>
           </div>
 
           <Separator />
 
-          <div className="space-y-2">
-            <Label>Título</Label>
-            <Input
-              value={config.title.text}
-              onChange={(e) => updateTitle({ text: e.target.value })}
-              placeholder="Nossa Experiência"
-            />
-          </div>
-
           {config.subtitle && (
-            <div className="space-y-2">
-              <Label>Subtítulo</Label>
-              <Input
-                value={config.subtitle.text}
-                onChange={(e) => updateSubtitle({ text: e.target.value })}
-                placeholder="Décadas de Excelência"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label>Subtítulo</Label>
+                <Input
+                  value={config.subtitle.text}
+                  onChange={(e) => updateSubtitle(e.target.value)}
+                  placeholder="Anos de Dedicação"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Subtítulo que aparece abaixo do título principal
+                </p>
+              </div>
+              <Separator />
+            </>
           )}
 
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea
               value={config.description.text}
-              onChange={(e) => updateDescription({ text: e.target.value })}
-              rows={3}
+              onChange={(e) => updateDescription(e.target.value)}
+              placeholder="Descrição da experiência da empresa..."
+              rows={5}
             />
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <Label>Layout</Label>
-            <Select
-              value={config.layout}
-              onValueChange={(layout: any) => onChange({ layout })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="simple">Simples</SelectItem>
-                <SelectItem value="highlights">Com Destaques</SelectItem>
-                <SelectItem value="timeline">Linha do Tempo</SelectItem>
-                <SelectItem value="full">Completo</SelectItem>
-              </SelectContent>
-            </Select>
+            <p className="text-xs text-muted-foreground">
+              Texto descritivo sobre a experiência da empresa
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Estilos */}
+      {/* Destaques/Highlights */}
       <Card>
         <CardHeader>
-          <CardTitle>Estilos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FontSelector
-            label="Tamanho do Título"
-            value={config.title.style.fontSize || '2.25rem'}
-            onChange={(fontSize) => updateTitle({ style: { ...config.title.style, fontSize } })}
-            type="size"
-          />
-
-          <ColorPicker
-            label="Cor do Título"
-            value={config.title.style.textColor || '#ffffff'}
-            onChange={(textColor) => updateTitle({ style: { ...config.title.style, textColor } })}
-          />
-
-          <Separator />
-
-          <div className="space-y-2">
-            <Label>Tipo de Background</Label>
-            <Select
-              value={config.background.type}
-              onValueChange={(type: any) =>
-                onChange({ background: { ...config.background, type } })
-              }
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="color">Cor Sólida</SelectItem>
-                <SelectItem value="gradient">Gradiente</SelectItem>
-                <SelectItem value="image">Imagem</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Destaques Numéricos</CardTitle>
+              <CardDescription>Edite os números e labels dos destaques</CardDescription>
+            </div>
+            <Button onClick={addHighlight} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar
+            </Button>
           </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {config.highlights.map((highlight, index) => (
+              <Card key={highlight.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Valor/Número {index + 1}</Label>
+                        <Input
+                          value={highlight.value}
+                          onChange={(e) => updateHighlight(index, 'value', e.target.value)}
+                          placeholder="Ex: 25+"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Número ou valor principal (Ex: 25+, 1000+)
+                        </p>
+                      </div>
 
-          {config.background.type === 'gradient' && config.background.gradient && (
-            <>
-              <ColorPicker
-                label="Cor Inicial do Gradiente"
-                value={config.background.gradient.from}
-                onChange={(from) =>
-                  onChange({
-                    background: {
-                      ...config.background,
-                      gradient: { ...config.background.gradient!, from },
-                    },
-                  })
-                }
-              />
+                      <div className="space-y-2">
+                        <Label className="text-sm">Label/Descrição</Label>
+                        <Input
+                          value={highlight.label}
+                          onChange={(e) => updateHighlight(index, 'label', e.target.value)}
+                          placeholder="Ex: Anos de experiência"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Texto que explica o número
+                        </p>
+                      </div>
+                    </div>
 
-              <ColorPicker
-                label="Cor Final do Gradiente"
-                value={config.background.gradient.to}
-                onChange={(to) =>
-                  onChange({
-                    background: {
-                      ...config.background,
-                      gradient: { ...config.background.gradient!, to },
-                    },
-                  })
-                }
-              />
-            </>
-          )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeHighlight(index)}
+                      className="text-destructive hover:text-destructive mt-6"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {config.highlights.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="mb-4">Nenhum destaque adicionado</p>
+                <Button onClick={addHighlight} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Primeiro Destaque
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
