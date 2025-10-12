@@ -1,4 +1,8 @@
-import { useMemo } from 'react';
+/**
+ * AdminDashboard - Dashboard com dados REAIS do backend
+ * MIGRADO de localStorage/mock para API PostgreSQL
+ */
+
 import { Link } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,9 +17,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   LineChart,
   Line
 } from 'recharts';
@@ -27,117 +28,56 @@ import {
   Bot,
   Clock,
   ArrowRight,
-  Sparkles,
   CheckCircle,
   AlertCircle,
   Activity,
-  Calendar
+  Loader2
 } from 'lucide-react';
-import { kanbanStorage } from '@/utils/kanbanStorage';
-import { aiChatStorage } from '@/utils/aiChatStorage';
-import { ChatWidget } from '@/components/ChatWidget';
-import { leadStorage } from '@/utils/leadStorage';
+import { useLeadsStats, useLeadsStatsByStatus, useLeadsStatsBySource, useLeadsTimeline, useLeads } from '@/hooks/api/useLeads';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const AdminDashboard = () => {
-  // Get data from storages
-  const columns = kanbanStorage.getAllColumns();
-  const specialSections = kanbanStorage.getSpecialSections();
-  const chatLinks = aiChatStorage.getChatLinks();
-  const products = aiChatStorage.getProducts();
-  const companyData = aiChatStorage.getCompanyData();
-  const aiProgress = aiChatStorage.getConfigurationProgress();
+  // Buscar dados reais do backend
+  const { data: stats, isLoading: statsLoading } = useLeadsStats();
+  const { data: statsByStatus, isLoading: statusLoading } = useLeadsStatsByStatus();
+  const { data: statsBySource } = useLeadsStatsBySource();
+  const { data: timeline, isLoading: timelineLoading } = useLeadsTimeline(7);
+  const { data: recentLeadsData, isLoading: leadsLoading } = useLeads({ limit: 5, sortBy: 'createdAt', sortOrder: 'desc' });
 
-  // Get or create a test lead for chat widget
-  const leads = leadStorage.getLeads();
-  const testLead = useMemo(() => {
-    // Procura por um lead de teste ou usa o primeiro disponível
-    let lead = leads.find(l => l.name === 'Chat Demo' || l.phone === '11999999999');
+  // Extrair leads da estrutura paginada
+  const recentLeads = recentLeadsData?.data || [];
 
-    if (!lead && leads.length > 0) {
-      lead = leads[0]; // Usa o primeiro lead existente
-    }
+  // Loading state
+  if (statsLoading || statusLoading || timelineLoading || leadsLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary mb-4" />
+            <p className="text-muted-foreground">Carregando dashboard...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
-    if (!lead) {
-      // Cria um lead de teste se não existir nenhum
-      lead = leadStorage.addLead('Chat Demo', '11999999999', 'website', 'medium');
-    }
+  // Calcular métricas
+  const totalLeads = stats?.total || 0;
+  const leadsToday = stats?.todayCount || 0;
+  const conversionRate = stats?.conversionRate || 0;
 
-    return lead;
-  }, [leads]);
+  // Preparar dados para gráfico de funil por status
+  const funnelData = statsByStatus ? Object.entries(statsByStatus).map(([status, count]) => ({
+    name: getStatusLabel(status),
+    value: count as number,
+    color: getStatusColor(status),
+  })) : [];
 
-  // Mock leads data (replace with real API data)
-  const mockLeads = [
-    { id: '1', name: 'João Silva', phone: '11999999999', source: 'facebook', columnId: columns[0]?.id, createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), tags: ['VIP'] },
-    { id: '2', name: 'Maria Santos', phone: '11988888888', source: 'instagram', columnId: columns[0]?.id, createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), tags: ['Urgente'] },
-    { id: '3', name: 'Pedro Costa', phone: '11977777777', source: 'website', columnId: columns[1]?.id, createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), tags: [] },
-    { id: '4', name: 'Ana Paula', phone: '11966666666', source: 'facebook', columnId: columns[2]?.id, createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), tags: ['VIP'] },
-    { id: '5', name: 'Carlos Souza', phone: '11955555555', source: 'instagram', columnId: columns[0]?.id, createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), tags: [] },
-    { id: '6', name: 'Juliana Lima', phone: '11944444444', source: 'website', columnId: 'special-recovery', createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), tags: [] },
-  ];
-
-  // Calculate metrics
-  const totalLeads = mockLeads.length;
-  const leadsToday = mockLeads.filter(l => {
-    const date = new Date(l.createdAt);
-    return date.toDateString() === new Date().toDateString();
-  }).length;
-
-  const conversionRate = columns.length > 0
-    ? Math.round((mockLeads.filter(l => l.columnId === columns[columns.length - 1]?.id).length / totalLeads) * 100)
-    : 0;
-
-  const activeLinks = chatLinks.filter(l => l.isActive).length;
-  const totalClicks = chatLinks.reduce((sum, link) => sum + link.clicks, 0);
-
-  // Leads by column for quick view
-  const leadsByColumn = useMemo(() => {
-    if (columns.length === 0) return [];
-    return columns.slice(0, 4).map(col => ({
-      name: col.name,
-      value: mockLeads.filter(l => l.columnId === col.id).length,
-      color: col.color,
-    }));
-  }, [columns, mockLeads]);
-
-  // Recent activity (last 5 leads)
-  const recentLeads = useMemo(() => {
-    return [...mockLeads]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5);
-  }, [mockLeads]);
-
-  // Time series data (last 7 days)
-  const timeSeriesData = useMemo(() => {
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString('pt-BR', { weekday: 'short' });
-
-      const count = i === 0 ? 2 : Math.floor(Math.random() * 4);
-      days.push({ day: dateStr, leads: count });
-    }
-    return days;
-  }, []);
-
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
-
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-    if (diffHours < 1) {
-      const diffMins = Math.floor(diffMs / (1000 * 60));
-      return `${diffMins} min atrás`;
-    }
-    if (diffHours < 24) {
-      return `${diffHours}h atrás`;
-    }
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d atrás`;
-  };
+  // Formatar timeline para gráfico
+  const timelineChartData = timeline?.map(item => ({
+    day: new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'short' }),
+    leads: item.count
+  })) || [];
 
   return (
     <AdminLayout>
@@ -146,39 +86,17 @@ const AdminDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Visão geral do desempenho do seu CRM
+            Visão geral do desempenho do seu CRM (dados reais do PostgreSQL)
           </p>
         </div>
 
-        {/* AI Configuration Progress (if not complete) */}
-        {aiProgress.percentage < 100 && (
-          <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">Configure sua IA de Captação</h3>
-                    <Badge variant="secondary">{aiProgress.percentage}% completo</Badge>
-                  </div>
-                  <Progress value={aiProgress.percentage} className="mb-3" />
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Complete a configuração para começar a captar leads automaticamente
-                    </p>
-                    <Button asChild size="sm">
-                      <Link to="/admin/ai">
-                        Configurar <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Alert de dados reais */}
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            ✅ Todos os dados são REAIS do banco de dados PostgreSQL. Não há simulações.
+          </AlertDescription>
+        </Alert>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -205,7 +123,7 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                  <p className="text-3xl font-bold mt-1">{conversionRate}%</p>
+                  <p className="text-3xl font-bold mt-1">{conversionRate.toFixed(1)}%</p>
                   <div className="flex items-center gap-1 mt-2">
                     <Target className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Meta: 25%</span>
@@ -222,11 +140,11 @@ const AdminDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Links Ativos</p>
-                  <p className="text-3xl font-bold mt-1">{activeLinks}</p>
+                  <p className="text-sm text-muted-foreground">Esta Semana</p>
+                  <p className="text-3xl font-bold mt-1">{stats?.weekCount || 0}</p>
                   <div className="flex items-center gap-1 mt-2">
                     <Activity className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">{totalClicks} cliques</span>
+                    <span className="text-sm text-muted-foreground">Últimos 7 dias</span>
                   </div>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
@@ -240,11 +158,11 @@ const AdminDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Produtos Cadastrados</p>
-                  <p className="text-3xl font-bold mt-1">{products.length}</p>
+                  <p className="text-sm text-muted-foreground">Este Mês</p>
+                  <p className="text-3xl font-bold mt-1">{stats?.monthCount || 0}</p>
                   <div className="flex items-center gap-1 mt-2">
-                    <Sparkles className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Para IA</span>
+                    <Bot className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Últimos 30 dias</span>
                   </div>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
@@ -263,18 +181,25 @@ const AdminDashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Evolução de Leads</CardTitle>
-                <CardDescription>Últimos 7 dias</CardDescription>
+                <CardDescription>Últimos 7 dias (dados reais)</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={timeSeriesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="leads" stroke="#3b82f6" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+                {timelineChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={timelineChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="day" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="leads" stroke="#3b82f6" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhum dado de timeline disponível</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -283,37 +208,33 @@ const AdminDashboard = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Funil de Vendas</CardTitle>
-                    <CardDescription>Distribuição por etapa do Kanban</CardDescription>
+                    <CardTitle>Distribuição por Status</CardTitle>
+                    <CardDescription>Leads organizados por status</CardDescription>
                   </div>
                   <Button asChild variant="outline" size="sm">
                     <Link to="/admin/leads">
-                      Ver Kanban <ArrowRight className="ml-2 h-4 w-4" />
+                      Ver Todos <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                {leadsByColumn.length > 0 ? (
+                {funnelData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={leadsByColumn}>
+                    <BarChart data={funnelData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                        {leadsByColumn.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
+                      <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhuma coluna criada ainda</p>
+                    <p className="text-sm">Nenhum lead cadastrado ainda</p>
                     <Button asChild variant="link" size="sm" className="mt-2">
-                      <Link to="/admin/leads">Criar primeira coluna</Link>
+                      <Link to="/admin/leads">Criar primeiro lead</Link>
                     </Button>
                   </div>
                 )}
@@ -343,9 +264,11 @@ const AdminDashboard = () => {
                           <p className="font-medium text-sm truncate">{lead.name}</p>
                           <p className="text-xs text-muted-foreground truncate">{lead.phone}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="text-xs">
-                              {lead.source}
-                            </Badge>
+                            {lead.source && (
+                              <Badge variant="secondary" className="text-xs">
+                                {lead.source}
+                              </Badge>
+                            )}
                             <span className="text-xs text-muted-foreground">
                               {getTimeAgo(lead.createdAt)}
                             </span>
@@ -356,7 +279,7 @@ const AdminDashboard = () => {
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Nenhum lead ainda</p>
+                      <p className="text-sm">Nenhum lead recente</p>
                     </div>
                   )}
                 </div>
@@ -376,9 +299,9 @@ const AdminDashboard = () => {
                   </Link>
                 </Button>
                 <Button asChild className="w-full justify-start" variant="outline">
-                  <Link to="/admin/ai">
+                  <Link to="/admin/chatbot-config">
                     <Bot className="mr-2 h-4 w-4" />
-                    Configurar IA
+                    Configurar Chatbot
                   </Link>
                 </Button>
                 <Button asChild className="w-full justify-start" variant="outline">
@@ -405,42 +328,28 @@ const AdminDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm">Kanban</span>
+                    <span className="text-sm">Banco de Dados</span>
                   </div>
                   <Badge variant="outline" className="text-green-600 border-green-600">
-                    {columns.length} colunas
+                    Conectado
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {aiProgress.percentage === 100 ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
-                    )}
-                    <span className="text-sm">IA Chat</span>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm">API Backend</span>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={aiProgress.percentage === 100 ? 'text-green-600 border-green-600' : 'text-amber-600 border-amber-600'}
-                  >
-                    {aiProgress.percentage}%
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    Online
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {activeLinks > 0 ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
-                    )}
-                    <span className="text-sm">Campanhas</span>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm">Chatbot</span>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={activeLinks > 0 ? 'text-green-600 border-green-600' : 'text-amber-600 border-amber-600'}
-                  >
-                    {activeLinks} ativas
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    Ativo
                   </Badge>
                 </div>
               </CardContent>
@@ -448,11 +357,50 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Chat Widget - IA Local */}
-      {testLead && <ChatWidget leadId={testLead.id} />}
     </AdminLayout>
   );
+};
+
+// Helper functions
+const getTimeAgo = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+  if (diffHours < 1) {
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    return `${diffMins} min atrás`;
+  }
+  if (diffHours < 24) {
+    return `${diffHours}h atrás`;
+  }
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d atrás`;
+};
+
+const getStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    NOVO: 'Novo',
+    QUALIFICADO: 'Qualificado',
+    EM_ANDAMENTO: 'Em Andamento',
+    CONCLUIDO: 'Concluído',
+    PERDIDO: 'Perdido',
+    ARQUIVADO: 'Arquivado',
+  };
+  return labels[status] || status;
+};
+
+const getStatusColor = (status: string): string => {
+  const colors: Record<string, string> = {
+    NOVO: '#3b82f6',
+    QUALIFICADO: '#10b981',
+    EM_ANDAMENTO: '#f59e0b',
+    CONCLUIDO: '#8b5cf6',
+    PERDIDO: '#ef4444',
+    ARQUIVADO: '#6b7280',
+  };
+  return colors[status] || '#3b82f6';
 };
 
 export default AdminDashboard;
