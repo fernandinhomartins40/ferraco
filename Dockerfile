@@ -20,7 +20,7 @@ RUN npm run build
 
 # Gerar Prisma Client do backend
 WORKDIR /app/apps/backend
-RUN npx prisma generate
+RUN npm run prisma:generate
 
 # Stage 2: Runtime - Container Único
 FROM node:20-alpine
@@ -32,7 +32,8 @@ RUN apk add --no-cache nginx openssl
 
 # Copiar backend completo com node_modules do builder
 COPY --from=builder /app/apps/backend ./backend
-COPY --from=builder /app/node_modules ./backend/node_modules
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
 # Copiar frontend buildado
 COPY --from=builder /app/apps/frontend/dist ./frontend/dist
