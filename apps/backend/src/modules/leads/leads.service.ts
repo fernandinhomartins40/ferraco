@@ -328,6 +328,50 @@ export class LeadsService {
     };
   }
 
+  async getTimeline(days: number = 30): Promise<{ date: string; count: number }[]> {
+    logger.debug('Fetching lead timeline', { days });
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const leads = await this.prisma.lead.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+        },
+        status: { not: LeadStatus.ARQUIVADO },
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    // Agrupar leads por data
+    const timeline: Record<string, number> = {};
+    const today = new Date();
+
+    // Inicializar todos os dias com 0
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      timeline[dateStr] = 0;
+    }
+
+    // Contar leads por dia
+    leads.forEach(lead => {
+      const dateStr = lead.createdAt.toISOString().split('T')[0];
+      if (timeline[dateStr] !== undefined) {
+        timeline[dateStr]++;
+      }
+    });
+
+    return Object.entries(timeline).map(([date, count]) => ({
+      date,
+      count,
+    }));
+  }
+
   // ==========================================================================
   // Duplicates
   // ==========================================================================

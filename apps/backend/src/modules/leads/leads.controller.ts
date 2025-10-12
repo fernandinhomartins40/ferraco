@@ -241,6 +241,26 @@ export class LeadsController {
     }
   };
 
+  /**
+   * GET /api/leads/stats/timeline
+   * Get leads timeline (daily counts)
+   */
+  getStatsTimeline = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+
+      if (days < 1 || days > 365) {
+        throw new ValidationError('Days must be between 1 and 365');
+      }
+
+      const timeline = await this.service.getTimeline(days);
+
+      successResponse(res, timeline);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // ==========================================================================
   // Timeline and History
   // ==========================================================================

@@ -45,6 +45,12 @@ router.get(
   controller.getStatsBySource
 );
 
+router.get(
+  '/stats/timeline',
+  requirePermission('leads', 'read'),
+  controller.getStatsTimeline
+);
+
 // ==========================================================================
 // Search and Filter Routes (must come before :id routes)
 // ==========================================================================
