@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ChatbotSessionService } from './chatbot-session.service';
 import { successResponse, errorResponse } from '../../utils/response';
-import { logger } from '../../lib/logger';
+import { logger } from '../../utils/logger';
 
 export class ChatbotSessionController {
   private sessionService: ChatbotSessionService;
