@@ -27,6 +27,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Definir variáveis de ambiente padrão
+ENV NODE_ENV=production
+ENV PORT=3000
+
 # Instalar Nginx e OpenSSL (necessário para Prisma)
 RUN apk add --no-cache nginx openssl
 
