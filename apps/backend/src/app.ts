@@ -42,7 +42,10 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Servir arquivos estáticos (uploads)
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  const uploadsPath = process.env.NODE_ENV === 'production'
+    ? '/app/uploads'
+    : path.join(__dirname, '../uploads');
+  app.use('/uploads', express.static(uploadsPath));
 
   // Rate limiting
   app.use(apiLimiter);

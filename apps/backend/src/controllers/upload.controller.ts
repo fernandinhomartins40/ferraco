@@ -8,7 +8,9 @@ import path from 'path';
 import fs from 'fs';
 
 // Criar diretório de uploads se não existir
-const uploadsDir = path.join(__dirname, '../../uploads');
+const uploadsDir = process.env.NODE_ENV === 'production'
+  ? '/app/uploads'
+  : path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
