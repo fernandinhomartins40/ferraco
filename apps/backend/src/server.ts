@@ -3,11 +3,15 @@ import { createApp } from './app';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { PORT, NODE_ENV } from './config/constants';
 import { logger } from './utils/logger';
+import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
 
 async function startServer(): Promise<void> {
   try {
     // Connect to database
     await connectDatabase();
+
+    // Garantir que a coluna padrão do Kanban existe
+    await ensureDefaultKanbanColumn();
 
     // Create Express app
     const app = createApp();
