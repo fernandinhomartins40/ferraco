@@ -1,11 +1,11 @@
 import { prisma } from '../../config/database';
 import { randomUUID } from 'crypto';
 import {
-  defaultConversationFlow,
-  replaceVariables,
-  calculateQualificationScore,
+  conversationFlowV2,
+  replaceVariablesV2,
+  calculateQualificationScoreV2,
   type ConversationStep
-} from './conversationFlow';
+} from './conversationFlowV2';
 
 export class ChatbotSessionService {
   /**
@@ -40,19 +40,24 @@ export class ChatbotSessionService {
       throw new Error('Welcome step not found in conversation flow');
     }
 
-    // Preparar lista de produtos
+    // Preparar lista de produtos - SEMPRE do banco de dados
     const products = JSON.parse(config.products || '[]');
     const productList = products.length > 0
-      ? products.map((p: any, idx: number) => `${idx + 1}. ${p.name}`).join('\n')
-      : 'Canzis para Vacas Leiteiras (Holandês e Jersey)';
+      ? products.map((p: any, idx: number) => `📦 ${p.name}\n   ${p.description?.substring(0, 80) || 'Produto sem descrição'}...`).join('\n\n')
+      : 'Nenhum produto cadastrado ainda. Entre em contato conosco!';
 
     // Criar mensagem de boas-vindas
-    const welcomeMessage = replaceVariables(firstStep.botMessage, {
+    const welcomeMessage = replaceVariablesV2(firstStep.botMessage, {
+      nome: '',
+      interesse: '',
       companyName: config.companyName,
       companyDescription: config.companyDescription,
       companyAddress: config.companyAddress,
       companyPhone: config.companyPhone,
+      capturedPhone: '',
       productList,
+      selectedProduct: '',
+      faqAnswer: '',
     });
 
     await prisma.chatbotMessage.create({
@@ -194,7 +199,7 @@ export class ChatbotSessionService {
     const updatedSession = await prisma.chatbotSession.findUnique({
       where: { sessionId },
     });
-    const newScore = calculateQualificationScore({
+    const newScore = calculateQualificationScoreV2({
       ...updatedSession,
       ...capturedData,
     });
@@ -228,14 +233,42 @@ export class ChatbotSessionService {
       },
     });
 
-    // Preparar lista de produtos
+    // Preparar lista de produtos com opções dinâmicas - SEMPRE do banco de dados
     const products = JSON.parse(config.products || '[]');
     const productList = products.length > 0
-      ? products.map((p: any, idx: number) => `📦 ${p.name}\n   ${p.description?.substring(0, 80) || ''}...`).join('\n\n')
-      : '📦 Canzis para Vacas Leiteiras\n   Sistema de fechamento metálico para vacas Holandesas e Jersey';
+      ? products.map((p: any, idx: number) => `📦 ${p.name}\n   ${p.description?.substring(0, 80) || 'Produto sem descrição'}...`).join('\n\n')
+      : 'Nenhum produto cadastrado ainda. Entre em contato conosco!';
+
+    // Atualizar opções dinâmicas de produtos se for o step show_products
+    if (nextStepId === 'show_products' && nextStep.options && products.length > 0) {
+      const productOptions = products.map((p: any, idx: number) => ({
+        id: `prod${idx + 1}`,
+        label: `📦 ${p.name}`,
+        nextStepId: 'product_interest',
+        captureAs: 'selected_product',
+      }));
+
+      // Substituir as primeiras opções por produtos reais
+      nextStep.options = [
+        ...productOptions,
+        ...nextStep.options.filter(opt => opt.id.startsWith('opt_')),
+      ];
+    }
+
+    // Preparar resposta FAQ se necessário
+    let faqAnswer = '';
+    if (nextStepId === 'faq_response') {
+      const faqs = JSON.parse(config.faqs || '[]');
+      // Pegar a primeira FAQ ou permitir busca customizada
+      if (faqs.length > 0) {
+        faqAnswer = `**${faqs[0].question}**\n\n${faqs[0].answer}`;
+      } else {
+        faqAnswer = 'Desculpe, não encontrei uma resposta para essa dúvida específica. Mas posso te conectar com um atendente!';
+      }
+    }
 
     // Criar mensagem do bot
-    const botMessage = replaceVariables(nextStep.botMessage, {
+    const botMessage = replaceVariablesV2(nextStep.botMessage, {
       nome: capturedData.capturedName || updatedSession?.capturedName || '',
       interesse: capturedData.interest || updatedSession?.interest || 'equipamentos',
       companyName: config.companyName,
@@ -244,6 +277,8 @@ export class ChatbotSessionService {
       companyPhone: config.companyPhone,
       capturedPhone: capturedData.capturedPhone || updatedSession?.capturedPhone || '',
       productList,
+      selectedProduct: userResponses.selected_product || '',
+      faqAnswer,
     });
 
     await prisma.chatbotMessage.create({
@@ -266,7 +301,7 @@ export class ChatbotSessionService {
    * Busca um step pelo ID
    */
   private getStepById(stepId: string): ConversationStep | undefined {
-    return defaultConversationFlow.find(step => step.id === stepId);
+    return conversationFlowV2.find(step => step.id === stepId);
   }
 
   /**
