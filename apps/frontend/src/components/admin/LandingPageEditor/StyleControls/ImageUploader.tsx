@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { ImageConfig } from '@/types/landingPage';
+import axios from 'axios';
 
 interface ImageUploaderProps {
   label: string;
@@ -41,25 +42,18 @@ export const ImageUploader = ({
     };
     reader.readAsDataURL(file);
 
-    // Upload para o servidor
+    // Upload para o servidor usando axios (que tem interceptor de auth configurado)
     try {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/upload/image', {
-        method: 'POST',
+      const response = await axios.post('/api/upload/image', formData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data',
         },
-        body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error('Erro ao fazer upload da imagem');
-      }
-
-      const result = await response.json();
-      const imageUrl = result.data.url;
+      const imageUrl = response.data.data.url;
 
       // Atualizar com URL real do servidor
       setPreview(imageUrl);
@@ -67,9 +61,10 @@ export const ImageUploader = ({
         ...value,
         url: imageUrl,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro no upload:', error);
-      alert('Erro ao fazer upload da imagem. Tente novamente.');
+      const errorMsg = error.response?.data?.message || 'Erro ao fazer upload da imagem. Tente novamente.';
+      alert(errorMsg);
     }
   };
 
