@@ -51,15 +51,31 @@ export class UploadController {
    */
   async uploadImage(req: Request, res: Response) {
     try {
+      console.log('📤 Upload request received:', {
+        hasFile: !!req.file,
+        uploadsDir,
+        NODE_ENV: process.env.NODE_ENV,
+      });
+
       if (!req.file) {
+        console.log('❌ No file in request');
         return res.status(400).json({
           success: false,
           message: 'Nenhum arquivo enviado',
         });
       }
 
+      console.log('✅ File received:', {
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+      });
+
       // Retornar URL da imagem
       const imageUrl = `/uploads/${req.file.filename}`;
+
+      console.log('✅ Upload successful, returning URL:', imageUrl);
 
       res.json({
         success: true,
