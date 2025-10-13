@@ -167,7 +167,9 @@ export const AdminChatbotConfig = () => {
   };
 
   const generateShareLink = (link: ShareLink) => {
-    const baseUrl = window.location.origin;
+    // Usar domínio real do site em produção
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const baseUrl = isLocalhost ? 'http://metalurgicaferraco.com' : window.location.origin;
     return `${baseUrl}/chat?source=${link.platform}&campaign=${encodeURIComponent(link.name)}`;
   };
 
