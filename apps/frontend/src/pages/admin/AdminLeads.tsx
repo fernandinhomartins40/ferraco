@@ -430,23 +430,27 @@ const AdminLeads = () => {
 
         {/* Kanban View - Full width */}
         <div className="-mx-6">
-          {isLoading ? (
+          {isLoading || isLoadingColumns ? (
             <div className="flex items-center justify-center py-12 px-6">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : leads.length === 0 ? (
+          ) : columns.length === 0 ? (
             <div className="px-6">
               <Card>
                 <CardContent className="text-center py-12 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Nenhum lead encontrado</p>
-                  <p className="text-sm">Crie seu primeiro lead para começar</p>
+                  <Settings2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Nenhuma coluna configurada</p>
+                  <p className="text-sm">Configure as colunas do Kanban para começar</p>
                   <Button
                     className="mt-4"
-                    onClick={() => setIsCreateDialogOpen(true)}
+                    onClick={() => {
+                      resetColumnForm();
+                      setIsEditColumnMode(false);
+                      setIsColumnDialogOpen(true);
+                    }}
                   >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Criar Primeiro Lead
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    Gerenciar Colunas
                   </Button>
                 </CardContent>
               </Card>
