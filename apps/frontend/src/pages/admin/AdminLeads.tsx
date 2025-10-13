@@ -182,9 +182,9 @@ const AdminLeads = () => {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col w-full">
+      <div className="w-full space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Leads</h1>
             <p className="text-muted-foreground">
@@ -301,7 +301,7 @@ const AdminLeads = () => {
         </div>
 
         {/* Alert de dados reais */}
-        <Alert className="border-green-200 bg-green-50 mb-6">
+        <Alert className="border-green-200 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
             ✅ Todos os leads são REAIS e persistidos no PostgreSQL. Não há simulações.
@@ -309,7 +309,7 @@ const AdminLeads = () => {
         </Alert>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card>
           <CardContent className="pt-6">
             <div className="flex gap-4">
               <div className="flex-1">
