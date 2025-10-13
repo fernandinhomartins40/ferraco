@@ -457,6 +457,26 @@ model KanbanColumn {
 }
 
 // ============================================================================
+// TABELA: LandingPageConfig (Configuração da Landing Page)
+// ============================================================================
+
+model LandingPageConfig {
+  id         String   @id @default(cuid())
+  header     String   @db.Text // JSON
+  hero       String   @db.Text // JSON
+  marquee    String   @db.Text // JSON
+  about      String   @db.Text // JSON
+  products   String   @db.Text // JSON
+  experience String   @db.Text // JSON
+  contact    String   @db.Text // JSON
+  footer     String   @db.Text // JSON
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("landing_page_config")
+}
+
+// ============================================================================
 // TABELA: PartialLead (Leads Parciais - Formulários Incompletos)
 // ============================================================================
 
