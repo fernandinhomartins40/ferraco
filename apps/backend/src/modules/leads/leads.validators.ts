@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LeadStatus, LeadPriority } from '@prisma/client';
+import { LeadPriority } from '@prisma/client';
 
 // ============================================================================
 // Helper Validators
@@ -110,7 +110,7 @@ export const CreateLeadSchema = z.object({
     .trim()
     .optional(),
 
-  status: z.nativeEnum(LeadStatus).optional(),
+  status: z.string().optional(), // Status dinâmico baseado nas colunas Kanban
 
   priority: z.nativeEnum(LeadPriority).optional(),
 
@@ -131,8 +131,8 @@ export const LeadFiltersSchema = z.object({
   search: z.string().trim().optional(),
 
   status: z.union([
-    z.nativeEnum(LeadStatus),
-    z.array(z.nativeEnum(LeadStatus)),
+    z.string(),
+    z.array(z.string()),
   ]).optional().transform((val) => {
     if (!val) return undefined;
     return Array.isArray(val) ? val : [val];

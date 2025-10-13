@@ -1,4 +1,4 @@
-import { Lead, LeadStatus, LeadPriority } from '@prisma/client';
+import { Lead, LeadPriority } from '@prisma/client';
 
 // ============================================================================
 // DTOs (Data Transfer Objects)
@@ -11,7 +11,7 @@ export interface CreateLeadDTO {
   company?: string;
   position?: string;
   source?: string;
-  status?: LeadStatus;
+  status?: string; // Status dinâmico baseado nas colunas Kanban
   priority?: LeadPriority;
   assignedToId?: string;
   customFields?: Record<string, unknown>;
@@ -24,7 +24,7 @@ export interface UpdateLeadDTO extends Partial<CreateLeadDTO> {
 
 export interface LeadFiltersDTO {
   search?: string;
-  status?: LeadStatus[];
+  status?: string[]; // Status dinâmico baseado nas colunas Kanban
   priority?: LeadPriority[];
   source?: string[];
   assignedToId?: string;

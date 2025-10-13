@@ -1,4 +1,4 @@
-import { PrismaClient, LeadStatus, LeadPriority } from '@prisma/client';
+import { PrismaClient, LeadPriority } from '@prisma/client';
 import {
   CreatePartialLeadDTO,
   UpdatePartialLeadDTO,
@@ -134,7 +134,7 @@ export class PartialLeadsService {
         email: partialLead.email,
         phone: partialLead.phone,
         source: partialLead.source,
-        status: LeadStatus.NOVO,
+        status: 'NOVO',
         priority: (conversionData.priority as LeadPriority) || LeadPriority.MEDIUM,
         createdById: userId,
         assignedToId: conversionData.assignedToId || userId,

@@ -1,4 +1,4 @@
-import { PrismaClient, Lead, Prisma, LeadStatus, LeadPriority } from '@prisma/client';
+import { PrismaClient, Lead, Prisma, LeadPriority } from '@prisma/client';
 import {
   CreateLeadDTO,
   UpdateLeadDTO,
@@ -47,7 +47,7 @@ export class LeadsService {
         name: data.name,
         email: data.email || null,
         phone: data.phone,
-        status: data.status || LeadStatus.NOVO,
+        status: data.status || 'NOVO',
         priority: data.priority || LeadPriority.MEDIUM,
         source: data.source || null,
         leadScore: score,
@@ -259,7 +259,7 @@ export class LeadsService {
     await this.prisma.lead.update({
       where: { id },
       data: {
-        status: LeadStatus.ARQUIVADO,
+        status: 'ARQUIVADO',
       },
     });
 
@@ -275,23 +275,23 @@ export class LeadsService {
 
     const [total, byStatus, byPriority, avgScore] = await Promise.all([
       this.prisma.lead.count({
-        where: { status: { not: LeadStatus.ARQUIVADO } },
+        where: { status: { not: 'ARQUIVADO' } },
       }),
 
       this.prisma.lead.groupBy({
         by: ['status'],
-        where: { status: { not: LeadStatus.ARQUIVADO } },
+        where: { status: { not: 'ARQUIVADO' } },
         _count: true,
       }),
 
       this.prisma.lead.groupBy({
         by: ['priority'],
-        where: { status: { not: LeadStatus.ARQUIVADO } },
+        where: { status: { not: 'ARQUIVADO' } },
         _count: true,
       }),
 
       this.prisma.lead.aggregate({
-        where: { status: { not: LeadStatus.ARQUIVADO } },
+        where: { status: { not: 'ARQUIVADO' } },
         _avg: { leadScore: true },
       }),
     ]);
@@ -299,14 +299,14 @@ export class LeadsService {
     // Group by source
     const leadsBySource = await this.prisma.lead.groupBy({
       by: ['source'],
-      where: { status: { not: LeadStatus.ARQUIVADO } },
+      where: { status: { not: 'ARQUIVADO' } },
       _count: true,
     });
 
     // Calculate conversion rate
     const convertedLeads = await this.prisma.lead.count({
       where: {
-        status: LeadStatus.CONCLUIDO,
+        status: 'CONCLUIDO',
       },
     });
 
@@ -339,7 +339,7 @@ export class LeadsService {
         createdAt: {
           gte: startDate,
         },
-        status: { not: LeadStatus.ARQUIVADO },
+        status: { not: 'ARQUIVADO' },
       },
       select: {
         createdAt: true,
@@ -398,7 +398,7 @@ export class LeadsService {
 
     const leads = await this.prisma.lead.findMany({
       where: {
-        status: { not: LeadStatus.ARQUIVADO },
+        status: { not: 'ARQUIVADO' },
         OR: whereConditions,
       },
       include: {
@@ -543,7 +543,7 @@ export class LeadsService {
     await this.prisma.lead.updateMany({
       where: { id: { in: data.duplicateLeadIds } },
       data: {
-        status: LeadStatus.ARQUIVADO,
+        status: 'ARQUIVADO',
         isDuplicate: true,
         duplicateOfId: data.primaryLeadId,
       },
@@ -560,7 +560,7 @@ export class LeadsService {
 
   private buildWhereClause(filters: LeadFiltersDTO): Prisma.LeadWhereInput {
     const where: Prisma.LeadWhereInput = {
-      status: { not: LeadStatus.ARQUIVADO },
+      status: { not: 'ARQUIVADO' },
     };
 
     if (filters.search) {
