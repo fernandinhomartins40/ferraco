@@ -25,6 +25,7 @@ import aiRoutes from './modules/ai/ai.routes';
 import chatbotRoutes from './modules/chatbot/chatbot.routes';
 import kanbanColumnRoutes from './routes/kanbanColumn.routes';
 import uploadRoutes from './routes/upload.routes';
+import landingPageRoutes from './routes/landing-page.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -75,6 +76,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/chatbot`, chatbotRoutes);
   app.use(`${API_PREFIX}/kanban-columns`, kanbanColumnRoutes);
   app.use(`${API_PREFIX}/upload`, uploadRoutes);
+  app.use(`${API_PREFIX}/landing-page`, landingPageRoutes);
 
   logger.info('✅ All routes registered successfully');
 

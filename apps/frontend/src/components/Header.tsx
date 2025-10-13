@@ -21,8 +21,8 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
     { label: "Contato", href: "#contato" },
   ];
 
-  const logoSrc = config?.logo?.image || logoFerraco;
-  const logoAlt = config?.logo?.alt || "Ferraco Equipamentos";
+  const logoSrc = config?.logo?.image?.url || logoFerraco;
+  const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";
   const ctaText = config?.cta?.text || "Solicitar Orçamento";
 
   const scrollToSection = (href: string) => {

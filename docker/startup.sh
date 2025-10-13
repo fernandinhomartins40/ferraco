@@ -16,12 +16,24 @@ if [ -n "$DATABASE_URL" ]; then
   echo "📊 Criando/Atualizando estrutura do banco de dados..."
   cd /app/backend
 
-  # Usar prisma db push em vez de migrate deploy (cria tabelas sem migration files)
-  npx prisma db push --accept-data-loss 2>&1 || echo "⚠️  Aviso: Falha ao criar tabelas"
+  # Executar migrations pendentes (SEGURO - não perde dados)
+  echo "📊 Aplicando migrations pendentes..."
+  npx prisma migrate deploy 2>&1 || {
+    echo "⚠️  Aviso: Erro ao aplicar migrations"
+    echo "ℹ️  Se o banco está vazio, executando db push..."
+    npx prisma db push --skip-generate 2>&1 || echo "⚠️  Aviso: Falha ao criar tabelas"
+  }
 
   # Seed do banco (apenas se estiver vazio)
   echo "🌱 Verificando se precisa popular banco de dados..."
-  npx prisma db seed 2>&1 || echo "ℹ️  Seed não executado (banco já populado ou seed não configurado)"
+  # Verifica se já existe algum usuário antes de fazer seed
+  USER_COUNT=$(npx prisma db execute --stdin <<< "SELECT COUNT(*) as count FROM users;" 2>/dev/null | grep -oE '[0-9]+' | tail -1 || echo "0")
+  if [ "$USER_COUNT" = "0" ]; then
+    echo "📝 Banco vazio - executando seed..."
+    npx prisma db seed 2>&1 || echo "⚠️  Aviso: Falha no seed"
+  else
+    echo "✅ Banco já populado ($USER_COUNT usuários) - pulando seed"
+  fi
 else
   echo "⚠️  DATABASE_URL não configurado - pulando migrações"
 fi

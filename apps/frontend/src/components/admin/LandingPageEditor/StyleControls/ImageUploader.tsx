@@ -28,23 +28,49 @@ export const ImageUploader = ({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     if (!acceptedFormats.includes(file.type)) {
       alert('Formato de arquivo não suportado');
       return;
     }
 
-    // Cria preview
+    // Criar preview local imediatamente
     const reader = new FileReader();
     reader.onload = (e) => {
-      const url = e.target?.result as string;
-      setPreview(url);
-      onChange({
-        ...value,
-        url,
-      });
+      setPreview(e.target?.result as string);
     };
     reader.readAsDataURL(file);
+
+    // Upload para o servidor
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao fazer upload da imagem');
+      }
+
+      const result = await response.json();
+      const imageUrl = result.data.url;
+
+      // Atualizar com URL real do servidor
+      setPreview(imageUrl);
+      onChange({
+        ...value,
+        url: imageUrl,
+      });
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      alert('Erro ao fazer upload da imagem. Tente novamente.');
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {

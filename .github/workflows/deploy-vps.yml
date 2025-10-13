@@ -178,10 +178,11 @@ jobs:
           fi
           docker compose version
 
-          # Parar containers anteriores
+          # Parar containers anteriores (SEM remover volumes - preserva banco de dados!)
           echo "⏹️  Parando containers anteriores..."
           cd ${{ env.APP_DIR }} 2>/dev/null || true
-          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --volumes --remove-orphans 2>/dev/null || true
+          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --remove-orphans 2>/dev/null || true
+          echo "✅ Volumes preservados (banco de dados mantido)"
 
           # Remover containers se ainda existirem
           docker rm -f ferraco-crm-vps 2>/dev/null || true
