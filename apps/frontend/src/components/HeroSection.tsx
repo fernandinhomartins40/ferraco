@@ -11,6 +11,15 @@ interface HeroSectionProps {
 const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Background image do config
+  const backgroundImage = config?.background?.type === 'image' && config?.background?.image?.url
+    ? config.background.image.url
+    : null;
+
+  const backgroundStyle = backgroundImage
+    ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : {};
+
   // Fallback para valores padrão do conteúdo atual
   const slides = config?.slides || [
     {
@@ -46,8 +55,12 @@ const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
   };
 
   return (
-    <section id="inicio" className="relative pt-20 lg:pt-24 h-[60vh] md:h-[65vh] lg:h-[70vh] flex items-center hero-gradient overflow-hidden">
-      <div className="absolute inset-0 bg-black/20"></div>
+    <section
+      id="inicio"
+      className={`relative pt-20 lg:pt-24 h-[60vh] md:h-[65vh] lg:h-[70vh] flex items-center overflow-hidden ${!backgroundImage ? 'hero-gradient' : ''}`}
+      style={backgroundStyle}
+    >
+      <div className="absolute inset-0 bg-black/40"></div>
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center text-white">

@@ -40,8 +40,8 @@ const Footer = ({ config }: FooterProps) => {
   };
 
   // Usar config ou fallback
-  const logoSrc = config?.logo?.image || logoFerraco;
-  const logoAlt = config?.logo?.alt || "Ferraco Equipamentos";
+  const logoSrc = config?.logo?.image?.url || config?.logo?.image || logoFerraco;
+  const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";
   const tagline = config?.tagline || "Há mais de 25 anos oferecendo soluções de qualidade superior para fazendas de todo o Brasil. Tradição, inovação e excelência em cada produto.";
   const copyright = config?.copyright || `© ${new Date().getFullYear()} Ferraco Equipamentos. Todos os direitos reservados.`;
   const displaySocialLinks = config?.social?.enabled ? config.social.links.filter(link => link.href) : socialLinks;
