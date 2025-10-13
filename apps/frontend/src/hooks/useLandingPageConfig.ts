@@ -156,8 +156,13 @@ export const useLandingPageConfig = () => {
     setIsSaving(true);
 
     try {
+      console.log('💾 Salvando configuração...', {
+        headerLogo: state.config.header.logo,
+        fullHeader: state.config.header,
+      });
+
       // 1. Salvar no backend primeiro
-      await apiClient.put('/landing-page/config', {
+      const backendResponse = await apiClient.put('/landing-page/config', {
         header: state.config.header,
         hero: state.config.hero,
         marquee: state.config.marquee,
@@ -167,6 +172,8 @@ export const useLandingPageConfig = () => {
         contact: state.config.contact,
         footer: state.config.footer,
       });
+
+      console.log('✅ Backend save response:', backendResponse.data);
 
       // 2. Depois salvar no localStorage
       const success = saveConfig(state.config);

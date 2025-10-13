@@ -55,6 +55,12 @@ export const ImageUploader = ({
 
       const imageUrl = response.data.data.url;
 
+      console.log('✅ Upload bem-sucedido!', {
+        imageUrl,
+        fullResponse: response.data,
+        currentValue: value,
+      });
+
       // Atualizar com URL real do servidor
       setPreview(imageUrl);
       onChange({

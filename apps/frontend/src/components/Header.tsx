@@ -25,6 +25,14 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
   const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";
   const ctaText = config?.cta?.text || "Solicitar Orçamento";
 
+  // Debug log
+  console.log('🖼️ Header config:', {
+    config,
+    logoConfig: config?.logo,
+    logoImage: config?.logo?.image,
+    logoSrc,
+  });
+
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href);
     if (element) {
