@@ -456,6 +456,22 @@ async function main() {
   console.log('  - 2 Opportunities');
   console.log('  - 2 Communication Templates');
   console.log('  - 1 Automation');
+
+  // Create default Landing Page Config
+  console.log('\n🎨 Creating default landing page config...');
+  await prisma.landingPageConfig.create({
+    data: {
+      header: JSON.stringify({ logo: { type: 'image', image: { url: '/assets/logo-ferraco.webp', alt: 'Ferraco Equipamentos', objectFit: 'contain' } }, menu: { items: [{ label: 'Início', href: '#inicio' }, { label: 'Sobre', href: '#sobre' }, { label: 'Produtos', href: '#produtos' }, { label: 'Experiência', href: '#experiencia' }, { label: 'Contato', href: '#contato' }] }, cta: { text: 'Solicitar Orçamento', variant: 'secondary' } }),
+      hero: JSON.stringify({ title: 'Equipamentos de Qualidade para o Agronegócio', subtitle: 'Soluções completas em equipamentos para pecuária leiteira', cta: { text: 'Solicitar Orçamento', variant: 'default' }, backgroundImage: { url: '/assets/hero-background.webp', alt: 'Ferraco', objectFit: 'cover' } }),
+      marquee: JSON.stringify({ items: [{ text: '🏆 30+ anos' }, { text: '✨ Qualidade' }, { text: '🚚 Entrega rápida' }, { text: '💯 Satisfação' }], speed: 30 }),
+      about: JSON.stringify({ title: 'Sobre a Ferraco', content: 'Há mais de 30 anos no mercado oferecendo as melhores soluções.', image: { url: '/assets/about-image.webp', alt: 'Sobre', objectFit: 'cover' } }),
+      products: JSON.stringify({ title: 'Nossos Produtos', subtitle: 'Equipamentos de alta qualidade', items: [] }),
+      experience: JSON.stringify({ title: 'Nossa Experiência', stats: [{ value: '30+', label: 'Anos' }, { value: '5000+', label: 'Clientes' }, { value: '100%', label: 'Qualidade' }] }),
+      contact: JSON.stringify({ title: 'Contato', subtitle: 'Estamos prontos para atender', phone: '(11) 99999-9999', email: 'contato@ferraco.com', address: 'São Paulo, SP' }),
+      footer: JSON.stringify({ companyName: 'Ferraco Equipamentos', description: 'Soluções completas para pecuária', socialLinks: [] })
+    }
+  });
+
   console.log('\n🔐 Login credentials:');
   console.log('  Admin:      admin@ferraco.com / Admin@123456');
   console.log('  Manager:    manager@ferraco.com / User@123456');
