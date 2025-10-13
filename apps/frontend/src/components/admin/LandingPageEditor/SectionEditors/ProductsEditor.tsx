@@ -140,6 +140,12 @@ export const ProductsEditor = ({ config, onChange }: ProductsEditorProps) => {
                   label="Imagem do Produto"
                   value={item.image}
                   onChange={(image) => updateItem({ image })}
+                  enableCrop={true}
+                  cropAspectRatio={4 / 3}
+                  cropTargetWidth={800}
+                  cropTargetHeight={600}
+                  cropTitle="Recortar Imagem do Produto"
+                  description="Imagens dos produtos serão recortadas em 800x600px (4:3)"
                 />
 
                 <Separator />

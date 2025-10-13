@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 
 // Criar diretório de uploads se não existir
 const uploadsDir = process.env.NODE_ENV === 'production'
@@ -169,6 +170,60 @@ export class UploadController {
       res.status(500).json({
         success: false,
         message: error.message || 'Erro ao listar imagens',
+      });
+    }
+  }
+
+  /**
+   * Upload com crop e compressão
+   * Espera receber no body: { image: base64, width: number, height: number, quality: number }
+   */
+  async uploadWithCrop(req: Request, res: Response) {
+    try {
+      const { image, width, height, quality = 85 } = req.body;
+
+      if (!image) {
+        return res.status(400).json({
+          success: false,
+          message: 'Imagem não fornecida',
+        });
+      }
+
+      // Extrair base64 data
+      const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Gerar nome único
+      const filename = `cropped-${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+      const filePath = path.join(uploadsDir, filename);
+
+      // Processar imagem com Sharp
+      await sharp(buffer)
+        .resize(width, height, {
+          fit: 'cover',
+          position: 'center',
+        })
+        .jpeg({ quality })
+        .toFile(filePath);
+
+      const stats = fs.statSync(filePath);
+
+      res.json({
+        success: true,
+        data: {
+          url: `/uploads/${filename}`,
+          filename,
+          size: stats.size,
+          width,
+          height,
+          quality,
+        },
+      });
+    } catch (error: any) {
+      console.error('Erro no upload com crop:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Erro ao processar imagem',
       });
     }
   }

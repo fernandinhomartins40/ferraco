@@ -6,9 +6,10 @@ import { useState, useRef } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Crop } from 'lucide-react';
 import { ImageConfig } from '@/types/landingPage';
 import { apiClient } from '@/lib/apiClient';
+import { ImageCropModal } from '@/components/ImageCropModal';
 
 interface ImageUploaderProps {
   label: string;
@@ -16,6 +17,11 @@ interface ImageUploaderProps {
   onChange: (image: ImageConfig) => void;
   description?: string;
   acceptedFormats?: string[];
+  enableCrop?: boolean;
+  cropAspectRatio?: number;
+  cropTargetWidth?: number;
+  cropTargetHeight?: number;
+  cropTitle?: string;
 }
 
 export const ImageUploader = ({
@@ -24,9 +30,16 @@ export const ImageUploader = ({
   onChange,
   description,
   acceptedFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'],
+  enableCrop = false,
+  cropAspectRatio = 16 / 9,
+  cropTargetWidth = 1200,
+  cropTargetHeight = 675,
+  cropTitle = 'Recortar Imagem',
 }: ImageUploaderProps) => {
   const [preview, setPreview] = useState(value.url);
   const [isDragging, setIsDragging] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (file: File) => {
@@ -35,6 +48,18 @@ export const ImageUploader = ({
       return;
     }
 
+    // Se crop está habilitado, abrir modal
+    if (enableCrop) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setTempImageSrc(e.target?.result as string);
+        setCropModalOpen(true);
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // Se não tem crop, fazer upload direto
     // Criar preview local imediatamente
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -69,6 +94,46 @@ export const ImageUploader = ({
       });
     } catch (error: any) {
       console.error('Erro no upload:', error);
+      const errorMsg = error.response?.data?.message || 'Erro ao fazer upload da imagem. Tente novamente.';
+      alert(errorMsg);
+    }
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob, croppedUrl: string) => {
+    // Mostrar preview local
+    setPreview(croppedUrl);
+
+    // Upload da imagem cropada
+    try {
+      // Converter blob para base64
+      const reader = new FileReader();
+      reader.readAsDataURL(croppedBlob);
+      reader.onload = async () => {
+        const base64Image = reader.result as string;
+
+        const response = await apiClient.post('/upload/image-crop', {
+          image: base64Image,
+          width: cropTargetWidth,
+          height: cropTargetHeight,
+          quality: 85,
+        });
+
+        const imageUrl = response.data.data.url;
+
+        console.log('✅ Upload com crop bem-sucedido!', {
+          imageUrl,
+          dimensions: `${cropTargetWidth}x${cropTargetHeight}`,
+        });
+
+        // Atualizar com URL real do servidor
+        setPreview(imageUrl);
+        onChange({
+          ...value,
+          url: imageUrl,
+        });
+      };
+    } catch (error: any) {
+      console.error('Erro no upload com crop:', error);
       const errorMsg = error.response?.data?.message || 'Erro ao fazer upload da imagem. Tente novamente.';
       alert(errorMsg);
     }
@@ -113,28 +178,35 @@ export const ImageUploader = ({
   };
 
   return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+    <>
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
 
-      {/* Preview */}
-      {preview && (
-        <div className="relative rounded-lg border overflow-hidden bg-muted">
-          <img
-            src={preview}
-            alt={value.alt || 'Preview'}
-            className="w-full h-48 object-cover"
-          />
-          <Button
-            size="icon"
-            variant="destructive"
-            className="absolute top-2 right-2"
-            onClick={handleClear}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+        {enableCrop && (
+          <p className="text-xs text-muted-foreground">
+            🔧 Crop ativo: {cropTargetWidth}x{cropTargetHeight}px (Aspecto: {cropAspectRatio.toFixed(2)})
+          </p>
+        )}
+
+        {/* Preview */}
+        {preview && (
+          <div className="relative rounded-lg border overflow-hidden bg-muted">
+            <img
+              src={preview}
+              alt={value.alt || 'Preview'}
+              className="w-full h-48 object-cover"
+            />
+            <Button
+              size="icon"
+              variant="destructive"
+              className="absolute top-2 right-2"
+              onClick={handleClear}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
       {/* Upload Area */}
       <div
@@ -217,5 +289,23 @@ export const ImageUploader = ({
         </select>
       </div>
     </div>
+
+    {/* Crop Modal */}
+    {enableCrop && (
+      <ImageCropModal
+        open={cropModalOpen}
+        onClose={() => {
+          setCropModalOpen(false);
+          setTempImageSrc('');
+        }}
+        imageSrc={tempImageSrc}
+        onCropComplete={handleCropComplete}
+        aspectRatio={cropAspectRatio}
+        targetWidth={cropTargetWidth}
+        targetHeight={cropTargetHeight}
+        title={cropTitle}
+      />
+    )}
+    </>
   );
 };

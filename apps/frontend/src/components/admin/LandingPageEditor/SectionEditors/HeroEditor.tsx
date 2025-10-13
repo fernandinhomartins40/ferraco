@@ -445,6 +445,12 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
               label="Imagem de Fundo"
               value={config.background.image}
               onChange={(image) => updateBackground({ image })}
+              enableCrop={true}
+              cropAspectRatio={16 / 9}
+              cropTargetWidth={1920}
+              cropTargetHeight={1080}
+              cropTitle="Recortar Imagem de Fundo Hero"
+              description="Imagens do Hero serão recortadas em 1920x1080px (16:9)"
             />
           )}
         </CardContent>

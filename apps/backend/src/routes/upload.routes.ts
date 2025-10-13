@@ -15,6 +15,9 @@ router.use(authenticate);
 // POST /api/upload/image - Upload de imagem
 router.post('/image', upload.single('image'), uploadController.uploadImage.bind(uploadController));
 
+// POST /api/upload/image-crop - Upload com crop e compressão
+router.post('/image-crop', uploadController.uploadWithCrop.bind(uploadController));
+
 // GET /api/upload/images - Listar todas as imagens
 router.get('/images', uploadController.listImages.bind(uploadController));
 
