@@ -251,8 +251,9 @@ jobs:
 
           # Criar diretórios persistentes (volumes Docker usarão esses diretórios)
           echo "🗄️  Criando diretórios persistentes para volumes Docker..."
-          mkdir -p data/ferraco-data data/ferraco-logs
-          chmod 777 data/ferraco-data data/ferraco-logs
+          mkdir -p data/ferraco-data data/ferraco-logs data/ferraco-uploads
+          chmod 777 data/ferraco-data data/ferraco-logs data/ferraco-uploads
+          echo "✅ Diretórios criados: data/ferraco-data, data/ferraco-logs, data/ferraco-uploads"
 
           # Configurar variáveis de ambiente para Docker
           echo "⚙️  Configurando ambiente Docker..."
@@ -328,6 +329,40 @@ jobs:
             sleep 5
           done
 
+          # Verificação de volumes e permissões
+          echo ""
+          echo "🔍 Verificando volumes e permissões..."
+          if [ -d "data/ferraco-uploads" ]; then
+            echo "✅ Diretório uploads existe"
+            ls -la data/ferraco-uploads
+            UPLOAD_PERM=$(stat -c '%a' data/ferraco-uploads)
+            echo "   Permissões: $UPLOAD_PERM"
+            if [ "$UPLOAD_PERM" = "777" ]; then
+              echo "✅ Permissões corretas (777)"
+            else
+              echo "⚠️  Permissões incorretas, corrigindo..."
+              chmod 777 data/ferraco-uploads
+            fi
+          else
+            echo "❌ Diretório uploads não existe!"
+          fi
+
+          # Verificar montagem de volumes no container
+          echo ""
+          echo "🔍 Verificando montagem de volumes no container..."
+          docker exec ferraco-crm-vps ls -la /app/uploads 2>/dev/null || echo "⚠️  Diretório /app/uploads não acessível"
+          docker exec ferraco-crm-vps touch /app/uploads/.test 2>/dev/null && \
+            echo "✅ Volume /app/uploads com permissão de escrita" || \
+            echo "❌ Volume /app/uploads SEM permissão de escrita"
+          docker exec ferraco-crm-vps rm -f /app/uploads/.test 2>/dev/null || true
+
+          # Verificar configuração do Express para servir arquivos estáticos
+          echo ""
+          echo "🔍 Verificando configuração do Express..."
+          docker exec ferraco-crm-vps grep -r "express.static" /app/backend/dist/ 2>/dev/null | head -n 1 && \
+            echo "✅ Express configurado para servir arquivos estáticos" || \
+            echo "⚠️  Express pode não estar configurado corretamente"
+
           # Verificação final
           echo ""
           echo "========================================="
@@ -390,6 +425,67 @@ jobs:
           fi
         DEPLOY_SCRIPT
 
+    - name: ✅ Post-Deploy Verification
+      run: |
+        echo ""
+        echo "========================================="
+        echo "✅ VERIFICAÇÃO PÓS-DEPLOY"
+        echo "========================================="
+
+        sshpass -p '${{ secrets.VPS_PASSWORD }}' ssh \
+          -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << "VERIFY_SCRIPT"
+          set -e
+          cd ${{ env.APP_DIR }}
+
+          echo ""
+          echo "🔍 1. Verificando Containers Docker..."
+          docker ps --filter "name=ferraco" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+          echo ""
+          echo "🔍 2. Verificando Volumes..."
+          echo "   📁 data/ferraco-data:"
+          ls -lah data/ferraco-data | head -5
+          echo "   📁 data/ferraco-logs:"
+          ls -lah data/ferraco-logs | head -5
+          echo "   📁 data/ferraco-uploads:"
+          ls -lah data/ferraco-uploads | head -5
+
+          echo ""
+          echo "🔍 3. Verificando Permissões..."
+          stat -c "   %n: %a (%A)" data/ferraco-data
+          stat -c "   %n: %a (%A)" data/ferraco-logs
+          stat -c "   %n: %a (%A)" data/ferraco-uploads
+
+          echo ""
+          echo "🔍 4. Verificando Montagem no Container..."
+          echo "   /app/uploads:"
+          docker exec ferraco-crm-vps ls -lah /app/uploads | head -5 || echo "   ❌ Erro ao acessar /app/uploads"
+
+          echo ""
+          echo "🔍 5. Testando Escrita no Volume..."
+          docker exec ferraco-crm-vps sh -c "echo 'test' > /app/uploads/.deploy-test && rm /app/uploads/.deploy-test" && \
+            echo "   ✅ Volume /app/uploads com escrita OK" || \
+            echo "   ❌ Volume /app/uploads SEM permissão de escrita"
+
+          echo ""
+          echo "🔍 6. Verificando Endpoints..."
+          echo "   /health:"
+          curl -s http://127.0.0.1:${{ env.APP_PORT }}/health | head -c 100 && echo "" || echo "   ❌ Erro"
+          echo "   /api/landing-page/config:"
+          curl -s http://127.0.0.1:${{ env.APP_PORT }}/api/landing-page/config | head -c 150 && echo "..." || echo "   ❌ Erro"
+
+          echo ""
+          echo "🔍 7. Verificando Logs do Container (últimas 20 linhas)..."
+          docker logs ferraco-crm-vps --tail 20
+
+          echo ""
+          echo "========================================="
+          echo "✅ VERIFICAÇÃO CONCLUÍDA"
+          echo "========================================="
+        VERIFY_SCRIPT
+
     - name: 🎉 Deploy Success
       run: |
         echo ""
@@ -422,6 +518,8 @@ jobs:
         echo "  • Health checks usam 127.0.0.1 (Alpine não resolve localhost)"
         echo "  • Container isolado - sem PM2 no host"
         echo "  • Build completo com --no-cache"
+        echo "  • Volumes persistentes: data, logs, uploads"
+        echo "  • Permissões: 777 em todos os volumes"
         echo ""
         echo "✅ Sistema pronto para uso!"
         echo "========================================="
