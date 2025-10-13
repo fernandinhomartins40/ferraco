@@ -39,6 +39,16 @@ export async function auditLogger(
     // Only log authenticated requests or failed auth attempts
     if (userId || (req.url.includes('/auth') && res.statusCode >= 400)) {
       try {
+        // Build details object with additional info
+        const details = {
+          method: req.method,
+          path: req.url,
+          statusCode: res.statusCode,
+          requestBody: sanitizeData(req.body || {}),
+          responseBody: res.statusCode >= 400 ? responseBody : null,
+          duration,
+        };
+
         await prisma.auditLog.create({
           data: {
             userId: userId || 'anonymous',
@@ -48,12 +58,9 @@ export async function auditLogger(
             resourceId: req.params.id || 'none',
             ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
             userAgent: req.headers['user-agent'] || 'unknown',
-            method: req.method,
-            path: req.url,
-            statusCode: res.statusCode,
-            requestBody: sanitizeData(req.body || {}),
-            responseBody: res.statusCode >= 400 ? responseBody : null,
-            duration,
+            details: JSON.stringify(details),
+            success: res.statusCode < 400,
+            errorMessage: res.statusCode >= 400 ? `HTTP ${res.statusCode}` : null,
           },
         });
       } catch (error) {
