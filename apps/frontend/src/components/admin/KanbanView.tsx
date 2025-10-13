@@ -76,7 +76,8 @@ const KanbanView = ({ leads, onUpdateLeadStatus, onEditLead, onDeleteLead }: Kan
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="w-full -mx-6 px-6 overflow-x-auto pb-4">
+        <div className="flex gap-4 min-w-max">
         {KANBAN_COLUMNS.map((column) => {
           const columnLeads = getLeadsByStatus(column.status);
 
@@ -205,6 +206,7 @@ const KanbanView = ({ leads, onUpdateLeadStatus, onEditLead, onDeleteLead }: Kan
             </div>
           );
         })}
+        </div>
       </div>
     </DragDropContext>
   );
