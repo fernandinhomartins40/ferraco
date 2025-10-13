@@ -1,6 +1,7 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
 import { CORS_OPTIONS, API_PREFIX } from './config/constants';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit';
@@ -23,6 +24,7 @@ import integrationsRoutes from './modules/integrations/integrations.routes';
 import aiRoutes from './modules/ai/ai.routes';
 import chatbotRoutes from './modules/chatbot/chatbot.routes';
 import kanbanColumnRoutes from './routes/kanbanColumn.routes';
+import uploadRoutes from './routes/upload.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -37,6 +39,9 @@ export function createApp(): Application {
   // Body parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Servir arquivos estáticos (uploads)
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   // Rate limiting
   app.use(apiLimiter);
@@ -69,6 +74,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/ai`, aiRoutes);
   app.use(`${API_PREFIX}/chatbot`, chatbotRoutes);
   app.use(`${API_PREFIX}/kanban-columns`, kanbanColumnRoutes);
+  app.use(`${API_PREFIX}/upload`, uploadRoutes);
 
   logger.info('✅ All routes registered successfully');
 
