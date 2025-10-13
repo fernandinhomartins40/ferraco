@@ -53,6 +53,7 @@ services:
       # Dados persistentes
       - ./data/ferraco-data:/app/data
       - ./data/ferraco-logs:/app/logs
+      - ./data/ferraco-uploads:/app/uploads
 
     depends_on:
       postgres:

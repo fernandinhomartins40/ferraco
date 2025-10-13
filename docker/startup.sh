@@ -8,6 +8,12 @@ echo "📦 Ambiente: $NODE_ENV"
 echo "🐳 Porta: $PORT"
 echo "========================================="
 
+# Criar diretório de uploads se não existir
+echo "📁 Criando diretório de uploads..."
+mkdir -p /app/uploads
+chmod 755 /app/uploads
+echo "✅ Diretório de uploads criado"
+
 # Criar diretórios necessários
 mkdir -p /app/data /app/logs
 
