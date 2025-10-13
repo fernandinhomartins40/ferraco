@@ -298,6 +298,7 @@ const AdminLeads = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Alert de dados reais */}
