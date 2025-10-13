@@ -189,6 +189,23 @@ export class ChatbotSessionService {
       ...capturedData,
     });
 
+    // Filtrar apenas campos válidos do Prisma schema
+    const validFields = {
+      capturedName: capturedData.capturedName,
+      capturedEmail: capturedData.capturedEmail,
+      capturedPhone: capturedData.capturedPhone,
+      interest: capturedData.interest,
+      segment: capturedData.segment,
+      marketingOptIn: capturedData.marketingOptIn,
+    };
+
+    // Remover campos undefined
+    Object.keys(validFields).forEach(key => {
+      if (validFields[key] === undefined) {
+        delete validFields[key];
+      }
+    });
+
     // Atualizar sessão
     await prisma.chatbotSession.update({
       where: { sessionId },
@@ -197,7 +214,7 @@ export class ChatbotSessionService {
         currentStage: nextStep.stage,
         userResponses: JSON.stringify(userResponses),
         qualificationScore: newScore,
-        ...capturedData,
+        ...validFields,
       },
     });
 
