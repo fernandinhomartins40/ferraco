@@ -382,7 +382,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-x-hidden flex flex-col">
+        <main className="flex-1 p-6 overflow-x-hidden">
           {children}
         </main>
       </div>
