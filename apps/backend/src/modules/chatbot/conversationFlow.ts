@@ -38,12 +38,28 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'welcome',
     stage: 1,
     name: 'Boas-vindas',
-    botMessage: 'Olá! 👋 Tudo bem?\nEu sou o assistente virtual da {companyName}. Posso te ajudar a conhecer melhor nossos produtos e encontrar a melhor opção pra você.\n\nVocê quer saber mais sobre os produtos ou falar com um atendente?',
+    botMessage: 'Olá! 👋 Tudo bem?\n\nSeja bem-vindo(a) à {companyName}! Aqui a gente é especializado em {companyDescription}.\n\nComo posso te ajudar hoje?',
     options: [
-      { id: 'opt1', label: '🛍️ Saber mais sobre os produtos', nextStepId: 'presentation', captureAs: 'initial_choice' },
-      { id: 'opt2', label: '👤 Falar com um atendente', nextStepId: 'human_handoff', captureAs: 'initial_choice' },
-      { id: 'opt3', label: '❓ Apenas tirar uma dúvida rápida', nextStepId: 'quick_question', captureAs: 'initial_choice' },
+      { id: 'opt1', label: '🛍️ Conhecer os produtos', nextStepId: 'show_products', captureAs: 'initial_choice' },
+      { id: 'opt2', label: '💬 Falar com um especialista', nextStepId: 'human_handoff', captureAs: 'initial_choice' },
+      { id: 'opt3', label: '❓ Tirar uma dúvida', nextStepId: 'quick_question', captureAs: 'initial_choice' },
     ],
+  },
+
+  // ========================================
+  // ETAPA 1.5: Mostrar Produtos do Banco
+  // ========================================
+  {
+    id: 'show_products',
+    stage: 1,
+    name: 'Mostrar Produtos',
+    botMessage: 'Ótimo! A gente trabalha com soluções de qualidade pensadas especialmente para o produtor rural. 🐄\n\n{productList}\n\nAlgum desses produtos te interessa mais?',
+    options: [
+      { id: 'opt1', label: '✅ Sim, quero saber mais', nextStepId: 'capture_name', captureAs: 'interest' },
+      { id: 'opt2', label: '💬 Prefiro falar com especialista', nextStepId: 'human_handoff', captureAs: 'interest' },
+      { id: 'opt3', label: '📱 Me envia informações no WhatsApp', nextStepId: 'capture_name', captureAs: 'interest' },
+    ],
+    actions: [{ type: 'increment_score', value: 10 }],
   },
 
   // ========================================
@@ -53,11 +69,11 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'presentation',
     stage: 2,
     name: 'Apresentação',
-    botMessage: 'Perfeito! 😄\nAntes de te mostrar as opções, posso entender rapidinho o que você está procurando?\n\nO que mais te interessa no momento?',
+    botMessage: 'Bacana! 😄\nPra te ajudar melhor, me conta rapidinho: você já conhece nossos produtos ou está conhecendo agora?',
     options: [
-      { id: 'opt1', label: '💼 Soluções para empresas', nextStepId: 'capture_name', captureAs: 'segment' },
-      { id: 'opt2', label: '🏠 Produtos para uso pessoal', nextStepId: 'capture_name', captureAs: 'segment' },
-      { id: 'opt3', label: '❓ Ainda estou conhecendo', nextStepId: 'capture_name', captureAs: 'segment' },
+      { id: 'opt1', label: '✅ Já conheço', nextStepId: 'capture_name', captureAs: 'familiarity' },
+      { id: 'opt2', label: '🆕 Primeira vez aqui', nextStepId: 'show_products', captureAs: 'familiarity' },
+      { id: 'opt3', label: '⚖️ Estou comparando opções', nextStepId: 'capture_name', captureAs: 'familiarity' },
     ],
     actions: [{ type: 'increment_score', value: 10 }],
   },
@@ -69,7 +85,7 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'capture_name',
     stage: 3,
     name: 'Captura de Nome',
-    botMessage: 'Legal! Pra te ajudar melhor, posso te chamar pelo seu nome? 😄',
+    botMessage: 'Perfeito! Pra eu te ajudar melhor, qual é o seu nome?',
     captureInput: {
       type: 'name',
       field: 'capturedName',
@@ -85,11 +101,11 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'qualification',
     stage: 4,
     name: 'Qualificação',
-    botMessage: 'Prazer, {nome}! 👋\nAgora me conta rapidinho — você já conhece nossos produtos ou é sua primeira vez aqui?',
+    botMessage: 'Que bom te conhecer, {nome}! 😊\n\nPra eu te passar as informações mais relevantes, você tem fazenda ou trabalha com pecuária?',
     options: [
-      { id: 'opt1', label: '✅ Já conheço um pouco', nextStepId: 'interest_detail', captureAs: 'familiarity' },
-      { id: 'opt2', label: '🆕 Primeira vez', nextStepId: 'interest_detail', captureAs: 'familiarity' },
-      { id: 'opt3', label: '⚖️ Estou comparando com outra empresa', nextStepId: 'interest_detail', captureAs: 'familiarity' },
+      { id: 'opt1', label: '🐄 Sim, tenho fazenda de gado leiteiro', nextStepId: 'interest_detail', captureAs: 'segment' },
+      { id: 'opt2', label: '🏭 Trabalho com equipamentos/revenda', nextStepId: 'interest_detail', captureAs: 'segment' },
+      { id: 'opt3', label: '🔍 Estou pesquisando pra alguém', nextStepId: 'interest_detail', captureAs: 'segment' },
     ],
     actions: [{ type: 'increment_score', value: 10 }],
   },
@@ -101,7 +117,7 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'interest_detail',
     stage: 4,
     name: 'Detalhamento',
-    botMessage: 'Entendi. 👍\nE o que mais te chamou atenção até agora?\n\n(Essa resposta me ajuda a entender o que pode te interessar mais.)',
+    botMessage: 'Entendi! E me conta, você tá procurando por algo específico? Por exemplo:\n• Canzis/comedouros\n• Bebedouros\n• Porteiras\n• Outro equipamento\n\nPode me dizer o que você precisa.',
     captureInput: {
       type: 'text',
       field: 'interest',
@@ -117,11 +133,11 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'product_explanation',
     stage: 5,
     name: 'Explicação',
-    botMessage: 'Show! Temos ótimas opções nessa linha. 👇\nNossos produtos foram desenvolvidos para oferecer {interesse} com máxima qualidade e eficiência.\n\nEles se destacam por durabilidade, tecnologia de ponta e suporte especializado.\n\nQuer que eu te mostre exemplos de como nossos clientes estão usando?',
+    botMessage: 'Perfeito, {nome}! Olha, nossos equipamentos de {interesse} são feitos com:\n\n✅ Tubos galvanizados de alta resistência\n✅ Durabilidade comprovada em campo\n✅ Ergonomia pensada pro conforto do animal\n✅ Instalação facilitada\n\nTemos modelos específicos pra raça Holandesa e Jersey. Quer que eu te passe mais detalhes técnicos ou prefere já falar sobre valores?',
     options: [
-      { id: 'opt1', label: '👀 Sim, quero ver exemplos', nextStepId: 'capture_contact', captureAs: 'wants_examples' },
-      { id: 'opt2', label: '💰 Quero saber valores', nextStepId: 'capture_contact', captureAs: 'wants_pricing' },
-      { id: 'opt3', label: '❓ Quero tirar uma dúvida específica', nextStepId: 'specific_question', captureAs: 'wants_clarification' },
+      { id: 'opt1', label: '📋 Quero detalhes técnicos', nextStepId: 'capture_contact', captureAs: 'wants_technical' },
+      { id: 'opt2', label: '💰 Prefiro falar sobre valores', nextStepId: 'capture_contact', captureAs: 'wants_pricing' },
+      { id: 'opt3', label: '📱 Me manda tudo no WhatsApp', nextStepId: 'capture_contact', captureAs: 'wants_whatsapp' },
     ],
     actions: [{ type: 'increment_score', value: 15 }],
   },
@@ -133,7 +149,7 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'capture_contact',
     stage: 6,
     name: 'Captação de Contato',
-    botMessage: 'Que bom, {nome}! 😄\nPosso te enviar as informações completas (ou uma simulação personalizada).\n\nQual o melhor número de WhatsApp pra te mandar os detalhes? 📱',
+    botMessage: 'Show, {nome}! Vou te passar um material completo sobre nossos equipamentos de {interesse}.\n\nMelhor eu mandar no WhatsApp ou prefere que um especialista entre em contato? Me passa seu número: 📱',
     captureInput: {
       type: 'phone',
       field: 'capturedPhone',
@@ -153,11 +169,11 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'handoff_decision',
     stage: 7,
     name: 'Encaminhamento',
-    botMessage: 'Perfeito, {nome}! Assim posso te enviar também novidades e promoções relacionadas ao que você mencionou.\n\nSe quiser, posso te encaminhar pro nosso consultor especializado pra te ajudar pessoalmente.\nQuer que eu faça isso agora?',
+    botMessage: 'Ótimo, {nome}! Vou anotar aqui: {capturedPhone}\n\nAgora me diz, prefere que nosso time entre em contato pra fazer um orçamento personalizado, ou quer só receber o material informativo?',
     options: [
-      { id: 'opt1', label: '👤 Sim, quero falar com o consultor', nextStepId: 'human_handoff', captureAs: 'wants_consultant' },
-      { id: 'opt2', label: '📱 Pode mandar por WhatsApp', nextStepId: 'marketing_consent', captureAs: 'prefers_whatsapp' },
-      { id: 'opt3', label: '👀 Prefiro só olhar por aqui', nextStepId: 'marketing_consent', captureAs: 'self_service' },
+      { id: 'opt1', label: '👤 Quero falar com especialista', nextStepId: 'closing_with_lead', captureAs: 'wants_consultant' },
+      { id: 'opt2', label: '📱 Só material por WhatsApp mesmo', nextStepId: 'marketing_consent', captureAs: 'prefers_whatsapp' },
+      { id: 'opt3', label: '📧 Prefiro receber por e-mail', nextStepId: 'capture_email', captureAs: 'prefers_email' },
     ],
   },
 
@@ -165,14 +181,39 @@ export const defaultConversationFlow: ConversationStep[] = [
   // ETAPA 8: Consentimento de Marketing
   // ========================================
   {
+    id: 'capture_email',
+    stage: 7,
+    name: 'Captura de Email',
+    botMessage: 'Sem problema! Me passa seu melhor e-mail que eu te envio o material completo:',
+    captureInput: {
+      type: 'email',
+      field: 'capturedEmail',
+      nextStepId: 'marketing_consent',
+    },
+    actions: [{ type: 'increment_score', value: 20 }],
+  },
+
+  {
     id: 'marketing_consent',
     stage: 8,
     name: 'Consentimento',
-    botMessage: 'Combinado! 😄\nEnquanto nosso time entra em contato, você pode conferir também nossos produtos em nosso site.\n\nAgradeço pelo seu tempo, {nome}! Espero que eu tenha te ajudado.\nPosso te avisar quando lançarmos novidades relacionadas a {interesse}?',
+    botMessage: 'Perfeito, {nome}! Você vai receber o material em breve.\n\nSe você quiser, posso te manter informado sobre lançamentos e promoções de equipamentos pra pecuária leiteira. Autoriza?',
     options: [
-      { id: 'opt1', label: '✅ Sim, quero receber novidades', nextStepId: 'closing', captureAs: 'marketing_opt_in' },
+      { id: 'opt1', label: '✅ Sim, pode me avisar', nextStepId: 'closing', captureAs: 'marketing_opt_in' },
       { id: 'opt2', label: '❌ Não, obrigado', nextStepId: 'closing', captureAs: 'marketing_opt_out' },
     ],
+    actions: [
+      { type: 'create_lead' },
+      { type: 'send_notification' },
+    ],
+  },
+
+  {
+    id: 'closing_with_lead',
+    stage: 8,
+    name: 'Encerramento com Lead',
+    botMessage: 'Combinado, {nome}! Um dos nossos especialistas vai entrar em contato com você em breve no número {capturedPhone}.\n\nEstamos localizados em {companyAddress} e você também pode nos ligar: {companyPhone}\n\nFoi um prazer te atender! 😊',
+    options: [],
     actions: [
       { type: 'create_lead' },
       { type: 'send_notification' },
@@ -239,7 +280,7 @@ export const defaultConversationFlow: ConversationStep[] = [
     id: 'closing',
     stage: 8,
     name: 'Encerramento',
-    botMessage: 'Foi um prazer te ajudar, {nome}! 😊\n\nSe precisar de qualquer coisa, é só chamar. Estou sempre por aqui! 👋',
+    botMessage: 'Fechou! Obrigado pelo seu tempo, {nome}! 😊\n\nQualquer dúvida, estou por aqui. É só chamar!\n\n📞 {companyPhone}\n📍 {companyAddress}\n\nAté mais! 👋',
     options: [],
   },
 ];
@@ -253,6 +294,11 @@ export function replaceVariables(
     nome?: string;
     interesse?: string;
     companyName?: string;
+    companyDescription?: string;
+    companyAddress?: string;
+    companyPhone?: string;
+    capturedPhone?: string;
+    productList?: string;
     [key: string]: any;
   }
 ): string {
@@ -271,6 +317,31 @@ export function replaceVariables(
   // Substituir {companyName}
   if (data.companyName) {
     result = result.replace(/\{companyName\}/g, data.companyName);
+  }
+
+  // Substituir {companyDescription}
+  if (data.companyDescription) {
+    result = result.replace(/\{companyDescription\}/g, data.companyDescription);
+  }
+
+  // Substituir {companyAddress}
+  if (data.companyAddress) {
+    result = result.replace(/\{companyAddress\}/g, data.companyAddress || 'Palmital - PR');
+  }
+
+  // Substituir {companyPhone}
+  if (data.companyPhone) {
+    result = result.replace(/\{companyPhone\}/g, data.companyPhone || '(42) 99134-5227');
+  }
+
+  // Substituir {capturedPhone}
+  if (data.capturedPhone) {
+    result = result.replace(/\{capturedPhone\}/g, data.capturedPhone);
+  }
+
+  // Substituir {productList}
+  if (data.productList) {
+    result = result.replace(/\{productList\}/g, data.productList);
   }
 
   return result;

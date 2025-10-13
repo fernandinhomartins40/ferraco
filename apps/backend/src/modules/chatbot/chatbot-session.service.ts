@@ -40,9 +40,19 @@ export class ChatbotSessionService {
       throw new Error('Welcome step not found in conversation flow');
     }
 
+    // Preparar lista de produtos
+    const products = JSON.parse(config.products || '[]');
+    const productList = products.length > 0
+      ? products.map((p: any, idx: number) => `${idx + 1}. ${p.name}`).join('\n')
+      : 'Canzis para Vacas Leiteiras (Holandês e Jersey)';
+
     // Criar mensagem de boas-vindas
     const welcomeMessage = replaceVariables(firstStep.botMessage, {
       companyName: config.companyName,
+      companyDescription: config.companyDescription,
+      companyAddress: config.companyAddress,
+      companyPhone: config.companyPhone,
+      productList,
     });
 
     await prisma.chatbotMessage.create({
@@ -218,11 +228,22 @@ export class ChatbotSessionService {
       },
     });
 
+    // Preparar lista de produtos
+    const products = JSON.parse(config.products || '[]');
+    const productList = products.length > 0
+      ? products.map((p: any, idx: number) => `📦 ${p.name}\n   ${p.description?.substring(0, 80) || ''}...`).join('\n\n')
+      : '📦 Canzis para Vacas Leiteiras\n   Sistema de fechamento metálico para vacas Holandesas e Jersey';
+
     // Criar mensagem do bot
     const botMessage = replaceVariables(nextStep.botMessage, {
       nome: capturedData.capturedName || updatedSession?.capturedName || '',
-      interesse: capturedData.interest || updatedSession?.interest || 'nossos produtos',
+      interesse: capturedData.interest || updatedSession?.interest || 'equipamentos',
       companyName: config.companyName,
+      companyDescription: config.companyDescription,
+      companyAddress: config.companyAddress,
+      companyPhone: config.companyPhone,
+      capturedPhone: capturedData.capturedPhone || updatedSession?.capturedPhone || '',
+      productList,
     });
 
     await prisma.chatbotMessage.create({
