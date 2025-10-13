@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { ImageConfig } from '@/types/landingPage';
-import axios from 'axios';
+import { apiClient } from '@/lib/apiClient';
 
 interface ImageUploaderProps {
   label: string;
@@ -42,12 +42,12 @@ export const ImageUploader = ({
     };
     reader.readAsDataURL(file);
 
-    // Upload para o servidor usando axios (que tem interceptor de auth configurado)
+    // Upload para o servidor usando apiClient centralizado (com auth automático)
     try {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await axios.post('/api/upload/image', formData, {
+      const response = await apiClient.post('/upload/image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
