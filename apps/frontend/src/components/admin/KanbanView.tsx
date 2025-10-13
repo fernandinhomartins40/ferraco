@@ -30,7 +30,7 @@ interface KanbanViewProps {
 }
 
 const KANBAN_COLUMNS: KanbanColumn[] = [
-  { id: 'novo', title: 'Novos', status: 'NOVO', color: 'bg-blue-100 border-blue-300' },
+  { id: 'novo', title: 'Lead Novo', status: 'NOVO', color: 'bg-blue-100 border-blue-300' },
   { id: 'qualificado', title: 'Qualificados', status: 'QUALIFICADO', color: 'bg-purple-100 border-purple-300' },
   { id: 'em_andamento', title: 'Em Andamento', status: 'EM_ANDAMENTO', color: 'bg-yellow-100 border-yellow-300' },
   { id: 'concluido', title: 'Concluídos', status: 'CONCLUIDO', color: 'bg-green-100 border-green-300' },
