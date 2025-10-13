@@ -63,7 +63,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
     }
   ];
 
-  const products = config?.items && config.items.length > 0 ? config.items : defaultProducts;
+  const products = config?.products && config.products.length > 0 ? config.products : defaultProducts;
 
   return (
     <section id="produtos" className="py-20 bg-background">
