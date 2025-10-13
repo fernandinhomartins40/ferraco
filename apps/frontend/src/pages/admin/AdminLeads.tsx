@@ -445,7 +445,6 @@ const AdminLeads = () => {
           </DialogContent>
         </Dialog>
       </div>
-      </div>
     </AdminLayout>
   );
 };
