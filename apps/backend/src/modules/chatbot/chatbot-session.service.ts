@@ -1,9 +1,13 @@
 import { prisma } from '../../config/database';
 import { randomUUID } from 'crypto';
 import {
-  conversationFlowV2,
+  conversationFlowV3 as conversationFlowV2,
+  calculateQualificationScoreV3 as calculateQualificationScoreV2,
+  findBestFAQ,
+  recommendRelatedProducts,
+} from './conversationFlowV3';
+import {
   replaceVariablesV2,
-  calculateQualificationScoreV2,
   type ConversationStep
 } from './conversationFlowV2';
 
@@ -195,14 +199,19 @@ export class ChatbotSessionService {
       await this.executeActions(currentStep.actions, session.id);
     }
 
-    // Calcular novo score
+    // Calcular novo score com contagem de mensagens
     const updatedSession = await prisma.chatbotSession.findUnique({
       where: { sessionId },
     });
+
+    const messageCount = await prisma.chatbotMessage.count({
+      where: { chatbotSessionId: session.id }
+    });
+
     const newScore = calculateQualificationScoreV2({
       ...updatedSession,
       ...capturedData,
-    });
+    }, messageCount);
 
     // Filtrar apenas campos válidos do Prisma schema
     const validFields = {
@@ -255,28 +264,61 @@ export class ChatbotSessionService {
       ];
     }
 
-    // Preparar resposta FAQ se necessário
+    // Preparar resposta FAQ se necessário (com busca inteligente)
     let faqAnswer = '';
     if (nextStepId === 'faq_response') {
       const faqs = JSON.parse(config.faqs || '[]');
-      // Pegar a primeira FAQ ou permitir busca customizada
-      if (faqs.length > 0) {
-        faqAnswer = `**${faqs[0].question}**\n\n${faqs[0].answer}`;
+      const userQuestion = userResponses.faq_question || '';
+
+      const bestFAQ = findBestFAQ(userQuestion, faqs);
+
+      if (bestFAQ) {
+        faqAnswer = `**${bestFAQ.question}**\n\n${bestFAQ.answer}`;
       } else {
-        faqAnswer = 'Desculpe, não encontrei uma resposta para essa dúvida específica. Mas posso te conectar com um atendente!';
+        faqAnswer = 'Hmm, não encontrei uma resposta exata para essa dúvida. 🤔\n\nMas posso te conectar com um especialista que vai te ajudar!';
+      }
+    }
+
+    // Preparar detalhes do produto selecionado
+    let productDetails = '';
+    let productBenefits = '';
+    let relatedProducts = '';
+
+    if (nextStepId === 'product_details' && userResponses.selected_product) {
+      const products = JSON.parse(config.products || '[]');
+      const selectedProduct = products.find((p: any) =>
+        userResponses.selected_product.includes(p.name)
+      );
+
+      if (selectedProduct) {
+        productDetails = `**${selectedProduct.name}**\n\n${selectedProduct.description}\n\n💰 **Preço:** ${selectedProduct.price || 'Sob consulta'}`;
+
+        productBenefits = selectedProduct.features && selectedProduct.features.length > 0
+          ? selectedProduct.features.map((f: string) => `✅ ${f}`).join('\n')
+          : 'Entre em contato para mais informações técnicas.';
+
+        const related = recommendRelatedProducts(selectedProduct.name, products, 2);
+        relatedProducts = related.length > 0
+          ? related.map((p: any) => `• ${p.name}`).join('\n')
+          : 'Veja todos os nossos produtos!';
       }
     }
 
     // Criar mensagem do bot
     const botMessage = replaceVariablesV2(nextStep.botMessage, {
       nome: capturedData.capturedName || updatedSession?.capturedName || '',
-      interesse: capturedData.interest || updatedSession?.interest || 'equipamentos',
+      interesse: capturedData.interest || updatedSession?.interest || userResponses.selected_product || 'equipamentos',
       companyName: config.companyName,
       companyDescription: config.companyDescription,
       companyAddress: config.companyAddress,
       companyPhone: config.companyPhone,
+      companyWebsite: config.companyWebsite,
+      workingHours: config.workingHours,
       capturedPhone: capturedData.capturedPhone || updatedSession?.capturedPhone || '',
       productList,
+      productDetails,
+      productBenefits,
+      relatedProducts,
       selectedProduct: userResponses.selected_product || '',
       faqAnswer,
     });
