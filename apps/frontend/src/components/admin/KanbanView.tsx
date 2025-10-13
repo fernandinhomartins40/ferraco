@@ -177,16 +177,16 @@ const KanbanView = ({ leads, onUpdateLeadStatus, onEditLead, onDeleteLead }: Kan
                                     </div>
 
                                     {/* Lead Score */}
-                                    {lead.leadScore > 0 && (
+                                    {((lead.score || lead.leadScore) && (lead.score || lead.leadScore) > 0) && (
                                       <div className="flex items-center gap-2">
                                         <div className="flex-1 bg-gray-200 rounded-full h-1.5">
                                           <div
                                             className="bg-blue-600 h-1.5 rounded-full"
-                                            style={{ width: `${lead.leadScore}%` }}
+                                            style={{ width: `${lead.score || lead.leadScore}%` }}
                                           />
                                         </div>
                                         <span className="text-xs text-muted-foreground">
-                                          {lead.leadScore}
+                                          {lead.score || lead.leadScore}
                                         </span>
                                       </div>
                                     )}

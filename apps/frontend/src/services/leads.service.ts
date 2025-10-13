@@ -50,18 +50,25 @@ export interface Lead {
   status: 'NOVO' | 'QUALIFICADO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'PERDIDO' | 'ARQUIVADO';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   source?: string | null;
+  score?: number;
+  assignedTo?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   assignedToId?: string | null;
   assignedAt?: string | null;
   teamId?: string | null;
   pipelineStageId?: string | null;
-  leadScore: number;
-  isDuplicate: boolean;
+  leadScore?: number;
+  isDuplicate?: boolean;
   nextFollowUpAt?: string | null;
   lastContactedAt?: string | null;
   metadata?: string | null;
+  customFields?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
-  createdById: string;
+  createdById?: string;
   tags?: Array<{ id: string; name: string; color: string }>;
   notes?: Array<{ id: string; content: string; createdAt: string }>;
 }
@@ -128,7 +135,12 @@ export const leadsService = {
    */
   async getAll(filters?: LeadFilters): Promise<{ data: Lead[]; total: number; page: number; totalPages: number }> {
     const response = await apiClient.get(API_URL, { params: filters });
-    return response.data.data;
+    return {
+      data: response.data.data,
+      total: response.data.pagination?.total || 0,
+      page: response.data.pagination?.page || 1,
+      totalPages: response.data.pagination?.totalPages || 1,
+    };
   },
 
   /**
