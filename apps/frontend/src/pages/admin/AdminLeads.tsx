@@ -182,7 +182,7 @@ const AdminLeads = () => {
 
   return (
     <AdminLayout>
-      <div>
+      <div className="flex flex-col w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
