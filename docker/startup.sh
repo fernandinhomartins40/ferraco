@@ -27,7 +27,7 @@ if [ -n "$DATABASE_URL" ]; then
   # Seed do banco (apenas se estiver vazio)
   echo "🌱 Verificando se precisa popular banco de dados..."
   # Verifica se já existe algum usuário antes de fazer seed
-  USER_COUNT=$(npx prisma db execute --stdin <<< "SELECT COUNT(*) as count FROM users;" 2>/dev/null | grep -oE '[0-9]+' | tail -1 || echo "0")
+  USER_COUNT=$(echo "SELECT COUNT(*) as count FROM users;" | npx prisma db execute --stdin 2>/dev/null | grep -oE '[0-9]+' | tail -1 || echo "0")
   if [ "$USER_COUNT" = "0" ]; then
     echo "📝 Banco vazio - executando seed..."
     npx prisma db seed 2>&1 || echo "⚠️  Aviso: Falha no seed"
