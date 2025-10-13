@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { KanbanColumnController } from '../controllers/kanbanColumn.controller';
-import { authMiddleware } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 const controller = new KanbanColumnController();
 
 // Todas as rotas requerem autenticação
-router.use(authMiddleware);
+router.use(authenticate);
 
 // GET /api/kanban-columns - Listar todas as colunas
 router.get('/', controller.getAll.bind(controller));
