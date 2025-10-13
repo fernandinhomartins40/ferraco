@@ -20,6 +20,7 @@ import {
   updateSection,
 } from '@/utils/landingPageStorage';
 import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/lib/apiClient';
 
 // ============================================================================
 // REDUCER PARA ESTADO DO EDITOR
@@ -149,12 +150,25 @@ export const useLandingPageConfig = () => {
   );
 
   /**
-   * Salva configuração no LocalStorage
+   * Salva configuração no Backend E LocalStorage
    */
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     setIsSaving(true);
 
     try {
+      // 1. Salvar no backend primeiro
+      await apiClient.put('/landing-page/config', {
+        header: state.config.header,
+        hero: state.config.hero,
+        marquee: state.config.marquee,
+        about: state.config.about,
+        products: state.config.products,
+        experience: state.config.experience,
+        contact: state.config.contact,
+        footer: state.config.footer,
+      });
+
+      // 2. Depois salvar no localStorage
       const success = saveConfig(state.config);
 
       if (success) {
@@ -169,13 +183,13 @@ export const useLandingPageConfig = () => {
           payload: state.config,
         });
       } else {
-        throw new Error('Falha ao salvar');
+        throw new Error('Falha ao salvar no localStorage');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar:', error);
       toast({
         title: 'Erro ao salvar',
-        description: 'Não foi possível salvar as alterações.',
+        description: error.response?.data?.message || 'Não foi possível salvar as alterações.',
         variant: 'destructive',
       });
     } finally {
@@ -242,7 +256,7 @@ export const useLandingPageConfig = () => {
     (file: File) => {
       const reader = new FileReader();
 
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const content = e.target?.result as string;
           const imported = importConfig(content);
@@ -251,6 +265,19 @@ export const useLandingPageConfig = () => {
             throw new Error('Configuração inválida');
           }
 
+          // Salvar no backend
+          await apiClient.put('/landing-page/config', {
+            header: imported.header,
+            hero: imported.hero,
+            marquee: imported.marquee,
+            about: imported.about,
+            products: imported.products,
+            experience: imported.experience,
+            contact: imported.contact,
+            footer: imported.footer,
+          });
+
+          // Salvar no localStorage
           dispatch({ type: 'LOAD_CONFIG', payload: imported });
           saveConfig(imported);
 
@@ -258,11 +285,11 @@ export const useLandingPageConfig = () => {
             title: 'Importado com sucesso',
             description: 'A configuração foi importada e aplicada.',
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Erro ao importar:', error);
           toast({
             title: 'Erro ao importar',
-            description: 'O arquivo fornecido não é uma configuração válida.',
+            description: error.response?.data?.message || 'O arquivo fornecido não é uma configuração válida.',
             variant: 'destructive',
           });
         }
