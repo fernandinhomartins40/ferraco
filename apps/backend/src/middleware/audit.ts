@@ -41,10 +41,11 @@ export async function auditLogger(
       try {
         await prisma.auditLog.create({
           data: {
-            userId: userId || null,
+            userId: userId || 'anonymous',
+            userName: req.user?.name || req.user?.email || 'anonymous',
             action: `${req.method} ${req.url}`,
-            resource: extractResource(req.url),
-            resourceId: req.params.id || null,
+            resource: extractResource(req.url) || 'unknown',
+            resourceId: req.params.id || 'none',
             ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
             userAgent: req.headers['user-agent'] || 'unknown',
             method: req.method,
