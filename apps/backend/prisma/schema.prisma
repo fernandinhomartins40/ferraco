@@ -435,6 +435,28 @@ model Lead {
 }
 
 // ============================================================================
+// TABELA: KanbanColumn (Colunas do Kanban Personalizadas)
+// ============================================================================
+
+model KanbanColumn {
+  id          String   @id @default(cuid())
+  name        String
+  color       String   // Cor da borda/fundo da coluna
+  status      String   // Status que será atribuído aos leads nesta coluna
+  order       Int      // Ordem de exibição
+  isSystem    Boolean  @default(false) // true para "Lead Novo" (não pode ser editada/deletada)
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([order])
+  @@index([isActive])
+  @@index([order])
+  @@map("kanban_columns")
+}
+
+// ============================================================================
 // TABELA: PartialLead (Leads Parciais - Formulários Incompletos)
 // ============================================================================
 

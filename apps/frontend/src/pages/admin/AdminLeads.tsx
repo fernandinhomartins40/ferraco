@@ -33,11 +33,14 @@ import {
   Search,
   Loader2,
   CheckCircle,
+  Settings2,
 } from 'lucide-react';
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
 import KanbanView from '@/components/admin/KanbanView';
 import { useToast } from '@/hooks/use-toast';
+import { useKanbanColumns } from '@/hooks/useKanbanColumns';
+import type { KanbanColumn, CreateKanbanColumnDto, UpdateKanbanColumnDto } from '@/services/kanbanColumns.service';
 
 const AdminLeads = () => {
   const { toast } = useToast();
@@ -48,6 +51,16 @@ const AdminLeads = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
+  // Column Management State
+  const [isColumnDialogOpen, setIsColumnDialogOpen] = useState(false);
+  const [isEditColumnMode, setIsEditColumnMode] = useState(false);
+  const [selectedColumn, setSelectedColumn] = useState<KanbanColumn | null>(null);
+  const [columnFormData, setColumnFormData] = useState<CreateKanbanColumnDto>({
+    name: '',
+    color: '#3B82F6',
+    status: '',
+  });
 
   // Form state
   const [formData, setFormData] = useState<CreateLeadData>({
@@ -67,6 +80,15 @@ const AdminLeads = () => {
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
+
+  // Kanban Columns Hooks
+  const {
+    columns,
+    isLoading: isLoadingColumns,
+    createColumn,
+    updateColumn,
+    deleteColumn,
+  } = useKanbanColumns();
 
   const leads = leadsData?.data || [];
 
@@ -118,11 +140,11 @@ const AdminLeads = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateStatus = async (leadId: string, newStatus: Lead['status']) => {
+  const handleUpdateStatus = async (leadId: string, newStatus: string) => {
     try {
       await updateLead.mutateAsync({
         id: leadId,
-        data: { status: newStatus },
+        data: { status: newStatus as Lead['status'] },
       });
       toast({
         title: 'Status atualizado',
@@ -135,6 +157,59 @@ const AdminLeads = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  // Column Handlers
+  const handleCreateColumn = async () => {
+    if (!columnFormData.name || !columnFormData.status) {
+      return;
+    }
+
+    await createColumn.mutateAsync(columnFormData);
+    setIsColumnDialogOpen(false);
+    resetColumnForm();
+  };
+
+  const handleEditColumn = async () => {
+    if (!selectedColumn) return;
+
+    await updateColumn.mutateAsync({
+      id: selectedColumn.id,
+      data: {
+        name: columnFormData.name,
+        color: columnFormData.color,
+        status: columnFormData.status,
+      },
+    });
+    setIsColumnDialogOpen(false);
+    setIsEditColumnMode(false);
+    setSelectedColumn(null);
+    resetColumnForm();
+  };
+
+  const handleDeleteColumn = async (columnId: string) => {
+    if (confirm('Tem certeza que deseja remover esta coluna?')) {
+      await deleteColumn.mutateAsync(columnId);
+    }
+  };
+
+  const openEditColumnDialog = (column: KanbanColumn) => {
+    setSelectedColumn(column);
+    setColumnFormData({
+      name: column.name,
+      color: column.color,
+      status: column.status,
+    });
+    setIsEditColumnMode(true);
+    setIsColumnDialogOpen(true);
+  };
+
+  const resetColumnForm = () => {
+    setColumnFormData({
+      name: '',
+      color: '#3B82F6',
+      status: '',
+    });
   };
 
   const resetForm = () => {
@@ -192,6 +267,17 @@ const AdminLeads = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetColumnForm();
+                setIsEditColumnMode(false);
+                setIsColumnDialogOpen(true);
+              }}
+            >
+              <Settings2 className="mr-2 h-4 w-4" />
+              Gerenciar Colunas
+            </Button>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={() => resetForm()}>
@@ -368,6 +454,7 @@ const AdminLeads = () => {
           ) : (
             <KanbanView
               leads={leads}
+              columns={columns}
               onUpdateLeadStatus={handleUpdateStatus}
               onEditLead={openEditDialog}
               onDeleteLead={(id) => {
@@ -375,6 +462,8 @@ const AdminLeads = () => {
                   deleteLead.mutate(id);
                 }
               }}
+              onEditColumn={openEditColumnDialog}
+              onDeleteColumn={handleDeleteColumn}
             />
           )}
         </div>
@@ -440,6 +529,97 @@ const AdminLeads = () => {
               >
                 {updateLead.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Column Management Dialog */}
+        <Dialog open={isColumnDialogOpen} onOpenChange={setIsColumnDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {isEditColumnMode ? 'Editar Coluna' : 'Nova Coluna do Kanban'}
+              </DialogTitle>
+              <DialogDescription>
+                {isEditColumnMode
+                  ? 'Atualize as informações da coluna.'
+                  : 'Crie uma nova coluna personalizada para o kanban.'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="column-name">Nome da Coluna *</Label>
+                <Input
+                  id="column-name"
+                  value={columnFormData.name}
+                  onChange={(e) =>
+                    setColumnFormData({ ...columnFormData, name: e.target.value })
+                  }
+                  placeholder="Ex: Negociação"
+                />
+              </div>
+              <div>
+                <Label htmlFor="column-status">Status *</Label>
+                <Input
+                  id="column-status"
+                  value={columnFormData.status}
+                  onChange={(e) =>
+                    setColumnFormData({ ...columnFormData, status: e.target.value.toUpperCase() })
+                  }
+                  placeholder="Ex: NEGOCIACAO"
+                  disabled={isEditColumnMode}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Este status será atribuído aos leads quando movidos para esta coluna
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="column-color">Cor da Coluna</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="column-color"
+                    type="color"
+                    value={columnFormData.color}
+                    onChange={(e) =>
+                      setColumnFormData({ ...columnFormData, color: e.target.value })
+                    }
+                    className="w-20 h-10"
+                  />
+                  <Input
+                    value={columnFormData.color}
+                    onChange={(e) =>
+                      setColumnFormData({ ...columnFormData, color: e.target.value })
+                    }
+                    placeholder="#3B82F6"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsColumnDialogOpen(false);
+                  setIsEditColumnMode(false);
+                  setSelectedColumn(null);
+                  resetColumnForm();
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={isEditColumnMode ? handleEditColumn : handleCreateColumn}
+                disabled={
+                  (isEditColumnMode ? updateColumn.isPending : createColumn.isPending) ||
+                  !columnFormData.name ||
+                  !columnFormData.status
+                }
+              >
+                {(isEditColumnMode ? updateColumn.isPending : createColumn.isPending) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {isEditColumnMode ? 'Salvar Alterações' : 'Criar Coluna'}
               </Button>
             </DialogFooter>
           </DialogContent>

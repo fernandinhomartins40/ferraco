@@ -22,6 +22,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import integrationsRoutes from './modules/integrations/integrations.routes';
 import aiRoutes from './modules/ai/ai.routes';
 import chatbotRoutes from './modules/chatbot/chatbot.routes';
+import kanbanColumnRoutes from './routes/kanbanColumn.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -67,6 +68,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/integrations`, integrationsRoutes);
   app.use(`${API_PREFIX}/ai`, aiRoutes);
   app.use(`${API_PREFIX}/chatbot`, chatbotRoutes);
+  app.use(`${API_PREFIX}/kanban-columns`, kanbanColumnRoutes);
 
   logger.info('✅ All routes registered successfully');
 

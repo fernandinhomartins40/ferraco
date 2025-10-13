@@ -1,12 +1,12 @@
 /**
- * KanbanView - Visualização Kanban para Leads com API PostgreSQL
+ * KanbanView - Visualização Kanban para Leads com Colunas Dinâmicas
  */
 
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, Building, MoreVertical, User } from 'lucide-react';
+import { Phone, Mail, Building, MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,28 +14,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Lead } from '@/services/leads.service';
-
-interface KanbanColumn {
-  id: string;
-  title: string;
-  status: Lead['status'];
-  color: string;
-}
+import type { KanbanColumn } from '@/services/kanbanColumns.service';
 
 interface KanbanViewProps {
   leads: Lead[];
-  onUpdateLeadStatus: (leadId: string, newStatus: Lead['status']) => Promise<void>;
+  columns: KanbanColumn[];
+  onUpdateLeadStatus: (leadId: string, newStatus: string) => Promise<void>;
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (leadId: string) => void;
+  onEditColumn?: (column: KanbanColumn) => void;
+  onDeleteColumn?: (columnId: string) => void;
 }
-
-const KANBAN_COLUMNS: KanbanColumn[] = [
-  { id: 'novo', title: 'Lead Novo', status: 'NOVO', color: 'bg-blue-100 border-blue-300' },
-  { id: 'qualificado', title: 'Qualificados', status: 'QUALIFICADO', color: 'bg-purple-100 border-purple-300' },
-  { id: 'em_andamento', title: 'Em Andamento', status: 'EM_ANDAMENTO', color: 'bg-yellow-100 border-yellow-300' },
-  { id: 'concluido', title: 'Concluídos', status: 'CONCLUIDO', color: 'bg-green-100 border-green-300' },
-  { id: 'perdido', title: 'Perdidos', status: 'PERDIDO', color: 'bg-red-100 border-red-300' },
-];
 
 const getPriorityColor = (priority: Lead['priority']) => {
   const colors = {
@@ -57,8 +46,16 @@ const getPriorityLabel = (priority: Lead['priority']) => {
   return labels[priority] || priority;
 };
 
-const KanbanView = ({ leads, onUpdateLeadStatus, onEditLead, onDeleteLead }: KanbanViewProps) => {
-  const getLeadsByStatus = (status: Lead['status']) => {
+const KanbanView = ({
+  leads,
+  columns,
+  onUpdateLeadStatus,
+  onEditLead,
+  onDeleteLead,
+  onEditColumn,
+  onDeleteColumn
+}: KanbanViewProps) => {
+  const getLeadsByStatus = (status: string) => {
     return leads.filter(lead => lead.status === status);
   };
 
@@ -67,7 +64,7 @@ const KanbanView = ({ leads, onUpdateLeadStatus, onEditLead, onDeleteLead }: Kan
 
     if (!destination) return;
 
-    const newStatus = destination.droppableId as Lead['status'];
+    const newStatus = destination.droppableId;
     const leadId = draggableId;
 
     // Atualizar status do lead
@@ -78,18 +75,40 @@ const KanbanView = ({ leads, onUpdateLeadStatus, onEditLead, onDeleteLead }: Kan
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="w-full px-6 overflow-x-auto pb-4">
         <div className="flex gap-4 min-w-max">
-        {KANBAN_COLUMNS.map((column) => {
+        {columns.map((column) => {
           const columnLeads = getLeadsByStatus(column.status);
 
           return (
             <div key={column.id} className="flex-shrink-0 w-80">
-              <Card className={`${column.color} border-2`}>
+              <Card className={`border-2`} style={{ borderColor: column.color, backgroundColor: `${column.color}20` }}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center justify-between">
-                    <span>{column.title}</span>
-                    <Badge variant="secondary" className="ml-2">
-                      {columnLeads.length}
-                    </Badge>
+                    <span>{column.name}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        {columnLeads.length}
+                      </Badge>
+                      {!column.isSystem && onEditColumn && onDeleteColumn && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEditColumn(column)}>
+                              Editar Coluna
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onDeleteColumn(column.id)}
+                              className="text-red-600"
+                            >
+                              Excluir Coluna
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
