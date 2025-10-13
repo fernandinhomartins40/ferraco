@@ -144,7 +144,7 @@ const AdminLeads = () => {
     try {
       await updateLead.mutateAsync({
         id: leadId,
-        data: { status: newStatus as Lead['status'] },
+        data: { status: newStatus },
       });
       toast({
         title: 'Status atualizado',

@@ -374,7 +374,7 @@ model Lead {
   phone             String
   company           String?       // Nome da empresa do lead
   position          String?       // Cargo/posição do lead
-  status            LeadStatus    @default(NOVO)
+  status            String        @default("NOVO") // Status dinâmico baseado nas colunas Kanban
   priority          LeadPriority  @default(MEDIUM)
   source            String?       // Website, Facebook, Instagram, etc
 

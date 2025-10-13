@@ -47,7 +47,7 @@ export interface Lead {
   phone: string;
   company?: string | null;
   position?: string | null;
-  status: 'NOVO' | 'QUALIFICADO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'PERDIDO' | 'ARQUIVADO';
+  status: string; // Status dinâmico baseado nas colunas Kanban
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   source?: string | null;
   score?: number;
@@ -87,7 +87,7 @@ export interface CreateLeadData {
 }
 
 export interface UpdateLeadData extends Partial<CreateLeadData> {
-  status?: 'NOVO' | 'QUALIFICADO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'PERDIDO' | 'ARQUIVADO';
+  status?: string; // Status dinâmico baseado nas colunas Kanban
   pipelineStageId?: string;
   nextFollowUpAt?: string;
 }
