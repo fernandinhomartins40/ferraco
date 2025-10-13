@@ -182,9 +182,9 @@ const AdminLeads = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div>
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold">Leads</h1>
             <p className="text-muted-foreground">
@@ -301,7 +301,7 @@ const AdminLeads = () => {
         </div>
 
         {/* Alert de dados reais */}
-        <Alert className="border-green-200 bg-green-50">
+        <Alert className="border-green-200 bg-green-50 mb-6">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
             ✅ Todos os leads são REAIS e persistidos no PostgreSQL. Não há simulações.
@@ -309,7 +309,7 @@ const AdminLeads = () => {
         </Alert>
 
         {/* Filters */}
-        <Card>
+        <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex gap-4">
               <div className="flex-1">
@@ -341,38 +341,42 @@ const AdminLeads = () => {
           </CardContent>
         </Card>
 
-        {/* Kanban / Table View */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : leads.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">Nenhum lead encontrado</p>
-              <p className="text-sm">Crie seu primeiro lead para começar</p>
-              <Button
-                className="mt-4"
-                onClick={() => setIsCreateDialogOpen(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Primeiro Lead
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <KanbanView
-            leads={leads}
-            onUpdateLeadStatus={handleUpdateStatus}
-            onEditLead={openEditDialog}
-            onDeleteLead={(id) => {
-              if (window.confirm('Tem certeza que deseja excluir este lead?')) {
-                deleteLead.mutate(id);
-              }
-            }}
-          />
-        )}
+        {/* Kanban View - Full width */}
+        <div className="-mx-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12 px-6">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : leads.length === 0 ? (
+            <div className="px-6">
+              <Card>
+                <CardContent className="text-center py-12 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Nenhum lead encontrado</p>
+                  <p className="text-sm">Crie seu primeiro lead para começar</p>
+                  <Button
+                    className="mt-4"
+                    onClick={() => setIsCreateDialogOpen(true)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar Primeiro Lead
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <KanbanView
+              leads={leads}
+              onUpdateLeadStatus={handleUpdateStatus}
+              onEditLead={openEditDialog}
+              onDeleteLead={(id) => {
+                if (window.confirm('Tem certeza que deseja excluir este lead?')) {
+                  deleteLead.mutate(id);
+                }
+              }}
+            />
+          )}
+        </div>
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
