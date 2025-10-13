@@ -37,9 +37,9 @@ export function createApp(): Application {
   app.use(helmet());
   app.use(cors(CORS_OPTIONS));
 
-  // Body parsing
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  // Body parsing (aumentado para 50MB para suportar uploads de imagens)
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // Servir arquivos estáticos (uploads)
   const uploadsPath = process.env.NODE_ENV === 'production'
