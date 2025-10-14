@@ -90,9 +90,17 @@ class WhatsAppService {
       this.setupMessageListeners();
 
       logger.info('✅ WhatsApp Service inicializado!');
-    } catch (error) {
+    } catch (error: any) {
+      // Se o erro for "Not Logged", não é um erro fatal - apenas aguardando QR Code
+      if (error === 'Not Logged' || error?.message === 'Not Logged') {
+        logger.info('⏳ WhatsApp aguardando autenticação (QR Code ou sessão salva)');
+        this.isConnected = false;
+        return; // Não lançar erro, é comportamento esperado
+      }
+
       logger.error('❌ Erro ao inicializar WhatsApp:', error);
-      throw error;
+      // Não fazer throw - deixar o servidor continuar funcionando
+      this.isConnected = false;
     }
   }
 
@@ -271,10 +279,23 @@ class WhatsAppService {
   /**
    * Obter status da conexão
    */
-  getStatus(): { connected: boolean; hasQR: boolean } {
+  getStatus(): { connected: boolean; hasQR: boolean; message: string } {
+    let message = 'Inicializando...';
+
+    if (this.isConnected) {
+      message = 'Conectado';
+    } else if (this.qrCode !== null) {
+      message = 'Aguardando leitura do QR Code';
+    } else if (this.client === null) {
+      message = 'Inicializando WhatsApp...';
+    } else {
+      message = 'Aguardando QR Code...';
+    }
+
     return {
       connected: this.isConnected,
       hasQR: this.qrCode !== null,
+      message,
     };
   }
 }
