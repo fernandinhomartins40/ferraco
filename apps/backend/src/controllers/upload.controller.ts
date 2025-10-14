@@ -182,6 +182,15 @@ export class UploadController {
     try {
       const { image, width, height, quality = 85 } = req.body;
 
+      console.log('📤 Upload com crop recebido:', {
+        hasImage: !!image,
+        width,
+        height,
+        quality,
+        uploadsDir,
+        NODE_ENV: process.env.NODE_ENV,
+      });
+
       if (!image) {
         return res.status(400).json({
           success: false,
@@ -197,6 +206,12 @@ export class UploadController {
       const filename = `cropped-${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
       const filePath = path.join(uploadsDir, filename);
 
+      console.log('🔧 Processando imagem com Sharp:', {
+        filename,
+        filePath,
+        bufferSize: buffer.length,
+      });
+
       // Processar imagem com Sharp
       await sharp(buffer)
         .resize(width, height, {
@@ -207,6 +222,13 @@ export class UploadController {
         .toFile(filePath);
 
       const stats = fs.statSync(filePath);
+
+      console.log('✅ Imagem cropada salva:', {
+        filename,
+        filePath,
+        size: stats.size,
+        exists: fs.existsSync(filePath),
+      });
 
       res.json({
         success: true,
@@ -220,7 +242,7 @@ export class UploadController {
         },
       });
     } catch (error: any) {
-      console.error('Erro no upload com crop:', error);
+      console.error('❌ Erro no upload com crop:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Erro ao processar imagem',

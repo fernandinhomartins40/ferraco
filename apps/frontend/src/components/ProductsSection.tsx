@@ -104,10 +104,10 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 mb-6">
-                    {product.features.map((feature, idx) => (
+                    {(product.benefits || product.features || defaultProduct?.features || []).map((item, idx) => (
                       <li key={idx} className="flex items-center text-muted-foreground">
                         <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
-                        {feature}
+                        {typeof item === 'string' ? item : item.text}
                       </li>
                     ))}
                   </ul>
