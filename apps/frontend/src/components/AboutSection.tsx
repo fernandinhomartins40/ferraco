@@ -1,6 +1,7 @@
 import { Shield, Users, Award, Truck, CheckCircle, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AboutConfig } from "@/types/landingPage";
+import * as LucideIcons from 'lucide-react';
 
 interface AboutSectionProps {
   onLeadModalOpen: () => void;
@@ -8,24 +9,34 @@ interface AboutSectionProps {
 }
 
 const AboutSection = ({ onLeadModalOpen, config }: AboutSectionProps) => {
+  // Função para renderizar ícone dinamicamente
+  const renderIcon = (iconName: string) => {
+    const IconComponent = (LucideIcons as any)[iconName] || Shield;
+    return <IconComponent className="w-8 h-8 text-primary" />;
+  };
+
   const values = [
     {
       icon: <Shield className="w-8 h-8 text-primary" />,
+      iconName: "Shield",
       title: "Qualidade Garantida",
       description: "Todos nossos produtos passam por rigoroso controle de qualidade e possuem certificação ISO."
     },
     {
       icon: <Users className="w-8 h-8 text-primary" />,
+      iconName: "Users",
       title: "Equipe Especializada",
       description: "Profissionais altamente qualificados com décadas de experiência no setor metalúrgico."
     },
     {
       icon: <Award className="w-8 h-8 text-primary" />,
+      iconName: "Award",
       title: "Tradição e Inovação",
       description: "25+ anos de tradição combinados com as mais modernas tecnologias de fabricação."
     },
     {
       icon: <Truck className="w-8 h-8 text-primary" />,
+      iconName: "Truck",
       title: "Logística Nacional",
       description: "Entregamos em todo o território nacional com prazos otimizados e segurança total."
     }
@@ -58,11 +69,15 @@ const AboutSection = ({ onLeadModalOpen, config }: AboutSectionProps) => {
         {/* Values Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
           {(config?.features && config.features.length > 0 ? config.features : values).map((feature, index) => {
-            const value = 'icon' in feature ? feature : values[index];
+            // Renderizar ícone: se tem icon (string), usar renderIcon, senão usar o default
+            const iconElement = 'icon' in feature && typeof feature.icon !== 'string'
+              ? feature.icon
+              : renderIcon((feature as any).icon || values[index]?.iconName || 'Shield');
+
             return (
               <div key={'id' in feature ? feature.id : index} className="text-center group">
                 <div className="bg-white rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center shadow-elegant group-hover:shadow-glow transition-smooth group-hover:scale-110">
-                  {value.icon}
+                  {iconElement}
                 </div>
                 <h3 className="text-xl font-bold text-foreground mb-2">
                   {feature.title}

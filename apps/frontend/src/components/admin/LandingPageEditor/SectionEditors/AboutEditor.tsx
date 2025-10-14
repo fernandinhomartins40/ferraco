@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { IconSelector } from '../StyleControls';
 
 interface AboutEditorProps {
   config: AboutConfig;
@@ -32,7 +33,7 @@ export const AboutEditor = ({ config, onChange }: AboutEditorProps) => {
     onChange({ description: { ...config.description, text } });
   };
 
-  const updateFeature = (index: number, field: 'title' | 'description', value: string) => {
+  const updateFeature = (index: number, field: 'title' | 'description' | 'icon', value: string) => {
     const newFeatures = [...config.features];
     newFeatures[index] = { ...newFeatures[index], [field]: value };
     onChange({ features: newFeatures });
@@ -129,6 +130,15 @@ export const AboutEditor = ({ config, onChange }: AboutEditorProps) => {
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="flex-1 space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Ícone</Label>
+                        <IconSelector
+                          label=""
+                          value={feature.icon}
+                          onChange={(icon) => updateFeature(index, 'icon', icon)}
+                        />
+                      </div>
+
                       <div className="space-y-2">
                         <Label className="text-sm">Título da Característica {index + 1}</Label>
                         <Input
