@@ -4,6 +4,21 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Instalar dependências do Puppeteer/Chromium (necessário para venom-bot)
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-noto-emoji
+
+# Variáveis de ambiente para Puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 # Copiar arquivos de configuração do monorepo
 COPY package*.json tsconfig.base.json ./
 
@@ -31,8 +46,21 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Instalar Nginx e OpenSSL (necessário para Prisma)
-RUN apk add --no-cache nginx openssl
+# Instalar Nginx, OpenSSL e dependências do Chromium/Puppeteer
+RUN apk add --no-cache \
+    nginx \
+    openssl \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-noto-emoji
+
+# Variáveis de ambiente para Puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Copiar backend completo com node_modules do builder
 COPY --from=builder /app/apps/backend ./backend

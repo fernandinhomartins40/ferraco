@@ -29,7 +29,7 @@ services:
       - "3050:3050"
     environment:
       NODE_ENV: production
-      PORT: 3050
+      PORT: 3000
 
       # Database (conecta ao container postgres)
       DATABASE_URL: postgresql://ferraco:ferraco123@postgres:5432/ferraco_crm
