@@ -1,13 +1,15 @@
 /**
- * HeroEditor - Editor da seção Hero
+ * HeroEditor - Editor da seção Hero com suporte a slides
  */
 
-import { HeroConfig } from '@/types/landingPage';
+import React from 'react';
+import { HeroConfig, HeroSlide } from '@/types/landingPage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -18,6 +20,8 @@ import {
 } from '@/components/ui/select';
 import { ColorPicker, FontSelector, ImageUploader, IconSelector } from '../StyleControls';
 import { Separator } from '@/components/ui/separator';
+import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { generateUUID } from '@/utils/uuid';
 
 interface HeroEditorProps {
   config: HeroConfig;
@@ -25,57 +29,149 @@ interface HeroEditorProps {
 }
 
 export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
-  const updateTitle = (updates: Partial<HeroConfig['title']>) => {
-    onChange({ title: { ...config.title, ...updates } });
+  const [activeSlideIndex, setActiveSlideIndex] = React.useState(0);
+
+  const activeSlide = config.slides[activeSlideIndex];
+
+  const updateSlide = (index: number, updates: Partial<HeroSlide>) => {
+    const newSlides = [...config.slides];
+    newSlides[index] = { ...newSlides[index], ...updates };
+    onChange({ slides: newSlides });
   };
 
-  const updateSubtitle = (updates: Partial<HeroConfig['subtitle']>) => {
-    onChange({ subtitle: { ...config.subtitle, ...updates } });
-  };
-
-  const updateDescription = (updates: Partial<HeroConfig['description']>) => {
-    onChange({ description: { ...config.description, ...updates } });
-  };
-
-  const updatePrimaryButton = (updates: Partial<HeroConfig['buttons']['primary']>) => {
-    onChange({
+  const addSlide = () => {
+    const newSlide: HeroSlide = {
+      id: generateUUID(),
+      title: {
+        text: 'Novo Slide',
+        style: {
+          fontSize: '3rem',
+          fontWeight: '700',
+          textColor: '#ffffff',
+        },
+      },
+      subtitle: {
+        text: 'Subtítulo do slide',
+        style: {
+          fontSize: '1.5rem',
+          fontWeight: '500',
+          textColor: '#ffffff',
+        },
+      },
+      description: {
+        text: 'Descrição do slide',
+        style: {
+          fontSize: '1.125rem',
+          textColor: '#ffffff',
+        },
+      },
       buttons: {
-        ...config.buttons,
-        primary: config.buttons.primary
-          ? { ...config.buttons.primary, ...updates }
+        primary: {
+          text: 'Saiba Mais',
+          href: '#',
+          variant: 'primary',
+        },
+        alignment: 'center',
+      },
+      background: {
+        type: 'gradient',
+        gradient: {
+          from: '#667eea',
+          to: '#764ba2',
+          direction: 'to right',
+        },
+        overlay: {
+          enabled: true,
+          color: '#000000',
+          opacity: 40,
+        },
+      },
+    };
+    onChange({ slides: [...config.slides, newSlide] });
+    setActiveSlideIndex(config.slides.length);
+  };
+
+  const removeSlide = (index: number) => {
+    if (config.slides.length <= 1) {
+      alert('É necessário ter pelo menos 1 slide');
+      return;
+    }
+    const newSlides = config.slides.filter((_, i) => i !== index);
+    onChange({ slides: newSlides });
+    if (activeSlideIndex >= newSlides.length) {
+      setActiveSlideIndex(newSlides.length - 1);
+    }
+  };
+
+  const moveSlide = (index: number, direction: 'up' | 'down') => {
+    const newSlides = [...config.slides];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= newSlides.length) return;
+
+    [newSlides[index], newSlides[newIndex]] = [newSlides[newIndex], newSlides[index]];
+    onChange({ slides: newSlides });
+    setActiveSlideIndex(newIndex);
+  };
+
+  const updateTitle = (updates: Partial<HeroSlide['title']>) => {
+    updateSlide(activeSlideIndex, {
+      title: { ...activeSlide.title, ...updates },
+    });
+  };
+
+  const updateSubtitle = (updates: Partial<HeroSlide['subtitle']>) => {
+    updateSlide(activeSlideIndex, {
+      subtitle: { ...activeSlide.subtitle, ...updates },
+    });
+  };
+
+  const updateDescription = (updates: Partial<HeroSlide['description']>) => {
+    updateSlide(activeSlideIndex, {
+      description: { ...activeSlide.description, ...updates },
+    });
+  };
+
+  const updatePrimaryButton = (updates: Partial<HeroSlide['buttons']['primary']>) => {
+    updateSlide(activeSlideIndex, {
+      buttons: {
+        ...activeSlide.buttons,
+        primary: activeSlide.buttons.primary
+          ? { ...activeSlide.buttons.primary, ...updates }
           : undefined,
       },
     });
   };
 
-  const updateSecondaryButton = (updates: Partial<HeroConfig['buttons']['secondary']>) => {
-    onChange({
+  const updateSecondaryButton = (updates: Partial<HeroSlide['buttons']['secondary']>) => {
+    updateSlide(activeSlideIndex, {
       buttons: {
-        ...config.buttons,
-        secondary: config.buttons.secondary
-          ? { ...config.buttons.secondary, ...updates }
+        ...activeSlide.buttons,
+        secondary: activeSlide.buttons.secondary
+          ? { ...activeSlide.buttons.secondary, ...updates }
           : undefined,
       },
     });
   };
 
-  const updateBackground = (updates: Partial<HeroConfig['background']>) => {
-    onChange({ background: { ...config.background, ...updates } });
+  const updateBackground = (updates: Partial<HeroSlide['background']>) => {
+    updateSlide(activeSlideIndex, {
+      background: { ...activeSlide.background, ...updates },
+    });
   };
+
+  if (!activeSlide) return null;
 
   return (
     <div className="space-y-6">
       {/* Configurações Gerais */}
       <Card>
         <CardHeader>
-          <CardTitle>Configurações Gerais</CardTitle>
-          <CardDescription>Configure a visibilidade e layout da seção Hero</CardDescription>
+          <CardTitle>Configurações Gerais do Hero</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="hero-enabled">Seção Ativa</Label>
+            <Label>Seção Ativa</Label>
             <Switch
-              id="hero-enabled"
               checked={config.enabled}
               onCheckedChange={(enabled) => onChange({ enabled })}
             />
@@ -83,12 +179,50 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
 
           <Separator />
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Auto-play</Label>
+              <Switch
+                checked={config.autoPlay}
+                onCheckedChange={(autoPlay) => onChange({ autoPlay })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Intervalo (segundos)</Label>
+              <Input
+                type="number"
+                value={config.autoPlayInterval}
+                onChange={(e) => onChange({ autoPlayInterval: Number(e.target.value) })}
+                disabled={!config.autoPlay}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center justify-between">
+              <Label>Mostrar Setas</Label>
+              <Switch
+                checked={config.showNavigation}
+                onCheckedChange={(showNavigation) => onChange({ showNavigation })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label>Mostrar Indicadores</Label>
+              <Switch
+                checked={config.showIndicators}
+                onCheckedChange={(showIndicators) => onChange({ showIndicators })}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="space-y-2">
             <Label>Layout</Label>
             <Select value={config.layout} onValueChange={(layout: any) => onChange({ layout })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="centered">Centralizado</SelectItem>
                 <SelectItem value="split">Dividido</SelectItem>
@@ -100,9 +234,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
           <div className="space-y-2">
             <Label>Altura</Label>
             <Select value={config.height} onValueChange={(height) => onChange({ height })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="auto">Automático</SelectItem>
                 <SelectItem value="screen">Altura da Tela</SelectItem>
@@ -114,388 +246,402 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
         </CardContent>
       </Card>
 
-      {/* Conteúdo */}
+      {/* Gerenciamento de Slides */}
       <Card>
         <CardHeader>
-          <CardTitle>Conteúdo</CardTitle>
-          <CardDescription>Textos e mensagens da seção Hero</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Slides ({config.slides.length})</CardTitle>
+              <CardDescription>Gerencie os slides do Hero</CardDescription>
+            </div>
+            <Button onClick={addSlide} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Slide
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="title">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="title">Título</TabsTrigger>
-              <TabsTrigger value="subtitle">Subtítulo</TabsTrigger>
-              <TabsTrigger value="description">Descrição</TabsTrigger>
-            </TabsList>
+          <div className="space-y-2">
+            {config.slides.map((slide, index) => (
+              <div
+                key={slide.id}
+                className={`flex items-center gap-2 p-3 rounded-lg border ${
+                  index === activeSlideIndex ? 'border-primary bg-primary/5' : 'border-border'
+                }`}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setActiveSlideIndex(index)}
+                  className="flex-1 justify-start"
+                >
+                  <span className="font-medium">
+                    Slide {index + 1}: {slide.title.text}
+                  </span>
+                </Button>
 
-            {/* Título */}
-            <TabsContent value="title" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Texto Principal</Label>
-                <Input
-                  value={config.title.text}
-                  onChange={(e) => updateTitle({ text: e.target.value })}
-                  placeholder="Título principal"
-                />
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => moveSlide(index, 'up')}
+                    disabled={index === 0}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => moveSlide(index, 'down')}
+                    disabled={index === config.slides.length - 1}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeSlide(index)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-
-              <div className="space-y-2">
-                <Label>Texto Destacado</Label>
-                <Input
-                  value={config.title.highlight || ''}
-                  onChange={(e) => updateTitle({ highlight: e.target.value })}
-                  placeholder="Parte do título para destacar"
-                />
-              </div>
-
-              <FontSelector
-                label="Tamanho da Fonte"
-                value={config.title.style.fontSize || '3rem'}
-                onChange={(fontSize) => updateTitle({ style: { ...config.title.style, fontSize } })}
-                type="size"
-              />
-
-              <FontSelector
-                label="Peso da Fonte"
-                value={config.title.style.fontWeight || '700'}
-                onChange={(fontWeight) =>
-                  updateTitle({ style: { ...config.title.style, fontWeight } })
-                }
-                type="weight"
-              />
-
-              <ColorPicker
-                label="Cor do Texto"
-                value={config.title.style.textColor || '#000000'}
-                onChange={(textColor) => updateTitle({ style: { ...config.title.style, textColor } })}
-              />
-            </TabsContent>
-
-            {/* Subtítulo */}
-            <TabsContent value="subtitle" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Texto do Subtítulo</Label>
-                <Input
-                  value={config.subtitle.text}
-                  onChange={(e) => updateSubtitle({ text: e.target.value })}
-                  placeholder="Subtítulo"
-                />
-              </div>
-
-              <FontSelector
-                label="Tamanho da Fonte"
-                value={config.subtitle.style.fontSize || '1.5rem'}
-                onChange={(fontSize) =>
-                  updateSubtitle({ style: { ...config.subtitle.style, fontSize } })
-                }
-                type="size"
-              />
-
-              <FontSelector
-                label="Peso da Fonte"
-                value={config.subtitle.style.fontWeight || '500'}
-                onChange={(fontWeight) =>
-                  updateSubtitle({ style: { ...config.subtitle.style, fontWeight } })
-                }
-                type="weight"
-              />
-
-              <ColorPicker
-                label="Cor do Texto"
-                value={config.subtitle.style.textColor || '#000000'}
-                onChange={(textColor) =>
-                  updateSubtitle({ style: { ...config.subtitle.style, textColor } })
-                }
-              />
-            </TabsContent>
-
-            {/* Descrição */}
-            <TabsContent value="description" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Texto da Descrição</Label>
-                <Textarea
-                  value={config.description.text}
-                  onChange={(e) => updateDescription({ text: e.target.value })}
-                  placeholder="Descrição detalhada"
-                  rows={4}
-                />
-              </div>
-
-              <FontSelector
-                label="Tamanho da Fonte"
-                value={config.description.style.fontSize || '1.125rem'}
-                onChange={(fontSize) =>
-                  updateDescription({ style: { ...config.description.style, fontSize } })
-                }
-                type="size"
-              />
-
-              <ColorPicker
-                label="Cor do Texto"
-                value={config.description.style.textColor || '#000000'}
-                onChange={(textColor) =>
-                  updateDescription({ style: { ...config.description.style, textColor } })
-                }
-              />
-            </TabsContent>
-          </Tabs>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Botões */}
+      {/* Editor do Slide Ativo */}
       <Card>
         <CardHeader>
-          <CardTitle>Botões de Ação</CardTitle>
-          <CardDescription>Configure os botões CTA da seção Hero</CardDescription>
+          <CardTitle>Editando: Slide {activeSlideIndex + 1}</CardTitle>
+          <CardDescription>Configure o conteúdo deste slide</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="primary">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="primary">Botão Primário</TabsTrigger>
-              <TabsTrigger value="secondary">Botão Secundário</TabsTrigger>
+          <Tabs defaultValue="content">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="content">Conteúdo</TabsTrigger>
+              <TabsTrigger value="buttons">Botões</TabsTrigger>
+              <TabsTrigger value="background">Fundo</TabsTrigger>
             </TabsList>
 
-            {/* Botão Primário */}
-            <TabsContent value="primary" className="space-y-4 mt-4">
-              {config.buttons.primary && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Texto do Botão</Label>
+            {/* Conteúdo */}
+            <TabsContent value="content" className="space-y-4 mt-4">
+              {/* Título */}
+              <div className="space-y-2">
+                <Label>Título</Label>
+                <Input
+                  value={activeSlide.title.text}
+                  onChange={(e) => updateTitle({ text: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Texto Destacado (opcional)</Label>
+                <Input
+                  value={activeSlide.title.highlight || ''}
+                  onChange={(e) => updateTitle({ highlight: e.target.value })}
+                  placeholder="Palavra para destacar"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FontSelector
+                  label="Tamanho"
+                  value={activeSlide.title.style.fontSize || '3rem'}
+                  onChange={(fontSize) =>
+                    updateTitle({ style: { ...activeSlide.title.style, fontSize } })
+                  }
+                  type="size"
+                />
+                <ColorPicker
+                  label="Cor"
+                  value={activeSlide.title.style.textColor || '#ffffff'}
+                  onChange={(textColor) =>
+                    updateTitle({ style: { ...activeSlide.title.style, textColor } })
+                  }
+                />
+              </div>
+
+              <Separator />
+
+              {/* Subtítulo */}
+              <div className="space-y-2">
+                <Label>Subtítulo</Label>
+                <Input
+                  value={activeSlide.subtitle.text}
+                  onChange={(e) => updateSubtitle({ text: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FontSelector
+                  label="Tamanho"
+                  value={activeSlide.subtitle.style.fontSize || '1.5rem'}
+                  onChange={(fontSize) =>
+                    updateSubtitle({ style: { ...activeSlide.subtitle.style, fontSize } })
+                  }
+                  type="size"
+                />
+                <ColorPicker
+                  label="Cor"
+                  value={activeSlide.subtitle.style.textColor || '#ffffff'}
+                  onChange={(textColor) =>
+                    updateSubtitle({ style: { ...activeSlide.subtitle.style, textColor } })
+                  }
+                />
+              </div>
+
+              <Separator />
+
+              {/* Descrição */}
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  value={activeSlide.description.text}
+                  onChange={(e) => updateDescription({ text: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <ColorPicker
+                label="Cor da Descrição"
+                value={activeSlide.description.style.textColor || '#ffffff'}
+                onChange={(textColor) =>
+                  updateDescription({ style: { ...activeSlide.description.style, textColor } })
+                }
+              />
+            </TabsContent>
+
+            {/* Botões */}
+            <TabsContent value="buttons" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Alinhamento dos Botões</Label>
+                <Select
+                  value={activeSlide.buttons.alignment}
+                  onValueChange={(alignment: any) =>
+                    updateSlide(activeSlideIndex, {
+                      buttons: { ...activeSlide.buttons, alignment },
+                    })
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                    <SelectItem value="center">Centro</SelectItem>
+                    <SelectItem value="right">Direita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              {/* Botão Primário */}
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Botão Primário</Label>
+                {activeSlide.buttons.primary && (
+                  <>
                     <Input
-                      value={config.buttons.primary.text}
+                      placeholder="Texto do botão"
+                      value={activeSlide.buttons.primary.text}
                       onChange={(e) => updatePrimaryButton({ text: e.target.value })}
-                      placeholder="Ver Produtos"
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Link (href)</Label>
                     <Input
-                      value={config.buttons.primary.href}
+                      placeholder="Link (href)"
+                      value={activeSlide.buttons.primary.href}
                       onChange={(e) => updatePrimaryButton({ href: e.target.value })}
-                      placeholder="#products"
                     />
-                  </div>
+                    <IconSelector
+                      label="Ícone"
+                      value={activeSlide.buttons.primary.icon || ''}
+                      onChange={(icon) => updatePrimaryButton({ icon })}
+                    />
+                  </>
+                )}
+              </div>
 
-                  <IconSelector
-                    label="Ícone"
-                    value={config.buttons.primary.icon || ''}
-                    onChange={(icon) => updatePrimaryButton({ icon })}
-                  />
+              <Separator />
 
-                  <div className="space-y-2">
-                    <Label>Posição do Ícone</Label>
-                    <Select
-                      value={config.buttons.primary.iconPosition || 'right'}
-                      onValueChange={(iconPosition: any) =>
-                        updatePrimaryButton({ iconPosition })
+              {/* Botão Secundário */}
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Botão Secundário</Label>
+                {activeSlide.buttons.secondary ? (
+                  <>
+                    <Input
+                      placeholder="Texto do botão"
+                      value={activeSlide.buttons.secondary.text}
+                      onChange={(e) => updateSecondaryButton({ text: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Link (href)"
+                      value={activeSlide.buttons.secondary.href}
+                      onChange={(e) => updateSecondaryButton({ href: e.target.value })}
+                    />
+                    <IconSelector
+                      label="Ícone"
+                      value={activeSlide.buttons.secondary.icon || ''}
+                      onChange={(icon) => updateSecondaryButton({ icon })}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        updateSlide(activeSlideIndex, {
+                          buttons: { ...activeSlide.buttons, secondary: undefined },
+                        })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      Remover Botão Secundário
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      updateSlide(activeSlideIndex, {
+                        buttons: {
+                          ...activeSlide.buttons,
+                          secondary: {
+                            text: 'Botão Secundário',
+                            href: '#',
+                            variant: 'outline',
+                          },
+                        },
+                      })
+                    }
+                  >
+                    Adicionar Botão Secundário
+                  </Button>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Background */}
+            <TabsContent value="background" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Tipo de Fundo</Label>
+                <Select
+                  value={activeSlide.background.type}
+                  onValueChange={(type: any) => updateBackground({ type })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="color">Cor Sólida</SelectItem>
+                    <SelectItem value="gradient">Gradiente</SelectItem>
+                    <SelectItem value="image">Imagem</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {activeSlide.background.type === 'color' && (
+                <ColorPicker
+                  label="Cor do Fundo"
+                  value={activeSlide.background.color || '#ffffff'}
+                  onChange={(color) => updateBackground({ color })}
+                />
+              )}
+
+              {activeSlide.background.type === 'gradient' && activeSlide.background.gradient && (
+                <>
+                  <ColorPicker
+                    label="Cor Inicial"
+                    value={activeSlide.background.gradient.from}
+                    onChange={(from) =>
+                      updateBackground({
+                        gradient: { ...activeSlide.background.gradient!, from },
+                      })
+                    }
+                  />
+                  <ColorPicker
+                    label="Cor Final"
+                    value={activeSlide.background.gradient.to}
+                    onChange={(to) =>
+                      updateBackground({
+                        gradient: { ...activeSlide.background.gradient!, to },
+                      })
+                    }
+                  />
+                  <div className="space-y-2">
+                    <Label>Direção</Label>
+                    <Select
+                      value={activeSlide.background.gradient.direction}
+                      onValueChange={(direction) =>
+                        updateBackground({
+                          gradient: { ...activeSlide.background.gradient!, direction },
+                        })
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="left">Esquerda</SelectItem>
-                        <SelectItem value="right">Direita</SelectItem>
+                        <SelectItem value="to right">Horizontal →</SelectItem>
+                        <SelectItem value="to left">Horizontal ←</SelectItem>
+                        <SelectItem value="to bottom">Vertical ↓</SelectItem>
+                        <SelectItem value="to top">Vertical ↑</SelectItem>
+                        <SelectItem value="to bottom right">Diagonal ↘</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </>
               )}
-            </TabsContent>
 
-            {/* Botão Secundário */}
-            <TabsContent value="secondary" className="space-y-4 mt-4">
-              {config.buttons.secondary && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Texto do Botão</Label>
-                    <Input
-                      value={config.buttons.secondary.text}
-                      onChange={(e) => updateSecondaryButton({ text: e.target.value })}
-                      placeholder="Fale Conosco"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Link (href)</Label>
-                    <Input
-                      value={config.buttons.secondary.href}
-                      onChange={(e) => updateSecondaryButton({ href: e.target.value })}
-                      placeholder="#contact"
-                    />
-                  </div>
-
-                  <IconSelector
-                    label="Ícone"
-                    value={config.buttons.secondary.icon || ''}
-                    onChange={(icon) => updateSecondaryButton({ icon })}
-                  />
-                </>
+              {activeSlide.background.type === 'image' && (
+                <ImageUploader
+                  label="Imagem de Fundo"
+                  value={activeSlide.background.image || { url: '', alt: '' }}
+                  onChange={(image) => updateBackground({ image })}
+                  enableCrop={true}
+                  cropAspectRatio={16 / 9}
+                  cropTargetWidth={1920}
+                  cropTargetHeight={1080}
+                  cropTitle="Recortar Imagem de Fundo"
+                  description="Imagens serão recortadas em 1920x1080px (16:9)"
+                />
               )}
+
+              <Separator />
+
+              {/* Overlay */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Overlay Escuro</Label>
+                  <Switch
+                    checked={activeSlide.background.overlay?.enabled}
+                    onCheckedChange={(enabled) =>
+                      updateBackground({
+                        overlay: {
+                          ...activeSlide.background.overlay!,
+                          enabled,
+                        },
+                      })
+                    }
+                  />
+                </div>
+
+                {activeSlide.background.overlay?.enabled && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Opacidade: {activeSlide.background.overlay.opacity}%</Label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={activeSlide.background.overlay.opacity}
+                        onChange={(e) =>
+                          updateBackground({
+                            overlay: {
+                              ...activeSlide.background.overlay!,
+                              opacity: Number(e.target.value),
+                            },
+                          })
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
-
-          <Separator className="my-4" />
-
-          <div className="space-y-2">
-            <Label>Alinhamento dos Botões</Label>
-            <Select
-              value={config.buttons.alignment}
-              onValueChange={(alignment: any) =>
-                onChange({ buttons: { ...config.buttons, alignment } })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="left">Esquerda</SelectItem>
-                <SelectItem value="center">Centro</SelectItem>
-                <SelectItem value="right">Direita</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Background */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Plano de Fundo</CardTitle>
-          <CardDescription>Configure o background da seção Hero</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Tipo de Background</Label>
-            <Select
-              value={config.background.type}
-              onValueChange={(type: any) => updateBackground({ type })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="color">Cor Sólida</SelectItem>
-                <SelectItem value="gradient">Gradiente</SelectItem>
-                <SelectItem value="image">Imagem</SelectItem>
-                <SelectItem value="video">Vídeo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {config.background.type === 'color' && (
-            <ColorPicker
-              label="Cor do Fundo"
-              value={config.background.color || '#ffffff'}
-              onChange={(color) => updateBackground({ color })}
-            />
-          )}
-
-          {config.background.type === 'gradient' && config.background.gradient && (
-            <>
-              <ColorPicker
-                label="Cor Inicial"
-                value={config.background.gradient.from}
-                onChange={(from) =>
-                  updateBackground({
-                    gradient: { ...config.background.gradient!, from },
-                  })
-                }
-              />
-
-              <ColorPicker
-                label="Cor Final"
-                value={config.background.gradient.to}
-                onChange={(to) =>
-                  updateBackground({
-                    gradient: { ...config.background.gradient!, to },
-                  })
-                }
-              />
-
-              <div className="space-y-2">
-                <Label>Direção do Gradiente</Label>
-                <Select
-                  value={config.background.gradient.direction}
-                  onValueChange={(direction) =>
-                    updateBackground({
-                      gradient: { ...config.background.gradient!, direction },
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="to bottom">Para Baixo</SelectItem>
-                    <SelectItem value="to top">Para Cima</SelectItem>
-                    <SelectItem value="to right">Para Direita</SelectItem>
-                    <SelectItem value="to left">Para Esquerda</SelectItem>
-                    <SelectItem value="to bottom right">Diagonal ↘</SelectItem>
-                    <SelectItem value="to bottom left">Diagonal ↙</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-
-          {config.background.type === 'image' && config.background.image && (
-            <ImageUploader
-              label="Imagem de Fundo"
-              value={config.background.image}
-              onChange={(image) => updateBackground({ image })}
-              enableCrop={true}
-              cropAspectRatio={16 / 9}
-              cropTargetWidth={1920}
-              cropTargetHeight={1080}
-              cropTitle="Recortar Imagem de Fundo Hero"
-              description="Imagens do Hero serão recortadas em 1920x1080px (16:9)"
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Animação */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Animação</CardTitle>
-          <CardDescription>Configure a animação de entrada da seção</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Animação Ativa</Label>
-            <Switch
-              checked={config.animation.enabled}
-              onCheckedChange={(enabled) =>
-                onChange({ animation: { ...config.animation, enabled } })
-              }
-            />
-          </div>
-
-          {config.animation.enabled && (
-            <>
-              <div className="space-y-2">
-                <Label>Tipo de Animação</Label>
-                <Select
-                  value={config.animation.type || 'fade'}
-                  onValueChange={(type: any) =>
-                    onChange({ animation: { ...config.animation, type } })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fade">Fade</SelectItem>
-                    <SelectItem value="slide">Slide</SelectItem>
-                    <SelectItem value="bounce">Bounce</SelectItem>
-                    <SelectItem value="zoom">Zoom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
     </div>

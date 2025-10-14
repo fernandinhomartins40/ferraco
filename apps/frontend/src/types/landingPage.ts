@@ -233,8 +233,8 @@ export interface HeroButton {
   style?: StyleConfig;
 }
 
-export interface HeroConfig {
-  enabled: boolean;
+export interface HeroSlide {
+  id: string;
   title: {
     text: string;
     highlight?: string;
@@ -272,6 +272,15 @@ export interface HeroConfig {
       opacity: number;
     };
   };
+}
+
+export interface HeroConfig {
+  enabled: boolean;
+  slides: HeroSlide[];
+  autoPlay: boolean;
+  autoPlayInterval: number; // em segundos
+  showNavigation: boolean; // setas
+  showIndicators: boolean; // bolinhas
   layout: 'centered' | 'split' | 'fullscreen';
   height: 'auto' | 'screen' | string;
   animation: AnimationConfig;
