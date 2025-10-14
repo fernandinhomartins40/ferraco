@@ -203,39 +203,40 @@ enum NotificationChannel {
 // ============================================================================
 
 model User {
-  id                String    @id @default(cuid())
-  username          String    @unique
-  email             String    @unique
-  password          String    // Hash bcrypt
-  name              String
-  role              UserRole  @default(CONSULTANT)
-  avatar            String?
-  isActive          Boolean   @default(true)
+  id       String   @id @default(cuid())
+  username String   @unique
+  email    String   @unique
+  password String // Hash bcrypt
+  name     String
+  role     UserRole @default(CONSULTANT)
+  avatar   String?
+  isActive Boolean  @default(true)
 
   // Timestamps
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  lastLogin         DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lastLogin DateTime?
 
   // Relações
-  permissions       UserPermission[]
-  teamMemberships   TeamMember[]
-  preferences       UserPreferences?
-  refreshTokens     RefreshToken[]
-  assignedLeads     Lead[]       @relation("AssignedTo")
-  createdLeads      Lead[]       @relation("CreatedBy")
-  notes             Note[]
-  interactions      Interaction[]
-  opportunitiesCreated Opportunity[] @relation("OpportunityCreatedBy")
-  opportunitiesAssigned Opportunity[] @relation("OpportunityAssignedTo")
-  automationsCreated Automation[] @relation("AutomationCreatedBy")
-  pipelinesCreated  Pipeline[]   @relation("PipelineCreatedBy")
-  integrationsCreated Integration[] @relation("IntegrationCreatedBy")
-  reportsCreated    Report[]     @relation("ReportCreatedBy")
-  auditLogs         AuditLog[]
-  signatures        DigitalSignature[]
-  dashboardConfigs  DashboardConfig[]
-  notifications     Notification[]
+  permissions           UserPermission[]
+  teamMemberships       TeamMember[]
+  preferences           UserPreferences?
+  refreshTokens         RefreshToken[]
+  assignedLeads         Lead[]                 @relation("AssignedTo")
+  createdLeads          Lead[]                 @relation("CreatedBy")
+  notes                 Note[]
+  interactions          Interaction[]
+  opportunitiesCreated  Opportunity[]          @relation("OpportunityCreatedBy")
+  opportunitiesAssigned Opportunity[]          @relation("OpportunityAssignedTo")
+  automationsCreated    Automation[]           @relation("AutomationCreatedBy")
+  pipelinesCreated      Pipeline[]             @relation("PipelineCreatedBy")
+  integrationsCreated   Integration[]          @relation("IntegrationCreatedBy")
+  reportsCreated        Report[]               @relation("ReportCreatedBy")
+  auditLogs             AuditLog[]
+  signatures            DigitalSignature[]
+  dashboardConfigs      DashboardConfig[]
+  notifications         Notification[]
+  WhatsAppConversation  WhatsAppConversation[]
 
   @@index([email])
   @@index([username])
@@ -248,16 +249,16 @@ model User {
 // ============================================================================
 
 model UserPermission {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   userId     String
-  resource   String   // 'leads', 'reports', 'automations', etc
-  actions    String   // JSON array: ['create', 'read', 'update', 'delete']
-  conditions String?  // JSON: condições especiais
+  resource   String // 'leads', 'reports', 'automations', etc
+  actions    String // JSON array: ['create', 'read', 'update', 'delete']
+  conditions String? // JSON: condições especiais
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, resource])
   @@index([userId])
@@ -269,36 +270,36 @@ model UserPermission {
 // ============================================================================
 
 model UserPreferences {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  theme                String   @default("light") // 'light', 'dark', 'auto'
-  language             String   @default("pt-BR")
-  timezone             String   @default("America/Sao_Paulo")
+  id       String @id @default(cuid())
+  userId   String @unique
+  theme    String @default("light") // 'light', 'dark', 'auto'
+  language String @default("pt-BR")
+  timezone String @default("America/Sao_Paulo")
 
   // Notificações
-  emailNewLeads        Boolean  @default(true)
-  emailLeadUpdates     Boolean  @default(true)
-  emailAutomations     Boolean  @default(true)
-  emailWeeklyReports   Boolean  @default(true)
-  emailSystemAlerts    Boolean  @default(true)
+  emailNewLeads      Boolean @default(true)
+  emailLeadUpdates   Boolean @default(true)
+  emailAutomations   Boolean @default(true)
+  emailWeeklyReports Boolean @default(true)
+  emailSystemAlerts  Boolean @default(true)
 
-  pushEnabled          Boolean  @default(true)
-  pushUrgentLeads      Boolean  @default(true)
-  pushAssignedTasks    Boolean  @default(true)
-  pushDeadlines        Boolean  @default(true)
+  pushEnabled       Boolean @default(true)
+  pushUrgentLeads   Boolean @default(true)
+  pushAssignedTasks Boolean @default(true)
+  pushDeadlines     Boolean @default(true)
 
-  inAppEnabled         Boolean  @default(true)
-  inAppSound           Boolean  @default(true)
-  inAppDesktop         Boolean  @default(true)
+  inAppEnabled Boolean @default(true)
+  inAppSound   Boolean @default(true)
+  inAppDesktop Boolean @default(true)
 
   // Dashboard padrão
-  defaultDashboardId   String?
+  defaultDashboardId String?
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultDashboard     DashboardConfig? @relation(fields: [defaultDashboardId], references: [id])
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultDashboard DashboardConfig? @relation(fields: [defaultDashboardId], references: [id])
 
   @@map("user_preferences")
 }
@@ -308,14 +309,14 @@ model UserPreferences {
 // ============================================================================
 
 model RefreshToken {
-  id         String   @id @default(cuid())
-  userId     String
-  token      String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  revokedAt  DateTime?
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
@@ -328,16 +329,16 @@ model RefreshToken {
 // ============================================================================
 
 model Team {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
-  isActive    Boolean  @default(true)
+  isActive    Boolean @default(true)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  members     TeamMember[]
-  leads       Lead[]
+  members TeamMember[]
+  leads   Lead[]
 
   @@map("teams")
 }
@@ -347,15 +348,15 @@ model Team {
 // ============================================================================
 
 model TeamMember {
-  id        String   @id @default(cuid())
-  teamId    String
-  userId    String
-  isLead    Boolean  @default(false) // Líder do time
+  id     String  @id @default(cuid())
+  teamId String
+  userId String
+  isLead Boolean @default(false) // Líder do time
 
-  joinedAt  DateTime @default(now())
+  joinedAt DateTime @default(now())
 
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
   @@index([teamId])
@@ -368,60 +369,61 @@ model TeamMember {
 // ============================================================================
 
 model Lead {
-  id                String        @id @default(cuid())
-  name              String
-  email             String?
-  phone             String
-  company           String?       // Nome da empresa do lead
-  position          String?       // Cargo/posição do lead
-  status            String        @default("NOVO") // Status dinâmico baseado nas colunas Kanban
-  priority          LeadPriority  @default(MEDIUM)
-  source            String?       // Website, Facebook, Instagram, etc
+  id       String       @id @default(cuid())
+  name     String
+  email    String?
+  phone    String
+  company  String? // Nome da empresa do lead
+  position String? // Cargo/posição do lead
+  status   String       @default("NOVO") // Status dinâmico baseado nas colunas Kanban
+  priority LeadPriority @default(MEDIUM)
+  source   String? // Website, Facebook, Instagram, etc
 
   // Atribuição
-  assignedToId      String?
-  assignedAt        DateTime?
-  teamId            String?
+  assignedToId String?
+  assignedAt   DateTime?
+  teamId       String?
 
   // CRM
-  pipelineStageId   String?
-  leadScore         Float         @default(0)
-  isDuplicate       Boolean       @default(false)
-  duplicateOfId     String?
+  pipelineStageId String?
+  leadScore       Float   @default(0)
+  isDuplicate     Boolean @default(false)
+  duplicateOfId   String?
 
   // Follow-up
-  nextFollowUpAt    DateTime?
-  lastContactedAt   DateTime?
+  nextFollowUpAt  DateTime?
+  lastContactedAt DateTime?
 
   // Metadados
-  metadata          String?       // JSON: dados adicionais
+  metadata String? // JSON: dados adicionais
 
   // Timestamps
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  createdById       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
 
   // Relações
-  assignedTo        User?         @relation("AssignedTo", fields: [assignedToId], references: [id])
-  createdBy         User          @relation("CreatedBy", fields: [createdById], references: [id])
-  team              Team?         @relation(fields: [teamId], references: [id])
-  pipelineStage     PipelineStage? @relation(fields: [pipelineStageId], references: [id])
-  duplicateOf       Lead?         @relation("DuplicateLeads", fields: [duplicateOfId], references: [id])
-  duplicates        Lead[]        @relation("DuplicateLeads")
+  assignedTo    User?          @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy     User           @relation("CreatedBy", fields: [createdById], references: [id])
+  team          Team?          @relation(fields: [teamId], references: [id])
+  pipelineStage PipelineStage? @relation(fields: [pipelineStageId], references: [id])
+  duplicateOf   Lead?          @relation("DuplicateLeads", fields: [duplicateOfId], references: [id])
+  duplicates    Lead[]         @relation("DuplicateLeads")
 
-  notes             Note[]
-  tags              LeadTag[]
-  communications    Communication[]
-  interactions      Interaction[]
-  opportunities     Opportunity[]
-  aiAnalysis        AIAnalysis?
+  notes                Note[]
+  tags                 LeadTag[]
+  communications       Communication[]
+  interactions         Interaction[]
+  opportunities        Opportunity[]
+  aiAnalysis           AIAnalysis?
   conversionPrediction ConversionPrediction?
-  leadScoring       LeadScoring?
-  duplicateDetections DuplicateDetection[] @relation("DetectedLead")
-  potentialDuplicates DuplicateMatch[]
-  signatures        DigitalSignature[]
-  partialLeads      PartialLead[]
-  chatbotSessions   ChatbotSession[]
+  leadScoring          LeadScoring?
+  duplicateDetections  DuplicateDetection[]  @relation("DetectedLead")
+  potentialDuplicates  DuplicateMatch[]
+  signatures           DigitalSignature[]
+  partialLeads         PartialLead[]
+  chatbotSessions      ChatbotSession[]
+  WhatsAppContact      WhatsAppContact?
 
   @@index([email])
   @@index([phone])
@@ -439,16 +441,16 @@ model Lead {
 // ============================================================================
 
 model KanbanColumn {
-  id          String   @id @default(cuid())
-  name        String
-  color       String   // Cor da borda/fundo da coluna
-  status      String   // Status que será atribuído aos leads nesta coluna
-  order       Int      // Ordem de exibição
-  isSystem    Boolean  @default(false) // true para "Lead Novo" (não pode ser editada/deletada)
-  isActive    Boolean  @default(true)
+  id       String  @id @default(cuid())
+  name     String
+  color    String // Cor da borda/fundo da coluna
+  status   String // Status que será atribuído aos leads nesta coluna
+  order    Int // Ordem de exibição
+  isSystem Boolean @default(false) // true para "Lead Novo" (não pode ser editada/deletada)
+  isActive Boolean @default(true)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([order])
   @@index([isActive])
@@ -481,32 +483,32 @@ model LandingPageConfig {
 // ============================================================================
 
 model PartialLead {
-  id               String    @id @default(cuid())
-  sessionId        String    @unique
-  name             String?
-  email            String?
-  phone            String?
-  source           String
-  url              String
-  userAgent        String
-  ipAddress        String?
+  id        String  @id @default(cuid())
+  sessionId String  @unique
+  name      String?
+  email     String?
+  phone     String?
+  source    String
+  url       String
+  userAgent String
+  ipAddress String?
 
   // Tracking
-  firstInteraction DateTime  @default(now())
-  lastUpdate       DateTime  @updatedAt
-  interactions     Int       @default(1)
+  firstInteraction DateTime @default(now())
+  lastUpdate       DateTime @updatedAt
+  interactions     Int      @default(1)
 
   // Status
-  completed        Boolean   @default(false)
-  abandoned        Boolean   @default(false)
+  completed         Boolean   @default(false)
+  abandoned         Boolean   @default(false)
   convertedToLeadId String?
-  completedAt      DateTime?
+  completedAt       DateTime?
 
   // Timestamps
-  createdAt        DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   // Relações
-  convertedToLead  Lead?     @relation(fields: [convertedToLeadId], references: [id])
+  convertedToLead Lead? @relation(fields: [convertedToLeadId], references: [id])
 
   @@index([sessionId])
   @@index([completed])
@@ -520,22 +522,22 @@ model PartialLead {
 // ============================================================================
 
 model Note {
-  id          String   @id @default(cuid())
-  content     String
-  important   Boolean  @default(false)
-  category    String?  // Ligação, Email, Reunião, etc
+  id        String  @id @default(cuid())
+  content   String
+  important Boolean @default(false)
+  category  String? // Ligação, Email, Reunião, etc
 
   // Vinculação
   leadId      String
   createdById String
 
   // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relações
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  createdBy   User     @relation(fields: [createdById], references: [id])
+  lead      Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id])
 
   @@index([leadId])
   @@index([createdById])
@@ -549,20 +551,20 @@ model Note {
 // ============================================================================
 
 model Tag {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   color       String
   description String?
-  isSystem    Boolean  @default(false)
-  isActive    Boolean  @default(true)
+  isSystem    Boolean @default(false)
+  isActive    Boolean @default(true)
 
   // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relações
-  leads       LeadTag[]
-  rules       TagRule[]
+  leads LeadTag[]
+  rules TagRule[]
 
   @@index([name])
   @@index([isActive])
@@ -580,8 +582,8 @@ model LeadTag {
   addedAt   DateTime @default(now())
   addedById String?
 
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@unique([leadId, tagId])
   @@index([leadId])
@@ -594,17 +596,17 @@ model LeadTag {
 // ============================================================================
 
 model TagRule {
-  id         String   @id @default(cuid())
-  tagId      String
-  condition  String   // 'status_change', 'time_based', 'source', 'keyword'
-  value      String   // JSON: valor da condição
-  action     String   // 'add_tag', 'remove_tag'
-  isActive   Boolean  @default(true)
+  id        String  @id @default(cuid())
+  tagId     String
+  condition String // 'status_change', 'time_based', 'source', 'keyword'
+  value     String // JSON: valor da condição
+  action    String // 'add_tag', 'remove_tag'
+  isActive  Boolean @default(true)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@index([tagId])
   @@index([isActive])
@@ -616,25 +618,25 @@ model TagRule {
 // ============================================================================
 
 model Communication {
-  id           String                  @id @default(cuid())
-  leadId       String
-  type         CommunicationType
-  direction    CommunicationDirection
-  status       CommunicationStatus     @default(PENDING)
-  content      String
-  templateId   String?
+  id         String                 @id @default(cuid())
+  leadId     String
+  type       CommunicationType
+  direction  CommunicationDirection
+  status     CommunicationStatus    @default(PENDING)
+  content    String
+  templateId String?
 
   // Metadados
-  metadata     String?                 // JSON: dados adicionais (IDs externos, etc)
+  metadata String? // JSON: dados adicionais (IDs externos, etc)
 
   // Timestamps
-  timestamp    DateTime                @default(now())
-  deliveredAt  DateTime?
-  readAt       DateTime?
+  timestamp   DateTime  @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
 
   // Relações
-  lead         Lead                    @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  template     MessageTemplate?        @relation(fields: [templateId], references: [id])
+  lead     Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  template MessageTemplate? @relation(fields: [templateId], references: [id])
 
   @@index([leadId])
   @@index([type])
@@ -648,16 +650,16 @@ model Communication {
 // ============================================================================
 
 model MessageTemplate {
-  id            String                    @id @default(cuid())
-  name          String
-  type          CommunicationType
-  category      MessageTemplateCategory
-  content       String
-  variables     String                    // JSON array: variáveis disponíveis
-  isActive      Boolean                   @default(true)
+  id        String                  @id @default(cuid())
+  name      String
+  type      CommunicationType
+  category  MessageTemplateCategory
+  content   String
+  variables String // JSON array: variáveis disponíveis
+  isActive  Boolean                 @default(true)
 
-  createdAt     DateTime                  @default(now())
-  updatedAt     DateTime                  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   communications Communication[]
 
@@ -672,27 +674,27 @@ model MessageTemplate {
 // ============================================================================
 
 model Interaction {
-  id              String             @id @default(cuid())
-  leadId          String
-  type            InteractionType
-  title           String
-  description     String
-  duration        Int?               // minutos
-  outcome         InteractionOutcome?
-  nextAction      String?
-  nextActionDate  DateTime?
+  id             String              @id @default(cuid())
+  leadId         String
+  type           InteractionType
+  title          String
+  description    String
+  duration       Int? // minutos
+  outcome        InteractionOutcome?
+  nextAction     String?
+  nextActionDate DateTime?
 
   // Participantes
-  participants    String             // JSON array: IDs de usuários
+  participants String // JSON array: IDs de usuários
 
   // Timestamps
-  createdAt       DateTime           @default(now())
-  createdById     String
+  createdAt   DateTime @default(now())
+  createdById String
 
   // Relações
-  lead            Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  createdBy       User               @relation(fields: [createdById], references: [id])
-  files           InteractionFile[]
+  lead      Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User              @relation(fields: [createdById], references: [id])
+  files     InteractionFile[]
 
   @@index([leadId])
   @@index([type])
@@ -706,15 +708,15 @@ model Interaction {
 // ============================================================================
 
 model InteractionFile {
-  id            String      @id @default(cuid())
+  id            String   @id @default(cuid())
   interactionId String
   name          String
   url           String
   type          String
   size          Int
-  uploadedAt    DateTime    @default(now())
+  uploadedAt    DateTime @default(now())
 
-  interaction   Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  interaction Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
 
   @@index([interactionId])
   @@map("interaction_files")
@@ -725,18 +727,18 @@ model InteractionFile {
 // ============================================================================
 
 model Pipeline {
-  id           String          @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
   description  String?
   businessType String
-  isDefault    Boolean         @default(false)
+  isDefault    Boolean @default(false)
 
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  createdById  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
 
-  createdBy    User            @relation("PipelineCreatedBy", fields: [createdById], references: [id])
-  stages       PipelineStage[]
+  createdBy     User            @relation("PipelineCreatedBy", fields: [createdById], references: [id])
+  stages        PipelineStage[]
   opportunities Opportunity[]
 
   @@index([isDefault])
@@ -748,26 +750,26 @@ model Pipeline {
 // ============================================================================
 
 model PipelineStage {
-  id               String   @id @default(cuid())
+  id               String  @id @default(cuid())
   pipelineId       String
   name             String
   description      String?
   color            String
   order            Int
-  expectedDuration Int      // dias
-  conversionRate   Float    @default(0)
-  isClosedWon      Boolean  @default(false)
-  isClosedLost     Boolean  @default(false)
+  expectedDuration Int // dias
+  conversionRate   Float   @default(0)
+  isClosedWon      Boolean @default(false)
+  isClosedLost     Boolean @default(false)
 
   // Automações vinculadas
-  automations      String?  // JSON array: IDs de automações
+  automations String? // JSON array: IDs de automações
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  pipeline         Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  leads            Lead[]
-  opportunities    Opportunity[]
+  pipeline      Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads         Lead[]
+  opportunities Opportunity[]
 
   @@unique([pipelineId, order])
   @@index([pipelineId])
@@ -779,36 +781,36 @@ model PipelineStage {
 // ============================================================================
 
 model Opportunity {
-  id                String         @id @default(cuid())
-  leadId            String
-  title             String?
-  description       String?
-  value             Float
-  currency          String         @default("BRL")
-  probability       Int            // 0-100
-  stage             String?
-  source            String?
-  competitors       String?        // JSON array
-  notes             String?
+  id          String  @id @default(cuid())
+  leadId      String
+  title       String?
+  description String?
+  value       Float
+  currency    String  @default("BRL")
+  probability Int // 0-100
+  stage       String?
+  source      String?
+  competitors String? // JSON array
+  notes       String?
 
   // Pipeline
-  pipelineId        String?
-  stageId           String?
-  status            String?        // OPEN, WON, LOST
+  pipelineId String?
+  stageId    String?
+  status     String? // OPEN, WON, LOST
 
   expectedCloseDate DateTime
   actualCloseDate   DateTime?
 
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  createdById       String
-  assignedToId      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+  assignedToId String
 
-  lead              Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  createdBy         User           @relation("OpportunityCreatedBy", fields: [createdById], references: [id])
-  assignedTo        User           @relation("OpportunityAssignedTo", fields: [assignedToId], references: [id])
-  pipeline          Pipeline?      @relation(fields: [pipelineId], references: [id])
-  pipelineStage     PipelineStage? @relation(fields: [stageId], references: [id])
+  lead          Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy     User           @relation("OpportunityCreatedBy", fields: [createdById], references: [id])
+  assignedTo    User           @relation("OpportunityAssignedTo", fields: [assignedToId], references: [id])
+  pipeline      Pipeline?      @relation(fields: [pipelineId], references: [id])
+  pipelineStage PipelineStage? @relation(fields: [stageId], references: [id])
 
   @@index([leadId])
   @@index([assignedToId])
@@ -821,25 +823,25 @@ model Opportunity {
 // ============================================================================
 
 model Automation {
-  id             String                  @id @default(cuid())
-  name           String
-  description    String
-  isActive       Boolean                 @default(true)
-  triggerType    AutomationTriggerType
-  triggerValue   String?                 // JSON: valor do trigger
+  id           String                @id @default(cuid())
+  name         String
+  description  String
+  isActive     Boolean               @default(true)
+  triggerType  AutomationTriggerType
+  triggerValue String? // JSON: valor do trigger
 
-  conditions     String                  // JSON array: condições
-  actions        String                  // JSON array: ações
+  conditions String // JSON array: condições
+  actions    String // JSON array: ações
 
-  executionCount Int                     @default(0)
+  executionCount Int       @default(0)
   lastExecutedAt DateTime?
 
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-  createdById    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
 
-  createdBy      User                    @relation("AutomationCreatedBy", fields: [createdById], references: [id])
-  executions     AutomationExecution[]
+  createdBy  User                  @relation("AutomationCreatedBy", fields: [createdById], references: [id])
+  executions AutomationExecution[]
 
   @@index([isActive])
   @@index([triggerType])
@@ -851,16 +853,16 @@ model Automation {
 // ============================================================================
 
 model AutomationExecution {
-  id            String     @id @default(cuid())
-  automationId  String
-  leadId        String?
-  status        String     // 'success', 'failed', 'partial'
-  result        String?    // JSON: resultado da execução
-  error         String?
+  id           String  @id @default(cuid())
+  automationId String
+  leadId       String?
+  status       String // 'success', 'failed', 'partial'
+  result       String? // JSON: resultado da execução
+  error        String?
 
-  executedAt    DateTime   @default(now())
+  executedAt DateTime @default(now())
 
-  automation    Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
 
   @@index([automationId])
   @@index([executedAt])
@@ -872,27 +874,27 @@ model AutomationExecution {
 // ============================================================================
 
 model Integration {
-  id            String                    @id @default(cuid())
-  name          String
-  type          IntegrationType
-  isEnabled     Boolean                   @default(true)
+  id        String          @id @default(cuid())
+  name      String
+  type      IntegrationType
+  isEnabled Boolean         @default(true)
 
   // Configurações
-  config        String                    // JSON: configurações da integração
-  credentials   String                    // JSON ENCRYPTED: credenciais
+  config      String // JSON: configurações da integração
+  credentials String // JSON ENCRYPTED: credenciais
 
   // Sync
   syncFrequency IntegrationSyncFrequency
-  syncStatus    IntegrationSyncStatus     @default(PENDING)
+  syncStatus    IntegrationSyncStatus    @default(PENDING)
   lastSync      DateTime?
   errorMessage  String?
 
-  createdAt     DateTime                  @default(now())
-  updatedAt     DateTime                  @updatedAt
-  createdById   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
 
-  createdBy     User                      @relation("IntegrationCreatedBy", fields: [createdById], references: [id])
-  syncLogs      IntegrationSyncLog[]
+  createdBy User                 @relation("IntegrationCreatedBy", fields: [createdById], references: [id])
+  syncLogs  IntegrationSyncLog[]
 
   @@index([type])
   @@index([isEnabled])
@@ -905,16 +907,16 @@ model Integration {
 // ============================================================================
 
 model IntegrationSyncLog {
-  id            String      @id @default(cuid())
+  id            String  @id @default(cuid())
   integrationId String
-  status        String      // 'success', 'error'
-  recordsSynced Int         @default(0)
+  status        String // 'success', 'error'
+  recordsSynced Int     @default(0)
   error         String?
-  details       String?     // JSON
+  details       String? // JSON
 
-  syncedAt      DateTime    @default(now())
+  syncedAt DateTime @default(now())
 
-  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
 
   @@index([integrationId])
   @@index([syncedAt])
@@ -926,26 +928,26 @@ model IntegrationSyncLog {
 // ============================================================================
 
 model Report {
-  id              String                  @id @default(cuid())
-  name            String
-  type            ReportType
-  filters         String                  // JSON: filtros do relatório
-  widgets         String                  // JSON array: widgets
+  id      String     @id @default(cuid())
+  name    String
+  type    ReportType
+  filters String // JSON: filtros do relatório
+  widgets String // JSON array: widgets
 
-  isScheduled     Boolean                 @default(false)
-  scheduleFrequency ReportScheduleFrequency?
-  scheduleTime    String?                 // HH:mm
-  scheduleRecipients String?              // JSON array: emails
-  scheduleFormat  ReportExportFormat?
+  isScheduled        Boolean                  @default(false)
+  scheduleFrequency  ReportScheduleFrequency?
+  scheduleTime       String? // HH:mm
+  scheduleRecipients String? // JSON array: emails
+  scheduleFormat     ReportExportFormat?
 
-  lastGenerated   DateTime?
+  lastGenerated DateTime?
 
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  createdById     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
 
-  createdBy       User                    @relation("ReportCreatedBy", fields: [createdById], references: [id])
-  generations     ReportGeneration[]
+  createdBy   User               @relation("ReportCreatedBy", fields: [createdById], references: [id])
+  generations ReportGeneration[]
 
   @@index([type])
   @@index([isScheduled])
@@ -957,16 +959,16 @@ model Report {
 // ============================================================================
 
 model ReportGeneration {
-  id          String   @id @default(cuid())
-  reportId    String
-  format      String
-  fileUrl     String?
-  status      String   // 'generating', 'completed', 'failed'
-  error       String?
+  id       String  @id @default(cuid())
+  reportId String
+  format   String
+  fileUrl  String?
+  status   String // 'generating', 'completed', 'failed'
+  error    String?
 
   generatedAt DateTime @default(now())
 
-  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
   @@index([generatedAt])
@@ -978,17 +980,17 @@ model ReportGeneration {
 // ============================================================================
 
 model DashboardConfig {
-  id         String   @id @default(cuid())
-  userId     String?  // null = dashboard global
-  name       String
-  layout     String   @default("grid") // 'grid', 'list'
-  widgets    String   // JSON array: configuração dos widgets
-  isDefault  Boolean  @default(false)
+  id        String  @id @default(cuid())
+  userId    String? // null = dashboard global
+  name      String
+  layout    String  @default("grid") // 'grid', 'list'
+  widgets   String // JSON array: configuração dos widgets
+  isDefault Boolean @default(false)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
   userPreferences UserPreferences[]
 
   @@index([userId])
@@ -1001,18 +1003,18 @@ model DashboardConfig {
 // ============================================================================
 
 model AIAnalysis {
-  id                String         @id @default(cuid())
-  leadId            String         @unique
-  sentimentScore    Float          // -1 to 1
-  sentiment         AISentiment
-  keyTopics         String         // JSON array
-  urgencyLevel      AIUrgencyLevel
-  confidenceScore   Float          // 0-100
+  id              String         @id @default(cuid())
+  leadId          String         @unique
+  sentimentScore  Float // -1 to 1
+  sentiment       AISentiment
+  keyTopics       String // JSON array
+  urgencyLevel    AIUrgencyLevel
+  confidenceScore Float // 0-100
 
-  lastAnalyzed      DateTime       @default(now())
+  lastAnalyzed DateTime @default(now())
 
-  lead              Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  recommendations   AIRecommendation[]
+  lead            Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  recommendations AIRecommendation[]
 
   @@index([leadId])
   @@index([sentiment])
@@ -1025,20 +1027,20 @@ model AIAnalysis {
 // ============================================================================
 
 model AIRecommendation {
-  id              String      @id @default(cuid())
+  id              String  @id @default(cuid())
   aiAnalysisId    String
-  type            String      // 'call', 'email', 'whatsapp', etc
-  priority        String      // 'low', 'medium', 'high'
+  type            String // 'call', 'email', 'whatsapp', etc
+  priority        String // 'low', 'medium', 'high'
   title           String
   description     String
   suggestedAction String
   expectedImpact  String
-  confidence      Float       // 0-100
-  isImplemented   Boolean     @default(false)
+  confidence      Float // 0-100
+  isImplemented   Boolean @default(false)
 
-  createdAt       DateTime    @default(now())
+  createdAt DateTime @default(now())
 
-  aiAnalysis      AIAnalysis  @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
+  aiAnalysis AIAnalysis @relation(fields: [aiAnalysisId], references: [id], onDelete: Cascade)
 
   @@index([aiAnalysisId])
   @@index([isImplemented])
@@ -1050,17 +1052,17 @@ model AIRecommendation {
 // ============================================================================
 
 model ConversionPrediction {
-  id                        String   @id @default(cuid())
-  leadId                    String   @unique
-  probability               Float    // 0-100
-  confidence                Float    // 0-100
-  estimatedTimeToConversion Int      // dias
-  suggestedActions          String   // JSON array
-  factors                   String   // JSON array: fatores de conversão
+  id                        String @id @default(cuid())
+  leadId                    String @unique
+  probability               Float // 0-100
+  confidence                Float // 0-100
+  estimatedTimeToConversion Int // dias
+  suggestedActions          String // JSON array
+  factors                   String // JSON array: fatores de conversão
 
-  lastUpdated               DateTime @default(now())
+  lastUpdated DateTime @default(now())
 
-  lead                      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([probability])
@@ -1072,15 +1074,15 @@ model ConversionPrediction {
 // ============================================================================
 
 model LeadScoring {
-  id             String   @id @default(cuid())
-  leadId         String   @unique
-  score          Float
-  factors        String   // JSON array: fatores da pontuação
-  history        String   // JSON array: histórico de mudanças
+  id      String @id @default(cuid())
+  leadId  String @unique
+  score   Float
+  factors String // JSON array: fatores da pontuação
+  history String // JSON array: histórico de mudanças
 
   lastCalculated DateTime @default(now())
 
-  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([score])
@@ -1092,18 +1094,18 @@ model LeadScoring {
 // ============================================================================
 
 model DuplicateDetection {
-  id          String                    @id @default(cuid())
-  leadId      String
-  confidence  Float                     // 0-100
-  status      DuplicateDetectionStatus
+  id         String                   @id @default(cuid())
+  leadId     String
+  confidence Float // 0-100
+  status     DuplicateDetectionStatus
 
-  resolvedAt  DateTime?
-  resolvedBy  String?
+  resolvedAt DateTime?
+  resolvedBy String?
 
-  createdAt   DateTime                  @default(now())
+  createdAt DateTime @default(now())
 
-  lead        Lead                      @relation("DetectedLead", fields: [leadId], references: [id], onDelete: Cascade)
-  matches     DuplicateMatch[]
+  lead    Lead             @relation("DetectedLead", fields: [leadId], references: [id], onDelete: Cascade)
+  matches DuplicateMatch[]
 
   @@index([leadId])
   @@index([status])
@@ -1115,17 +1117,17 @@ model DuplicateDetection {
 // ============================================================================
 
 model DuplicateMatch {
-  id                   String              @id @default(cuid())
+  id                   String                   @id @default(cuid())
   duplicateDetectionId String
   potentialDuplicateId String
-  similarity           Float               // 0-100
-  matchingFields       String              // JSON array: campos que batem
+  similarity           Float // 0-100
+  matchingFields       String // JSON array: campos que batem
   suggestedAction      DuplicateSuggestedAction
 
-  createdAt            DateTime            @default(now())
+  createdAt DateTime @default(now())
 
-  duplicateDetection   DuplicateDetection  @relation(fields: [duplicateDetectionId], references: [id], onDelete: Cascade)
-  potentialDuplicate   Lead                @relation(fields: [potentialDuplicateId], references: [id], onDelete: Cascade)
+  duplicateDetection DuplicateDetection @relation(fields: [duplicateDetectionId], references: [id], onDelete: Cascade)
+  potentialDuplicate Lead               @relation(fields: [potentialDuplicateId], references: [id], onDelete: Cascade)
 
   @@index([duplicateDetectionId])
   @@index([potentialDuplicateId])
@@ -1137,37 +1139,37 @@ model DuplicateMatch {
 // ============================================================================
 
 model ChatbotSession {
-  id             String            @id @default(cuid())
-  leadId         String?
-  sessionId      String            @unique
-  isActive       Boolean           @default(true)
-  isQualified    Boolean           @default(false)
-  conversationData String           // JSON: dados da conversa
+  id               String  @id @default(cuid())
+  leadId           String?
+  sessionId        String  @unique
+  isActive         Boolean @default(true)
+  isQualified      Boolean @default(false)
+  conversationData String // JSON: dados da conversa
 
   // Fluxo conversacional
-  currentStage   Int               @default(1) // Etapa atual (1-8)
-  currentStepId  String?           // ID do step atual no fluxo
+  currentStage  Int     @default(1) // Etapa atual (1-8)
+  currentStepId String? // ID do step atual no fluxo
 
   // Dados capturados
-  capturedName   String?
-  capturedEmail  String?
-  capturedPhone  String?
-  interest       String?           // Interesse manifestado
-  segment        String?           // Segmento (empresa/pessoal)
-  userResponses  String            @default("{}") // JSON: todas as respostas
+  capturedName  String?
+  capturedEmail String?
+  capturedPhone String?
+  interest      String? // Interesse manifestado
+  segment       String? // Segmento (empresa/pessoal)
+  userResponses String  @default("{}") // JSON: todas as respostas
 
   // Consentimentos
-  marketingOptIn Boolean           @default(false)
+  marketingOptIn Boolean @default(false)
 
   // Qualificação
-  qualificationScore Int           @default(0)
-  readyForHuman  Boolean           @default(false)
+  qualificationScore Int     @default(0)
+  readyForHuman      Boolean @default(false)
 
-  startedAt      DateTime          @default(now())
-  endedAt        DateTime?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
 
-  lead           Lead?             @relation(fields: [leadId], references: [id])
-  messages       ChatbotMessage[]
+  lead     Lead?            @relation(fields: [leadId], references: [id])
+  messages ChatbotMessage[]
 
   @@index([leadId])
   @@index([sessionId])
@@ -1181,16 +1183,16 @@ model ChatbotSession {
 // ============================================================================
 
 model ChatbotMessage {
-  id               String          @id @default(cuid())
+  id               String  @id @default(cuid())
   chatbotSessionId String
-  sender           String          // 'user', 'bot'
+  sender           String // 'user', 'bot'
   content          String
   intent           String?
   confidence       Float?
 
-  timestamp        DateTime        @default(now())
+  timestamp DateTime @default(now())
 
-  chatbotSession   ChatbotSession  @relation(fields: [chatbotSessionId], references: [id], onDelete: Cascade)
+  chatbotSession ChatbotSession @relation(fields: [chatbotSessionId], references: [id], onDelete: Cascade)
 
   @@index([chatbotSessionId])
   @@index([timestamp])
@@ -1202,43 +1204,43 @@ model ChatbotMessage {
 // ============================================================================
 
 model ChatbotConfig {
-  id                  String   @id @default(cuid())
-  isEnabled           Boolean  @default(true)
+  id        String  @id @default(cuid())
+  isEnabled Boolean @default(true)
 
   // Behavior
-  botName             String   @default("Ferraco Bot")
-  welcomeMessage      String
-  tone                String   @default("friendly") // professional, friendly, casual, formal
-  captureLeads        Boolean  @default(true)
-  requireEmail        Boolean  @default(true)
-  requirePhone        Boolean  @default(true)
-  autoResponse        Boolean  @default(true)
+  botName        String  @default("Ferraco Bot")
+  welcomeMessage String
+  tone           String  @default("friendly") // professional, friendly, casual, formal
+  captureLeads   Boolean @default(true)
+  requireEmail   Boolean @default(true)
+  requirePhone   Boolean @default(true)
+  autoResponse   Boolean @default(true)
 
   // Company Data
-  companyName         String
-  companyDescription  String
-  companyAddress      String?
-  companyPhone        String?
-  companyEmail        String?
-  companyWebsite      String?
-  workingHours        String?
+  companyName        String
+  companyDescription String
+  companyAddress     String?
+  companyPhone       String?
+  companyEmail       String?
+  companyWebsite     String?
+  workingHours       String?
 
   // Products and FAQ (stored as JSON)
-  products            String   @default("[]") // JSON array
-  faqs                String   @default("[]") // JSON array
-  shareLinks          String   @default("[]") // JSON array
+  products   String @default("[]") // JSON array
+  faqs       String @default("[]") // JSON array
+  shareLinks String @default("[]") // JSON array
 
   // Fluxo conversacional (stored as JSON)
-  conversationFlow    String   @default("[]") // JSON array: steps do fluxo
+  conversationFlow String @default("[]") // JSON array: steps do fluxo
 
   // Legacy fields (manter compatibilidade)
-  fallbackMessage     String   @default("Desculpe, não entendi. Pode reformular sua pergunta?")
-  qualificationQuestions String  @default("[]") // JSON array
-  handoffTriggers     String   @default("[]") // JSON array
-  businessHours       String   @default("{}") // JSON: horários de funcionamento
+  fallbackMessage        String @default("Desculpe, não entendi. Pode reformular sua pergunta?")
+  qualificationQuestions String @default("[]") // JSON array
+  handoffTriggers        String @default("[]") // JSON array
+  businessHours          String @default("{}") // JSON: horários de funcionamento
 
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("chatbot_config")
 }
@@ -1248,19 +1250,19 @@ model ChatbotConfig {
 // ============================================================================
 
 model DigitalSignature {
-  id             String       @id @default(cuid())
-  userId         String
-  leadId         String
-  documentType   DocumentType
-  signatureData  String       // base64
-  ipAddress      String
-  isValid        Boolean      @default(true)
-  certificateId  String?
+  id            String       @id @default(cuid())
+  userId        String
+  leadId        String
+  documentType  DocumentType
+  signatureData String // base64
+  ipAddress     String
+  isValid       Boolean      @default(true)
+  certificateId String?
 
-  timestamp      DateTime     @default(now())
+  timestamp DateTime @default(now())
 
-  user           User         @relation(fields: [userId], references: [id])
-  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([leadId])
@@ -1273,21 +1275,21 @@ model DigitalSignature {
 // ============================================================================
 
 model AuditLog {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   userId       String
   userName     String
   action       String
   resource     String
   resourceId   String
-  details      String?  // JSON
+  details      String? // JSON
   ipAddress    String
   userAgent    String
-  success      Boolean  @default(true)
+  success      Boolean @default(true)
   errorMessage String?
 
-  timestamp    DateTime @default(now())
+  timestamp DateTime @default(now())
 
-  user         User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([resource])
@@ -1302,18 +1304,18 @@ model AuditLog {
 // ============================================================================
 
 model Notification {
-  id          String              @id @default(cuid())
-  userId      String
-  title       String
-  message     String
-  channel     NotificationChannel
-  isRead      Boolean             @default(false)
-  readAt      DateTime?
-  data        String?             // JSON: dados adicionais
+  id      String              @id @default(cuid())
+  userId  String
+  title   String
+  message String
+  channel NotificationChannel
+  isRead  Boolean             @default(false)
+  readAt  DateTime?
+  data    String? // JSON: dados adicionais
 
-  createdAt   DateTime            @default(now())
+  createdAt DateTime @default(now())
 
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isRead])
@@ -1326,10 +1328,10 @@ model Notification {
 // ============================================================================
 
 model SystemConfig {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String   // JSON
-  isPublic  Boolean  @default(false) // Se pode ser exposto ao frontend
+  id       String  @id @default(cuid())
+  key      String  @unique
+  value    String // JSON
+  isPublic Boolean @default(false) // Se pode ser exposto ao frontend
 
   updatedAt DateTime @updatedAt
 
@@ -1342,20 +1344,145 @@ model SystemConfig {
 // ============================================================================
 
 model FileUpload {
-  id          String   @id @default(cuid())
-  fileName    String
+  id           String  @id @default(cuid())
+  fileName     String
   originalName String
-  mimeType    String
-  size        Int
-  path        String
-  url         String
+  mimeType     String
+  size         Int
+  path         String
+  url          String
   uploadedById String?
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([uploadedById])
   @@index([createdAt])
   @@map("file_uploads")
+}
+
+// ============================================================================
+// WHATSAPP CHAT SYSTEM
+// ============================================================================
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  STICKER
+  LOCATION
+  CONTACT
+  LINK
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+// Contato do WhatsApp (pode ou não ser um Lead)
+model WhatsAppContact {
+  id            String  @id @default(cuid())
+  phone         String  @unique // Formato: 5511999999999
+  name          String? // Nome do contato
+  profilePicUrl String? // URL da foto de perfil
+
+  // Vinculação com Lead (opcional)
+  leadId String? @unique
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  // Metadados
+  isBlocked  Boolean   @default(false)
+  lastSeenAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  conversations WhatsAppConversation[]
+  messages      WhatsAppMessage[]
+
+  @@index([phone])
+  @@index([leadId])
+  @@map("whatsapp_contacts")
+}
+
+// Conversa (agrupamento de mensagens com um contato)
+model WhatsAppConversation {
+  id        String @id @default(cuid())
+  contactId String
+
+  // Estado da conversa
+  lastMessageAt      DateTime @default(now())
+  lastMessagePreview String? // Prévia da última mensagem
+  unreadCount        Int      @default(0)
+  isArchived         Boolean  @default(false)
+  isPinned           Boolean  @default(false)
+
+  // Atribuição (quem está atendendo)
+  assignedToId String?
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  contact  WhatsAppContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  messages WhatsAppMessage[]
+
+  @@index([contactId])
+  @@index([lastMessageAt])
+  @@index([unreadCount])
+  @@index([assignedToId])
+  @@map("whatsapp_conversations")
+}
+
+// Mensagem individual
+model WhatsAppMessage {
+  id             String @id @default(cuid())
+  conversationId String
+  contactId      String
+
+  // Conteúdo
+  type         MessageType
+  content      String // Texto ou caption
+  mediaUrl     String? // URL do arquivo (se houver mídia)
+  mediaType    String? // MIME type
+  mediaSize    Int? // Tamanho em bytes
+  thumbnailUrl String? // Miniatura (para vídeos/imagens)
+
+  // Direção
+  fromMe Boolean // true = enviada por nós, false = recebida
+
+  // Status (apenas para mensagens enviadas)
+  status MessageStatus @default(PENDING)
+
+  // IDs externos (WhatsApp)
+  whatsappMessageId String? @unique // ID da mensagem no WhatsApp
+
+  // Timestamps
+  timestamp   DateTime  @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  // Metadados
+  metadata  String? // JSON: dados extras (localização, contato, etc)
+  isDeleted Boolean @default(false)
+
+  // Relações
+  conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  contact      WhatsAppContact      @relation(fields: [contactId], references: [id])
+
+  @@index([conversationId])
+  @@index([contactId])
+  @@index([timestamp])
+  @@index([fromMe])
+  @@index([whatsappMessageId])
+  @@map("whatsapp_messages")
 }
 
 // ============================================================================
