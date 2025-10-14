@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { IconSelector } from '@/components/admin/IconSelector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ContactEditorProps {
   config: ContactConfig;
@@ -27,9 +29,24 @@ export const ContactEditor = ({ config, onChange }: ContactEditorProps) => {
     }
   };
 
-  const updateMethod = (index: number, field: 'label' | 'value', value: string) => {
+  const updateMethod = (index: number, field: 'label' | 'value' | 'icon' | 'type' | 'href', value: string) => {
     const newMethods = [...config.methods];
     newMethods[index] = { ...newMethods[index], [field]: value };
+
+    // Auto-gerar href baseado no tipo
+    if (field === 'type' || field === 'value') {
+      const method = newMethods[index];
+      if (method.type === 'phone') {
+        const cleanValue = method.value.replace(/\D/g, '');
+        method.href = `tel:+55${cleanValue}`;
+      } else if (method.type === 'email') {
+        method.href = `mailto:${method.value}`;
+      } else if (method.type === 'whatsapp') {
+        const cleanValue = method.value.replace(/\D/g, '');
+        method.href = `https://wa.me/55${cleanValue}`;
+      }
+    }
+
     onChange({ methods: newMethods });
   };
 
@@ -131,30 +148,34 @@ export const ContactEditor = ({ config, onChange }: ContactEditorProps) => {
             {config.methods.map((method, index) => (
               <Card key={method.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 mb-4">
                     <div className="flex-1 grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label className="text-sm">Label {index + 1}</Label>
-                        <Input
-                          value={method.label}
-                          onChange={(e) => updateMethod(index, 'label', e.target.value)}
-                          placeholder="Ex: Telefone Principal"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Nome do método de contato
-                        </p>
+                        <Label className="text-sm">Tipo</Label>
+                        <Select
+                          value={method.type}
+                          onValueChange={(value) => updateMethod(index, 'type', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="phone">📞 Telefone</SelectItem>
+                            <SelectItem value="email">📧 Email</SelectItem>
+                            <SelectItem value="whatsapp">💬 WhatsApp</SelectItem>
+                            <SelectItem value="address">📍 Endereço</SelectItem>
+                            <SelectItem value="custom">🔧 Customizado</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm">Valor</Label>
-                        <Input
-                          value={method.value}
-                          onChange={(e) => updateMethod(index, 'value', e.target.value)}
-                          placeholder="Ex: (11) 98765-4321"
+                        <Label className="text-sm">Ícone</Label>
+                        <IconSelector
+                          label=""
+                          value={method.icon}
+                          onChange={(icon) => updateMethod(index, 'icon', icon)}
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Telefone, email ou endereço
-                        </p>
                       </div>
                     </div>
 
@@ -168,9 +189,37 @@ export const ContactEditor = ({ config, onChange }: ContactEditorProps) => {
                     </Button>
                   </div>
 
-                  <div className="mt-2 px-2 py-1 bg-muted/50 rounded text-xs text-muted-foreground">
-                    Tipo: {method.type === 'phone' ? '📞 Telefone' : method.type === 'email' ? '📧 Email' : method.type === 'whatsapp' ? '💬 WhatsApp' : method.type === 'address' ? '📍 Endereço' : 'Customizado'}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Label</Label>
+                      <Input
+                        value={method.label}
+                        onChange={(e) => updateMethod(index, 'label', e.target.value)}
+                        placeholder="Ex: Telefone Principal"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Nome do método de contato
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm">Valor</Label>
+                      <Input
+                        value={method.value}
+                        onChange={(e) => updateMethod(index, 'value', e.target.value)}
+                        placeholder="Ex: (11) 98765-4321"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {method.type === 'phone' || method.type === 'whatsapp' ? 'Número com DDD' : method.type === 'email' ? 'Endereço de email' : 'Valor do contato'}
+                      </p>
+                    </div>
                   </div>
+
+                  {method.href && (
+                    <div className="mt-3 px-2 py-1 bg-muted/50 rounded text-xs text-muted-foreground">
+                      Link: {method.href}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

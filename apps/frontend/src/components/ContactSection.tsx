@@ -1,4 +1,5 @@
 import { MapPin, Phone, Mail, Clock, MessageCircle } from "lucide-react";
+import * as LucideIcons from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ContactConfig } from "@/types/landingPage";
@@ -9,35 +10,47 @@ interface ContactSectionProps {
 }
 
 const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
-  const contactInfo = [
+  // Renderizar ícone dinamicamente
+  const renderIcon = (iconName: string) => {
+    const IconComponent = (LucideIcons as any)[iconName] || Phone;
+    return <IconComponent className="w-6 h-6 text-primary" />;
+  };
+
+  const defaultContactInfo = [
     {
-      icon: <Phone className="w-6 h-6 text-primary" />,
-      title: "Telefone",
-      info: "(11) 3456-7890",
-      subInfo: "(11) 98765-4321"
+      id: '1',
+      type: 'phone' as const,
+      icon: 'Phone',
+      label: "Telefone",
+      value: "(11) 3456-7890",
+      href: "tel:+551134567890"
     },
     {
-      icon: <Mail className="w-6 h-6 text-primary" />,
-      title: "E-mail",
-      info: "contato@ferraco.com.br",
-      subInfo: "vendas@ferraco.com.br"
+      id: '2',
+      type: 'email' as const,
+      icon: 'Mail',
+      label: "E-mail",
+      value: "contato@ferraco.com.br",
+      href: "mailto:contato@ferraco.com.br"
     },
     {
-      icon: <MapPin className="w-6 h-6 text-primary" />,
-      title: "Endereço",
-      info: "Rua Industrial, 1234",
-      subInfo: "São Paulo - SP, 01234-567"
+      id: '3',
+      type: 'address' as const,
+      icon: 'MapPin',
+      label: "Endereço",
+      value: "Rua Industrial, 1234 - São Paulo - SP, 01234-567"
     },
     {
-      icon: <Clock className="w-6 h-6 text-primary" />,
-      title: "Horário",
-      info: "Segunda a Sexta: 7h às 18h",
-      subInfo: "Sábado: 8h às 12h"
+      id: '4',
+      type: 'custom' as const,
+      icon: 'Clock',
+      label: "Horário",
+      value: "Segunda a Sexta: 7h às 18h | Sábado: 8h às 12h"
     }
   ];
 
   // Usar config ou fallback
-  const displayContactInfo = config?.contactMethods && config.contactMethods.length > 0 ? config.contactMethods : contactInfo;
+  const displayContactInfo = config?.methods && config.methods.length > 0 ? config.methods : defaultContactInfo;
 
   return (
     <section id="contato" className="py-20 bg-background">
@@ -59,32 +72,43 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
               Informações de Contato
             </h3>
             <div className="space-y-6 mb-8">
-              {displayContactInfo.map((contact, index) => {
-                const defaultContact = contactInfo[index];
-                return (
-                  <Card key={index} className="shadow-elegant hover:shadow-glow transition-smooth">
+              {displayContactInfo.map((contact) => {
+                const content = (
+                  <Card key={contact.id} className="shadow-elegant hover:shadow-glow transition-smooth">
                     <CardContent className="p-6">
                       <div className="flex items-start space-x-4">
                         <div className="bg-primary/10 rounded-full p-3">
-                          {defaultContact?.icon}
+                          {renderIcon(contact.icon)}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h4 className="text-lg font-semibold text-foreground mb-1">
-                            {contact.label || contact.title}
+                            {contact.label}
                           </h4>
-                          <p className="text-muted-foreground font-medium">
-                            {contact.value || contact.info}
+                          <p className="text-muted-foreground font-medium break-words">
+                            {contact.value}
                           </p>
-                          {contact.subInfo && (
-                            <p className="text-muted-foreground text-sm">
-                              {contact.subInfo}
-                            </p>
-                          )}
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 );
+
+                // Se tiver href, tornar clicável
+                if (contact.href) {
+                  return (
+                    <a
+                      key={contact.id}
+                      href={contact.href}
+                      target={contact.type === 'email' ? '_self' : '_blank'}
+                      rel="noopener noreferrer"
+                      className="block hover:opacity-80 transition-opacity"
+                    >
+                      {content}
+                    </a>
+                  );
+                }
+
+                return content;
               })}
             </div>
 
