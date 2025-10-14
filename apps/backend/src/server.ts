@@ -15,9 +15,7 @@ async function startServer(): Promise<void> {
     await ensureDefaultKanbanColumn();
 
     // Inicializar WhatsApp Service (assíncrono, não bloqueia o servidor)
-    whatsappService.initialize().catch((error) => {
-      logger.error('❌ Erro ao inicializar WhatsApp (não bloqueia servidor):', error);
-    });
+    await whatsappService.initialize();
 
     // Create Express app
     const app = createApp();

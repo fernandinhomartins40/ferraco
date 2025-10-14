@@ -42,11 +42,25 @@ class WhatsAppService {
   /**
    * Inicializar sessão WhatsApp
    * Chamado automaticamente ao iniciar o servidor
+   * NÃO BLOQUEIA - Retorna imediatamente e conecta em background
    */
   async initialize(): Promise<void> {
-    try {
-      logger.info('🚀 Inicializando WhatsApp com Venom Bot...');
+    logger.info('🚀 Inicializando WhatsApp com Venom Bot em background...');
 
+    // Inicializar em background sem bloquear o servidor
+    this.startWhatsAppClient().catch((error) => {
+      logger.error('❌ Erro fatal ao inicializar WhatsApp:', error);
+    });
+
+    // Retornar imediatamente para não bloquear o servidor
+    return Promise.resolve();
+  }
+
+  /**
+   * Inicia o cliente WhatsApp (executa em background)
+   */
+  private async startWhatsAppClient(): Promise<void> {
+    try {
       this.client = await create(
         {
           session: 'ferraco-crm', // Nome da sessão
@@ -95,11 +109,10 @@ class WhatsAppService {
       if (error === 'Not Logged' || error?.message === 'Not Logged') {
         logger.info('⏳ WhatsApp aguardando autenticação (QR Code ou sessão salva)');
         this.isConnected = false;
-        return; // Não lançar erro, é comportamento esperado
+        return;
       }
 
       logger.error('❌ Erro ao inicializar WhatsApp:', error);
-      // Não fazer throw - deixar o servidor continuar funcionando
       this.isConnected = false;
     }
   }
