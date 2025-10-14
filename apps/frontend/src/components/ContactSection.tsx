@@ -183,24 +183,6 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="shadow-elegant hover:shadow-glow transition-smooth bg-secondary/10">
-              <CardContent className="p-8 text-center">
-                <h4 className="text-xl font-bold text-foreground mb-4">
-                  Precisa de uma solução personalizada?
-                </h4>
-                <p className="text-muted-foreground mb-6">
-                  Nossa engenharia desenvolve projetos sob medida para suas necessidades específicas
-                </p>
-                <Button 
-                  onClick={onLeadModalOpen}
-                  variant="outline"
-                  className="w-full font-semibold transition-smooth hover:scale-105"
-                >
-                  Falar com Engenharia
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
