@@ -136,24 +136,6 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
 
           {/* CTA Section */}
           <div className="space-y-8">
-            <Card className="shadow-elegant hover:shadow-glow transition-smooth bg-gradient-to-br from-primary/5 to-accent/5">
-              <CardContent className="p-8 text-center">
-                <h3 className="text-3xl font-bold text-foreground mb-4">
-                  Solicite um Orçamento
-                </h3>
-                <p className="text-muted-foreground text-lg mb-6">
-                  Deixe seus dados e nossa equipe técnica entrará em contato em até 2 horas úteis
-                </p>
-                <Button 
-                  onClick={onLeadModalOpen}
-                  size="lg"
-                  className="w-full font-semibold py-4 transition-smooth hover:scale-105"
-                >
-                  Solicitar Orçamento Grátis
-                </Button>
-              </CardContent>
-            </Card>
-
             <Card className="shadow-elegant hover:shadow-glow transition-smooth">
               <CardContent className="p-8">
                 <h4 className="text-2xl font-bold text-foreground mb-4 text-center">
