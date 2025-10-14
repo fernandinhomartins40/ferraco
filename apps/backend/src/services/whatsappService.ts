@@ -27,6 +27,8 @@ class WhatsAppService {
   private qrCode: string | null = null;
   private isConnected: boolean = false;
   private sessionsPath: string;
+  private initializationAttempts: number = 0;
+  private maxInitializationAttempts: number = 3;
 
   constructor() {
     // Diretório de sessões (será volume Docker)
@@ -63,13 +65,19 @@ class WhatsAppService {
     try {
       this.client = await create(
         {
-          session: 'ferraco-crm', // Nome da sessão
-          multidevice: true, // Suporte a multidevice
-          folderNameToken: this.sessionsPath, // Pasta de sessões
-          headless: 'new', // Modo headless (sem interface gráfica)
-          useChrome: false, // Usar Chromium padrão
+          session: 'ferraco-crm',
+          multidevice: true,
+          folderNameToken: this.sessionsPath,
+          headless: 'new',
+          useChrome: false,
           debug: false,
-          logQR: false, // Não logar QR no console
+          logQR: false,
+          disableSpins: true, // Crítico para Docker - desabilita animações
+          disableWelcome: true, // Desabilita mensagem de boas-vindas
+          updatesLog: false, // Desabilita logs de atualização
+          autoClose: 0, // Não fechar automaticamente - deixar QR disponível
+          createPathFileToken: true, // Criar pasta de tokens
+          waitForLogin: false, // Não aguardar login completo - retornar com QR
           browserArgs: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -78,24 +86,58 @@ class WhatsAppService {
             '--no-first-run',
             '--no-zygote',
             '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--disable-extensions',
           ],
         },
         // Callback quando QR Code é gerado
-        (base64Qr) => {
+        (base64Qr, asciiQR, attempt, urlCode) => {
           this.qrCode = base64Qr;
-          logger.info('📱 QR Code gerado! Acesse /api/whatsapp/qr para visualizar');
+          logger.info(`📱 QR Code gerado (tentativa ${attempt})! Acesse /api/whatsapp/qr para visualizar`);
+          logger.debug(`QR Code URL: ${urlCode}`);
         },
-        // Callback de status da conexão
+        // Callback de status da conexão (TODOS os status possíveis)
         (statusSession) => {
           logger.info(`📊 Status da sessão: ${statusSession}`);
 
-          if (statusSession === 'isLogged' || statusSession === 'CONNECTED') {
-            this.isConnected = true;
-            this.qrCode = null; // Limpar QR code após conectar
-            logger.info('✅ WhatsApp conectado com sucesso!');
-          } else if (statusSession === 'notLogged' || statusSession === 'qrReadFail') {
-            this.isConnected = false;
-            logger.warn('⚠️  WhatsApp desconectado. Novo QR será gerado.');
+          switch (statusSession) {
+            // Conectado com sucesso
+            case 'isLogged':
+            case 'CONNECTED':
+            case 'chatsAvailable':
+              this.isConnected = true;
+              this.qrCode = null;
+              logger.info('✅ WhatsApp conectado com sucesso!');
+              break;
+
+            // Aguardando QR Code
+            case 'notLogged':
+            case 'qrReadError':
+            case 'qrReadFail':
+            case 'waitForLogin':
+              this.isConnected = false;
+              logger.info('⏳ Aguardando leitura do QR Code...');
+              break;
+
+            // Desconectado
+            case 'desconnectedMobile':
+            case 'serverClose':
+            case 'browserClose':
+              this.isConnected = false;
+              this.qrCode = null;
+              logger.warn('⚠️  WhatsApp desconectado');
+              break;
+
+            // Estados intermediários
+            case 'initBrowser':
+            case 'openBrowser':
+            case 'initWhatsapp':
+            case 'successPageWhatsapp':
+              logger.debug(`🔄 Inicializando: ${statusSession}`);
+              break;
+
+            default:
+              logger.warn(`⚠️  Status desconhecido: ${statusSession}`);
           }
         }
       );
@@ -103,16 +145,34 @@ class WhatsAppService {
       // Configurar listeners de mensagens
       this.setupMessageListeners();
 
-      logger.info('✅ WhatsApp Service inicializado!');
+      logger.info('✅ WhatsApp cliente criado e pronto!');
     } catch (error: any) {
-      // Se o erro for "Not Logged", não é um erro fatal - apenas aguardando QR Code
-      if (error === 'Not Logged' || error?.message === 'Not Logged') {
-        logger.info('⏳ WhatsApp aguardando autenticação (QR Code ou sessão salva)');
+      const errorMsg = error?.message || error?.toString() || String(error);
+
+      // Erros esperados/normais - não são fatais
+      const expectedErrors = [
+        'Not Logged',
+        'waitForLogin',
+        'qrReadError',
+        'desconnectedMobile',
+        'Execution context was destroyed',
+      ];
+
+      const isExpectedError = expectedErrors.some(
+        (expected) => errorMsg.includes(expected)
+      );
+
+      if (isExpectedError) {
+        logger.info(`⏳ WhatsApp aguardando autenticação: ${errorMsg}`);
         this.isConnected = false;
         return;
       }
 
-      logger.error('❌ Erro ao inicializar WhatsApp:', error);
+      // Erro inesperado - logar mas não travar
+      logger.error('❌ Erro inesperado ao inicializar WhatsApp:', {
+        error: errorMsg,
+        stack: error?.stack,
+      });
       this.isConnected = false;
     }
   }
