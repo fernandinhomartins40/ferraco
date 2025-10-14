@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { HeroConfig } from "@/types/landingPage";
+import * as LucideIcons from 'lucide-react';
 
 interface HeroSectionProps {
   onLeadModalOpen: () => void;
@@ -9,119 +8,152 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  // Renderizar ícone dinamicamente
+  const renderIcon = (iconName?: string) => {
+    if (!iconName) return null;
+    const IconComponent = (LucideIcons as any)[iconName];
+    return IconComponent ? <IconComponent className="w-5 h-5" /> : null;
+  };
 
-  // Background image do config
+  // Dados do config ou fallback
+  const title = config?.title?.text || "Equipamentos para Pecuária Leiteira";
+  const titleHighlight = config?.title?.highlight;
+  const subtitle = config?.subtitle?.text || "Há mais de 25 anos fornecendo soluções de alta qualidade";
+  const description = config?.description?.text || "Especialistas em equipamentos para pecuária leiteira, oferecendo tecnologia de ponta e atendimento personalizado para fazendas em todo o Brasil";
+
+  const primaryButton = config?.buttons?.primary || { text: "Conhecer Produtos", href: "#produtos" };
+  const secondaryButton = config?.buttons?.secondary || { text: "Solicitar Orçamento", href: "#contato" };
+  const buttonsAlignment = config?.buttons?.alignment || 'center';
+
+  // Background
   const backgroundImage = config?.background?.type === 'image' && config?.background?.image?.url
     ? config.background.image.url
     : null;
 
-  const backgroundStyle = backgroundImage
+  const backgroundColor = config?.background?.type === 'color' && config?.background?.color
+    ? config.background.color
+    : null;
+
+  const backgroundGradient = config?.background?.type === 'gradient' && config?.background?.gradient
+    ? `linear-gradient(${config.background.gradient.direction}, ${config.background.gradient.from}, ${config.background.gradient.to})`
+    : null;
+
+  const backgroundStyle: React.CSSProperties = backgroundImage
     ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : backgroundColor
+    ? { backgroundColor }
+    : backgroundGradient
+    ? { background: backgroundGradient }
     : {};
 
-  // Fallback para valores padrão do conteúdo atual
-  const slides = config?.slides || [
-    {
-      title: "Equipamentos para Pecuária Leiteira",
-      subtitle: "Há mais de 25 anos fornecendo soluções de alta qualidade para fazendas em todo o Brasil",
-      cta: "Conhecer Produtos"
-    },
-    {
-      title: "Tecnologia de Ponta",
-      subtitle: "Equipamentos modernos e processos inovadores para garantir a melhor qualidade",
-      cta: "Ver Diferenciais"
-    },
-    {
-      title: "Atendimento Especializado",
-      subtitle: "Equipe técnica qualificada para atender suas necessidades específicas",
-      cta: "Falar com Especialista"
+  const overlayStyle = config?.background?.overlay?.enabled
+    ? {
+        backgroundColor: config.background.overlay.color,
+        opacity: config.background.overlay.opacity / 100,
+      }
+    : undefined;
+
+  const height = config?.height || '70vh';
+  const heightClass = height === 'screen' ? 'h-screen' : height === 'auto' ? 'min-h-[60vh]' : '';
+  const heightStyle = !heightClass && height !== 'auto' && height !== 'screen' ? { height } : {};
+
+  // Função para lidar com cliques nos botões
+  const handleButtonClick = (href?: string) => {
+    if (href?.startsWith('#')) {
+      const element = document.querySelector(href);
+      element?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      onLeadModalOpen();
     }
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
   };
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-  };
+  // Alinhamento dos botões
+  const alignmentClass = buttonsAlignment === 'left' ? 'justify-start' : buttonsAlignment === 'right' ? 'justify-end' : 'justify-center';
 
   return (
     <section
       id="inicio"
-      className={`relative pt-20 lg:pt-24 h-[60vh] md:h-[65vh] lg:h-[70vh] flex items-center overflow-hidden ${!backgroundImage ? 'hero-gradient' : ''}`}
-      style={backgroundStyle}
+      className={`relative pt-20 lg:pt-24 flex items-center overflow-hidden ${heightClass} ${!backgroundImage && !backgroundColor && !backgroundGradient ? 'hero-gradient' : ''}`}
+      style={{ ...backgroundStyle, ...heightStyle }}
     >
-      <div className="absolute inset-0 bg-black/40"></div>
+      {/* Overlay */}
+      {config?.background?.overlay?.enabled && (
+        <div className="absolute inset-0" style={overlayStyle}></div>
+      )}
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-4xl mx-auto text-center text-white">
+        <div className={`max-w-4xl ${config?.layout === 'centered' ? 'mx-auto text-center' : ''} text-white`}>
           <div className="animate-fade-in-up">
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight">
-              {slides[currentSlide].title}
+            {/* Título */}
+            <h1
+              className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight"
+              style={{
+                fontSize: config?.title?.style?.fontSize,
+                fontWeight: config?.title?.style?.fontWeight,
+                color: config?.title?.style?.textColor || '#ffffff',
+              }}
+            >
+              {titleHighlight ? (
+                <>
+                  {title.replace(titleHighlight, '')}
+                  <span className="text-secondary">{titleHighlight}</span>
+                </>
+              ) : title}
             </h1>
-            <p className="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 opacity-90 max-w-3xl mx-auto">
-              {slides[currentSlide].subtitle}
+
+            {/* Subtítulo */}
+            <p
+              className="text-lg md:text-xl lg:text-2xl mb-4 opacity-90 max-w-3xl"
+              style={{
+                fontSize: config?.subtitle?.style?.fontSize,
+                fontWeight: config?.subtitle?.style?.fontWeight,
+                color: config?.subtitle?.style?.textColor || '#ffffff',
+              }}
+            >
+              {subtitle}
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-              <Button
-                onClick={onLeadModalOpen}
-                size="lg"
-                variant="secondary"
-                className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 transition-smooth hover:scale-105 shadow-glow"
+
+            {/* Descrição */}
+            {description && (
+              <p
+                className="text-base md:text-lg mb-6 md:mb-8 opacity-80 max-w-2xl"
+                style={{
+                  fontSize: config?.description?.style?.fontSize,
+                  color: config?.description?.style?.textColor || '#ffffff',
+                }}
               >
-                {slides[currentSlide].cta}
-              </Button>
-              <Button
-                onClick={onLeadModalOpen}
-                size="lg"
-                variant="outline"
-                className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 border-white text-white hover:bg-white hover:text-primary transition-smooth hover:scale-105"
-              >
-                Solicitar Orçamento
-              </Button>
+                {description}
+              </p>
+            )}
+
+            {/* Botões */}
+            <div className={`flex flex-col sm:flex-row gap-3 md:gap-4 ${alignmentClass}`}>
+              {primaryButton && (
+                <Button
+                  onClick={() => handleButtonClick(primaryButton.href)}
+                  size="lg"
+                  variant="secondary"
+                  className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 transition-smooth hover:scale-105 shadow-glow"
+                >
+                  {primaryButton.iconPosition === 'left' && renderIcon(primaryButton.icon)}
+                  {primaryButton.text}
+                  {primaryButton.iconPosition === 'right' && renderIcon(primaryButton.icon)}
+                </Button>
+              )}
+              {secondaryButton && (
+                <Button
+                  onClick={() => handleButtonClick(secondaryButton.href)}
+                  size="lg"
+                  variant="outline"
+                  className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 border-white text-white hover:bg-white hover:text-primary transition-smooth hover:scale-105"
+                >
+                  {renderIcon(secondaryButton.icon)}
+                  {secondaryButton.text}
+                </Button>
+              )}
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Navigation Arrows */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 z-20"
-        onClick={prevSlide}
-      >
-        <ChevronLeft size={32} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 z-20"
-        onClick={nextSlide}
-      >
-        <ChevronRight size={32} />
-      </Button>
-
-      {/* Slide Indicators */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            className={`w-3 h-3 rounded-full transition-smooth ${
-              index === currentSlide ? 'bg-secondary' : 'bg-white/50'
-            }`}
-            onClick={() => setCurrentSlide(index)}
-          />
-        ))}
       </div>
     </section>
   );
