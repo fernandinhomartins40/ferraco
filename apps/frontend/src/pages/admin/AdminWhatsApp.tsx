@@ -1,8 +1,8 @@
 /**
- * AdminWhatsApp - Conectar WhatsApp usando Venom Bot (integrado)
+ * AdminWhatsApp - Conectar WhatsApp usando WPPConnect
  *
  * Nossa própria implementação - SEM dependências externas
- * Venom Bot roda dentro do backend Node.js
+ * WPPConnect roda dentro do backend Node.js
  */
 
 import { useState, useEffect } from 'react';
@@ -156,7 +156,7 @@ const AdminWhatsApp = () => {
             WhatsApp Business
           </h2>
           <p className="text-muted-foreground mt-2">
-            Integração WhatsApp usando Venom Bot (nativo do CRM)
+            Integração WhatsApp usando WPPConnect (nativo do CRM)
           </p>
         </div>
 
@@ -358,7 +358,7 @@ const AdminWhatsApp = () => {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tecnologia:</span>
-              <span className="font-medium">Venom Bot</span>
+              <span className="font-medium">WPPConnect</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Multidevice:</span>
