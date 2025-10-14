@@ -31,7 +31,82 @@ interface HeroEditorProps {
 export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
   const [activeSlideIndex, setActiveSlideIndex] = React.useState(0);
 
-  const activeSlide = config.slides[activeSlideIndex];
+  // Inicializar slides se não existir
+  React.useEffect(() => {
+    if (!config.slides || config.slides.length === 0) {
+      const defaultSlide: HeroSlide = {
+        id: generateUUID(),
+        title: {
+          text: 'Equipamentos para Pecuária Leiteira',
+          style: {
+            fontSize: '3rem',
+            fontWeight: '700',
+            textColor: '#ffffff',
+          },
+        },
+        subtitle: {
+          text: 'Há mais de 25 anos fornecendo soluções de alta qualidade',
+          style: {
+            fontSize: '1.5rem',
+            fontWeight: '500',
+            textColor: '#ffffff',
+          },
+        },
+        description: {
+          text: 'Especialistas em equipamentos para pecuária leiteira',
+          style: {
+            fontSize: '1.125rem',
+            textColor: '#ffffff',
+          },
+        },
+        buttons: {
+          primary: {
+            text: 'Conhecer Produtos',
+            href: '#produtos',
+            variant: 'primary',
+          },
+          secondary: {
+            text: 'Solicitar Orçamento',
+            href: '#contato',
+            variant: 'outline',
+          },
+          alignment: 'center',
+        },
+        background: {
+          type: 'gradient',
+          gradient: {
+            from: '#667eea',
+            to: '#764ba2',
+            direction: 'to right',
+          },
+          overlay: {
+            enabled: true,
+            color: '#000000',
+            opacity: 40,
+          },
+        },
+      };
+
+      onChange({
+        slides: [defaultSlide],
+        autoPlay: config.autoPlay !== false,
+        autoPlayInterval: config.autoPlayInterval || 5,
+        showNavigation: config.showNavigation !== false,
+        showIndicators: config.showIndicators !== false,
+      });
+    }
+  }, []);
+
+  const activeSlide = config.slides?.[activeSlideIndex];
+
+  // Guard: prevent render if no active slide
+  if (!activeSlide) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p className="text-muted-foreground">Inicializando slides...</p>
+      </div>
+    );
+  }
 
   const updateSlide = (index: number, updates: Partial<HeroSlide>) => {
     const newSlides = [...config.slides];
