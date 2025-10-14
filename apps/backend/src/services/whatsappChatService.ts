@@ -13,6 +13,7 @@ const prisma = new PrismaClient();
 
 export class WhatsAppChatService {
   private io: SocketIOServer | null = null;
+  private whatsappClient: any = null;
 
   /**
    * Define o servidor WebSocket para emitir eventos real-time
@@ -20,6 +21,156 @@ export class WhatsAppChatService {
   setSocketServer(io: SocketIOServer): void {
     this.io = io;
     logger.info('📡 WebSocket server configurado no WhatsAppChatService');
+  }
+
+  /**
+   * Define o cliente WPPConnect
+   */
+  setWhatsAppClient(client: any): void {
+    this.whatsappClient = client;
+  }
+
+  /**
+   * Sincronizar TODOS os chats e contatos do WhatsApp para o banco
+   * Chamado quando WhatsApp conecta pela primeira vez
+   */
+  async syncAllChatsAndContacts(): Promise<void> {
+    if (!this.whatsappClient) {
+      logger.warn('⚠️  Cliente WhatsApp não disponível para sincronização');
+      return;
+    }
+
+    try {
+      logger.info('🔄 Iniciando sincronização completa de chats e contatos...');
+
+      // 1. Obter todos os chats
+      const allChats = await this.whatsappClient.getAllChats();
+      logger.info(`📋 Encontrados ${allChats.length} chats`);
+
+      // 2. Processar cada chat
+      for (const chat of allChats) {
+        try {
+          // Extrair número do telefone
+          const phone = chat.id._serialized.replace('@c.us', '').replace('@g.us', '');
+
+          // Pular grupos por enquanto (id termina com @g.us)
+          if (chat.id._serialized.includes('@g.us')) {
+            continue;
+          }
+
+          // Obter informações do contato
+          const contactInfo = await this.whatsappClient.getContact(chat.id._serialized);
+          const contactName = contactInfo?.name || contactInfo?.pushname || contactInfo?.verifiedName || chat.name || phone;
+
+          // Criar/atualizar contato
+          const contact = await prisma.whatsAppContact.upsert({
+            where: { phone },
+            create: {
+              phone,
+              name: contactName,
+              profilePicUrl: chat.profilePicThumb?.eurl || null,
+            },
+            update: {
+              name: contactName,
+              profilePicUrl: chat.profilePicThumb?.eurl || null,
+              lastSeenAt: chat.t ? new Date(chat.t * 1000) : null,
+            },
+          });
+
+          // Criar/atualizar conversa
+          const conversation = await prisma.whatsAppConversation.upsert({
+            where: { contactId: contact.id },
+            create: {
+              contactId: contact.id,
+              lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
+              lastMessagePreview: chat.lastMessage?.body || null,
+              unreadCount: chat.unreadCount || 0,
+              isPinned: chat.pin || false,
+            },
+            update: {
+              lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
+              lastMessagePreview: chat.lastMessage?.body || null,
+              unreadCount: chat.unreadCount || 0,
+              isPinned: chat.pin || false,
+            },
+          });
+
+          logger.info(`✅ Chat sincronizado: ${contactName} (${phone})`);
+        } catch (error) {
+          logger.error(`❌ Erro ao sincronizar chat ${chat.id}:`, error);
+        }
+      }
+
+      logger.info('✅ Sincronização completa de chats finalizada!');
+    } catch (error) {
+      logger.error('❌ Erro ao sincronizar chats:', error);
+    }
+  }
+
+  /**
+   * Carregar histórico completo de mensagens de um chat
+   */
+  async loadChatHistory(conversationId: string): Promise<void> {
+    if (!this.whatsappClient) {
+      logger.warn('⚠️  Cliente WhatsApp não disponível');
+      return;
+    }
+
+    try {
+      // Buscar conversa e contato
+      const conversation = await prisma.whatsAppConversation.findUnique({
+        where: { id: conversationId },
+        include: { contact: true },
+      });
+
+      if (!conversation) {
+        logger.warn(`⚠️  Conversa ${conversationId} não encontrada`);
+        return;
+      }
+
+      const chatId = `${conversation.contact.phone}@c.us`;
+
+      logger.info(`📥 Carregando histórico do chat ${conversation.contact.name}...`);
+
+      // Carregar todas as mensagens do chat
+      const messages = await this.whatsappClient.loadAndGetAllMessagesInChat(chatId);
+      logger.info(`📋 Encontradas ${messages.length} mensagens`);
+
+      // Salvar cada mensagem no banco
+      for (const msg of messages) {
+        try {
+          // Verificar se mensagem já existe
+          const existingMessage = await prisma.whatsAppMessage.findUnique({
+            where: { whatsappMessageId: msg.id },
+          });
+
+          if (existingMessage) continue; // Pular se já existe
+
+          const messageType = this.getMessageType(msg);
+
+          await prisma.whatsAppMessage.create({
+            data: {
+              conversationId: conversation.id,
+              contactId: conversation.contact.id,
+              type: messageType,
+              content: msg.body || '',
+              mediaUrl: null,
+              mediaType: msg.mimetype || null,
+              fromMe: msg.fromMe || false,
+              status: MessageStatus.DELIVERED,
+              whatsappMessageId: msg.id,
+              timestamp: new Date(msg.timestamp * 1000),
+            },
+          });
+        } catch (error) {
+          // Ignorar erros de mensagens duplicadas
+        }
+      }
+
+      logger.info(`✅ Histórico carregado: ${conversation.contact.name}`);
+    } catch (error) {
+      logger.error('❌ Erro ao carregar histórico:', error);
+    }
   }
 
   /**

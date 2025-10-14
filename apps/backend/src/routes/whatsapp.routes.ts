@@ -304,6 +304,67 @@ router.get('/conversations/:id/messages', authenticate, async (req: Request, res
 });
 
 /**
+ * POST /api/whatsapp/conversations/:id/load-history
+ * Carregar histórico completo de mensagens de uma conversa
+ */
+router.post('/conversations/:id/load-history', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Carregar histórico em background
+    whatsappChatService.loadChatHistory(id).catch((error) => {
+      logger.error('Erro ao carregar histórico em background:', error);
+    });
+
+    res.json({
+      success: true,
+      message: 'Carregando histórico de mensagens em background...',
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao iniciar carregamento de histórico:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao carregar histórico',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/sync-chats
+ * Sincronizar todos os chats e contatos do WhatsApp
+ */
+router.post('/sync-chats', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    // Sincronizar em background
+    whatsappChatService.syncAllChatsAndContacts().catch((error) => {
+      logger.error('Erro ao sincronizar chats em background:', error);
+    });
+
+    res.json({
+      success: true,
+      message: 'Sincronizando chats e contatos em background...',
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao iniciar sincronização:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao sincronizar chats',
+      message: error.message,
+    });
+  }
+});
+
+/**
  * POST /api/whatsapp/conversations/:id/read
  * Marcar mensagens de uma conversa como lidas
  *

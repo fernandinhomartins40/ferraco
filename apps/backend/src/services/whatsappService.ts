@@ -99,6 +99,14 @@ class WhatsAppService {
               this.qrCode = null;
               this.isInitializing = false;
               logger.info('✅ WhatsApp conectado com sucesso!');
+
+              // Sincronizar chats e contatos quando conectar
+              if (this.client) {
+                whatsappChatService.setWhatsAppClient(this.client);
+                setTimeout(() => {
+                  whatsappChatService.syncAllChatsAndContacts();
+                }, 5000); // Aguardar 5s para WhatsApp carregar completamente
+              }
               break;
 
             case 'notLogged':
