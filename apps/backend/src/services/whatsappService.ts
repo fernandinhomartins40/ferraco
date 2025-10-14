@@ -1,17 +1,23 @@
 /**
- * WhatsApp Service - Integração com Venom Bot
+ * WhatsApp Service - Integração com WPPConnect
  *
- * Este serviço gerencia a conexão WhatsApp Web usando Venom Bot
- * - Sessão persistente em volume /sessions
- * - QR Code em base64 para frontend
- * - Envio e recebimento de mensagens
- * - Logs salvos no Supabase
+ * Migrado de Venom Bot para WPPConnect para resolver problemas de:
+ * - QR Code não sendo gerado em modo headless/Docker
+ * - Instabilidade de conexão
+ * - Loops infinitos de reconexão
+ *
+ * WPPConnect oferece:
+ * ✅ QR Code confiável em headless
+ * ✅ Callbacks estáveis
+ * ✅ Melhor suporte para produção
+ * ✅ Documentação clara
  */
 
-import { create, Whatsapp, Message } from 'venom-bot';
+import * as wppconnect from '@wppconnect-team/wppconnect';
+import type { Whatsapp, Message } from '@wppconnect-team/wppconnect';
 import { logger } from '../utils/logger';
-import path from 'path';
-import fs from 'fs';
+import * as path from 'path';
+import * as fs from 'fs';
 
 interface WhatsAppMessage {
   from: string;
@@ -27,8 +33,7 @@ class WhatsAppService {
   private qrCode: string | null = null;
   private isConnected: boolean = false;
   private sessionsPath: string;
-  private initializationAttempts: number = 0;
-  private maxInitializationAttempts: number = 3;
+  private isInitializing: boolean = false;
 
   constructor() {
     // Diretório de sessões (será volume Docker)
@@ -43,15 +48,21 @@ class WhatsAppService {
 
   /**
    * Inicializar sessão WhatsApp
-   * Chamado automaticamente ao iniciar o servidor
    * NÃO BLOQUEIA - Retorna imediatamente e conecta em background
    */
   async initialize(): Promise<void> {
-    logger.info('🚀 Inicializando WhatsApp com Venom Bot em background...');
+    if (this.isInitializing) {
+      logger.warn('⚠️  WhatsApp já está inicializando...');
+      return;
+    }
+
+    logger.info('🚀 Inicializando WhatsApp com WPPConnect em background...');
+    this.isInitializing = true;
 
     // Inicializar em background sem bloquear o servidor
     this.startWhatsAppClient().catch((error) => {
       logger.error('❌ Erro fatal ao inicializar WhatsApp:', error);
+      this.isInitializing = false;
     });
 
     // Retornar imediatamente para não bloquear o servidor
@@ -63,117 +74,106 @@ class WhatsAppService {
    */
   private async startWhatsAppClient(): Promise<void> {
     try {
-      this.client = await create(
-        {
-          session: 'ferraco-crm',
-          multidevice: true,
-          folderNameToken: this.sessionsPath,
-          headless: 'new',
-          useChrome: false,
-          debug: false,
-          logQR: false,
-          disableSpins: true, // Crítico para Docker - desabilita animações
-          disableWelcome: true, // Desabilita mensagem de boas-vindas
-          updatesLog: false, // Desabilita logs de atualização
-          autoClose: 0, // Não fechar automaticamente - deixar QR disponível
-          createPathFileToken: true, // Criar pasta de tokens
-          waitForLogin: false, // Não aguardar login completo - retornar com QR
-          browserArgs: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu',
-            '--disable-software-rasterizer',
-            '--disable-extensions',
-          ],
+      this.client = await wppconnect.create(
+        'ferraco-crm', // session name
+        // Callback QR Code
+        (base64Qrimg: string, asciiQR: string, attempt: number) => {
+          this.qrCode = base64Qrimg;
+          logger.info(`📱 QR Code gerado! Tentativa ${attempt}/5`);
+          logger.info('✅ Acesse /api/whatsapp/qr para visualizar o QR Code');
+
+          if (attempt >= 5) {
+            logger.warn('⚠️  Limite de tentativas atingido. QR Code expirou.');
+            this.qrCode = null;
+          }
         },
-        // Callback quando QR Code é gerado
-        (base64Qr, asciiQR, attempt, urlCode) => {
-          this.qrCode = base64Qr;
-          logger.info(`📱 QR Code gerado (tentativa ${attempt})! Acesse /api/whatsapp/qr para visualizar`);
-          logger.debug(`QR Code URL: ${urlCode}`);
-        },
-        // Callback de status da conexão (TODOS os status possíveis)
-        (statusSession) => {
-          logger.info(`📊 Status da sessão: ${statusSession}`);
+        // Callback status
+        (statusSession: string, session: string) => {
+          logger.info(`📊 [${session}] Status: ${statusSession}`);
 
           switch (statusSession) {
-            // Conectado com sucesso
+            case 'inChat':
             case 'isLogged':
-            case 'CONNECTED':
+            case 'qrReadSuccess':
             case 'chatsAvailable':
               this.isConnected = true;
               this.qrCode = null;
+              this.isInitializing = false;
               logger.info('✅ WhatsApp conectado com sucesso!');
               break;
 
-            // Aguardando QR Code
             case 'notLogged':
             case 'qrReadError':
             case 'qrReadFail':
-            case 'waitForLogin':
               this.isConnected = false;
               logger.info('⏳ Aguardando leitura do QR Code...');
               break;
 
-            // Desconectado
             case 'desconnectedMobile':
             case 'serverClose':
-            case 'browserClose':
+            case 'deleteToken':
               this.isConnected = false;
               this.qrCode = null;
               logger.warn('⚠️  WhatsApp desconectado');
               break;
 
-            // Estados intermediários
-            case 'initBrowser':
-            case 'openBrowser':
-            case 'initWhatsapp':
-            case 'successPageWhatsapp':
-              logger.debug(`🔄 Inicializando: ${statusSession}`);
+            case 'autocloseCalled':
+            case 'browserClose':
+              this.isConnected = false;
+              this.isInitializing = false;
+              logger.warn('🔄 Navegador fechado');
               break;
 
             default:
-              logger.warn(`⚠️  Status desconhecido: ${statusSession}`);
+              logger.debug(`🔄 Status: ${statusSession}`);
           }
+        },
+        undefined, // onLoadingScreen
+        undefined, // catchLinkCode
+        // Options
+        {
+          headless: 'new' as any,
+          devtools: false,
+          debug: false,
+          disableWelcome: true,
+          updatesLog: false,
+          autoClose: 0,
+          folderNameToken: this.sessionsPath,
+          mkdirFolderToken: '',
+          logQR: false,
+          puppeteerOptions: {
+            headless: 'new' as any,
+            args: [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-accelerated-2d-canvas',
+              '--no-first-run',
+              '--no-zygote',
+              '--disable-gpu',
+              '--disable-software-rasterizer',
+              '--disable-extensions',
+            ],
+          },
         }
       );
 
       // Configurar listeners de mensagens
       this.setupMessageListeners();
 
-      logger.info('✅ WhatsApp cliente criado e pronto!');
+      logger.info('✅ WhatsApp Service (WPPConnect) inicializado!');
+      this.isInitializing = false;
+
     } catch (error: any) {
       const errorMsg = error?.message || error?.toString() || String(error);
 
-      // Erros esperados/normais - não são fatais
-      const expectedErrors = [
-        'Not Logged',
-        'waitForLogin',
-        'qrReadError',
-        'desconnectedMobile',
-        'Execution context was destroyed',
-      ];
-
-      const isExpectedError = expectedErrors.some(
-        (expected) => errorMsg.includes(expected)
-      );
-
-      if (isExpectedError) {
-        logger.info(`⏳ WhatsApp aguardando autenticação: ${errorMsg}`);
-        this.isConnected = false;
-        return;
-      }
-
-      // Erro inesperado - logar mas não travar
-      logger.error('❌ Erro inesperado ao inicializar WhatsApp:', {
+      logger.error('❌ Erro ao inicializar WhatsApp:', {
         error: errorMsg,
         stack: error?.stack,
       });
+
       this.isConnected = false;
+      this.isInitializing = false;
     }
   }
 
@@ -190,6 +190,7 @@ class WhatsAppService {
     this.client.onMessage(async (message: Message) => {
       try {
         // Ignorar mensagens enviadas por nós
+        if (message.isGroupMsg && message.author === message.to) return;
         if (message.fromMe) return;
 
         const whatsappMessage: WhatsAppMessage = {
@@ -203,11 +204,8 @@ class WhatsAppService {
 
         logger.info(`📩 Mensagem recebida de ${message.from}: ${message.body}`);
 
-        // Salvar no Supabase (implementar depois)
+        // Salvar no banco de dados
         await this.saveMessageToDatabase(whatsappMessage);
-
-        // Aqui você pode adicionar lógica de auto-resposta ou chatbot
-        // await this.handleIncomingMessage(whatsappMessage);
 
       } catch (error) {
         logger.error('Erro ao processar mensagem:', error);
@@ -242,11 +240,11 @@ class WhatsAppService {
     }
 
     try {
-      const hostDevice = await this.client.getHostDevice();
+      const hostDevice: any = await this.client.getHostDevice();
       return {
-        phone: hostDevice.id.user,
-        name: hostDevice.pushname,
-        platform: hostDevice.platform,
+        phone: hostDevice?.id?.user || hostDevice?.wid?.user || 'Desconhecido',
+        name: hostDevice?.pushname || 'WhatsApp',
+        platform: 'WPPConnect',
       };
     } catch (error) {
       logger.error('Erro ao obter informações da conta:', error);
@@ -307,27 +305,13 @@ class WhatsAppService {
   }
 
   /**
-   * Salvar mensagem no banco de dados (Supabase)
+   * Salvar mensagem no banco de dados
    * @param message Mensagem para salvar
    */
   private async saveMessageToDatabase(message: WhatsAppMessage): Promise<void> {
     try {
-      // TODO: Implementar integração com Supabase
-      // Exemplo de estrutura da tabela:
-      /*
-        CREATE TABLE whatsapp_messages (
-          id SERIAL PRIMARY KEY,
-          from_number VARCHAR(50) NOT NULL,
-          to_number VARCHAR(50) NOT NULL,
-          message_body TEXT NOT NULL,
-          timestamp TIMESTAMPTZ NOT NULL,
-          is_group BOOLEAN DEFAULT false,
-          from_me BOOLEAN DEFAULT false,
-          created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-      */
-
-      logger.info(`💾 Mensagem salva no banco: ${message.from} -> ${message.to}`);
+      // TODO: Implementar integração com PostgreSQL via Prisma
+      logger.info(`💾 Mensagem salva: ${message.from} -> ${message.to}`);
     } catch (error) {
       logger.error('Erro ao salvar mensagem no banco:', error);
     }
@@ -339,10 +323,11 @@ class WhatsAppService {
   async disconnect(): Promise<void> {
     if (this.client) {
       try {
-        await this.client.logout();
+        await this.client.close();
         logger.info('👋 WhatsApp desconectado');
         this.isConnected = false;
         this.qrCode = null;
+        this.client = null;
       } catch (error) {
         logger.error('Erro ao desconectar WhatsApp:', error);
       }
@@ -359,8 +344,10 @@ class WhatsAppService {
       message = 'Conectado';
     } else if (this.qrCode !== null) {
       message = 'Aguardando leitura do QR Code';
-    } else if (this.client === null) {
+    } else if (this.isInitializing) {
       message = 'Inicializando WhatsApp...';
+    } else if (this.client === null) {
+      message = 'Não inicializado';
     } else {
       message = 'Aguardando QR Code...';
     }
