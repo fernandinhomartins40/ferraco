@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { IconSelector } from '@/components/admin/IconSelector';
+import { IconSelector } from '@/components/admin/LandingPageEditor/StyleControls/IconSelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ContactEditorProps {
