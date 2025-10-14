@@ -1,8 +1,8 @@
 /**
- * AdminWhatsApp - Conectar WhatsApp usando WPPConnect
+ * AdminWhatsApp - Gerenciamento completo do WhatsApp
  *
- * Nossa própria implementação - SEM dependências externas
- * WPPConnect roda dentro do backend Node.js
+ * Aba 1: Configurações e Conexão
+ * Aba 2: Chat (histórico de conversas + área de mensagens)
  */
 
 import { useState, useEffect } from 'react';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   MessageCircle,
   QrCode,
@@ -21,9 +22,13 @@ import {
   Loader2,
   Send,
   RefreshCw,
+  Settings,
+  MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/apiClient';
+import ConversationList from '@/components/whatsapp/ConversationList';
+import ChatArea from '@/components/whatsapp/ChatArea';
 
 interface WhatsAppStatus {
   connected: boolean;
@@ -45,6 +50,7 @@ const AdminWhatsApp = () => {
   const [testPhone, setTestPhone] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
   // Verificar status ao carregar
   useEffect(() => {
@@ -173,258 +179,251 @@ const AdminWhatsApp = () => {
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-3xl font-bold flex items-center gap-2">
-            <MessageCircle className="h-8 w-8 text-green-600" />
-            WhatsApp Business
-          </h2>
-          <p className="text-muted-foreground mt-2">
-            Integração WhatsApp usando WPPConnect (nativo do CRM)
+          <h1 className="text-3xl font-bold">WhatsApp Business</h1>
+          <p className="text-muted-foreground">
+            Gerencie suas conversas e configure a integração WhatsApp
           </p>
         </div>
 
-        {/* Info sobre implementação */}
-        <Alert className="border-blue-200 bg-blue-50">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            <strong>Implementação própria:</strong> O WhatsApp roda dentro do servidor do CRM.
-            Sem APIs externas, sem custos extras, 100% integrado.
-          </AlertDescription>
-        </Alert>
+        {/* Tabs */}
+        <Tabs defaultValue="chat" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Chat
+            </TabsTrigger>
+            <TabsTrigger value="config" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Configurações
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Status Card */}
-        <Alert className={status?.connected ? 'border-green-500 bg-green-50' : ''}>
-          {status?.connected ? (
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <AlertDescription>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">
-                  Status: <Badge className={status?.connected ? 'bg-green-600' : 'bg-gray-500'}>
-                    {status?.message}
-                  </Badge>
-                </p>
-                {account && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Conta conectada: {account.name} ({account.phone})
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={checkStatus}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-                {status?.connected && (
+          {/* ABA 1: CHAT - Estilo WhatsApp Web */}
+          <TabsContent value="chat" className="mt-6">
+            {!status?.connected ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-12">
+                    <MessageCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">WhatsApp não conectado</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Para acessar suas conversas, conecte o WhatsApp na aba "Configurações"
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const configTab = document.querySelector('[value="config"]') as HTMLElement;
+                        configTab?.click();
+                      }}
+                    >
+                      Ir para Configurações
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="h-[calc(100vh-16rem)]">
+                <div className="flex h-full overflow-hidden">
+                  {/* Sidebar - Lista de Conversas */}
+                  <div className="w-96 border-r flex-shrink-0 bg-white">
+                    <ConversationList
+                      selectedId={selectedConversationId}
+                      onSelectConversation={setSelectedConversationId}
+                    />
+                  </div>
+
+                  {/* Área Principal - Chat */}
+                  <div className="flex-1 flex flex-col bg-gray-50">
+                    {selectedConversationId ? (
+                      <ChatArea conversationId={selectedConversationId} />
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center text-gray-400">
+                        <div className="text-center">
+                          <MessageCircle className="h-24 w-24 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium">Selecione uma conversa</h3>
+                          <p className="text-sm mt-2">
+                            Escolha uma conversa na lista ao lado para começar
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* ABA 2: CONFIGURAÇÕES - Conexão e Testes */}
+          <TabsContent value="config" className="mt-6 space-y-6">
+            {/* Status Card */}
+            <Alert className={status?.connected ? 'border-green-500' : 'border-gray-300'}>
+              {status?.connected ? (
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
+              <AlertDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">
+                      Status: <Badge className={status?.connected ? 'bg-green-600' : 'bg-gray-500'}>
+                        {status?.message}
+                      </Badge>
+                    </p>
+                    {account && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Conta conectada: {account.name} ({account.phone})
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={checkStatus}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    {status?.connected && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDisconnect}
+                      >
+                        Desconectar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            {/* QR Code Card */}
+            {status?.hasQR && !status?.connected && qrCode && (
+              <Card className="border-2 border-green-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <QrCode className="h-6 w-6 text-green-600" />
+                    Escanear QR Code
+                  </CardTitle>
+                  <CardDescription>
+                    Abra o WhatsApp no celular e escaneie o código abaixo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center gap-4">
+                  <div className="bg-white p-4 rounded-lg border-2 border-green-500">
+                    <img
+                      src={qrCode}
+                      alt="QR Code WhatsApp"
+                      className="w-64 h-64"
+                    />
+                  </div>
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Como escanear:</strong><br />
+                      WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar aparelho
+                    </AlertDescription>
+                  </Alert>
                   <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDisconnect}
+                    variant="outline"
+                    onClick={handleReinitialize}
+                    className="w-full"
                   >
-                    Desconectar
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Gerar Novo QR Code
                   </Button>
-                )}
-              </div>
-            </div>
-          </AlertDescription>
-        </Alert>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* QR Code Card */}
-        {status?.hasQR && !status?.connected && qrCode && (
-          <Card className="border-2 border-green-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <QrCode className="h-6 w-6 text-green-600" />
-                Escanear QR Code
-              </CardTitle>
-              <CardDescription>
-                Abra o WhatsApp no celular e escaneie o código abaixo
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
-              <div className="bg-white p-4 rounded-lg border-2 border-green-500">
-                <img
-                  src={qrCode}
-                  alt="QR Code WhatsApp"
-                  className="w-64 h-64"
-                />
-              </div>
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Como escanear:</strong><br />
-                  WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar aparelho
-                </AlertDescription>
-              </Alert>
-              <Button
-                variant="outline"
-                onClick={handleReinitialize}
-                className="w-full"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Gerar Novo QR Code
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Test Message Card (quando conectado) */}
-        {status?.connected && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Enviar Mensagem de Teste</CardTitle>
-              <CardDescription>
-                Teste o envio de mensagens WhatsApp
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Número do destinatário (com código do país)
-                </label>
-                <Input
-                  placeholder="Ex: 5511999999999"
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  className="font-mono"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Formato: Código do país + DDD + Número (sem espaços ou caracteres especiais)
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Mensagem
-                </label>
-                <Input
-                  placeholder="Digite sua mensagem de teste"
-                  value={testMessage}
-                  onChange={(e) => setTestMessage(e.target.value)}
-                />
-              </div>
-
-              <Button
-                onClick={handleSendTestMessage}
-                disabled={isSending || !testPhone || !testMessage}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar Mensagem de Teste
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Features Card (quando conectado) */}
-        {status?.connected && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Funcionalidades Disponíveis</CardTitle>
-              <CardDescription>O que você pode fazer agora</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3 p-3 border rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Enviar mensagens</p>
-                    <p className="text-xs text-muted-foreground">
-                      Via API para qualquer número
-                    </p>
+            {/* Test Message Card (quando conectado) */}
+            {status?.connected && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Enviar Mensagem de Teste</CardTitle>
+                  <CardDescription>
+                    Teste o envio de mensagens WhatsApp
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Número (com DDD)</label>
+                    <Input
+                      type="text"
+                      placeholder="Ex: 11999999999"
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value)}
+                    />
                   </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 border rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Receber mensagens</p>
-                    <p className="text-xs text-muted-foreground">
-                      Automaticamente via webhook
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 border rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Sessão persistente</p>
-                    <p className="text-xs text-muted-foreground">
-                      Não precisa escanear QR sempre
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 border rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">100% integrado</p>
-                    <p className="text-xs text-muted-foreground">
-                      Roda no mesmo servidor do CRM
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Technical Info Card */}
-        <Card className="bg-slate-50">
-          <CardHeader>
-            <CardTitle className="text-base">Informações Técnicas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tecnologia:</span>
-              <span className="font-medium">WPPConnect</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Multidevice:</span>
-              <Badge variant="outline">Habilitado</Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Persistência:</span>
-              <Badge variant="outline">Volume Docker</Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">API Endpoints:</span>
-              <span className="font-mono text-xs">/api/whatsapp/*</span>
-            </div>
-          </CardContent>
-        </Card>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Mensagem</label>
+                    <Input
+                      type="text"
+                      placeholder="Digite sua mensagem..."
+                      value={testMessage}
+                      onChange={(e) => setTestMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isSending) {
+                          handleSendTestMessage();
+                        }
+                      }}
+                    />
+                  </div>
 
-        {/* Help Card */}
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-blue-900">Como funciona?</p>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• O WhatsApp inicia automaticamente quando o servidor liga</li>
-                  <li>• Se for a primeira vez, você precisará escanear o QR Code</li>
-                  <li>• A sessão fica salva e não precisa escanear novamente</li>
-                  <li>• Todas as mensagens são processadas em tempo real</li>
-                </ul>
-              </div>
+                  <Button
+                    onClick={handleSendTestMessage}
+                    disabled={isSending || !testPhone || !testMessage}
+                    className="w-full"
+                  >
+                    {isSending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Enviar Mensagem
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Info Cards */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Como Funciona</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground space-y-2">
+                  <p>1. Escaneie o QR Code com seu WhatsApp</p>
+                  <p>2. Aguarde a conexão ser estabelecida</p>
+                  <p>3. Acesse suas conversas na aba "Chat"</p>
+                  <p>4. Todas as mensagens são salvas no banco de dados</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Tecnologia</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground space-y-2">
+                  <p>• WPPConnect (WhatsApp Web API)</p>
+                  <p>• Socket.io (tempo real)</p>
+                  <p>• PostgreSQL (persistência)</p>
+                  <p>• React + TypeScript</p>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );
