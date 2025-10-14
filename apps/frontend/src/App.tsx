@@ -16,6 +16,7 @@ const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminLeads = lazy(() => import("./pages/admin/AdminLeads"));
 const AdminWhatsApp = lazy(() => import("./pages/admin/AdminWhatsApp"));
+const AdminWhatsAppChat = lazy(() => import("./pages/admin/AdminWhatsAppChat"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminLandingPageEditor = lazy(() => import("./pages/admin/AdminLandingPageEditor"));
@@ -99,6 +100,16 @@ const App = () => {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <AdminWhatsApp />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/whatsapp/chat"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminWhatsAppChat />
                 </Suspense>
               </ProtectedRoute>
             }
