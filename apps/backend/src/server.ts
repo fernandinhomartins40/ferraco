@@ -5,6 +5,9 @@ import { PORT, NODE_ENV } from './config/constants';
 import { logger } from './utils/logger';
 import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
 import { whatsappService } from './services/whatsappService';
+import whatsappChatService from './services/whatsappChatService';
+import { Server as SocketIOServer } from 'socket.io';
+import { createServer } from 'http';
 
 async function startServer(): Promise<void> {
   try {
@@ -20,11 +23,47 @@ async function startServer(): Promise<void> {
     // Create Express app
     const app = createApp();
 
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Setup WebSocket (Socket.io) for real-time chat
+    const io = new SocketIOServer(httpServer, {
+      cors: {
+        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+        methods: ['GET', 'POST'],
+        credentials: true,
+      },
+    });
+
+    // Configure WebSocket events
+    io.on('connection', (socket) => {
+      logger.info(`🔌 Cliente WebSocket conectado: ${socket.id}`);
+
+      socket.on('disconnect', () => {
+        logger.info(`🔌 Cliente WebSocket desconectado: ${socket.id}`);
+      });
+
+      // Client pode se inscrever em conversas específicas
+      socket.on('subscribe:conversation', (conversationId: string) => {
+        socket.join(`conversation:${conversationId}`);
+        logger.info(`📺 Cliente inscrito na conversa: ${conversationId}`);
+      });
+
+      socket.on('unsubscribe:conversation', (conversationId: string) => {
+        socket.leave(`conversation:${conversationId}`);
+        logger.info(`📺 Cliente desinscrito da conversa: ${conversationId}`);
+      });
+    });
+
+    // Pass Socket.io instance to WhatsAppChatService
+    whatsappChatService.setSocketServer(io);
+
     // Start server
-    const server = app.listen(PORT, () => {
+    const server = httpServer.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT} in ${NODE_ENV} mode`);
       logger.info(`📡 API available at http://localhost:${PORT}/api`);
       logger.info(`💚 Health check at http://localhost:${PORT}/health`);
+      logger.info(`🔌 WebSocket server ready for real-time chat`);
     });
 
     // Graceful shutdown

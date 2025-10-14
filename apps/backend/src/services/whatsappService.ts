@@ -18,6 +18,7 @@ import type { Whatsapp, Message } from '@wppconnect-team/wppconnect';
 import { logger } from '../utils/logger';
 import * as path from 'path';
 import * as fs from 'fs';
+import whatsappChatService from './whatsappChatService';
 
 interface WhatsAppMessage {
   from: string;
@@ -189,23 +190,10 @@ class WhatsAppService {
     // Listener para todas as mensagens
     this.client.onMessage(async (message: Message) => {
       try {
-        // Ignorar mensagens enviadas por nós
-        if (message.isGroupMsg && message.author === message.to) return;
-        if (message.fromMe) return;
-
-        const whatsappMessage: WhatsAppMessage = {
-          from: message.from,
-          to: message.to,
-          body: message.body,
-          timestamp: new Date(message.timestamp * 1000),
-          isGroup: message.isGroupMsg,
-          fromMe: message.fromMe,
-        };
-
         logger.info(`📩 Mensagem recebida de ${message.from}: ${message.body}`);
 
-        // Salvar no banco de dados
-        await this.saveMessageToDatabase(whatsappMessage);
+        // Sincronizar mensagem com o banco via WhatsAppChatService
+        await whatsappChatService.handleIncomingMessage(message);
 
       } catch (error) {
         logger.error('Erro ao processar mensagem:', error);
@@ -270,16 +258,6 @@ class WhatsAppService {
 
       logger.info(`✅ Mensagem enviada para ${to}`);
 
-      // Salvar mensagem enviada no banco
-      await this.saveMessageToDatabase({
-        from: 'me',
-        to: formattedNumber,
-        body: message,
-        timestamp: new Date(),
-        isGroup: false,
-        fromMe: true,
-      });
-
     } catch (error) {
       logger.error(`Erro ao enviar mensagem para ${to}:`, error);
       throw error;
@@ -305,16 +283,10 @@ class WhatsAppService {
   }
 
   /**
-   * Salvar mensagem no banco de dados
-   * @param message Mensagem para salvar
+   * Obter o cliente WPPConnect (usado pelo WhatsAppChatService)
    */
-  private async saveMessageToDatabase(message: WhatsAppMessage): Promise<void> {
-    try {
-      // TODO: Implementar integração com PostgreSQL via Prisma
-      logger.info(`💾 Mensagem salva: ${message.from} -> ${message.to}`);
-    } catch (error) {
-      logger.error('Erro ao salvar mensagem no banco:', error);
-    }
+  getClient(): Whatsapp | null {
+    return this.client;
   }
 
   /**
