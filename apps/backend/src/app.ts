@@ -26,6 +26,7 @@ import chatbotRoutes from './modules/chatbot/chatbot.routes';
 import kanbanColumnRoutes from './routes/kanbanColumn.routes';
 import uploadRoutes from './routes/upload.routes';
 import landingPageRoutes from './routes/landing-page.routes';
+import whatsappRoutes from './routes/whatsapp.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -80,6 +81,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/kanban-columns`, kanbanColumnRoutes);
   app.use(`${API_PREFIX}/upload`, uploadRoutes);
   app.use(`${API_PREFIX}/landing-page`, landingPageRoutes);
+  app.use(`${API_PREFIX}/whatsapp`, whatsappRoutes);
 
   logger.info('✅ All routes registered successfully');
 

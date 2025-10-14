@@ -4,6 +4,7 @@ import { connectDatabase, disconnectDatabase } from './config/database';
 import { PORT, NODE_ENV } from './config/constants';
 import { logger } from './utils/logger';
 import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
+import { whatsappService } from './services/whatsappService';
 
 async function startServer(): Promise<void> {
   try {
@@ -12,6 +13,11 @@ async function startServer(): Promise<void> {
 
     // Garantir que a coluna padrão do Kanban existe
     await ensureDefaultKanbanColumn();
+
+    // Inicializar WhatsApp Service (assíncrono, não bloqueia o servidor)
+    whatsappService.initialize().catch((error) => {
+      logger.error('❌ Erro ao inicializar WhatsApp (não bloqueia servidor):', error);
+    });
 
     // Create Express app
     const app = createApp();
@@ -29,6 +35,9 @@ async function startServer(): Promise<void> {
 
       server.close(async () => {
         logger.info('Server closed');
+
+        // Desconectar WhatsApp
+        await whatsappService.disconnect();
 
         await disconnectDatabase();
 

@@ -29,7 +29,7 @@ services:
       - "3050:3050"
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 3050
 
       # Database (conecta ao container postgres)
       DATABASE_URL: postgresql://ferraco:ferraco123@postgres:5432/ferraco_crm
@@ -49,11 +49,15 @@ services:
       # API
       API_PREFIX: ${API_PREFIX:-/api}
 
+      # WhatsApp
+      WHATSAPP_SESSIONS_PATH: /app/sessions
+
     volumes:
       # Dados persistentes
       - ./data/ferraco-data:/app/data
       - ./data/ferraco-logs:/app/logs
       - ./data/ferraco-uploads:/app/uploads
+      - ./data/ferraco-whatsapp-sessions:/app/sessions
 
     depends_on:
       postgres:
