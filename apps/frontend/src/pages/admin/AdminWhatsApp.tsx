@@ -53,11 +53,23 @@ const AdminWhatsApp = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Buscar QR Code quando disponível
+  // Buscar QR Code quando disponível (polling a cada 3 segundos)
   useEffect(() => {
+    let qrInterval: NodeJS.Timeout | null = null;
+
     if (status?.hasQR && !status?.connected) {
+      // Buscar imediatamente
       fetchQRCode();
+
+      // Polling para manter QR code atualizado
+      qrInterval = setInterval(() => {
+        fetchQRCode();
+      }, 3000);
     }
+
+    return () => {
+      if (qrInterval) clearInterval(qrInterval);
+    };
   }, [status]);
 
   // Buscar info da conta quando conectado
@@ -107,6 +119,19 @@ const AdminWhatsApp = () => {
       toast.success('WhatsApp desconectado');
     } catch (error) {
       toast.error('Erro ao desconectar WhatsApp');
+      console.error(error);
+    }
+  };
+
+  const handleReinitialize = async () => {
+    try {
+      toast.info('Gerando novo QR Code...');
+      await api.post('/whatsapp/reinitialize');
+      setQrCode(null);
+      setStatus({ connected: false, hasQR: false, message: 'Reinicializando...' });
+      toast.success('WhatsApp reinicializado! Aguarde o novo QR Code...');
+    } catch (error) {
+      toast.error('Erro ao reinicializar WhatsApp');
       console.error(error);
     }
   };
@@ -239,6 +264,14 @@ const AdminWhatsApp = () => {
                   WhatsApp → Mais opções (⋮) → Aparelhos conectados → Conectar aparelho
                 </AlertDescription>
               </Alert>
+              <Button
+                variant="outline"
+                onClick={handleReinitialize}
+                className="w-full"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Gerar Novo QR Code
+              </Button>
             </CardContent>
           </Card>
         )}

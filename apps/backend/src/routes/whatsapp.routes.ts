@@ -190,6 +190,29 @@ router.post('/disconnect', authenticate, async (req: Request, res: Response) => 
   }
 });
 
+/**
+ * POST /api/whatsapp/reinitialize
+ * Reinicializar WhatsApp (gerar novo QR code)
+ */
+router.post('/reinitialize', authenticate, async (req: Request, res: Response) => {
+  try {
+    await whatsappService.reinitialize();
+
+    res.json({
+      success: true,
+      message: 'WhatsApp reinicializado. Novo QR Code será gerado em alguns segundos.',
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao reinicializar WhatsApp:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao reinicializar WhatsApp',
+      message: error.message,
+    });
+  }
+});
+
 // ============================================================================
 // ROTAS DE CHAT
 // ============================================================================

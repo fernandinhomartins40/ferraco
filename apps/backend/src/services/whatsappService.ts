@@ -80,13 +80,11 @@ class WhatsAppService {
         // Callback QR Code
         (base64Qrimg: string, asciiQR: string, attempt: number) => {
           this.qrCode = base64Qrimg;
-          logger.info(`📱 QR Code gerado! Tentativa ${attempt}/5`);
+          logger.info(`📱 QR Code gerado! Tentativa ${attempt}`);
           logger.info('✅ Acesse /api/whatsapp/qr para visualizar o QR Code');
 
-          if (attempt >= 5) {
-            logger.warn('⚠️  Limite de tentativas atingido. QR Code expirou.');
-            this.qrCode = null;
-          }
+          // QR code é regenerado automaticamente pelo WPPConnect
+          // Não anular o código, sempre manter o mais recente disponível
         },
         // Callback status
         (statusSession: string, session: string) => {
@@ -307,9 +305,33 @@ class WhatsAppService {
   }
 
   /**
+   * Reinicializar conexão WhatsApp (gerar novo QR code)
+   */
+  async reinitialize(): Promise<void> {
+    logger.info('🔄 Reinicializando WhatsApp...');
+
+    // Desconectar sessão atual se existir
+    await this.disconnect();
+
+    // Resetar estados
+    this.isInitializing = false;
+    this.isConnected = false;
+    this.qrCode = null;
+    this.client = null;
+
+    // Aguardar 2 segundos antes de reiniciar
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Inicializar novamente
+    await this.initialize();
+
+    logger.info('✅ WhatsApp reinicializado');
+  }
+
+  /**
    * Obter status da conexão
    */
-  getStatus(): { connected: boolean; hasQR: boolean; message: string } {
+  getStatus(): { connected: boolean; hasQR: boolean; message: string; isInitializing: boolean } {
     let message = 'Inicializando...';
 
     if (this.isConnected) {
@@ -328,6 +350,7 @@ class WhatsAppService {
       connected: this.isConnected,
       hasQR: this.qrCode !== null,
       message,
+      isInitializing: this.isInitializing,
     };
   }
 }
