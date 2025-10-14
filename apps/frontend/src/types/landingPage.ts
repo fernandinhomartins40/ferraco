@@ -484,6 +484,18 @@ export interface ContactConfig {
     style: StyleConfig;
   };
   methods: ContactMethod[];
+  whatsappCta?: {
+    enabled: boolean;
+    title: string;
+    description: string;
+    buttonText: string;
+    phoneNumber: string; // número com DDD (ex: 11987654321)
+  };
+  benefits?: {
+    enabled: boolean;
+    title: string;
+    items: string[];
+  };
   form: ContactForm;
   layout: 'methods-only' | 'form-only' | 'split' | 'tabbed';
   map?: {

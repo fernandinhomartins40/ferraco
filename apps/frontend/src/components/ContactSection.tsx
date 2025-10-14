@@ -113,58 +113,54 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
             </div>
 
             {/* WhatsApp CTA */}
-            <Card className="shadow-elegant hover:shadow-glow transition-smooth bg-primary/5">
-              <CardContent className="p-6 text-center">
-                <MessageCircle className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h4 className="text-xl font-bold text-foreground mb-2">
-                  Atendimento via WhatsApp
-                </h4>
-                <p className="text-muted-foreground mb-4">
-                  Fale conosco diretamente pelo WhatsApp para atendimento rápido e personalizado
-                </p>
-                <Button 
-                  onClick={() => window.open('https://wa.me/5511987654321', '_blank')}
-                  variant="default"
-                  className="font-semibold transition-smooth hover:scale-105"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Chamar no WhatsApp
-                </Button>
-              </CardContent>
-            </Card>
+            {config?.whatsappCta?.enabled !== false && (
+              <Card className="shadow-elegant hover:shadow-glow transition-smooth bg-primary/5">
+                <CardContent className="p-6 text-center">
+                  <MessageCircle className="w-12 h-12 text-primary mx-auto mb-4" />
+                  <h4 className="text-xl font-bold text-foreground mb-2">
+                    {config?.whatsappCta?.title ?? 'Atendimento via WhatsApp'}
+                  </h4>
+                  <p className="text-muted-foreground mb-4">
+                    {config?.whatsappCta?.description ?? 'Fale conosco diretamente pelo WhatsApp para atendimento rápido e personalizado'}
+                  </p>
+                  <Button
+                    onClick={() => window.open(`https://wa.me/${config?.whatsappCta?.phoneNumber ?? '5511987654321'}`, '_blank')}
+                    variant="default"
+                    className="font-semibold transition-smooth hover:scale-105"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    {config?.whatsappCta?.buttonText ?? 'Chamar no WhatsApp'}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* CTA Section */}
           <div className="space-y-8">
-            <Card className="shadow-elegant hover:shadow-glow transition-smooth">
-              <CardContent className="p-8">
-                <h4 className="text-2xl font-bold text-foreground mb-4 text-center">
-                  Por que escolher a FerrAço?
-                </h4>
-                <div className="space-y-4">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                    <span className="text-muted-foreground">Orçamento grátis e sem compromisso</span>
+            {config?.benefits?.enabled !== false && (config?.benefits?.items?.length ?? 0) > 0 && (
+              <Card className="shadow-elegant hover:shadow-glow transition-smooth">
+                <CardContent className="p-8">
+                  <h4 className="text-2xl font-bold text-foreground mb-4 text-center">
+                    {config?.benefits?.title ?? 'Por que escolher a FerrAço?'}
+                  </h4>
+                  <div className="space-y-4">
+                    {(config?.benefits?.items ?? [
+                      'Orçamento grátis e sem compromisso',
+                      'Atendimento técnico especializado',
+                      'Entrega em todo o Brasil',
+                      'Garantia estendida inclusa',
+                      'Suporte pós-venda completo',
+                    ]).map((benefit, index) => (
+                      <div key={index} className="flex items-center">
+                        <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
+                        <span className="text-muted-foreground">{benefit}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                    <span className="text-muted-foreground">Atendimento técnico especializado</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                    <span className="text-muted-foreground">Entrega em todo o Brasil</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                    <span className="text-muted-foreground">Garantia estendida inclusa</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                    <span className="text-muted-foreground">Suporte pós-venda completo</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

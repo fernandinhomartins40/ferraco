@@ -88,6 +88,66 @@ export const ContactEditor = ({ config, onChange }: ContactEditorProps) => {
     });
   };
 
+  const updateWhatsappCta = (field: keyof NonNullable<typeof config.whatsappCta>, value: string | boolean) => {
+    onChange({
+      whatsappCta: {
+        enabled: config.whatsappCta?.enabled ?? true,
+        title: config.whatsappCta?.title ?? 'Atendimento via WhatsApp',
+        description: config.whatsappCta?.description ?? 'Fale conosco diretamente pelo WhatsApp',
+        buttonText: config.whatsappCta?.buttonText ?? 'Chamar no WhatsApp',
+        phoneNumber: config.whatsappCta?.phoneNumber ?? '5511987654321',
+        ...config.whatsappCta,
+        [field]: value,
+      },
+    });
+  };
+
+  const updateBenefits = (field: 'enabled' | 'title', value: boolean | string) => {
+    onChange({
+      benefits: {
+        enabled: config.benefits?.enabled ?? true,
+        title: config.benefits?.title ?? 'Por que escolher a FerrAço?',
+        items: config.benefits?.items ?? [],
+        ...config.benefits,
+        [field]: value,
+      },
+    });
+  };
+
+  const updateBenefitItem = (index: number, value: string) => {
+    const newItems = [...(config.benefits?.items ?? [])];
+    newItems[index] = value;
+    onChange({
+      benefits: {
+        enabled: config.benefits?.enabled ?? true,
+        title: config.benefits?.title ?? 'Por que escolher a FerrAço?',
+        items: newItems,
+      },
+    });
+  };
+
+  const addBenefitItem = () => {
+    const newItems = [...(config.benefits?.items ?? []), 'Novo benefício'];
+    onChange({
+      benefits: {
+        enabled: config.benefits?.enabled ?? true,
+        title: config.benefits?.title ?? 'Por que escolher a FerrAço?',
+        items: newItems,
+      },
+    });
+  };
+
+  const removeBenefitItem = (index: number) => {
+    const newItems = (config.benefits?.items ?? []).filter((_, i) => i !== index);
+    onChange({
+      benefits: {
+        enabled: config.benefits?.enabled ?? true,
+        title: config.benefits?.title ?? 'Por que escolher a FerrAço?',
+        items: newItems,
+      },
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Textos Principais */}
@@ -230,6 +290,113 @@ export const ContactEditor = ({ config, onChange }: ContactEditorProps) => {
                 <Button onClick={addMethod} variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Primeiro Método
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp CTA */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Card WhatsApp</CardTitle>
+          <CardDescription>Configure o card de atendimento via WhatsApp</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Título</Label>
+            <Input
+              value={config.whatsappCta?.title ?? 'Atendimento via WhatsApp'}
+              onChange={(e) => updateWhatsappCta('title', e.target.value)}
+              placeholder="Atendimento via WhatsApp"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Descrição</Label>
+            <Input
+              value={config.whatsappCta?.description ?? 'Fale conosco diretamente pelo WhatsApp'}
+              onChange={(e) => updateWhatsappCta('description', e.target.value)}
+              placeholder="Fale conosco diretamente pelo WhatsApp"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Texto do Botão</Label>
+            <Input
+              value={config.whatsappCta?.buttonText ?? 'Chamar no WhatsApp'}
+              onChange={(e) => updateWhatsappCta('buttonText', e.target.value)}
+              placeholder="Chamar no WhatsApp"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Número do WhatsApp</Label>
+            <Input
+              value={config.whatsappCta?.phoneNumber ?? '5511987654321'}
+              onChange={(e) => updateWhatsappCta('phoneNumber', e.target.value)}
+              placeholder="5511987654321"
+            />
+            <p className="text-xs text-muted-foreground">
+              Número com código do país e DDD (ex: 5511987654321)
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Benefícios */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Card "Por que escolher?"</CardTitle>
+              <CardDescription>Configure os benefícios exibidos</CardDescription>
+            </div>
+            <Button onClick={addBenefitItem} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Título do Card</Label>
+            <Input
+              value={config.benefits?.title ?? 'Por que escolher a FerrAço?'}
+              onChange={(e) => updateBenefits('title', e.target.value)}
+              placeholder="Por que escolher a FerrAço?"
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <Label>Benefícios</Label>
+            {(config.benefits?.items ?? []).map((item, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  value={item}
+                  onChange={(e) => updateBenefitItem(index, e.target.value)}
+                  placeholder={`Benefício ${index + 1}`}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeBenefitItem(index)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            {(config.benefits?.items?.length ?? 0) === 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                <p className="mb-2 text-sm">Nenhum benefício adicionado</p>
+                <Button onClick={addBenefitItem} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Primeiro Benefício
                 </Button>
               </div>
             )}
