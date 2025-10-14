@@ -8,14 +8,13 @@ echo "📦 Ambiente: $NODE_ENV"
 echo "🐳 Porta: $PORT"
 echo "========================================="
 
-# Criar diretório de uploads se não existir
-echo "📁 Criando diretório de uploads..."
-mkdir -p /app/uploads
-chmod 755 /app/uploads
-echo "✅ Diretório de uploads criado"
-
-# Criar diretórios necessários
-mkdir -p /app/data /app/logs
+# Criar diretórios necessários com permissões corretas
+echo "📁 Criando diretórios necessários..."
+mkdir -p /app/uploads /app/data /app/logs /app/sessions
+chmod 755 /app/uploads /app/data /app/logs
+chmod 777 /app/sessions
+chown -R node:node /app/sessions
+echo "✅ Diretórios criados com permissões corretas"
 
 # Migrar banco de dados (Prisma) - pular se DATABASE_URL não estiver configurado
 if [ -n "$DATABASE_URL" ]; then
