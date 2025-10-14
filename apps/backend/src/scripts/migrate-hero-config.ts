@@ -10,16 +10,17 @@ const prisma = new PrismaClient();
 async function migrateHeroConfig() {
   console.log('🔄 Iniciando migração do HeroConfig...');
 
-  const landingPages = await prisma.landingPage.findMany();
+  const landingPages = await prisma.landingPageConfig.findMany();
 
   for (const page of landingPages) {
-    const config = page.config as any;
+    // Parse do JSON do hero
+    const heroConfig = JSON.parse(page.hero);
 
     // Verificar se já tem o novo formato (slides)
-    if (config.hero && !config.hero.slides) {
+    if (heroConfig && !heroConfig.slides) {
       console.log(`📝 Migrando landing page: ${page.id}`);
 
-      const oldHero = config.hero;
+      const oldHero = heroConfig;
 
       // Criar slide único com os dados antigos
       const newHero = {
@@ -92,19 +93,17 @@ async function migrateHeroConfig() {
         style: oldHero.style || {},
       };
 
-      // Atualizar config
-      config.hero = newHero;
-
-      await prisma.landingPage.update({
+      // Atualizar hero no banco
+      await prisma.landingPageConfig.update({
         where: { id: page.id },
-        data: { config },
+        data: { hero: JSON.stringify(newHero) },
       });
 
       console.log(`✅ Landing page ${page.id} migrada com sucesso`);
-    } else if (config.hero && config.hero.slides) {
+    } else if (heroConfig && heroConfig.slides) {
       console.log(`⏭️  Landing page ${page.id} já está no novo formato`);
     } else {
-      console.log(`⚠️  Landing page ${page.id} não tem seção hero`);
+      console.log(`⚠️  Landing page ${page.id} não tem seção hero ou hero está vazio`);
     }
   }
 
