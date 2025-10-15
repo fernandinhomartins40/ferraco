@@ -319,23 +319,15 @@ export const AdminLandingPageEditor = () => {
 
                 {/* Preview Content */}
                 {showPreview ? (
-                  <ScrollArea
-                    className={`
-                      mx-auto border rounded-lg overflow-hidden bg-background transition-all
-                      ${previewMode === 'mobile' ? 'max-w-[375px]' : ''}
-                      ${previewMode === 'tablet' ? 'max-w-[768px]' : ''}
-                      ${previewMode === 'desktop' ? 'w-full' : ''}
-                    `}
-                    style={{ height: '600px' }}
-                  >
+                  <div className="w-full border rounded-lg overflow-auto bg-background" style={{ height: '600px' }}>
                     <LandingPagePreview
                       config={config}
                       currentSection={currentSection}
-                      highlightSection={true}
+                      previewMode={previewMode}
                     />
-                  </ScrollArea>
+                  </div>
                 ) : (
-                  <div className="aspect-[16/10] bg-muted rounded-lg flex items-center justify-center">
+                  <div className="h-[600px] bg-muted rounded-lg flex items-center justify-center">
                     <p className="text-muted-foreground">Preview oculto</p>
                   </div>
                 )}
