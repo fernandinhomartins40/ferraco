@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { chatbotService, type Product, type FAQItem, type ShareLink } from '@/services/chatbot.service';
+import { uploadService } from '@/services/upload.service';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -76,6 +77,7 @@ export const AdminChatbotConfig = () => {
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([]);
   const [activeTab, setActiveTab] = useState('behavior');
   const [copied, setCopied] = useState('');
+  const [uploadingImages, setUploadingImages] = useState<{ [key: string]: boolean }>({});
 
   // Buscar configuração do backend
   const { data: config, isLoading } = useQuery({
@@ -200,6 +202,41 @@ export const AdminChatbotConfig = () => {
 
     const newVideos = product.videos.filter((_, idx) => idx !== index);
     updateProduct(productId, 'videos', newVideos);
+  };
+
+  // ===== FUNÇÕES DE UPLOAD =====
+
+  const handleImageUpload = async (productId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    setUploadingImages({ ...uploadingImages, [productId]: true });
+
+    try {
+      const filesArray = Array.from(files);
+      const uploadedUrls = await uploadService.uploadMultipleImages(filesArray);
+
+      const currentImages = product.images || [];
+      const newImages = [...currentImages, ...uploadedUrls];
+
+      updateProduct(productId, 'images', newImages);
+
+      toast({
+        title: 'Sucesso!',
+        description: `${filesArray.length} imagem(ns) enviada(s) com sucesso.`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: 'Erro no upload',
+        description: error.message || 'Não foi possível fazer upload das imagens.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingImages({ ...uploadingImages, [productId]: false });
+    }
   };
 
   // Funções para FAQ
@@ -724,18 +761,28 @@ export const AdminChatbotConfig = () => {
                           {/* Imagens */}
                           <div className="space-y-2">
                             <Label className="flex items-center gap-2">
-                              <span>Imagens Adicionais (WhatsApp)</span>
+                              <span>Imagens para WhatsApp (Upload de Arquivos)</span>
                               <Badge variant="outline" className="text-xs">Opcional</Badge>
                             </Label>
-                            <Textarea
-                              placeholder="Cole URLs de imagens, uma por linha"
-                              value={(product.images || []).join('\n')}
-                              onChange={(e) => updateProduct(product.id, 'images',
-                                e.target.value.split('\n').filter(s => s.trim())
+                            <div className="flex gap-2">
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={(e) => handleImageUpload(product.id, e.target.files)}
+                                className="bg-white flex-1"
+                                disabled={uploadingImages[product.id]}
+                              />
+                              {uploadingImages[product.id] && (
+                                <Button disabled size="sm">
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Enviando...
+                                </Button>
                               )}
-                              className="bg-white font-mono text-sm"
-                              rows={3}
-                            />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              📸 Selecione uma ou múltiplas imagens (JPG, PNG, WebP). Serão enviadas via WhatsApp.
+                            </p>
                             {product.images && product.images.length > 0 && (
                               <div className="flex gap-2 flex-wrap mt-2">
                                 {product.images.map((img, idx) => (
