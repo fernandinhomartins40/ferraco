@@ -17,7 +17,12 @@ export class ChatbotSessionService {
   /**
    * Inicia uma nova sessão de chatbot
    */
-  async startSession(data?: { userAgent?: string; ipAddress?: string }) {
+  async startSession(data?: {
+    userAgent?: string;
+    ipAddress?: string;
+    source?: string;
+    campaign?: string;
+  }) {
     const sessionId = randomUUID();
 
     // Buscar config do chatbot
@@ -35,6 +40,8 @@ export class ChatbotSessionService {
         conversationData: JSON.stringify({
           userAgent: data?.userAgent,
           ipAddress: data?.ipAddress,
+          source: data?.source,
+          campaign: data?.campaign,
         }),
       },
     });
@@ -426,12 +433,23 @@ export class ChatbotSessionService {
 
       if (!systemUser) return;
 
+      // Extrair source e campaign do conversationData
+      let conversationData: any = {};
+      try {
+        conversationData = JSON.parse(session.conversationData || '{}');
+      } catch (error) {
+        logger.error('Erro ao parsear conversationData:', error);
+      }
+
+      const leadSource = conversationData.source || 'Chatbot';
+      const campaign = conversationData.campaign;
+
       const lead = await prisma.lead.create({
         data: {
           name: session.capturedName,
           phone: session.capturedPhone,
           email: session.capturedEmail,
-          source: 'Chatbot',
+          source: leadSource,
           status: 'NOVO',
           priority: session.qualificationScore >= 50 ? 'HIGH' : 'MEDIUM',
           leadScore: session.qualificationScore,
@@ -441,6 +459,7 @@ export class ChatbotSessionService {
             segment: session.segment,
             marketingOptIn: session.marketingOptIn,
             userResponses: session.userResponses,
+            campaign: campaign,
           }),
           createdById: systemUser.id,
         },

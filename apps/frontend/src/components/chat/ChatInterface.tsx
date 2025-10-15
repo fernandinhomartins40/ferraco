@@ -20,9 +20,11 @@ interface ChatOption {
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => void;
+  source?: string;
+  campaign?: string;
 }
 
-export const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
+export const ChatInterface = ({ onSendMessage, source = 'website', campaign }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -46,6 +48,8 @@ export const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
       try {
         const response = await axios.post('/api/chatbot/session/start', {
           userAgent: navigator.userAgent,
+          source,
+          campaign,
         });
 
         const { session, message, options } = response.data.data;

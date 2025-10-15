@@ -16,11 +16,13 @@ export class ChatbotSessionController {
    */
   startSession = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { userAgent, ipAddress } = req.body;
+      const { userAgent, ipAddress, source, campaign } = req.body;
 
       const result = await this.sessionService.startSession({
         userAgent: userAgent || req.headers['user-agent'],
         ipAddress: ipAddress || req.ip,
+        source,
+        campaign,
       });
 
       successResponse(res, result, 'Sessão iniciada com sucesso');
