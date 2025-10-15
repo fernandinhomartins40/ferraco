@@ -100,12 +100,10 @@ class WhatsAppService {
               this.isInitializing = false;
               logger.info('✅ WhatsApp conectado com sucesso!');
 
-              // Sincronizar chats e contatos quando conectar
+              // ✅ SIMPLIFICADO: Apenas define o cliente, sem sync automática
+              // O sistema só envia mensagens, não precisa carregar histórico
               if (this.client) {
                 whatsappChatService.setWhatsAppClient(this.client);
-                setTimeout(() => {
-                  whatsappChatService.syncAllChatsAndContacts();
-                }, 5000); // Aguardar 5s para WhatsApp carregar completamente
               }
               break;
 
@@ -148,7 +146,6 @@ class WhatsAppService {
           folderNameToken: this.sessionsPath,
           mkdirFolderToken: '',
           logQR: false,
-          syncFullHistory: true, // ✅ Força sincronização máxima de histórico
           puppeteerOptions: {
             headless: 'new' as any,
             args: [

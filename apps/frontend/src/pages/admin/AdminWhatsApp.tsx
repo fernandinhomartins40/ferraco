@@ -304,24 +304,9 @@ const AdminWhatsApp = () => {
                       <RefreshCw className="h-4 w-4" />
                     </Button>
                     {status?.connected && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSyncChats}
-                          disabled={isSyncing}
-                          title="Sincronizar chats e contatos"
-                        >
-                          {isSyncing ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4" />
-                          )}
-                          <span className="ml-1">Sincronizar</span>
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
+                      <Button
+                        variant="destructive"
+                        size="sm"
                           onClick={handleDisconnect}
                         >
                           Desconectar

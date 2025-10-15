@@ -591,9 +591,17 @@ export class WhatsAppChatService {
 
   /**
    * Lista todas as conversas (ordenadas por última mensagem)
+   * ✅ SIMPLIFICADO: Só retorna conversas onde O SISTEMA enviou mensagens
    */
   async getConversations(limit = 50) {
     return prisma.whatsAppConversation.findMany({
+      where: {
+        messages: {
+          some: {
+            fromMe: true, // ✅ Só conversas com mensagens enviadas pelo sistema
+          },
+        },
+      },
       take: limit,
       orderBy: { lastMessageAt: 'desc' },
       include: {
@@ -620,10 +628,14 @@ export class WhatsAppChatService {
 
   /**
    * Lista mensagens de uma conversa (com paginação)
+   * ✅ SIMPLIFICADO: Só retorna mensagens enviadas pelo sistema
    */
   async getMessages(conversationId: string, limit = 100, offset = 0) {
     return prisma.whatsAppMessage.findMany({
-      where: { conversationId },
+      where: {
+        conversationId,
+        fromMe: true, // ✅ Só mensagens enviadas pelo sistema
+      },
       orderBy: { timestamp: 'asc' },
       take: limit,
       skip: offset,
