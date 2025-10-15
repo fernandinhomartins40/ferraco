@@ -1,6 +1,7 @@
-import { TrendingUp, Users, Globe, Clock } from "lucide-react";
+import { TrendingUp, Users, Globe, Clock, Award, Target, Zap, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ExperienceConfig } from "@/types/landingPage";
+import * as LucideIcons from 'lucide-react';
 
 interface ExperienceSectionProps {
   onLeadModalOpen: () => void;
@@ -61,7 +62,8 @@ const ExperienceSection = ({ onLeadModalOpen, config }: ExperienceSectionProps) 
 
   // Renderizar ícone dinâmico
   const renderIcon = (iconName: string, index: number) => {
-    const IconComponent = require('lucide-react')[iconName];
+    // Usar wildcard import do lucide-react
+    const IconComponent = (LucideIcons as any)[iconName];
     if (IconComponent) {
       return <IconComponent className="w-12 h-12 text-secondary" />;
     }
