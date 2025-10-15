@@ -92,48 +92,83 @@ const AboutSection = ({ onLeadModalOpen, config }: AboutSectionProps) => {
 
         {/* Experience Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
-              25+ Anos de Experiência
-            </h3>
-            <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-              Nossa trajetória é marcada pela constante busca por excelência e inovação. 
-              Ao longo de mais de duas décadas, construímos relacionamentos sólidos com 
-              nossos clientes, baseados na confiança, qualidade e resultados excepcionais.
-            </p>
-            <div className="grid grid-cols-2 gap-6 mb-8">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary mb-2">5.000+</div>
-                <div className="text-muted-foreground">Clientes Atendidos</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary mb-2">25+</div>
-                <div className="text-muted-foreground">Anos de Mercado</div>
-              </div>
-            </div>
-            <Button 
-              onClick={onLeadModalOpen}
-              size="lg"
-              className="font-semibold px-8 py-4 transition-smooth hover:scale-105"
-            >
-              Conheça Nossa História
-            </Button>
-          </div>
+          {/* Experience Column */}
+          {config?.experience?.enabled !== false && (
+            <div>
+              <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+                {config?.experience?.title || "25+ Anos de Experiência"}
+              </h3>
+              <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+                {config?.experience?.description || "Nossa trajetória é marcada pela constante busca por excelência e inovação. Ao longo de mais de duas décadas, construímos relacionamentos sólidos com nossos clientes, baseados na confiança, qualidade e resultados excepcionais."}
+              </p>
 
-          <div className="bg-white rounded-2xl p-8 shadow-elegant">
-            <h4 className="text-2xl font-bold text-foreground mb-6 flex items-center">
-              <Target className="w-6 h-6 text-primary mr-3" />
-              Nossos Diferenciais
-            </h4>
-            <div className="grid grid-cols-1 gap-4">
-              {differentials.map((differential, index) => (
-                <div key={index} className="flex items-center">
-                  <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                  <span className="text-muted-foreground">{differential}</span>
+              {/* Stats */}
+              {config?.stats && config.stats.length > 0 && (
+                <div className={`grid gap-6 mb-8 ${config.stats.length === 2 ? 'grid-cols-2' : `grid-cols-${Math.min(config.stats.length, 3)}`}`}>
+                  {config.stats.map((stat) => (
+                    <div key={stat.id} className="text-center">
+                      <div className="text-4xl font-bold text-primary mb-2">{stat.value}</div>
+                      <div className="text-muted-foreground">{stat.label}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {/* Button */}
+              {config?.experience?.button && (
+                <Button
+                  onClick={onLeadModalOpen}
+                  size="lg"
+                  className="font-semibold px-8 py-4 transition-all duration-300 hover:scale-105"
+                  style={{
+                    backgroundColor: config.experience.button.style?.backgroundColor || '#10b981',
+                    color: config.experience.button.style?.textColor || '#ffffff',
+                    ...(config.experience.button.style || {}),
+                  }}
+                  onMouseEnter={(e) => {
+                    if (config.experience?.button?.style?.hover) {
+                      const target = e.currentTarget;
+                      const hover = config.experience.button.style.hover;
+                      if (hover.backgroundColor) target.style.backgroundColor = hover.backgroundColor;
+                      if (hover.textColor) target.style.color = hover.textColor;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (config.experience?.button?.style) {
+                      const target = e.currentTarget;
+                      const style = config.experience.button.style;
+                      target.style.backgroundColor = style.backgroundColor || '#10b981';
+                      target.style.color = style.textColor || '#ffffff';
+                    }
+                  }}
+                >
+                  {config.experience.button.text || "Conheça Nossa História"}
+                </Button>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Differentials Card */}
+          {config?.differentialsCard?.enabled !== false && (
+            <div className="bg-white rounded-2xl p-8 shadow-elegant">
+              <h4 className="text-2xl font-bold text-foreground mb-6 flex items-center">
+                {config?.differentialsCard?.icon && renderIcon(config.differentialsCard.icon)}
+                {!config?.differentialsCard?.icon && <Target className="w-6 h-6 text-primary mr-3" />}
+                {config?.differentialsCard?.title || "Nossos Diferenciais"}
+              </h4>
+              <div className="grid grid-cols-1 gap-4">
+                {(config?.differentialsCard?.differentials && config.differentialsCard.differentials.length > 0
+                  ? config.differentialsCard.differentials
+                  : differentials.map((text, i) => ({ id: `default-${i}`, text, icon: 'CheckCircle' }))
+                ).map((differential) => (
+                  <div key={differential.id} className="flex items-center">
+                    {differential.icon ? renderIcon(differential.icon) : <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />}
+                    <span className="text-muted-foreground">{differential.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

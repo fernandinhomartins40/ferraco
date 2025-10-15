@@ -307,6 +307,30 @@ export interface AboutStats {
   style?: StyleConfig;
 }
 
+export interface AboutDifferential {
+  id: string;
+  text: string;
+  icon?: string;
+}
+
+export interface AboutExperienceSection {
+  enabled: boolean;
+  title: string;
+  description: string;
+  button?: {
+    text: string;
+    href: string;
+    style?: HoverableStyleConfig;
+  };
+}
+
+export interface AboutDifferentialsCard {
+  enabled: boolean;
+  title: string;
+  icon?: string;
+  differentials: AboutDifferential[];
+}
+
 export interface AboutConfig {
   enabled: boolean;
   title: {
@@ -323,6 +347,8 @@ export interface AboutConfig {
   };
   features: AboutFeature[];
   stats?: AboutStats[];
+  experience?: AboutExperienceSection;
+  differentialsCard?: AboutDifferentialsCard;
   image?: ImageConfig;
   layout: 'text-only' | 'text-image' | 'text-features' | 'full';
   imagePosition?: 'left' | 'right';
