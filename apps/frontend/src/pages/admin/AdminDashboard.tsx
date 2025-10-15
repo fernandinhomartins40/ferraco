@@ -18,7 +18,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   LineChart,
-  Line
+  Line,
+  Cell
 } from 'recharts';
 import {
   Users,
@@ -33,13 +34,14 @@ import {
   Activity,
   Loader2
 } from 'lucide-react';
-import { useLeadsStats, useLeadsStatsByStatus, useLeadsStatsBySource, useLeadsTimeline, useLeads } from '@/hooks/api/useLeads';
+import { useLeadsStats, useLeadsStatsBySource, useLeadsTimeline, useLeads } from '@/hooks/api/useLeads';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useKanbanColumns } from '@/hooks/useKanbanColumns';
 
 const AdminDashboard = () => {
   // Buscar dados reais do backend
   const { data: stats, isLoading: statsLoading } = useLeadsStats();
-  const { data: statsByStatus, isLoading: statusLoading } = useLeadsStatsByStatus();
+  const { columnStats, isLoadingStats: statusLoading } = useKanbanColumns();
   const { data: statsBySource } = useLeadsStatsBySource();
   const { data: timeline, isLoading: timelineLoading } = useLeadsTimeline(7);
   const { data: recentLeadsData, isLoading: leadsLoading } = useLeads({ limit: 5, sortBy: 'createdAt', sortOrder: 'desc' });
@@ -66,12 +68,12 @@ const AdminDashboard = () => {
   const leadsToday = stats?.todayCount || 0;
   const conversionRate = stats?.conversionRate || 0;
 
-  // Preparar dados para gráfico de funil por status
-  const funnelData = statsByStatus ? Object.entries(statsByStatus).map(([status, count]) => ({
-    name: getStatusLabel(status),
-    value: count as number,
-    color: getStatusColor(status),
-  })) : [];
+  // Preparar dados para gráfico de funil por status (usando colunas Kanban customizadas)
+  const funnelData = columnStats.map(stat => ({
+    name: stat.name,
+    value: stat.count,
+    color: stat.color,
+  }));
 
   // Formatar timeline para gráfico
   const timelineChartData = timeline?.map(item => ({
@@ -226,7 +228,11 @@ const AdminDashboard = () => {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                      <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                        {funnelData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (

@@ -56,6 +56,14 @@ export interface UpdateKanbanColumnDto {
   status: string;
 }
 
+export interface KanbanColumnStats {
+  columnId: string;
+  name: string;
+  color: string;
+  status: string;
+  count: number;
+}
+
 export const kanbanColumnsService = {
   // GET /api/kanban-columns - Listar todas as colunas
   async getAll(): Promise<KanbanColumn[]> {
@@ -83,6 +91,12 @@ export const kanbanColumnsService = {
   // PUT /api/kanban-columns/reorder - Reordenar colunas
   async reorder(columnIds: string[]): Promise<KanbanColumn[]> {
     const response = await apiClient.put(`${API_URL}/reorder`, { columnIds });
+    return response.data;
+  },
+
+  // GET /api/kanban-columns/stats - Obter estatísticas por coluna
+  async getStats(): Promise<KanbanColumnStats[]> {
+    const response = await apiClient.get(`${API_URL}/stats`);
     return response.data;
   },
 };

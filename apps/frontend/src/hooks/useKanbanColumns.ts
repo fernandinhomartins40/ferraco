@@ -10,10 +10,17 @@ export function useKanbanColumns() {
     queryFn: () => kanbanColumnsService.getAll(),
   });
 
+  const { data: columnStats = [], isLoading: isLoadingStats } = useQuery({
+    queryKey: ['kanban-columns-stats'],
+    queryFn: () => kanbanColumnsService.getStats(),
+    staleTime: 30000, // 30 seconds
+  });
+
   const createColumn = useMutation({
     mutationFn: (data: CreateKanbanColumnDto) => kanbanColumnsService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kanban-columns'] });
+      queryClient.invalidateQueries({ queryKey: ['kanban-columns-stats'] });
       toast.success('Coluna criada com sucesso');
     },
     onError: () => {
@@ -26,6 +33,7 @@ export function useKanbanColumns() {
       kanbanColumnsService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kanban-columns'] });
+      queryClient.invalidateQueries({ queryKey: ['kanban-columns-stats'] });
       toast.success('Coluna atualizada com sucesso');
     },
     onError: () => {
@@ -37,6 +45,7 @@ export function useKanbanColumns() {
     mutationFn: (id: string) => kanbanColumnsService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kanban-columns'] });
+      queryClient.invalidateQueries({ queryKey: ['kanban-columns-stats'] });
       toast.success('Coluna removida com sucesso');
     },
     onError: () => {
@@ -56,7 +65,9 @@ export function useKanbanColumns() {
 
   return {
     columns,
+    columnStats,
     isLoading,
+    isLoadingStats,
     error,
     createColumn,
     updateColumn,

@@ -151,4 +151,39 @@ export class KanbanColumnController {
       res.status(500).json({ error: 'Erro ao reordenar colunas do kanban' });
     }
   }
+
+  // GET /api/kanban-columns/stats - Obter estatísticas por coluna
+  async getStats(req: Request, res: Response) {
+    try {
+      // Buscar todas as colunas ativas
+      const columns = await prisma.kanbanColumn.findMany({
+        where: { isActive: true },
+        orderBy: { order: 'asc' },
+      });
+
+      // Para cada coluna, contar quantos leads têm aquele status
+      const statsPromises = columns.map(async (column) => {
+        const count = await prisma.lead.count({
+          where: {
+            status: column.status,
+          },
+        });
+
+        return {
+          columnId: column.id,
+          name: column.name,
+          color: column.color,
+          status: column.status,
+          count,
+        };
+      });
+
+      const stats = await Promise.all(statsPromises);
+
+      res.json(stats);
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas das colunas:', error);
+      res.status(500).json({ error: 'Erro ao buscar estatísticas das colunas do kanban' });
+    }
+  }
 }

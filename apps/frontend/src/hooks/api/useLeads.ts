@@ -106,6 +106,7 @@ export const useCreateLead = () => {
       queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
       queryClient.invalidateQueries({ queryKey: leadKeys.statsByStatus() });
       queryClient.invalidateQueries({ queryKey: leadKeys.statsBySource() });
+      queryClient.invalidateQueries({ queryKey: ['kanban-columns-stats'] });
       toast({
         title: 'Sucesso!',
         description: 'Lead criado com sucesso.',
@@ -136,6 +137,7 @@ export const useUpdateLead = () => {
       queryClient.invalidateQueries({ queryKey: leadKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
       queryClient.invalidateQueries({ queryKey: leadKeys.statsByStatus() });
+      queryClient.invalidateQueries({ queryKey: ['kanban-columns-stats'] });
       toast({
         title: 'Sucesso!',
         description: 'Lead atualizado com sucesso.',
@@ -165,6 +167,7 @@ export const useDeleteLead = () => {
       queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
       queryClient.invalidateQueries({ queryKey: leadKeys.statsByStatus() });
       queryClient.invalidateQueries({ queryKey: leadKeys.statsBySource() });
+      queryClient.invalidateQueries({ queryKey: ['kanban-columns-stats'] });
       toast({
         title: 'Sucesso!',
         description: 'Lead deletado com sucesso.',

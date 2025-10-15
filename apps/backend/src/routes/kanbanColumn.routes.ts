@@ -8,6 +8,9 @@ const controller = new KanbanColumnController();
 // Todas as rotas requerem autenticação
 router.use(authenticate);
 
+// GET /api/kanban-columns/stats - Obter estatísticas por coluna (MUST BE BEFORE '/')
+router.get('/stats', controller.getStats.bind(controller));
+
 // GET /api/kanban-columns - Listar todas as colunas
 router.get('/', controller.getAll.bind(controller));
 
