@@ -4,8 +4,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Instalar dependências do Puppeteer/Chromium (necessário para venom-bot)
+# Instalar bash e dependências do Puppeteer/Chromium (necessário para WPPConnect)
 RUN apk add --no-cache \
+    bash \
     chromium \
     nss \
     freetype \
@@ -35,7 +36,7 @@ RUN npm run build
 
 # Gerar Prisma Client do backend
 WORKDIR /app/apps/backend
-RUN npm run prisma:generate
+RUN npx prisma generate
 
 # Stage 2: Runtime - Container Único
 FROM node:20-alpine
@@ -46,8 +47,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Instalar Nginx, OpenSSL e dependências do Chromium/Puppeteer
+# Instalar Nginx, OpenSSL, bash e dependências do Chromium/Puppeteer
 RUN apk add --no-cache \
+    bash \
     nginx \
     openssl \
     chromium \
