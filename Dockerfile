@@ -30,9 +30,8 @@ COPY apps ./apps
 # Instalar todas as dependências (workspaces)
 RUN npm ci
 
-# Build do frontend
-WORKDIR /app/apps/frontend
-RUN npm run build
+# Build do frontend (deve ser executado da raiz do monorepo)
+RUN npm run build:frontend
 
 # Gerar Prisma Client do backend
 WORKDIR /app/apps/backend
