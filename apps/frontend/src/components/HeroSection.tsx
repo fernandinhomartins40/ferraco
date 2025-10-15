@@ -201,7 +201,33 @@ const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
                   onClick={() => handleButtonClick(activeSlide.buttons.primary?.href)}
                   size="lg"
                   variant="secondary"
-                  className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 transition-smooth hover:scale-105 shadow-glow"
+                  className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 transition-all duration-300 hover:scale-105 shadow-lg"
+                  style={{
+                    backgroundColor: activeSlide.buttons.primary.style?.backgroundColor || '#10b981',
+                    color: activeSlide.buttons.primary.style?.textColor || '#ffffff',
+                    border: activeSlide.buttons.primary.style?.border,
+                    ...(activeSlide.buttons.primary.style || {}),
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeSlide.buttons.primary?.style?.hover) {
+                      const target = e.currentTarget;
+                      const hover = activeSlide.buttons.primary.style.hover;
+                      if (hover.backgroundColor) target.style.backgroundColor = hover.backgroundColor;
+                      if (hover.textColor) target.style.color = hover.textColor;
+                      if (hover.border) target.style.border = hover.border;
+                      if (hover.transform) target.style.transform = hover.transform;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeSlide.buttons.primary?.style) {
+                      const target = e.currentTarget;
+                      const style = activeSlide.buttons.primary.style;
+                      target.style.backgroundColor = style.backgroundColor || '#10b981';
+                      target.style.color = style.textColor || '#ffffff';
+                      target.style.border = style.border || '';
+                      target.style.transform = 'scale(1)';
+                    }
+                  }}
                 >
                   {activeSlide.buttons.primary.iconPosition === 'left' &&
                     renderIcon(activeSlide.buttons.primary.icon)}
@@ -215,7 +241,33 @@ const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
                   onClick={() => handleButtonClick(activeSlide.buttons.secondary?.href)}
                   size="lg"
                   variant="outline"
-                  className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 border-white text-white hover:bg-white hover:text-primary transition-smooth hover:scale-105"
+                  className="text-base md:text-lg font-semibold px-6 md:px-8 py-3 md:py-4 transition-all duration-300 hover:scale-105"
+                  style={{
+                    backgroundColor: activeSlide.buttons.secondary.style?.backgroundColor || 'transparent',
+                    color: activeSlide.buttons.secondary.style?.textColor || '#ffffff',
+                    border: activeSlide.buttons.secondary.style?.border || '1px solid #ffffff',
+                    ...(activeSlide.buttons.secondary.style || {}),
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeSlide.buttons.secondary?.style?.hover) {
+                      const target = e.currentTarget;
+                      const hover = activeSlide.buttons.secondary.style.hover;
+                      if (hover.backgroundColor) target.style.backgroundColor = hover.backgroundColor;
+                      if (hover.textColor) target.style.color = hover.textColor;
+                      if (hover.border) target.style.border = hover.border;
+                      if (hover.transform) target.style.transform = hover.transform;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeSlide.buttons.secondary?.style) {
+                      const target = e.currentTarget;
+                      const style = activeSlide.buttons.secondary.style;
+                      target.style.backgroundColor = style.backgroundColor || 'transparent';
+                      target.style.color = style.textColor || '#ffffff';
+                      target.style.border = style.border || '1px solid #ffffff';
+                      target.style.transform = 'scale(1)';
+                    }
+                  }}
                 >
                   {renderIcon(activeSlide.buttons.secondary.icon)}
                   <span className="mx-2">{activeSlide.buttons.secondary.text}</span>

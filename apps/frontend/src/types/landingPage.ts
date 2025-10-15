@@ -230,7 +230,7 @@ export interface HeroButton {
   variant: 'primary' | 'secondary' | 'outline' | 'ghost';
   icon?: string;
   iconPosition?: 'left' | 'right';
-  style?: StyleConfig;
+  style?: HoverableStyleConfig;
 }
 
 export interface HeroSlide {

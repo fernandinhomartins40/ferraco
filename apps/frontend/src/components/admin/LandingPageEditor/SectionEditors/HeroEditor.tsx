@@ -517,21 +517,97 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                 <Label className="text-lg font-semibold">Botão Primário</Label>
                 {activeSlide.buttons.primary && (
                   <>
-                    <Input
-                      placeholder="Texto do botão"
-                      value={activeSlide.buttons.primary.text}
-                      onChange={(e) => updatePrimaryButton({ text: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Link (href)"
-                      value={activeSlide.buttons.primary.href}
-                      onChange={(e) => updatePrimaryButton({ href: e.target.value })}
-                    />
+                    <div className="space-y-2">
+                      <Label>Texto</Label>
+                      <Input
+                        placeholder="Texto do botão"
+                        value={activeSlide.buttons.primary.text}
+                        onChange={(e) => updatePrimaryButton({ text: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Link (href)</Label>
+                      <Input
+                        placeholder="#produtos, #contato, etc"
+                        value={activeSlide.buttons.primary.href}
+                        onChange={(e) => updatePrimaryButton({ href: e.target.value })}
+                      />
+                    </div>
+
                     <IconSelector
                       label="Ícone"
                       value={activeSlide.buttons.primary.icon || ''}
                       onChange={(icon) => updatePrimaryButton({ icon })}
                     />
+
+                    <Separator />
+
+                    {/* Estilos do Botão Primário */}
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Cores do Botão</Label>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <ColorPicker
+                          label="Cor de Fundo"
+                          value={activeSlide.buttons.primary.style?.backgroundColor || '#10b981'}
+                          onChange={(backgroundColor) =>
+                            updatePrimaryButton({
+                              style: {
+                                ...activeSlide.buttons.primary?.style,
+                                backgroundColor,
+                              },
+                            })
+                          }
+                        />
+                        <ColorPicker
+                          label="Cor do Texto"
+                          value={activeSlide.buttons.primary.style?.textColor || '#ffffff'}
+                          onChange={(textColor) =>
+                            updatePrimaryButton({
+                              style: {
+                                ...activeSlide.buttons.primary?.style,
+                                textColor,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+
+                      <Label className="text-base font-medium mt-4">Cores no Hover</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <ColorPicker
+                          label="Fundo (hover)"
+                          value={activeSlide.buttons.primary.style?.hover?.backgroundColor || '#059669'}
+                          onChange={(backgroundColor) =>
+                            updatePrimaryButton({
+                              style: {
+                                ...activeSlide.buttons.primary?.style,
+                                hover: {
+                                  ...activeSlide.buttons.primary?.style?.hover,
+                                  backgroundColor,
+                                },
+                              },
+                            })
+                          }
+                        />
+                        <ColorPicker
+                          label="Texto (hover)"
+                          value={activeSlide.buttons.primary.style?.hover?.textColor || '#ffffff'}
+                          onChange={(textColor) =>
+                            updatePrimaryButton({
+                              style: {
+                                ...activeSlide.buttons.primary?.style,
+                                hover: {
+                                  ...activeSlide.buttons.primary?.style?.hover,
+                                  textColor,
+                                },
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
@@ -543,21 +619,116 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                 <Label className="text-lg font-semibold">Botão Secundário</Label>
                 {activeSlide.buttons.secondary ? (
                   <>
-                    <Input
-                      placeholder="Texto do botão"
-                      value={activeSlide.buttons.secondary.text}
-                      onChange={(e) => updateSecondaryButton({ text: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Link (href)"
-                      value={activeSlide.buttons.secondary.href}
-                      onChange={(e) => updateSecondaryButton({ href: e.target.value })}
-                    />
+                    <div className="space-y-2">
+                      <Label>Texto</Label>
+                      <Input
+                        placeholder="Texto do botão"
+                        value={activeSlide.buttons.secondary.text}
+                        onChange={(e) => updateSecondaryButton({ text: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Link (href)</Label>
+                      <Input
+                        placeholder="#produtos, #contato, etc"
+                        value={activeSlide.buttons.secondary.href}
+                        onChange={(e) => updateSecondaryButton({ href: e.target.value })}
+                      />
+                    </div>
+
                     <IconSelector
                       label="Ícone"
                       value={activeSlide.buttons.secondary.icon || ''}
                       onChange={(icon) => updateSecondaryButton({ icon })}
                     />
+
+                    <Separator />
+
+                    {/* Estilos do Botão Secundário */}
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Cores do Botão</Label>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <ColorPicker
+                          label="Cor de Fundo"
+                          value={activeSlide.buttons.secondary.style?.backgroundColor || 'transparent'}
+                          onChange={(backgroundColor) =>
+                            updateSecondaryButton({
+                              style: {
+                                ...activeSlide.buttons.secondary?.style,
+                                backgroundColor,
+                              },
+                            })
+                          }
+                        />
+                        <ColorPicker
+                          label="Cor do Texto"
+                          value={activeSlide.buttons.secondary.style?.textColor || '#ffffff'}
+                          onChange={(textColor) =>
+                            updateSecondaryButton({
+                              style: {
+                                ...activeSlide.buttons.secondary?.style,
+                                textColor,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Cor da Borda</Label>
+                        <ColorPicker
+                          label=""
+                          value={activeSlide.buttons.secondary.style?.border?.replace('1px solid ', '') || '#ffffff'}
+                          onChange={(borderColor) =>
+                            updateSecondaryButton({
+                              style: {
+                                ...activeSlide.buttons.secondary?.style,
+                                border: `1px solid ${borderColor}`,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+
+                      <Label className="text-base font-medium mt-4">Cores no Hover</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <ColorPicker
+                          label="Fundo (hover)"
+                          value={activeSlide.buttons.secondary.style?.hover?.backgroundColor || '#ffffff'}
+                          onChange={(backgroundColor) =>
+                            updateSecondaryButton({
+                              style: {
+                                ...activeSlide.buttons.secondary?.style,
+                                hover: {
+                                  ...activeSlide.buttons.secondary?.style?.hover,
+                                  backgroundColor,
+                                },
+                              },
+                            })
+                          }
+                        />
+                        <ColorPicker
+                          label="Texto (hover)"
+                          value={activeSlide.buttons.secondary.style?.hover?.textColor || '#667eea'}
+                          onChange={(textColor) =>
+                            updateSecondaryButton({
+                              style: {
+                                ...activeSlide.buttons.secondary?.style,
+                                hover: {
+                                  ...activeSlide.buttons.secondary?.style?.hover,
+                                  textColor,
+                                },
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
                     <Button
                       variant="outline"
                       onClick={() =>
@@ -580,6 +751,15 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                             text: 'Botão Secundário',
                             href: '#',
                             variant: 'outline',
+                            style: {
+                              backgroundColor: 'transparent',
+                              textColor: '#ffffff',
+                              border: '1px solid #ffffff',
+                              hover: {
+                                backgroundColor: '#ffffff',
+                                textColor: '#667eea',
+                              },
+                            },
                           },
                         },
                       })
