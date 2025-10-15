@@ -36,6 +36,7 @@ import {
   ContactEditor,
   FooterEditor,
 } from '@/components/admin/LandingPageEditor/SectionEditors';
+import { LandingPagePreview } from '@/components/admin/LandingPageEditor/LandingPagePreview';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -318,29 +319,21 @@ export const AdminLandingPageEditor = () => {
 
                 {/* Preview Content */}
                 {showPreview ? (
-                  <div
+                  <ScrollArea
                     className={`
-                      mx-auto border rounded-lg overflow-hidden bg-white transition-all
+                      mx-auto border rounded-lg overflow-hidden bg-background transition-all
                       ${previewMode === 'mobile' ? 'max-w-[375px]' : ''}
                       ${previewMode === 'tablet' ? 'max-w-[768px]' : ''}
                       ${previewMode === 'desktop' ? 'w-full' : ''}
                     `}
+                    style={{ height: '600px' }}
                   >
-                    <div className="aspect-[16/10] bg-muted flex items-center justify-center">
-                      <div className="text-center p-8">
-                        <p className="text-muted-foreground mb-4">
-                          Preview da Landing Page
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Seção atual: <strong>{currentSection}</strong>
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          O preview em tempo real será implementado integrando com os componentes
-                          da landing page
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    <LandingPagePreview
+                      config={config}
+                      currentSection={currentSection}
+                      highlightSection={true}
+                    />
+                  </ScrollArea>
                 ) : (
                   <div className="aspect-[16/10] bg-muted rounded-lg flex items-center justify-center">
                     <p className="text-muted-foreground">Preview oculto</p>
