@@ -261,6 +261,167 @@ export class WhatsAppChatService {
   }
 
   /**
+   * ✅ NOVO: Salvarmensagem enviada no banco (estratégia híbrida)
+   * Garante que TODAS as mensagens (recebidas + enviadas) ficam no banco
+   */
+  async saveOutgoingMessage(data: {
+    to: string;
+    content: string;
+    whatsappMessageId: string;
+    timestamp: Date;
+  }): Promise<void> {
+    try {
+      // Extrair número limpo
+      const phone = data.to.replace(/\D/g, '');
+
+      // Buscar ou criar contato
+      const contact = await this.findOrCreateContact(phone, phone);
+
+      // Buscar ou criar conversa
+      const conversation = await this.findOrCreateConversation(contact.id);
+
+      // Verificar se mensagem já existe
+      const existingMessage = await prisma.whatsAppMessage.findUnique({
+        where: { whatsappMessageId: data.whatsappMessageId },
+      });
+
+      if (existingMessage) {
+        logger.debug(`⚠️  Mensagem ${data.whatsappMessageId} já existe no banco`);
+        return;
+      }
+
+      // Salvar mensagem enviada
+      const savedMessage = await prisma.whatsAppMessage.create({
+        data: {
+          conversationId: conversation.id,
+          contactId: contact.id,
+          type: MessageType.TEXT,
+          content: data.content,
+          fromMe: true, // ✅ Mensagem enviada por nós
+          status: MessageStatus.SENT,
+          whatsappMessageId: data.whatsappMessageId,
+          timestamp: data.timestamp,
+        },
+      });
+
+      // Atualizar conversa
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          lastMessageAt: data.timestamp,
+          lastMessagePreview: this.getMessagePreview(data.content, MessageType.TEXT),
+        },
+      });
+
+      // Emitir evento WebSocket
+      if (this.io) {
+        this.io.emit('message:new', savedMessage);
+        this.io.emit('conversation:update', conversation.id);
+      }
+
+      logger.info(`✅ Mensagem enviada salva no banco: ${savedMessage.id}`);
+    } catch (error) {
+      logger.error('❌ Erro ao salvar mensagem enviada:', error);
+    }
+  }
+
+  /**
+   * ✅ NOVO: Carregamento incremental de mensagens (em lotes)
+   * Evita timeout ao carregar milhares de mensagens de uma vez
+   */
+  async loadMessagesIncrementally(conversationId: string, batchSize = 100): Promise<number> {
+    if (!this.whatsappClient) {
+      logger.warn('⚠️  Cliente WhatsApp não disponível');
+      return 0;
+    }
+
+    try {
+      const conversation = await prisma.whatsAppConversation.findUnique({
+        where: { id: conversationId },
+        include: { contact: true },
+      });
+
+      if (!conversation) return 0;
+
+      const chatId = `${conversation.contact.phone}@c.us`;
+      let totalSaved = 0;
+      let lastMessageId: string | null = null;
+      let hasMore = true;
+
+      logger.info(`🔄 Carregamento incremental para ${conversation.contact.name}...`);
+
+      while (hasMore) {
+        // Buscar lote de mensagens
+        const batch = await this.whatsappClient.getMessages(chatId, {
+          count: batchSize,
+          direction: 'before',
+          ...(lastMessageId && { id: lastMessageId }),
+        });
+
+        if (!batch || batch.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        // Salvar lote
+        for (const msg of batch) {
+          try {
+            const existingMessage = await prisma.whatsAppMessage.findUnique({
+              where: { whatsappMessageId: msg.id },
+            });
+
+            if (existingMessage) continue;
+
+            await prisma.whatsAppMessage.create({
+              data: {
+                conversationId: conversation.id,
+                contactId: conversation.contact.id,
+                type: this.getMessageType(msg),
+                content: msg.body || '',
+                mediaType: msg.mimetype || null,
+                fromMe: msg.fromMe || false,
+                status: MessageStatus.DELIVERED,
+                whatsappMessageId: msg.id,
+                timestamp: new Date(msg.timestamp * 1000),
+              },
+            });
+
+            totalSaved++;
+          } catch (error) {
+            // Ignorar erros
+          }
+        }
+
+        // Atualizar último ID para próximo lote
+        lastMessageId = batch[batch.length - 1].id;
+
+        // Se retornou menos que o batchSize, chegamos ao fim
+        if (batch.length < batchSize) {
+          hasMore = false;
+        }
+
+        logger.info(`📥 Lote processado: ${batch.length} mensagens (${totalSaved} novas)`);
+      }
+
+      // Marcar como totalmente sincronizado
+      await prisma.whatsAppConversation.update({
+        where: { id: conversationId },
+        data: {
+          fullySynced: true,
+          lastSyncedAt: new Date(),
+          syncedMessageCount: totalSaved,
+        },
+      });
+
+      logger.info(`✅ Carregamento incremental concluído: ${totalSaved} mensagens novas`);
+      return totalSaved;
+    } catch (error) {
+      logger.error('❌ Erro ao carregar mensagens incrementalmente:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Handler principal para mensagens recebidas do WPPConnect
    * Salva no banco e emite evento WebSocket
    */

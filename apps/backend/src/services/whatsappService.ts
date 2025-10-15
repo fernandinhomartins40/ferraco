@@ -148,6 +148,7 @@ class WhatsAppService {
           folderNameToken: this.sessionsPath,
           mkdirFolderToken: '',
           logQR: false,
+          syncFullHistory: true, // ✅ Força sincronização máxima de histórico
           puppeteerOptions: {
             headless: 'new' as any,
             args: [
@@ -260,9 +261,18 @@ class WhatsAppService {
       // Formatar número para o padrão do WhatsApp
       const formattedNumber = this.formatPhoneNumber(to);
 
-      await this.client.sendText(formattedNumber, message);
+      // Enviar mensagem via WPPConnect
+      const result = await this.client.sendText(formattedNumber, message);
 
       logger.info(`✅ Mensagem enviada para ${to}`);
+
+      // ✅ NOVO: Salvar mensagem enviada no banco (estratégia híbrida)
+      await whatsappChatService.saveOutgoingMessage({
+        to: to,
+        content: message,
+        whatsappMessageId: result.id || `${Date.now()}_${to}`,
+        timestamp: new Date(),
+      });
 
     } catch (error) {
       logger.error(`Erro ao enviar mensagem para ${to}:`, error);

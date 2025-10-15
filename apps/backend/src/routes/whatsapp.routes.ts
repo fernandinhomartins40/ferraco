@@ -332,6 +332,36 @@ router.post('/conversations/:id/load-history', authenticate, async (req: Request
 });
 
 /**
+ * ✅ NOVA ROTA: POST /api/whatsapp/conversations/:id/load-incremental
+ * Carregar mensagens incrementalmente (em lotes) para evitar timeout
+ * Ideal para conversas com milhares de mensagens
+ */
+router.post('/conversations/:id/load-incremental', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { batchSize } = req.body; // Opcional: tamanho do lote (padrão: 100)
+
+    // Carregar incrementalmente em background
+    whatsappChatService.loadMessagesIncrementally(id, batchSize).catch((error) => {
+      logger.error('Erro ao carregar mensagens incrementalmente em background:', error);
+    });
+
+    res.json({
+      success: true,
+      message: 'Carregando mensagens incrementalmente em background...',
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao iniciar carregamento incremental:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao carregar mensagens',
+      message: error.message,
+    });
+  }
+});
+
+/**
  * POST /api/whatsapp/sync-chats
  * Sincronizar todos os chats e contatos do WhatsApp
  */

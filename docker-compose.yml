@@ -16,10 +16,13 @@ services:
       - DATABASE_URL=file:./dev.db
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
       - CORS_ORIGIN=http://localhost:5173,http://localhost:3000
+      - WHATSAPP_SESSIONS_PATH=/app/sessions
     volumes:
       - ./apps/backend:/app
       - /app/node_modules
       - backend-data:/app/prisma
+      - whatsapp-sessions:/app/sessions
+      - whatsapp-tokens:/app/tokens
     networks:
       - ferraco-network
     healthcheck:
@@ -54,3 +57,5 @@ networks:
 
 volumes:
   backend-data:
+  whatsapp-sessions:
+  whatsapp-tokens:

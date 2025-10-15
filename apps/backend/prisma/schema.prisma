@@ -1423,6 +1423,11 @@ model WhatsAppConversation {
   isArchived         Boolean  @default(false)
   isPinned           Boolean  @default(false)
 
+  // Flags de sincronização (sistema de cache inteligente)
+  fullySynced        Boolean   @default(false) // Indica se todas as mensagens foram sincronizadas
+  lastSyncedAt       DateTime? // Última vez que sincronizou mensagens
+  syncedMessageCount Int       @default(0) // Total de mensagens sincronizadas
+
   // Atribuição (quem está atendendo)
   assignedToId String?
   assignedTo   User?   @relation(fields: [assignedToId], references: [id])
@@ -1438,6 +1443,7 @@ model WhatsAppConversation {
   @@index([lastMessageAt])
   @@index([unreadCount])
   @@index([assignedToId])
+  @@index([fullySynced])
   @@map("whatsapp_conversations")
 }
 
