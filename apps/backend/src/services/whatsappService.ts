@@ -19,6 +19,8 @@ import { logger } from '../utils/logger';
 import * as path from 'path';
 import * as fs from 'fs';
 import whatsappChatService from './whatsappChatService';
+import { WhatsAppListeners } from './whatsappListeners';
+import { Server as SocketIOServer } from 'socket.io';
 
 interface WhatsAppMessage {
   from: string;
@@ -35,6 +37,7 @@ class WhatsAppService {
   private isConnected: boolean = false;
   private sessionsPath: string;
   private isInitializing: boolean = false;
+  private listeners: WhatsAppListeners | null = null;
 
   constructor() {
     // Diretório de sessões (será volume Docker)
@@ -168,6 +171,14 @@ class WhatsAppService {
 
       // Configurar listeners de ACK (confirmação de leitura/entrega)
       this.setupAckListeners();
+
+      // Configurar listeners avançados (presença, digitando, chamadas, etc.)
+      this.listeners = new WhatsAppListeners(this.client);
+      this.listeners.setupAllListeners();
+      this.listeners.setupPollListeners();
+      this.listeners.setupDownloadListeners();
+      this.listeners.setupSyncListeners();
+      this.listeners.setupBatteryListeners();
 
       logger.info('✅ WhatsApp Service (WPPConnect) inicializado!');
       this.isInitializing = false;
@@ -525,6 +536,17 @@ class WhatsAppService {
       message,
       isInitializing: this.isInitializing,
     };
+  }
+
+  /**
+   * Configurar Socket.IO para listeners avançados
+   * @param io Instância do Socket.IO
+   */
+  setSocketServer(io: SocketIOServer): void {
+    if (this.listeners) {
+      this.listeners.setSocketServer(io);
+      logger.info('✅ Socket.IO configurado para listeners avançados do WhatsApp');
+    }
   }
 }
 

@@ -55,8 +55,9 @@ async function startServer(): Promise<void> {
       });
     });
 
-    // Pass Socket.io instance to WhatsAppChatService
+    // Pass Socket.io instance to WhatsAppChatService and WhatsAppService
     whatsappChatService.setSocketServer(io);
+    whatsappService.setSocketServer(io);
 
     // Start server
     const server = httpServer.listen(PORT, () => {
