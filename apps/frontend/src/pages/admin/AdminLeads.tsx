@@ -917,16 +917,19 @@ const AdminLeads = () => {
               <div>
                 <Label htmlFor="template-select">Template de Mensagem</Label>
                 <Select
-                  value={automationColumnFormData.messageTemplateId}
+                  value={automationColumnFormData.messageTemplateId || 'none'}
                   onValueChange={(value) =>
-                    setAutomationColumnFormData({ ...automationColumnFormData, messageTemplateId: value })
+                    setAutomationColumnFormData({
+                      ...automationColumnFormData,
+                      messageTemplateId: value === 'none' ? '' : value
+                    })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um template" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.name}
