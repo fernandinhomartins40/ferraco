@@ -72,6 +72,29 @@ export const uploadService = {
   },
 
   /**
+   * Upload de imagem com crop e compressão
+   */
+  async uploadImageWithCrop(
+    base64Image: string,
+    width: number,
+    height: number,
+    quality: number = 85
+  ): Promise<string> {
+    const response = await apiClient.post<UploadResponse>('/image-crop', {
+      image: base64Image,
+      width,
+      height,
+      quality,
+    });
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.message || 'Erro ao fazer upload');
+    }
+
+    return response.data.data.url;
+  },
+
+  /**
    * Upload de múltiplas imagens
    */
   async uploadMultipleImages(files: File[]): Promise<string[]> {

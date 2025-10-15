@@ -44,6 +44,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { chatbotService, type Product, type FAQItem, type ShareLink } from '@/services/chatbot.service';
 import { uploadService } from '@/services/upload.service';
+import { ImageCropModal } from '@/components/ImageCropModal';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -78,6 +79,9 @@ export const AdminChatbotConfig = () => {
   const [activeTab, setActiveTab] = useState('behavior');
   const [copied, setCopied] = useState('');
   const [uploadingImages, setUploadingImages] = useState<{ [key: string]: boolean }>({});
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState('');
+  const [currentProductId, setCurrentProductId] = useState<string>('');
 
   // Buscar configuração do backend
   const { data: config, isLoading } = useQuery({
@@ -204,37 +208,65 @@ export const AdminChatbotConfig = () => {
     updateProduct(productId, 'videos', newVideos);
   };
 
-  // ===== FUNÇÕES DE UPLOAD =====
+  // ===== FUNÇÕES DE UPLOAD COM CROP =====
 
   const handleImageUpload = async (productId: string, files: FileList | null) => {
     if (!files || files.length === 0) return;
 
+    const file = files[0]; // Pegar primeira imagem para crop
+    setCurrentProductId(productId);
+
+    // Ler arquivo e abrir modal de crop
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setTempImageSrc(e.target?.result as string);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob, croppedUrl: string) => {
+    const productId = currentProductId;
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
     setUploadingImages({ ...uploadingImages, [productId]: true });
 
     try {
-      const filesArray = Array.from(files);
-      const uploadedUrls = await uploadService.uploadMultipleImages(filesArray);
+      // Converter blob para base64
+      const reader = new FileReader();
+      reader.readAsDataURL(croppedBlob);
 
-      const currentImages = product.images || [];
-      const newImages = [...currentImages, ...uploadedUrls];
+      reader.onload = async () => {
+        const base64Image = reader.result as string;
 
-      updateProduct(productId, 'images', newImages);
+        // Upload com crop e compressão (800x600 para WhatsApp)
+        const imageUrl = await uploadService.uploadImageWithCrop(
+          base64Image,
+          800,  // Largura otimizada para WhatsApp
+          600,  // Altura otimizada
+          85    // Qualidade 85%
+        );
 
-      toast({
-        title: 'Sucesso!',
-        description: `${filesArray.length} imagem(ns) enviada(s) com sucesso.`,
-      });
+        const currentImages = product.images || [];
+        const newImages = [...currentImages, imageUrl];
+
+        updateProduct(productId, 'images', newImages);
+
+        toast({
+          title: 'Sucesso!',
+          description: 'Imagem cropada e otimizada com sucesso.',
+        });
+
+        setUploadingImages({ ...uploadingImages, [productId]: false });
+      };
 
     } catch (error: any) {
       toast({
         title: 'Erro no upload',
-        description: error.message || 'Não foi possível fazer upload das imagens.',
+        description: error.message || 'Não foi possível fazer upload da imagem.',
         variant: 'destructive',
       });
-    } finally {
       setUploadingImages({ ...uploadingImages, [productId]: false });
     }
   };
@@ -768,7 +800,6 @@ export const AdminChatbotConfig = () => {
                               <Input
                                 type="file"
                                 accept="image/*"
-                                multiple
                                 onChange={(e) => handleImageUpload(product.id, e.target.files)}
                                 className="bg-white flex-1"
                                 disabled={uploadingImages[product.id]}
@@ -781,7 +812,7 @@ export const AdminChatbotConfig = () => {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              📸 Selecione uma ou múltiplas imagens (JPG, PNG, WebP). Serão enviadas via WhatsApp.
+                              📸 Selecione uma imagem (JPG, PNG, WebP). Será cropada e otimizada (800x600) para WhatsApp.
                             </p>
                             {product.images && product.images.length > 0 && (
                               <div className="flex gap-2 flex-wrap mt-2">
@@ -1130,6 +1161,19 @@ export const AdminChatbotConfig = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal de Crop de Imagem */}
+      <ImageCropModal
+        open={cropModalOpen}
+        onClose={() => setCropModalOpen(false)}
+        imageSrc={tempImageSrc}
+        onCropComplete={handleCropComplete}
+        aspectRatio={4 / 3}
+        cropShape="rect"
+        title="Recortar Imagem para WhatsApp"
+        targetWidth={800}
+        targetHeight={600}
+      />
     </AdminLayout>
   );
 };
