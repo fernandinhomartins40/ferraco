@@ -444,14 +444,46 @@ export class ChatbotSessionService {
       const leadSource = conversationData.source || 'Chatbot';
       const campaign = conversationData.campaign;
 
+      // Parse user responses para verificar handoff humano
+      const userResponses = JSON.parse(session.userResponses || '{}');
+      const isHumanHandoff = session.currentStepId === 'human_handoff';
+
+      // Determinar status e prioridade baseado no contexto
+      let status = 'NOVO';
+      let priority: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
+
+      if (isHumanHandoff) {
+        // ⭐ HANDOFF HUMANO - Prioridade máxima
+        status = 'ATENDIMENTO_HUMANO';
+        priority = 'HIGH';
+      } else {
+        // Prioridade baseada no score
+        if (session.qualificationScore >= 60) priority = 'HIGH';
+        else if (session.qualificationScore >= 40) priority = 'MEDIUM';
+        else priority = 'LOW';
+      }
+
+      // Determinar tipo de usuário
+      let userType = 'generico';
+      if (userResponses.user_type?.includes('produtor rural')) userType = 'produtor_rural';
+      else if (userResponses.user_type?.includes('setor agro')) userType = 'profissional_agro';
+      else if (userResponses.user_type?.includes('pesquisando')) userType = 'terceiros';
+
+      // Extrair urgência
+      let urgency = '';
+      if (userResponses.urgency?.includes('urgente')) urgency = '15_dias';
+      else if (userResponses.urgency?.includes('1 ou 2 meses')) urgency = '1_2_meses';
+      else if (userResponses.urgency?.includes('3 meses')) urgency = '3_meses_mais';
+      else if (userResponses.urgency?.includes('não tenho prazo')) urgency = 'sem_prazo';
+
       const lead = await prisma.lead.create({
         data: {
           name: session.capturedName,
           phone: session.capturedPhone,
           email: session.capturedEmail,
           source: leadSource,
-          status: 'NOVO',
-          priority: session.qualificationScore >= 50 ? 'HIGH' : 'MEDIUM',
+          status: status,
+          priority: priority,
           leadScore: session.qualificationScore,
           metadata: JSON.stringify({
             sessionId: session.sessionId,
@@ -460,6 +492,19 @@ export class ChatbotSessionService {
             marketingOptIn: session.marketingOptIn,
             userResponses: session.userResponses,
             campaign: campaign,
+            // ⭐ NOVOS CAMPOS CONFORME DOCUMENTO
+            userType: userType,
+            activity: userResponses.activity || '',
+            profession: userResponses.profession || '',
+            relation: userResponses.proxy_relation || '',
+            urgency: urgency,
+            wantsPrice: userResponses.wants_pricing === 'wants_pricing',
+            wantsMaterial: userResponses.wants_material === 'wants_material',
+            requiresHumanAttendance: isHumanHandoff,
+            handoffStage: isHumanHandoff ? session.currentStepId : '',
+            handoffReason: isHumanHandoff ? 'usuario_pediu_equipe' : '',
+            capturedAt: new Date().toISOString(),
+            conversationStage: session.currentStage,
           }),
           createdById: systemUser.id,
         },
