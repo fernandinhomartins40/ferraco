@@ -96,6 +96,12 @@ export class WhatsAppChatService {
           });
 
           logger.info(`✅ Chat sincronizado: ${contactName} (${phone})`);
+
+          // Sincronizar mensagens deste chat em background
+          this.syncChatMessages(conversation.id, chat.id._serialized).catch((error) => {
+            logger.error(`❌ Erro ao sincronizar mensagens de ${contactName}:`, error);
+          });
+
         } catch (error) {
           logger.error(`❌ Erro ao sincronizar chat ${chat.id}:`, error);
         }
@@ -108,7 +114,79 @@ export class WhatsAppChatService {
   }
 
   /**
+   * Sincronizar mensagens de um chat específico
+   * Similar ao loadChatHistory mas usando chatId diretamente
+   */
+  private async syncChatMessages(conversationId: string, chatId: string): Promise<void> {
+    try {
+      logger.info(`📥 Sincronizando mensagens do chat ${chatId}...`);
+
+      // Usar método moderno WPP.chat.getMessages com count: -1 para TODAS as mensagens
+      const messages = await this.whatsappClient.getMessages(chatId, { count: -1 });
+
+      if (!messages || messages.length === 0) {
+        logger.info(`⚠️  Nenhuma mensagem encontrada para ${chatId}`);
+        return;
+      }
+
+      logger.info(`📋 Encontradas ${messages.length} mensagens para sincronizar`);
+
+      let savedCount = 0;
+      let skippedCount = 0;
+
+      // Buscar o contato da conversa
+      const conversation = await prisma.whatsAppConversation.findUnique({
+        where: { id: conversationId },
+        include: { contact: true },
+      });
+
+      if (!conversation) return;
+
+      // Salvar cada mensagem no banco
+      for (const msg of messages) {
+        try {
+          // Verificar se mensagem já existe
+          const existingMessage = await prisma.whatsAppMessage.findUnique({
+            where: { whatsappMessageId: msg.id },
+          });
+
+          if (existingMessage) {
+            skippedCount++;
+            continue; // Pular se já existe
+          }
+
+          const messageType = this.getMessageType(msg);
+
+          await prisma.whatsAppMessage.create({
+            data: {
+              conversationId: conversation.id,
+              contactId: conversation.contact.id,
+              type: messageType,
+              content: msg.body || '',
+              mediaUrl: null,
+              mediaType: msg.mimetype || null,
+              fromMe: msg.fromMe || false,
+              status: MessageStatus.DELIVERED,
+              whatsappMessageId: msg.id,
+              timestamp: new Date(msg.timestamp * 1000),
+            },
+          });
+
+          savedCount++;
+        } catch (error) {
+          // Ignorar erros de mensagens duplicadas
+        }
+      }
+
+      logger.info(`✅ Mensagens sincronizadas para ${conversation.contact.name}: ${savedCount} novas, ${skippedCount} já existentes`);
+    } catch (error) {
+      logger.error(`❌ Erro ao sincronizar mensagens:`, error);
+    }
+  }
+
+  /**
    * Carregar histórico completo de mensagens de um chat
+   * Usa WPP.chat.getMessages() com count: -1 para carregar TODAS as mensagens
    */
   async loadChatHistory(conversationId: string): Promise<void> {
     if (!this.whatsappClient) {
@@ -130,11 +208,14 @@ export class WhatsAppChatService {
 
       const chatId = `${conversation.contact.phone}@c.us`;
 
-      logger.info(`📥 Carregando histórico do chat ${conversation.contact.name}...`);
+      logger.info(`📥 Carregando histórico completo do chat ${conversation.contact.name}...`);
 
-      // Carregar todas as mensagens do chat
-      const messages = await this.whatsappClient.loadAndGetAllMessagesInChat(chatId);
-      logger.info(`📋 Encontradas ${messages.length} mensagens`);
+      // Usar método moderno WPP.chat.getMessages com count: -1 para TODAS as mensagens
+      const messages = await this.whatsappClient.getMessages(chatId, { count: -1 });
+      logger.info(`📋 Encontradas ${messages.length} mensagens no histórico`);
+
+      let savedCount = 0;
+      let skippedCount = 0;
 
       // Salvar cada mensagem no banco
       for (const msg of messages) {
@@ -144,7 +225,10 @@ export class WhatsAppChatService {
             where: { whatsappMessageId: msg.id },
           });
 
-          if (existingMessage) continue; // Pular se já existe
+          if (existingMessage) {
+            skippedCount++;
+            continue; // Pular se já existe
+          }
 
           const messageType = this.getMessageType(msg);
 
@@ -162,12 +246,15 @@ export class WhatsAppChatService {
               timestamp: new Date(msg.timestamp * 1000),
             },
           });
+
+          savedCount++;
         } catch (error) {
           // Ignorar erros de mensagens duplicadas
+          logger.debug(`⚠️  Erro ao salvar mensagem ${msg.id}:`, error);
         }
       }
 
-      logger.info(`✅ Histórico carregado: ${conversation.contact.name}`);
+      logger.info(`✅ Histórico carregado para ${conversation.contact.name}: ${savedCount} novas, ${skippedCount} já existentes`);
     } catch (error) {
       logger.error('❌ Erro ao carregar histórico:', error);
     }
