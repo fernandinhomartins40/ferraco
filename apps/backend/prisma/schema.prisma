@@ -426,6 +426,7 @@ model Lead {
   WhatsAppContact      WhatsAppContact?
   whatsappAutomations  WhatsAppAutomation[]
   automationPosition   AutomationLeadPosition?
+  whatsappBotSessions  WhatsAppBotSession[]
 
   @@index([email])
   @@index([phone])
@@ -1680,6 +1681,49 @@ model WhatsAppAutomationMessage {
   @@index([automationId])
   @@index([status])
   @@map("whatsapp_automation_messages")
+}
+
+// ============================================================================
+// WHATSAPP BOT SYSTEM
+// ============================================================================
+
+// Sessões do bot do WhatsApp (separado do chatbot web)
+model WhatsAppBotSession {
+  id              String   @id @default(cuid())
+  leadId          String
+  phone           String
+  currentStepId   String
+  contextData     String   @db.Text // JSON: leadName, interesse, companyName, etc.
+  isActive        Boolean  @default(true)
+  handedOffToHuman Boolean @default(false)
+  handoffAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead     Lead                   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages WhatsAppBotMessage[]
+
+  @@index([leadId])
+  @@index([phone])
+  @@index([isActive])
+  @@index([handedOffToHuman])
+  @@map("whatsapp_bot_sessions")
+}
+
+// Mensagens do bot do WhatsApp
+model WhatsAppBotMessage {
+  id           String   @id @default(cuid())
+  botSessionId String
+  sender       String   // 'bot' | 'user'
+  content      String   @db.Text
+  timestamp    DateTime @default(now())
+
+  botSession WhatsAppBotSession @relation(fields: [botSessionId], references: [id], onDelete: Cascade)
+
+  @@index([botSessionId])
+  @@index([timestamp])
+  @@map("whatsapp_bot_messages")
 }
 
 // ============================================================================

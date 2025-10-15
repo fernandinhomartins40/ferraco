@@ -194,9 +194,43 @@ class WhatsAppService {
     // Listener para todas as mensagens
     this.client.onMessage(async (message: Message) => {
       try {
+        // Ignorar mensagens de grupo e mensagens enviadas por nós
+        if (message.isGroupMsg || message.fromMe) {
+          return;
+        }
+
         logger.info(`📩 Mensagem recebida de ${message.from}: ${message.body}`);
 
-        // Sincronizar mensagem com o banco via WhatsAppChatService
+        // Normalizar número de telefone
+        const normalizedPhone = message.from.replace('@c.us', '').replace(/\D/g, '');
+
+        // ⭐ NOVO: Verificar se existe sessão ativa do bot do WhatsApp
+        try {
+          const { prisma } = await import('../config/database');
+
+          const botSession = await prisma.whatsAppBotSession.findFirst({
+            where: {
+              phone: normalizedPhone,
+              isActive: true,
+              handedOffToHuman: false,
+            },
+          });
+
+          // Se houver sessão ativa do bot, rotear para o bot
+          if (botSession) {
+            logger.info(`🤖 Mensagem roteada para bot do WhatsApp - Sessão ${botSession.id}`);
+
+            const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
+            await whatsappBotService.processUserMessage(normalizedPhone, message.body);
+            return;
+          }
+        } catch (error) {
+          logger.error('Erro ao verificar sessão do bot:', error);
+          // Continuar para atendimento humano em caso de erro
+        }
+
+        // Caso contrário, rotear para atendimento humano (sistema de chat existente)
+        logger.info(`👤 Mensagem roteada para atendimento humano`);
         await whatsappChatService.handleIncomingMessage(message);
 
       } catch (error) {

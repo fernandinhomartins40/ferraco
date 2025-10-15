@@ -520,6 +520,18 @@ export class ChatbotSessionService {
       logger.info(`🤖 Criando automação WhatsApp para lead ${lead.id} (${lead.name})`);
       whatsappAutomationService.createAutomationFromLead(lead.id)
         .catch(err => logger.error('❌ Erro ao criar automação WhatsApp:', err));
+
+      // ⭐ NOVO: Se for handoff humano, iniciar bot do WhatsApp
+      if (isHumanHandoff) {
+        logger.info(`👨‍💼 Iniciando bot do WhatsApp para handoff humano - Lead ${lead.id}`);
+
+        // Importação dinâmica para evitar circular dependency
+        import('../whatsapp-bot/whatsapp-bot.service').then(module => {
+          const { whatsappBotService } = module;
+          whatsappBotService.startBotConversation(lead.id)
+            .catch(err => logger.error('❌ Erro ao iniciar bot do WhatsApp:', err));
+        }).catch(err => logger.error('❌ Erro ao importar whatsapp-bot.service:', err));
+      }
     }
   }
 
