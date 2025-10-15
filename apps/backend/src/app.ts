@@ -27,6 +27,9 @@ import kanbanColumnRoutes from './routes/kanbanColumn.routes';
 import uploadRoutes from './routes/upload.routes';
 import landingPageRoutes from './routes/landing-page.routes';
 import whatsappRoutes from './routes/whatsapp.routes';
+import automationKanbanRoutes from './routes/automationKanban.routes';
+import whatsappMessageTemplateRoutes from './routes/whatsappMessageTemplate.routes';
+import { automationSchedulerService } from './services/automationScheduler.service';
 
 export function createApp(): Application {
   const app = express();
@@ -82,8 +85,14 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/upload`, uploadRoutes);
   app.use(`${API_PREFIX}/landing-page`, landingPageRoutes);
   app.use(`${API_PREFIX}/whatsapp`, whatsappRoutes);
+  app.use(`${API_PREFIX}/automation-kanban`, automationKanbanRoutes);
+  app.use(`${API_PREFIX}/whatsapp-templates`, whatsappMessageTemplateRoutes);
 
   logger.info('✅ All routes registered successfully');
+
+  // Iniciar Automation Scheduler
+  automationSchedulerService.start();
+  logger.info('✅ Automation Scheduler started');
 
   // 404 handler
   app.use(notFoundHandler);

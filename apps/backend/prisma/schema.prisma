@@ -425,6 +425,7 @@ model Lead {
   chatbotSessions      ChatbotSession[]
   WhatsAppContact      WhatsAppContact?
   whatsappAutomations  WhatsAppAutomation[]
+  automationPosition   AutomationLeadPosition?
 
   @@index([email])
   @@index([phone])
@@ -457,6 +458,119 @@ model KanbanColumn {
   @@index([isActive])
   @@index([order])
   @@map("kanban_columns")
+}
+
+// ============================================================================
+// TABELA: AutomationKanbanColumn (Colunas do Kanban de Automação de Mensagens)
+// ============================================================================
+
+model AutomationKanbanColumn {
+  id          String  @id @default(cuid())
+  name        String
+  color       String
+  order       Int
+  isActive    Boolean @default(true)
+  description String? // Descrição da coluna
+
+  // Configurações de Envio
+  sendIntervalSeconds Int     @default(60) // Intervalo entre envios dentro da coluna (segundos)
+  scheduledDate       DateTime? // Data/hora agendada para envio
+  isRecurring         Boolean @default(false) // Envio mensal recorrente
+  recurringDay        Int? // Dia do mês (1-31) para envio recorrente
+
+  // Template de Mensagem
+  messageTemplateId String?
+  messageTemplate   WhatsAppMessageTemplate? @relation(fields: [messageTemplateId], references: [id], onDelete: SetNull)
+
+  // Produtos vinculados
+  productIds String? // JSON array de IDs de produtos
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Leads nesta coluna
+  leads AutomationLeadPosition[]
+
+  @@unique([order])
+  @@index([isActive])
+  @@index([order])
+  @@map("automation_kanban_columns")
+}
+
+// ============================================================================
+// TABELA: AutomationLeadPosition (Posição do Lead no Kanban de Automação)
+// ============================================================================
+
+model AutomationLeadPosition {
+  id       String @id @default(cuid())
+  leadId   String
+  columnId String
+
+  lead   Lead                     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  column AutomationKanbanColumn   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  // Status de envio
+  lastSentAt       DateTime?
+  nextScheduledAt  DateTime? // Próximo envio agendado
+  messagesSentCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([leadId]) // Um lead pode estar em apenas uma coluna de automação por vez
+  @@index([columnId])
+  @@index([nextScheduledAt])
+  @@map("automation_lead_positions")
+}
+
+// ============================================================================
+// TABELA: WhatsAppMessageTemplate (Templates de Mensagens WhatsApp para Automação)
+// ============================================================================
+
+model WhatsAppMessageTemplate {
+  id      String  @id @default(cuid())
+  name    String
+  content String  @db.Text // Conteúdo da mensagem com variáveis {{nome}}, {{produto}}, etc.
+
+  // Mídia
+  mediaUrls String? // JSON array de URLs de imagens/vídeos
+  mediaType String? // IMAGE, VIDEO, DOCUMENT, etc.
+
+  // Metadados
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  automationColumns AutomationKanbanColumn[]
+
+  @@map("whatsapp_message_templates")
+}
+
+// ============================================================================
+// TABELA: AutomationSettings (Configurações Globais de Automação)
+// ============================================================================
+
+model AutomationSettings {
+  id String @id @default(cuid())
+
+  // Intervalo entre colunas
+  columnIntervalSeconds Int @default(300) // 5 minutos entre mudanças de coluna
+
+  // Limites de segurança
+  maxMessagesPerHour Int @default(30)
+  maxMessagesPerDay  Int @default(200)
+
+  // Horários de envio
+  sendOnlyBusinessHours Boolean @default(true)
+  businessHourStart     Int     @default(8) // 8h
+  businessHourEnd       Int     @default(18) // 18h
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("automation_settings")
 }
 
 // ============================================================================

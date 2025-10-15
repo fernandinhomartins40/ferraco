@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -34,12 +35,17 @@ import {
   Loader2,
   CheckCircle,
   Settings2,
+  Bot,
+  Layers,
 } from 'lucide-react';
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
 import KanbanView from '@/components/admin/KanbanView';
+import AutomationKanbanView from '@/components/admin/AutomationKanbanView';
 import { useToast } from '@/hooks/use-toast';
 import { useKanbanColumns } from '@/hooks/useKanbanColumns';
+import { useAutomationKanban } from '@/hooks/useAutomationKanban';
+import { useWhatsAppTemplates } from '@/hooks/useWhatsAppTemplates';
 import type { KanbanColumn, CreateKanbanColumnDto, UpdateKanbanColumnDto } from '@/services/kanbanColumns.service';
 
 const AdminLeads = () => {
@@ -60,6 +66,31 @@ const AdminLeads = () => {
     name: '',
     color: '#3B82F6',
     status: '',
+  });
+
+  // Automation Column Management State
+  const [isAutomationColumnDialogOpen, setIsAutomationColumnDialogOpen] = useState(false);
+  const [isEditAutomationColumnMode, setIsEditAutomationColumnMode] = useState(false);
+  const [selectedAutomationColumn, setSelectedAutomationColumn] = useState<any>(null);
+  const [automationColumnFormData, setAutomationColumnFormData] = useState({
+    name: '',
+    color: '#10B981',
+    description: '',
+    sendIntervalSeconds: 60,
+    scheduledDate: '',
+    isRecurring: false,
+    recurringDay: undefined as number | undefined,
+    messageTemplateId: '',
+    productIds: [] as string[],
+  });
+
+  // Template Management State
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [templateFormData, setTemplateFormData] = useState({
+    name: '',
+    content: '',
+    mediaUrls: [] as string[],
+    mediaType: '',
   });
 
   // Form state
@@ -89,6 +120,21 @@ const AdminLeads = () => {
     updateColumn,
     deleteColumn,
   } = useKanbanColumns();
+
+  // Automation Kanban Hooks
+  const {
+    columns: automationColumns,
+    isLoadingColumns: isLoadingAutomationColumns,
+    leadsInAutomation,
+    moveLeadToColumn: moveToAutomationColumn,
+    removeLeadFromAutomation,
+    createColumn: createAutomationColumn,
+    updateColumn: updateAutomationColumn,
+    deleteColumn: deleteAutomationColumn,
+  } = useAutomationKanban();
+
+  // WhatsApp Templates Hooks
+  const { templates, createTemplate, updateTemplate, deleteTemplate } = useWhatsAppTemplates();
 
   const leads = leadsData?.data || [];
 
@@ -209,6 +255,97 @@ const AdminLeads = () => {
       name: '',
       color: '#3B82F6',
       status: '',
+    });
+  };
+
+  // Automation Column Handlers
+  const handleCreateAutomationColumn = async () => {
+    if (!automationColumnFormData.name) {
+      return;
+    }
+
+    await createAutomationColumn.mutateAsync({
+      ...automationColumnFormData,
+      scheduledDate: automationColumnFormData.scheduledDate || undefined,
+      productIds: automationColumnFormData.productIds.length > 0 ? automationColumnFormData.productIds : undefined,
+      messageTemplateId: automationColumnFormData.messageTemplateId || undefined,
+    });
+    setIsAutomationColumnDialogOpen(false);
+    resetAutomationColumnForm();
+  };
+
+  const handleEditAutomationColumn = async () => {
+    if (!selectedAutomationColumn) return;
+
+    await updateAutomationColumn.mutateAsync({
+      id: selectedAutomationColumn.id,
+      data: {
+        ...automationColumnFormData,
+        scheduledDate: automationColumnFormData.scheduledDate || undefined,
+        productIds: automationColumnFormData.productIds.length > 0 ? automationColumnFormData.productIds : undefined,
+        messageTemplateId: automationColumnFormData.messageTemplateId || undefined,
+      },
+    });
+    setIsAutomationColumnDialogOpen(false);
+    setIsEditAutomationColumnMode(false);
+    setSelectedAutomationColumn(null);
+    resetAutomationColumnForm();
+  };
+
+  const handleDeleteAutomationColumn = async (columnId: string) => {
+    if (confirm('Tem certeza que deseja remover esta coluna de automação?')) {
+      await deleteAutomationColumn.mutateAsync(columnId);
+    }
+  };
+
+  const openEditAutomationColumnDialog = (column: any) => {
+    setSelectedAutomationColumn(column);
+    setAutomationColumnFormData({
+      name: column.name,
+      color: column.color,
+      description: column.description || '',
+      sendIntervalSeconds: column.sendIntervalSeconds,
+      scheduledDate: column.scheduledDate || '',
+      isRecurring: column.isRecurring,
+      recurringDay: column.recurringDay,
+      messageTemplateId: column.messageTemplateId || '',
+      productIds: column.productIds ? JSON.parse(column.productIds) : [],
+    });
+    setIsEditAutomationColumnMode(true);
+    setIsAutomationColumnDialogOpen(true);
+  };
+
+  const resetAutomationColumnForm = () => {
+    setAutomationColumnFormData({
+      name: '',
+      color: '#10B981',
+      description: '',
+      sendIntervalSeconds: 60,
+      scheduledDate: '',
+      isRecurring: false,
+      recurringDay: undefined,
+      messageTemplateId: '',
+      productIds: [],
+    });
+  };
+
+  // Template Handlers
+  const handleCreateTemplate = async () => {
+    if (!templateFormData.name || !templateFormData.content) {
+      return;
+    }
+
+    await createTemplate.mutateAsync(templateFormData);
+    setIsTemplateDialogOpen(false);
+    resetTemplateForm();
+  };
+
+  const resetTemplateForm = () => {
+    setTemplateFormData({
+      name: '',
+      content: '',
+      mediaUrls: [],
+      mediaType: '',
     });
   };
 
@@ -472,6 +609,77 @@ const AdminLeads = () => {
           )}
         </div>
 
+        {/* Separador e Título do Kanban de Automação */}
+        <Separator className="my-8" />
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-6">
+            <div>
+              <div className="flex items-center gap-2">
+                <Bot className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl font-bold">Automação de Mensagens WhatsApp</h2>
+              </div>
+              <p className="text-muted-foreground mt-1">
+                Arraste leads para colunas de automação para agendar envios automáticos de mensagens
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetAutomationColumnForm();
+                setIsEditAutomationColumnMode(false);
+                setIsAutomationColumnDialogOpen(true);
+              }}
+            >
+              <Settings2 className="mr-2 h-4 w-4" />
+              Nova Coluna de Automação
+            </Button>
+          </div>
+
+          {/* Kanban de Automação */}
+          <div className="-mx-6">
+            {isLoadingAutomationColumns ? (
+              <div className="flex items-center justify-center py-12 px-6">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : automationColumns.length === 0 ? (
+              <div className="px-6">
+                <Card>
+                  <CardContent className="text-center py-12 text-muted-foreground">
+                    <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">Nenhuma coluna de automação configurada</p>
+                    <p className="text-sm">Configure colunas para automatizar o envio de mensagens</p>
+                    <Button
+                      className="mt-4"
+                      onClick={() => {
+                        toast({
+                          title: 'Em desenvolvimento',
+                          description: 'Funcionalidade em breve.',
+                        });
+                      }}
+                    >
+                      <Settings2 className="mr-2 h-4 w-4" />
+                      Criar Primeira Coluna
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <AutomationKanbanView
+                columns={automationColumns}
+                leadsPositions={leadsInAutomation}
+                availableLeads={leads}
+                onMoveLeadToColumn={(leadId, columnId) => {
+                  moveToAutomationColumn({ leadId, columnId });
+                }}
+                onRemoveLeadFromAutomation={removeLeadFromAutomation.mutate}
+                onEditColumn={openEditAutomationColumnDialog}
+                onDeleteColumn={handleDeleteAutomationColumn}
+              />
+            )}
+          </div>
+        </div>
+
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
@@ -624,6 +832,225 @@ const AdminLeads = () => {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 {isEditColumnMode ? 'Salvar Alterações' : 'Criar Coluna'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Automation Column Dialog */}
+        <Dialog open={isAutomationColumnDialogOpen} onOpenChange={setIsAutomationColumnDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {isEditAutomationColumnMode ? 'Editar Coluna de Automação' : 'Nova Coluna de Automação'}
+              </DialogTitle>
+              <DialogDescription>
+                Configure uma coluna para automação de envio de mensagens WhatsApp
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="automation-column-name">Nome da Coluna *</Label>
+                <Input
+                  id="automation-column-name"
+                  value={automationColumnFormData.name}
+                  onChange={(e) =>
+                    setAutomationColumnFormData({ ...automationColumnFormData, name: e.target.value })
+                  }
+                  placeholder="Ex: Primeiro Contato"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="automation-column-description">Descrição</Label>
+                <Input
+                  id="automation-column-description"
+                  value={automationColumnFormData.description}
+                  onChange={(e) =>
+                    setAutomationColumnFormData({ ...automationColumnFormData, description: e.target.value })
+                  }
+                  placeholder="Descreva o objetivo desta coluna"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="automation-column-color">Cor da Coluna</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="automation-column-color"
+                    type="color"
+                    value={automationColumnFormData.color}
+                    onChange={(e) =>
+                      setAutomationColumnFormData({ ...automationColumnFormData, color: e.target.value })
+                    }
+                    className="w-20 h-10"
+                  />
+                  <Input
+                    value={automationColumnFormData.color}
+                    onChange={(e) =>
+                      setAutomationColumnFormData({ ...automationColumnFormData, color: e.target.value })
+                    }
+                    placeholder="#10B981"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="send-interval">Intervalo entre Envios (segundos)</Label>
+                <Input
+                  id="send-interval"
+                  type="number"
+                  min="10"
+                  value={automationColumnFormData.sendIntervalSeconds}
+                  onChange={(e) =>
+                    setAutomationColumnFormData({
+                      ...automationColumnFormData,
+                      sendIntervalSeconds: parseInt(e.target.value) || 60,
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tempo de espera entre envios para evitar bloqueios
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="template-select">Template de Mensagem</Label>
+                <Select
+                  value={automationColumnFormData.messageTemplateId}
+                  onValueChange={(value) =>
+                    setAutomationColumnFormData({ ...automationColumnFormData, messageTemplateId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum</SelectItem>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="p-0 h-auto mt-1"
+                  onClick={() => setIsTemplateDialogOpen(true)}
+                >
+                  + Criar novo template
+                </Button>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="is-recurring"
+                  checked={automationColumnFormData.isRecurring}
+                  onChange={(e) =>
+                    setAutomationColumnFormData({
+                      ...automationColumnFormData,
+                      isRecurring: e.target.checked,
+                    })
+                  }
+                  className="rounded"
+                />
+                <Label htmlFor="is-recurring">Envio Recorrente Mensal</Label>
+              </div>
+
+              {automationColumnFormData.isRecurring && (
+                <div>
+                  <Label htmlFor="recurring-day">Dia do Mês (1-31)</Label>
+                  <Input
+                    id="recurring-day"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={automationColumnFormData.recurringDay || ''}
+                    onChange={(e) =>
+                      setAutomationColumnFormData({
+                        ...automationColumnFormData,
+                        recurringDay: parseInt(e.target.value) || undefined,
+                      })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAutomationColumnDialogOpen(false);
+                  setIsEditAutomationColumnMode(false);
+                  setSelectedAutomationColumn(null);
+                  resetAutomationColumnForm();
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={isEditAutomationColumnMode ? handleEditAutomationColumn : handleCreateAutomationColumn}
+                disabled={
+                  (isEditAutomationColumnMode
+                    ? updateAutomationColumn.isPending
+                    : createAutomationColumn.isPending) || !automationColumnFormData.name
+                }
+              >
+                {(isEditAutomationColumnMode
+                  ? updateAutomationColumn.isPending
+                  : createAutomationColumn.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isEditAutomationColumnMode ? 'Salvar Alterações' : 'Criar Coluna'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Template Dialog */}
+        <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Novo Template de Mensagem</DialogTitle>
+              <DialogDescription>
+                Crie um template reutilizável para suas mensagens
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="template-name">Nome do Template *</Label>
+                <Input
+                  id="template-name"
+                  value={templateFormData.name}
+                  onChange={(e) => setTemplateFormData({ ...templateFormData, name: e.target.value })}
+                  placeholder="Ex: Boas-vindas"
+                />
+              </div>
+              <div>
+                <Label htmlFor="template-content">Conteúdo da Mensagem *</Label>
+                <textarea
+                  id="template-content"
+                  value={templateFormData.content}
+                  onChange={(e) => setTemplateFormData({ ...templateFormData, content: e.target.value })}
+                  placeholder="Use {{nome}}, {{produto}}, etc. para variáveis"
+                  className="w-full min-h-[100px] p-2 border rounded-md"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Variáveis disponíveis: {'{{nome}}'}, {'{{telefone}}'}, {'{{produto}}'}
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleCreateTemplate}
+                disabled={createTemplate.isPending || !templateFormData.name || !templateFormData.content}
+              >
+                {createTemplate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Criar Template
               </Button>
             </DialogFooter>
           </DialogContent>
