@@ -51,6 +51,7 @@ const AdminWhatsApp = () => {
   const [testMessage, setTestMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Verificar status ao carregar
   useEffect(() => {
@@ -161,6 +162,20 @@ const AdminWhatsApp = () => {
       console.error(error);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleSyncChats = async () => {
+    setIsSyncing(true);
+    try {
+      toast.info('Sincronizando chats e contatos...');
+      await api.post('/whatsapp/sync-chats');
+      toast.success('Sincronização iniciada! Aguarde alguns segundos e recarregue a aba Chat.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao sincronizar chats');
+      console.error(error);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -284,17 +299,34 @@ const AdminWhatsApp = () => {
                       variant="outline"
                       size="sm"
                       onClick={checkStatus}
+                      title="Atualizar status"
                     >
                       <RefreshCw className="h-4 w-4" />
                     </Button>
                     {status?.connected && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDisconnect}
-                      >
-                        Desconectar
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSyncChats}
+                          disabled={isSyncing}
+                          title="Sincronizar chats e contatos"
+                        >
+                          {isSyncing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                          <span className="ml-1">Sincronizar</span>
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleDisconnect}
+                        >
+                          Desconectar
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
