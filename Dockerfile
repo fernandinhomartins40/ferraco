@@ -31,8 +31,7 @@ COPY apps ./apps
 RUN npm ci
 
 # Build do frontend (deve ser executado da raiz do monorepo)
-WORKDIR /app/apps/frontend
-RUN npx vite build --logLevel info
+RUN npm run build:frontend
 
 # Gerar Prisma Client do backend
 WORKDIR /app/apps/backend

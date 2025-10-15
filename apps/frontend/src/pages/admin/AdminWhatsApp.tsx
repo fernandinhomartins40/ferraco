@@ -307,11 +307,10 @@ const AdminWhatsApp = () => {
                       <Button
                         variant="destructive"
                         size="sm"
-                          onClick={handleDisconnect}
-                        >
-                          Desconectar
-                        </Button>
-                      </>
+                        onClick={handleDisconnect}
+                      >
+                        Desconectar
+                      </Button>
                     )}
                   </div>
                 </div>
