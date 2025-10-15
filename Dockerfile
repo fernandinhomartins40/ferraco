@@ -33,9 +33,8 @@ RUN npm ci
 # Build do frontend (deve ser executado da raiz do monorepo)
 RUN npm run build:frontend
 
-# Gerar Prisma Client do backend
-WORKDIR /app/apps/backend
-RUN npx prisma generate
+# Gerar Prisma Client do backend (executar da raiz do monorepo)
+RUN npm run prisma:generate
 
 # Stage 2: Runtime - Container Único
 FROM node:20-alpine
