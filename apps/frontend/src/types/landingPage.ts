@@ -563,6 +563,8 @@ export interface FooterLink {
   text: string;
   href: string;
   external?: boolean;
+  linkType?: 'email' | 'phone' | 'whatsapp' | 'address' | 'website' | 'custom';
+  icon?: string;
 }
 
 export interface FooterSection {

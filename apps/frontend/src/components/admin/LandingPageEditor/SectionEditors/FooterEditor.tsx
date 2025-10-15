@@ -10,18 +10,59 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { ImageUploader } from '../StyleControls';
+import { ImageUploader, IconSelector } from '../StyleControls';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface FooterEditorProps {
   config: FooterConfig;
   onChange: (config: Partial<FooterConfig>) => void;
 }
 
+// Tipos de link pré-definidos
+const LINK_TYPES = [
+  { value: 'email', label: 'E-mail', icon: 'Mail', placeholder: 'contato@empresa.com', hrefTemplate: 'mailto:' },
+  { value: 'phone', label: 'Telefone', icon: 'Phone', placeholder: '(11) 1234-5678', hrefTemplate: 'tel:' },
+  { value: 'whatsapp', label: 'WhatsApp', icon: 'MessageCircle', placeholder: '11987654321', hrefTemplate: 'https://wa.me/' },
+  { value: 'address', label: 'Endereço', icon: 'MapPin', placeholder: 'Rua Exemplo, 123', hrefTemplate: 'https://maps.google.com/?q=' },
+  { value: 'website', label: 'Site/URL', icon: 'Globe', placeholder: 'https://exemplo.com', hrefTemplate: '' },
+  { value: 'custom', label: 'Personalizado', icon: 'Link', placeholder: 'Texto livre', hrefTemplate: '' },
+] as const;
+
 export const FooterEditor = ({ config, onChange }: FooterEditorProps) => {
   const updateLogo = (updates: Partial<FooterConfig['logo']>) => {
     onChange({ logo: config.logo ? { ...config.logo, ...updates } : undefined });
+  };
+
+  // Gera href automaticamente baseado no tipo
+  const generateHref = (linkType: string, text: string): string => {
+    const type = LINK_TYPES.find(t => t.value === linkType);
+    if (!type || linkType === 'custom') return text;
+
+    // Remove formatação para gerar href limpo
+    const cleanText = text.replace(/\D/g, ''); // Remove não-dígitos para telefone/whatsapp
+
+    switch (linkType) {
+      case 'email':
+        return `mailto:${text}`;
+      case 'phone':
+        return `tel:+55${cleanText}`;
+      case 'whatsapp':
+        return `https://wa.me/55${cleanText}`;
+      case 'address':
+        return `https://maps.google.com/?q=${encodeURIComponent(text)}`;
+      case 'website':
+        return text.startsWith('http') ? text : `https://${text}`;
+      default:
+        return text;
+    }
   };
 
   const updateSocial = (index: number, field: 'href' | 'label', value: string) => {
@@ -55,20 +96,57 @@ export const FooterEditor = ({ config, onChange }: FooterEditorProps) => {
     onChange({ sections: newSections });
   };
 
-  const updateSectionLink = (sectionIndex: number, linkIndex: number, field: 'text' | 'href', value: string) => {
+  const updateSectionLink = (sectionIndex: number, linkIndex: number, field: 'text' | 'href' | 'linkType' | 'icon', value: string) => {
     const newSections = [...config.sections];
     const newLinks = [...newSections[sectionIndex].links];
-    newLinks[linkIndex] = { ...newLinks[linkIndex], [field]: value };
+    const currentLink = newLinks[linkIndex];
+
+    if (field === 'linkType') {
+      // Quando muda o tipo, atualiza o ícone padrão e gera novo href
+      const linkTypeConfig = LINK_TYPES.find(t => t.value === value);
+      newLinks[linkIndex] = {
+        ...currentLink,
+        linkType: value as any,
+        icon: linkTypeConfig?.icon,
+        href: generateHref(value, currentLink.text),
+      };
+    } else if (field === 'text') {
+      // Quando muda o texto e tem linkType, regenera href
+      const newText = value;
+      const newHref = currentLink.linkType ? generateHref(currentLink.linkType, newText) : currentLink.href;
+      newLinks[linkIndex] = {
+        ...currentLink,
+        text: newText,
+        href: newHref,
+      };
+    } else {
+      newLinks[linkIndex] = { ...currentLink, [field]: value };
+    }
+
     newSections[sectionIndex] = { ...newSections[sectionIndex], links: newLinks };
     onChange({ sections: newSections });
   };
 
   const addSectionLink = (sectionIndex: number) => {
     const newSections = [...config.sections];
+    const sectionTitle = newSections[sectionIndex].title;
+
+    // Detecta tipo baseado no título da seção
+    let defaultType: any = 'custom';
+    if (sectionTitle.toLowerCase().includes('contato')) {
+      defaultType = 'email';
+    } else if (sectionTitle.toLowerCase().includes('horário')) {
+      defaultType = 'custom';
+    }
+
+    const linkTypeConfig = LINK_TYPES.find(t => t.value === defaultType);
+
     const newLink = {
       id: `link-${Date.now()}`,
-      text: 'Novo Link',
-      href: '#',
+      text: '',
+      href: '',
+      linkType: defaultType,
+      icon: linkTypeConfig?.icon || 'Link',
     };
     newSections[sectionIndex].links.push(newLink);
     onChange({ sections: newSections });
@@ -158,38 +236,97 @@ export const FooterEditor = ({ config, onChange }: FooterEditorProps) => {
               </div>
 
               <div className="ml-4 space-y-3 border-l-2 pl-4">
-                {section.links.map((link, linkIndex) => (
-                  <div key={link.id} className="flex items-start gap-2">
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Texto</Label>
-                        <Input
-                          value={link.text}
-                          onChange={(e) => updateSectionLink(sectionIndex, linkIndex, 'text', e.target.value)}
-                          placeholder="Ex: contato@ferraco.com"
-                          className="text-sm"
-                        />
+                {section.links.map((link, linkIndex) => {
+                  const linkTypeConfig = LINK_TYPES.find(t => t.value === link.linkType) || LINK_TYPES[5];
+                  const isCustomType = link.linkType === 'custom' || !link.linkType;
+
+                  return (
+                    <Card key={link.id} className="p-3">
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 space-y-3">
+                            {/* Tipo de Link */}
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Tipo de Link</Label>
+                              <Select
+                                value={link.linkType || 'custom'}
+                                onValueChange={(value) => updateSectionLink(sectionIndex, linkIndex, 'linkType', value)}
+                              >
+                                <SelectTrigger className="text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {LINK_TYPES.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Texto */}
+                            <div className="space-y-1">
+                              <Label className="text-xs">
+                                {isCustomType ? 'Texto' : linkTypeConfig.label}
+                              </Label>
+                              <Input
+                                value={link.text}
+                                onChange={(e) => updateSectionLink(sectionIndex, linkIndex, 'text', e.target.value)}
+                                placeholder={linkTypeConfig.placeholder}
+                                className="text-sm"
+                              />
+                              {!isCustomType && (
+                                <p className="text-xs text-muted-foreground">
+                                  O link será gerado automaticamente
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Href (apenas para custom) */}
+                            {isCustomType && (
+                              <div className="space-y-1">
+                                <Label className="text-xs">Link (href)</Label>
+                                <Input
+                                  value={link.href}
+                                  onChange={(e) => updateSectionLink(sectionIndex, linkIndex, 'href', e.target.value)}
+                                  placeholder="#"
+                                  className="text-sm"
+                                />
+                              </div>
+                            )}
+
+                            {/* Preview do href gerado */}
+                            {!isCustomType && link.text && (
+                              <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                                <strong>Link:</strong> {link.href || '(preencha o campo acima)'}
+                              </div>
+                            )}
+
+                            {/* Ícone */}
+                            <div className="space-y-1">
+                              <Label className="text-xs">Ícone (opcional)</Label>
+                              <IconSelector
+                                label=""
+                                value={link.icon || linkTypeConfig.icon}
+                                onChange={(icon) => updateSectionLink(sectionIndex, linkIndex, 'icon', icon)}
+                              />
+                            </div>
+                          </div>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeSectionLink(sectionIndex, linkIndex)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Link (opcional)</Label>
-                        <Input
-                          value={link.href}
-                          onChange={(e) => updateSectionLink(sectionIndex, linkIndex, 'href', e.target.value)}
-                          placeholder="Ex: mailto:contato@ferraco.com"
-                          className="text-sm"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeSectionLink(sectionIndex, linkIndex)}
-                      className="text-destructive hover:text-destructive mt-5"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                    </Card>
+                  );
+                })}
                 <Button
                   variant="outline"
                   size="sm"
