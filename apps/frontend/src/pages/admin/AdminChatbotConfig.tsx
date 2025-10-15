@@ -140,6 +140,68 @@ export const AdminChatbotConfig = () => {
     setProducts(products.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
   };
 
+  // ===== NOVAS FUNÇÕES PARA AUTOMAÇÃO WHATSAPP =====
+
+  const addSpecification = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const specs = product.specifications || {};
+    const newKey = `Especificação ${Object.keys(specs).length + 1}`;
+
+    updateProduct(productId, 'specifications', {
+      ...specs,
+      [newKey]: ''
+    });
+  };
+
+  const updateSpecificationKey = (productId: string, oldKey: string, newKey: string, value: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const specs = { ...product.specifications };
+    delete specs[oldKey];
+    specs[newKey] = value;
+
+    updateProduct(productId, 'specifications', specs);
+  };
+
+  const updateSpecificationValue = (productId: string, key: string, value: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    updateProduct(productId, 'specifications', {
+      ...product.specifications,
+      [key]: value
+    });
+  };
+
+  const removeSpecification = (productId: string, key: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const specs = { ...product.specifications };
+    delete specs[key];
+
+    updateProduct(productId, 'specifications', specs);
+  };
+
+  const removeProductImage = (productId: string, index: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product || !product.images) return;
+
+    const newImages = product.images.filter((_, idx) => idx !== index);
+    updateProduct(productId, 'images', newImages);
+  };
+
+  const removeProductVideo = (productId: string, index: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product || !product.videos) return;
+
+    const newVideos = product.videos.filter((_, idx) => idx !== index);
+    updateProduct(productId, 'videos', newVideos);
+  };
+
   // Funções para FAQ
   const addFAQ = () => {
     setFaqs([...faqs, { id: Date.now().toString(), question: '', answer: '' }]);
@@ -620,6 +682,155 @@ export const AdminChatbotConfig = () => {
                             placeholder="Material resistente&#10;Fácil instalação&#10;Garantia de 2 anos"
                             rows={3}
                           />
+                        </div>
+
+                        {/* ===== NOVA SEÇÃO: AUTOMAÇÃO WHATSAPP ===== */}
+                        <Separator className="my-6" />
+
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg space-y-4 border-2 border-green-200">
+                          <div className="flex items-center gap-2 mb-4">
+                            <MessageCircle className="h-5 w-5 text-green-600" />
+                            <h4 className="font-semibold text-green-900">
+                              Automação WhatsApp (Opcional)
+                            </h4>
+                            <Badge variant="secondary" className="ml-auto">Novo</Badge>
+                          </div>
+
+                          <Alert className="border-green-300 bg-white">
+                            <AlertDescription className="text-sm text-gray-700">
+                              💡 Preencha os campos abaixo para enviar automaticamente informações
+                              detalhadas via WhatsApp quando um lead manifestar interesse neste produto.
+                            </AlertDescription>
+                          </Alert>
+
+                          {/* Descrição Detalhada */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <span>Descrição Detalhada para WhatsApp</span>
+                              <Badge variant="outline" className="text-xs">Opcional</Badge>
+                            </Label>
+                            <Textarea
+                              value={product.detailedDescription || ''}
+                              onChange={(e) => updateProduct(product.id, 'detailedDescription', e.target.value)}
+                              placeholder="Descrição técnica completa que será enviada via WhatsApp..."
+                              rows={4}
+                              className="bg-white"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Se não preenchido, usará a descrição padrão acima.
+                            </p>
+                          </div>
+
+                          {/* Imagens */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <span>Imagens Adicionais (WhatsApp)</span>
+                              <Badge variant="outline" className="text-xs">Opcional</Badge>
+                            </Label>
+                            <Textarea
+                              placeholder="Cole URLs de imagens, uma por linha"
+                              value={(product.images || []).join('\n')}
+                              onChange={(e) => updateProduct(product.id, 'images',
+                                e.target.value.split('\n').filter(s => s.trim())
+                              )}
+                              className="bg-white font-mono text-sm"
+                              rows={3}
+                            />
+                            {product.images && product.images.length > 0 && (
+                              <div className="flex gap-2 flex-wrap mt-2">
+                                {product.images.map((img, idx) => (
+                                  <div key={idx} className="relative group">
+                                    <img src={img} className="h-20 w-20 object-cover rounded border-2 border-white shadow" alt="" />
+                                    <Button
+                                      size="icon"
+                                      variant="destructive"
+                                      className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition"
+                                      onClick={() => removeProductImage(product.id, idx)}
+                                      type="button"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Vídeos */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <span>Vídeos (WhatsApp)</span>
+                              <Badge variant="outline" className="text-xs">Opcional</Badge>
+                            </Label>
+                            <Textarea
+                              placeholder="Cole URLs de vídeos (YouTube, Vimeo ou arquivos MP4), uma por linha"
+                              value={(product.videos || []).join('\n')}
+                              onChange={(e) => updateProduct(product.id, 'videos',
+                                e.target.value.split('\n').filter(s => s.trim())
+                              )}
+                              className="bg-white font-mono text-sm"
+                              rows={2}
+                            />
+                            {product.videos && product.videos.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                {product.videos.map((video, idx) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <Input value={video} readOnly className="text-xs font-mono" />
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => removeProductVideo(product.id, idx)}
+                                      type="button"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Especificações Técnicas */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <span>Especificações Técnicas</span>
+                              <Badge variant="outline" className="text-xs">Opcional</Badge>
+                            </Label>
+                            {product.specifications && Object.entries(product.specifications).map(([key, value], idx) => (
+                              <div key={idx} className="flex gap-2">
+                                <Input
+                                  placeholder="Nome (ex: Material)"
+                                  value={key}
+                                  onChange={(e) => updateSpecificationKey(product.id, key, e.target.value, value as string)}
+                                  className="bg-white"
+                                />
+                                <Input
+                                  placeholder="Valor (ex: Aço Inox 304)"
+                                  value={value as string}
+                                  onChange={(e) => updateSpecificationValue(product.id, key, e.target.value)}
+                                  className="bg-white"
+                                />
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => removeSpecification(product.id, key)}
+                                  type="button"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addSpecification(product.id)}
+                              className="w-full"
+                              type="button"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Adicionar Especificação
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

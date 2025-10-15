@@ -10,6 +10,8 @@ import {
   replaceVariablesV2,
   type ConversationStep
 } from './conversationFlowV2';
+import { whatsappAutomationService } from '../../services/whatsappAutomation.service';
+import { logger } from '../../utils/logger';
 
 export class ChatbotSessionService {
   /**
@@ -449,6 +451,11 @@ export class ChatbotSessionService {
         where: { id: sessionId },
         data: { leadId: lead.id },
       });
+
+      // ✅ NOVO: Criar automação WhatsApp em background
+      logger.info(`🤖 Criando automação WhatsApp para lead ${lead.id} (${lead.name})`);
+      whatsappAutomationService.createAutomationFromLead(lead.id)
+        .catch(err => logger.error('❌ Erro ao criar automação WhatsApp:', err));
     }
   }
 

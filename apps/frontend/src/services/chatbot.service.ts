@@ -40,11 +40,20 @@ const createApiClient = (): AxiosInstance => {
 const apiClient = createApiClient();
 
 export interface Product {
+  // ===== CAMPOS EXISTENTES =====
   id: string;
   name: string;
   description: string;
   price: string;
   features: string[];
+
+  // ===== NOVOS CAMPOS OPCIONAIS (para automação WhatsApp) =====
+  detailedDescription?: string;  // Descrição completa para WhatsApp
+  images?: string[];             // Array de URLs de imagens
+  videos?: string[];             // Array de URLs de vídeos
+  specifications?: {             // Especificações técnicas
+    [key: string]: string;
+  };
 }
 
 export interface FAQItem {

@@ -278,6 +278,72 @@ class WhatsAppService {
   }
 
   /**
+   * Enviar imagem via WhatsApp
+   * @param to Número de destino
+   * @param imageUrl URL da imagem
+   * @param caption Legenda opcional
+   * @returns ID da mensagem no WhatsApp
+   */
+  async sendImage(to: string, imageUrl: string, caption?: string): Promise<string | undefined> {
+    if (!this.client || !this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    try {
+      const formattedNumber = this.formatPhoneNumber(to);
+
+      // Enviar imagem via WPPConnect
+      const result = await this.client.sendImage(
+        formattedNumber,
+        imageUrl,
+        'image',
+        caption || ''
+      );
+
+      logger.info(`✅ Imagem enviada para ${to}`);
+
+      return result.id;
+
+    } catch (error) {
+      logger.error(`❌ Erro ao enviar imagem para ${to}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar vídeo via WhatsApp
+   * @param to Número de destino
+   * @param videoUrl URL do vídeo
+   * @param caption Legenda opcional
+   * @returns ID da mensagem no WhatsApp
+   */
+  async sendVideo(to: string, videoUrl: string, caption?: string): Promise<string | undefined> {
+    if (!this.client || !this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    try {
+      const formattedNumber = this.formatPhoneNumber(to);
+
+      // Enviar vídeo via WPPConnect
+      const result = await this.client.sendVideoAsGif(
+        formattedNumber,
+        videoUrl,
+        'video.mp4',
+        caption || ''
+      );
+
+      logger.info(`✅ Vídeo enviado para ${to}`);
+
+      return result.id;
+
+    } catch (error) {
+      logger.error(`❌ Erro ao enviar vídeo para ${to}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Formatar número de telefone para o padrão WhatsApp
    * @param phoneNumber Número de telefone
    * @returns Número formatado (ex: 5511999999999@c.us)

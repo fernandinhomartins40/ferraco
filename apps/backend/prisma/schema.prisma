@@ -424,6 +424,7 @@ model Lead {
   partialLeads         PartialLead[]
   chatbotSessions      ChatbotSession[]
   WhatsAppContact      WhatsAppContact?
+  whatsappAutomations  WhatsAppAutomation[]
 
   @@index([email])
   @@index([phone])
@@ -1489,6 +1490,82 @@ model WhatsAppMessage {
   @@index([fromMe])
   @@index([whatsappMessageId])
   @@map("whatsapp_messages")
+}
+
+// ============================================================================
+// WHATSAPP AUTOMATION SYSTEM
+// ============================================================================
+
+enum WhatsAppAutomationStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+// Automação de envio WhatsApp após captação de lead
+model WhatsAppAutomation {
+  id           String                     @id @default(cuid())
+  leadId       String
+  status       WhatsAppAutomationStatus   @default(PENDING)
+  scheduledFor DateTime? // null = envio imediato
+
+  // Produtos a enviar (JSON array de nomes)
+  productsToSend String // JSON: ["Bebedouro", "Freestall"]
+
+  // Controle de envio
+  messagesSent  Int @default(0)
+  messagesTotal Int @default(0)
+
+  // Logs
+  executionLog String? // JSON: log detalhado
+  error        String? // Mensagem de erro se falhou
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  // Relações
+  lead     Lead                        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages WhatsAppAutomationMessage[]
+
+  @@index([leadId])
+  @@index([status])
+  @@index([scheduledFor])
+  @@map("whatsapp_automations")
+}
+
+// Mensagens individuais enviadas na automação
+model WhatsAppAutomationMessage {
+  id           String @id @default(cuid())
+  automationId String
+
+  // Tipo e conteúdo
+  messageType String // TEXT, IMAGE, VIDEO, DOCUMENT
+  content     String? // Texto da mensagem
+  mediaUrl    String? // URL do arquivo de mídia
+  fileName    String? // Nome do arquivo
+
+  // Status
+  status            MessageStatus @default(PENDING)
+  whatsappMessageId String? // ID retornado pelo WhatsApp
+
+  // Ordem de envio
+  order Int
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+  deliveredAt DateTime?
+
+  // Relação
+  automation WhatsAppAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([automationId])
+  @@index([status])
+  @@map("whatsapp_automation_messages")
 }
 
 // ============================================================================
