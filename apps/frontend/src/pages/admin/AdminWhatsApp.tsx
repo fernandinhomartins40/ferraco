@@ -240,10 +240,10 @@ const AdminWhatsApp = () => {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="h-[calc(100vh-16rem)]">
+              <Card className="h-[calc(100vh-16rem)] min-h-[500px]">
                 <div className="flex h-full overflow-hidden">
                   {/* Sidebar - Lista de Conversas */}
-                  <div className="w-96 border-r flex-shrink-0 bg-white">
+                  <div className={`w-full md:w-96 border-r flex-shrink-0 bg-white ${selectedConversationId ? 'hidden md:block' : 'block'}`}>
                     <ConversationList
                       selectedId={selectedConversationId}
                       onSelectConversation={setSelectedConversationId}
@@ -251,9 +251,9 @@ const AdminWhatsApp = () => {
                   </div>
 
                   {/* Área Principal - Chat */}
-                  <div className="flex-1 flex flex-col bg-gray-50">
+                  <div className={`flex-1 flex flex-col bg-gray-50 ${selectedConversationId ? 'block' : 'hidden md:flex'}`}>
                     {selectedConversationId ? (
-                      <ChatArea conversationId={selectedConversationId} />
+                      <ChatArea conversationId={selectedConversationId} onBack={() => setSelectedConversationId(null)} />
                     ) : (
                       <div className="flex-1 flex items-center justify-center text-gray-400">
                         <div className="text-center">

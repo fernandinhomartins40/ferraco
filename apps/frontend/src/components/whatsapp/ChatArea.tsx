@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Loader2, Phone, Video, MoreVertical } from 'lucide-react';
+import { Loader2, Phone, Video, MoreVertical, ArrowLeft } from 'lucide-react';
 import api from '@/lib/apiClient';
 import MessageInput from './MessageInput';
 import { format } from 'date-fns';
@@ -38,9 +38,10 @@ interface Message {
 
 interface ChatAreaProps {
   conversationId: string;
+  onBack?: () => void;
 }
 
-const ChatArea = ({ conversationId }: ChatAreaProps) => {
+const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -171,34 +172,46 @@ const ChatArea = ({ conversationId }: ChatAreaProps) => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b bg-white flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+          {/* Back Button (Mobile only) */}
+          {onBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="md:hidden flex-shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+
           {/* Avatar */}
           {conversation.contact.profilePicUrl ? (
             <img
               src={conversation.contact.profilePicUrl}
               alt={getDisplayName(conversation.contact)}
-              className="w-10 h-10 rounded-full object-cover"
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
               <span className="text-gray-600 font-medium">
                 {getDisplayName(conversation.contact).charAt(0).toUpperCase()}
               </span>
             </div>
           )}
 
-          <div>
-            <h2 className="font-semibold">{getDisplayName(conversation.contact)}</h2>
-            <p className="text-sm text-gray-500">{conversation.contact.phone}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold truncate">{getDisplayName(conversation.contact)}</h2>
+            <p className="text-sm text-gray-500 truncate">{conversation.contact.phone}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
+        <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+          <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Phone className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Video className="h-5 w-5" />
           </Button>
           <Button variant="ghost" size="icon">
@@ -208,8 +221,8 @@ const ChatArea = ({ conversationId }: ChatAreaProps) => {
       </div>
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 px-6 py-4">
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 px-4 md:px-6 py-4 overflow-y-auto">
+        <div className="space-y-4 pb-4">
           {Object.entries(groupedMessages).map(([date, dateMessages]) => (
             <div key={date}>
               {/* Date Separator */}
@@ -227,7 +240,7 @@ const ChatArea = ({ conversationId }: ChatAreaProps) => {
                 >
                   <div
                     className={`
-                      max-w-[70%] rounded-lg px-4 py-2 shadow-sm
+                      max-w-[85%] sm:max-w-[70%] rounded-lg px-3 md:px-4 py-2 shadow-sm
                       ${
                         message.fromMe
                           ? 'bg-green-500 text-white'
@@ -266,8 +279,10 @@ const ChatArea = ({ conversationId }: ChatAreaProps) => {
         </div>
       </ScrollArea>
 
-      {/* Message Input */}
-      <MessageInput onSendMessage={handleSendMessage} />
+      {/* Message Input - Fixed at bottom */}
+      <div className="flex-shrink-0">
+        <MessageInput onSendMessage={handleSendMessage} />
+      </div>
     </div>
   );
 };
