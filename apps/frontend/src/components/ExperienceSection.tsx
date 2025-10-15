@@ -59,6 +59,37 @@ const ExperienceSection = ({ onLeadModalOpen, config }: ExperienceSectionProps) 
   // Usar config ou fallback para stats
   const displayStats = config?.highlights && config.highlights.length > 0 ? config.highlights : stats;
 
+  // Renderizar ícone dinâmico
+  const renderIcon = (iconName: string, index: number) => {
+    const IconComponent = require('lucide-react')[iconName];
+    if (IconComponent) {
+      return <IconComponent className="w-12 h-12 text-secondary" />;
+    }
+    // Fallback para ícone padrão
+    return stats[index]?.icon || <TrendingUp className="w-12 h-12 text-secondary" />;
+  };
+
+  // Usar testimonials do config ou fallback
+  const displayTestimonials = config?.testimonials?.items && config.testimonials.items.length > 0
+    ? config.testimonials.items
+    : testimonials;
+
+  const handleButtonClick = (href?: string) => {
+    if (!href) {
+      onLeadModalOpen();
+      return;
+    }
+
+    if (href.startsWith('#')) {
+      const element = document.querySelector(href);
+      element?.scrollIntoView({ behavior: 'smooth' });
+    } else if (href.startsWith('http')) {
+      window.open(href, '_blank');
+    } else {
+      onLeadModalOpen();
+    }
+  };
+
   return (
     <section id="experiencia" className="py-20 bg-accent text-white">
       <div className="container mx-auto px-4">
@@ -75,14 +106,13 @@ const ExperienceSection = ({ onLeadModalOpen, config }: ExperienceSectionProps) 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
           {displayStats.map((stat, index) => {
-            const defaultStat = stats[index];
             return (
               <div key={'id' in stat ? stat.id : index} className="text-center group">
                 <div className="bg-white/10 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-smooth group-hover:scale-110">
-                  {defaultStat?.icon}
+                  {stat.icon ? renderIcon(stat.icon, index) : stats[index]?.icon}
                 </div>
                 <div className="text-5xl font-bold mb-2 text-secondary">
-                  {stat.value || stat.number}
+                  {stat.value || (stat as any).number}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">
                   {stat.label}
@@ -96,51 +126,76 @@ const ExperienceSection = ({ onLeadModalOpen, config }: ExperienceSectionProps) 
         </div>
 
         {/* Testimonials */}
-        <div className="mb-16">
-          <h3 className="text-3xl font-bold text-center mb-12">
-            O que nossos clientes dizem
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/20 transition-smooth">
-                <div className="text-lg mb-4 italic">
-                  "{testimonial.quote}"
+        {config?.testimonials?.enabled !== false && (
+          <div className="mb-16">
+            <h3 className="text-3xl font-bold text-center mb-12">
+              {config?.testimonials?.title || "O que nossos clientes dizem"}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {displayTestimonials.map((testimonial, index) => (
+                <div key={'id' in testimonial ? testimonial.id : index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/20 transition-smooth">
+                  <div className="text-lg mb-4 italic">
+                    "{testimonial.quote}"
+                  </div>
+                  <div className="border-t border-white/20 pt-4">
+                    <div className="font-semibold text-secondary">
+                      {testimonial.author}
+                    </div>
+                    <div className="text-sm text-white/80">
+                      {testimonial.role}
+                    </div>
+                    <div className="text-sm text-white/60">
+                      {testimonial.company}
+                    </div>
+                  </div>
                 </div>
-                <div className="border-t border-white/20 pt-4">
-                  <div className="font-semibold text-secondary">
-                    {testimonial.author}
-                  </div>
-                  <div className="text-sm text-white/80">
-                    {testimonial.role}
-                  </div>
-                  <div className="text-sm text-white/60">
-                    {testimonial.company}
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* CTA */}
-        <div className="text-center">
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto">
-            <h3 className="text-3xl font-bold mb-4">
-              Faça parte da nossa história de sucesso
-            </h3>
-            <p className="text-xl opacity-90 mb-8">
-              Junte-se aos milhares de clientes que confiam na qualidade e experiência da FerrAço
-            </p>
-            <Button 
-              onClick={onLeadModalOpen}
-              size="lg"
-              variant="secondary"
-              className="font-semibold px-8 py-4 transition-smooth hover:scale-105"
-            >
-              Quero Ser Cliente FerrAço
-            </Button>
+        {config?.cta?.enabled !== false && (
+          <div className="text-center">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto">
+              <h3 className="text-3xl font-bold mb-4">
+                {config?.cta?.title || "Faça parte da nossa história de sucesso"}
+              </h3>
+              <p className="text-xl opacity-90 mb-8">
+                {config?.cta?.description || "Junte-se aos milhares de clientes que confiam na qualidade e experiência da FerrAço"}
+              </p>
+              <Button
+                onClick={() => handleButtonClick(config?.cta?.button?.href)}
+                size="lg"
+                variant="secondary"
+                className="font-semibold px-8 py-4 transition-all duration-300 hover:scale-105"
+                style={{
+                  backgroundColor: config?.cta?.button?.style?.backgroundColor || '#10b981',
+                  color: config?.cta?.button?.style?.textColor || '#ffffff',
+                  ...(config?.cta?.button?.style || {}),
+                }}
+                onMouseEnter={(e) => {
+                  if (config?.cta?.button?.style?.hover) {
+                    const target = e.currentTarget;
+                    const hover = config.cta.button.style.hover;
+                    if (hover.backgroundColor) target.style.backgroundColor = hover.backgroundColor;
+                    if (hover.textColor) target.style.color = hover.textColor;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (config?.cta?.button?.style) {
+                    const target = e.currentTarget;
+                    const style = config.cta.button.style;
+                    target.style.backgroundColor = style.backgroundColor || '#10b981';
+                    target.style.color = style.textColor || '#ffffff';
+                  }
+                }}
+              >
+                {config?.cta?.button?.text || "Quero Ser Cliente FerrAço"}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

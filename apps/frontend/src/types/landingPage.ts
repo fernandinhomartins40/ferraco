@@ -414,8 +414,29 @@ export interface ExperienceHighlight {
   id: string;
   value: string;
   label: string;
+  description?: string;
   icon?: string;
   style?: StyleConfig;
+}
+
+export interface ExperienceTestimonial {
+  id: string;
+  quote: string;
+  author: string;
+  role: string;
+  company: string;
+  avatar?: ImageConfig;
+}
+
+export interface ExperienceCTA {
+  enabled: boolean;
+  title: string;
+  description: string;
+  button: {
+    text: string;
+    href: string;
+    style?: HoverableStyleConfig;
+  };
 }
 
 export interface ExperienceTimeline {
@@ -440,6 +461,12 @@ export interface ExperienceConfig {
     style: StyleConfig;
   };
   highlights: ExperienceHighlight[];
+  testimonials?: {
+    enabled: boolean;
+    title: string;
+    items: ExperienceTestimonial[];
+  };
+  cta?: ExperienceCTA;
   timeline?: ExperienceTimeline[];
   background: {
     type: 'color' | 'gradient' | 'image';
