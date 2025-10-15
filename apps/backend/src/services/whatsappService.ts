@@ -297,6 +297,7 @@ class WhatsAppService {
 
   /**
    * Desconectar WhatsApp e limpar sessão
+   * Após desconectar, reinicializa automaticamente para gerar novo QR code
    */
   async disconnect(): Promise<void> {
     if (this.client) {
@@ -310,6 +311,14 @@ class WhatsAppService {
         logger.error('Erro ao desconectar WhatsApp:', error);
       }
     }
+
+    // Aguardar 2 segundos antes de reinicializar
+    logger.info('🔄 Gerando novo QR Code em 2 segundos...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Reinicializar para gerar novo QR code
+    this.isInitializing = false;
+    await this.initialize();
   }
 
   /**
