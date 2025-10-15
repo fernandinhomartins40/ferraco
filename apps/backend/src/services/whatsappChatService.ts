@@ -628,13 +628,13 @@ export class WhatsAppChatService {
 
   /**
    * Lista mensagens de uma conversa (com paginação)
-   * ✅ SIMPLIFICADO: Só retorna mensagens enviadas pelo sistema
+   * ✅ CORRIGIDO: Retorna TODAS as mensagens (enviadas e recebidas)
    */
   async getMessages(conversationId: string, limit = 100, offset = 0) {
     return prisma.whatsAppMessage.findMany({
       where: {
         conversationId,
-        fromMe: true, // ✅ Só mensagens enviadas pelo sistema
+        // ✅ REMOVIDO filtro fromMe - agora mostra todas as mensagens
       },
       orderBy: { timestamp: 'asc' },
       take: limit,
@@ -643,6 +643,75 @@ export class WhatsAppChatService {
         contact: true,
       },
     });
+  }
+
+  /**
+   * ✅ NOVO: Atualiza status da mensagem baseado no ACK do WhatsApp
+   * ACK codes:
+   * 0 = ERROR
+   * 1 = PENDING
+   * 2 = SERVER (enviado para servidor WhatsApp)
+   * 3 = DEVICE (entregue no dispositivo do destinatário)
+   * 4 = READ (lido pelo destinatário)
+   * 5 = PLAYED (áudio/vídeo reproduzido)
+   */
+  async updateMessageStatus(whatsappMessageId: string, ackCode: number): Promise<void> {
+    try {
+      // Mapear ACK code para MessageStatus
+      let status: MessageStatus;
+      let readAt: Date | null = null;
+      let deliveredAt: Date | null = null;
+
+      switch (ackCode) {
+        case 0:
+          status = MessageStatus.FAILED;
+          break;
+        case 1:
+          status = MessageStatus.PENDING;
+          break;
+        case 2:
+          status = MessageStatus.SENT;
+          break;
+        case 3:
+          status = MessageStatus.DELIVERED;
+          deliveredAt = new Date();
+          break;
+        case 4:
+        case 5:
+          status = MessageStatus.READ;
+          readAt = new Date();
+          deliveredAt = new Date();
+          break;
+        default:
+          status = MessageStatus.SENT;
+      }
+
+      // Atualizar mensagem no banco
+      const updated = await prisma.whatsAppMessage.updateMany({
+        where: { whatsappMessageId },
+        data: {
+          status,
+          ...(readAt && { readAt }),
+          ...(deliveredAt && { deliveredAt }),
+        },
+      });
+
+      if (updated.count > 0) {
+        logger.info(`✅ Status atualizado: ${whatsappMessageId} -> ${status}`);
+
+        // Emitir evento WebSocket
+        if (this.io) {
+          this.io.emit('message:status', {
+            whatsappMessageId,
+            status,
+            readAt,
+            deliveredAt,
+          });
+        }
+      }
+    } catch (error) {
+      logger.error(`❌ Erro ao atualizar status da mensagem ${whatsappMessageId}:`, error);
+    }
   }
 
   /**

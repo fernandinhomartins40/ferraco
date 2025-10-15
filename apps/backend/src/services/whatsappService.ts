@@ -166,6 +166,9 @@ class WhatsAppService {
       // Configurar listeners de mensagens
       this.setupMessageListeners();
 
+      // Configurar listeners de ACK (confirmação de leitura/entrega)
+      this.setupAckListeners();
+
       logger.info('✅ WhatsApp Service (WPPConnect) inicializado!');
       this.isInitializing = false;
 
@@ -239,6 +242,31 @@ class WhatsAppService {
     });
 
     logger.info('✅ Listeners de mensagens configurados');
+  }
+
+  /**
+   * Configurar listeners para ACKs (confirmações de leitura/entrega)
+   */
+  private setupAckListeners(): void {
+    if (!this.client) {
+      logger.error('Cliente WhatsApp não inicializado');
+      return;
+    }
+
+    // Listener para mudanças de status (ACK)
+    this.client.onAck(async (ack: any) => {
+      try {
+        logger.info(`📨 ACK recebido: ${ack.id._serialized} - Status: ${ack.ack}`);
+
+        // Atualizar status da mensagem no banco
+        await whatsappChatService.updateMessageStatus(ack.id._serialized, ack.ack);
+
+      } catch (error) {
+        logger.error('Erro ao processar ACK:', error);
+      }
+    });
+
+    logger.info('✅ Listeners de ACK configurados');
   }
 
   /**
