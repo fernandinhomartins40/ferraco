@@ -44,7 +44,10 @@ export const LandingPagePreview = ({
     switch (currentSection) {
       case 'header':
         return config.header.enabled ? (
-          <Header onLeadModalOpen={openLeadModal} config={config.header} />
+          // Wrapper para remover fixed position no preview
+          <div className="[&_header]:static [&_header]:relative">
+            <Header onLeadModalOpen={openLeadModal} config={config.header} />
+          </div>
         ) : (
           <div className="p-8 text-center text-muted-foreground">Seção Header desabilitada</div>
         );
@@ -111,25 +114,27 @@ export const LandingPagePreview = ({
   const getScale = () => {
     switch (previewMode) {
       case 'mobile':
-        return 0.4; // 40% para mobile
+        return 0.5; // 50% para mobile
       case 'tablet':
-        return 0.6; // 60% para tablet
+        return 0.7; // 70% para tablet
       case 'desktop':
       default:
-        return 0.8; // 80% para desktop
+        return 1; // 100% para desktop (sem escala)
     }
   };
 
   const scale = getScale();
 
   return (
-    <div className="w-full overflow-hidden bg-background">
-      {/* Container com escala */}
+    <div className="w-full bg-background">
+      {/* Container com escala - centrado sem margem esquerda */}
       <div
+        className="mx-auto"
         style={{
           transform: `scale(${scale})`,
-          transformOrigin: 'top center',
-          width: `${100 / scale}%`,
+          transformOrigin: 'top left',
+          width: scale < 1 ? `${100 / scale}%` : '100%',
+          maxWidth: '100%',
         }}
       >
         {renderCurrentSection()}
