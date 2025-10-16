@@ -264,7 +264,7 @@ class WhatsAppService {
       return;
     }
 
-    // Listener para mudanças de status (ACK)
+    // Listener para mudanças de status (ACK) - MÚLTIPLO DISPATCH
     this.client.onAck(async (ack: any) => {
       try {
         const messageId = ack.id?._serialized || ack.id;
@@ -276,7 +276,8 @@ class WhatsAppService {
           'messageId usado': messageId,
           'tipo messageId': typeof messageId,
           ackCode,
-          statusName: ackCode === 1 ? 'PENDING' : ackCode === 2 ? 'SENT' : ackCode === 3 ? 'DELIVERED' : ackCode === 4 || ackCode === 5 ? 'READ' : 'UNKNOWN'
+          statusName: ackCode === 1 ? 'PENDING' : ackCode === 2 ? 'SENT' : ackCode === 3 ? 'DELIVERED' : ackCode === 4 || ackCode === 5 ? 'READ' : 'UNKNOWN',
+          'full ack object': JSON.stringify(ack)
         });
 
         // Atualizar status da mensagem no banco
@@ -287,7 +288,83 @@ class WhatsAppService {
       }
     });
 
-    logger.info('✅ Listeners de ACK configurados');
+    // ⭐ NOVO: Polling para verificar status de mensagens recentes
+    // Como o onAck pode não disparar para DELIVERED/READ, vamos fazer polling
+    setInterval(async () => {
+      try {
+        await this.checkRecentMessagesStatus();
+      } catch (error) {
+        logger.error('Erro ao verificar status de mensagens:', error);
+      }
+    }, 10000); // Verificar a cada 10 segundos
+
+    logger.info('✅ Listeners de ACK configurados + polling de status ativado');
+  }
+
+  /**
+   * ⭐ NOVO: Verificar status de mensagens recentes
+   */
+  private async checkRecentMessagesStatus(): Promise<void> {
+    try {
+      const { prisma } = await import('../config/database');
+
+      // Buscar mensagens enviadas nos últimos 5 minutos que ainda não foram lidas
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+      const recentMessages = await prisma.whatsAppMessage.findMany({
+        where: {
+          fromMe: true,
+          status: { in: ['PENDING', 'SENT', 'DELIVERED'] },
+          timestamp: { gte: fiveMinutesAgo },
+          whatsappMessageId: { not: null },
+        },
+        take: 50, // Limitar para não sobrecarregar
+      });
+
+      if (recentMessages.length === 0) return;
+
+      logger.debug(`🔍 Verificando status de ${recentMessages.length} mensagens recentes`);
+
+      // Verificar status de cada mensagem no WhatsApp
+      for (const msg of recentMessages) {
+        try {
+          if (!msg.whatsappMessageId || !this.client) continue;
+
+          // Buscar status atualizado da mensagem via WPPConnect
+          const messageStatus = await this.client.getMessageById(msg.whatsappMessageId);
+
+          if (messageStatus && messageStatus.ack) {
+            const currentAckCode = messageStatus.ack;
+
+            // Mapear para nosso enum
+            let newStatus: string | null = null;
+            switch (currentAckCode) {
+              case 3:
+                if (msg.status !== 'DELIVERED' && msg.status !== 'READ') {
+                  newStatus = 'DELIVERED';
+                }
+                break;
+              case 4:
+              case 5:
+                if (msg.status !== 'READ') {
+                  newStatus = 'READ';
+                }
+                break;
+            }
+
+            // Se o status mudou, atualizar
+            if (newStatus) {
+              logger.info(`🔄 Status atualizado via polling: ${msg.id} -> ${newStatus} (ACK=${currentAckCode})`);
+              await whatsappChatService.updateMessageStatus(msg.whatsappMessageId, currentAckCode);
+            }
+          }
+        } catch (error) {
+          // Silencioso - mensagem pode não existir mais no WhatsApp
+        }
+      }
+    } catch (error) {
+      logger.error('Erro no polling de status:', error);
+    }
   }
 
   /**
