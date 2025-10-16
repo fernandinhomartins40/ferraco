@@ -84,15 +84,17 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       console.log('📨 Status de mensagem atualizado:', JSON.stringify(data, null, 2));
       console.log('📨 messageIds recebidos:', data.messageIds);
       console.log('📨 Novo status:', data.status);
-      console.log('📨 IDs das mensagens atuais:', messages.map(m => m.id));
+      console.log('📨 IDs das mensagens atuais (closure):', messages.map(m => m.id));
 
-      setMessages((prev) =>
-        prev.map((msg) => {
+      setMessages((prev) => {
+        console.log('📨 IDs das mensagens atuais (prev dentro setMessages):', prev.map(m => m.id));
+
+        return prev.map((msg) => {
           const shouldUpdate = data.messageIds.includes(msg.id);
           console.log(`📨 Mensagem ${msg.id}: shouldUpdate=${shouldUpdate}, status atual=${msg.status}, novo=${data.status}`);
           return shouldUpdate ? { ...msg, status: data.status } : msg;
-        })
-      );
+        });
+      });
     },
     onTyping: (data) => {
       const contactId = conversation?.contact.phone.replace(/\D/g, '');
