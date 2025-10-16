@@ -5,7 +5,8 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Use a mesma origem do frontend (funciona tanto em dev quanto em prod)
+const BACKEND_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 interface Message {
   id: string;
