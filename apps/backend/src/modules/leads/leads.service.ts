@@ -318,12 +318,18 @@ export class LeadsService {
       }),
     ]);
 
-    // Group by source
-    const leadsBySource = await this.prisma.lead.groupBy({
-      by: ['source'],
+    // Group by source - buscar todos os leads e agrupar manualmente
+    const allLeads = await this.prisma.lead.findMany({
       where: { status: { not: 'ARQUIVADO' } },
-      _count: true,
+      select: { source: true },
     });
+
+    // Agrupar por source manualmente
+    const sourceGroups = allLeads.reduce((acc, lead) => {
+      const source = lead.source || 'Desconhecido';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
     // Calculate conversion rate
     const convertedLeads = await this.prisma.lead.count({
@@ -344,9 +350,7 @@ export class LeadsService {
       byPriority: Object.fromEntries(
         byPriority.map(p => [p.priority, p._count])
       ),
-      bySource: Object.fromEntries(
-        leadsBySource.map(s => [s.source || 'Desconhecido', s._count])
-      ),
+      bySource: sourceGroups,
       averageScore: avgScore._avg.leadScore || 0,
       conversionRate: Math.round(conversionRate * 100) / 100,
     };
