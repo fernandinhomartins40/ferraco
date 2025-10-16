@@ -90,6 +90,8 @@ export interface LeadResponse {
 
 export interface LeadStatsResponse {
   total: number;
+  weekCount: number;
+  monthCount: number;
   byStatus: Record<string, number>;
   byPriority: Record<string, number>;
   bySource: Record<string, number>;

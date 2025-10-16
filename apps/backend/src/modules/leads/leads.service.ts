@@ -273,7 +273,15 @@ export class LeadsService {
   async getStats(): Promise<LeadStatsResponse> {
     logger.debug('Fetching lead statistics');
 
-    const [total, byStatus, byPriority, avgScore] = await Promise.all([
+    // Calculate date ranges
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - 7);
+
+    const startOfMonth = new Date(now);
+    startOfMonth.setDate(now.getDate() - 30);
+
+    const [total, byStatus, byPriority, avgScore, weekCount, monthCount] = await Promise.all([
       this.prisma.lead.count({
         where: { status: { not: 'ARQUIVADO' } },
       }),
@@ -293,6 +301,20 @@ export class LeadsService {
       this.prisma.lead.aggregate({
         where: { status: { not: 'ARQUIVADO' } },
         _avg: { leadScore: true },
+      }),
+
+      this.prisma.lead.count({
+        where: {
+          status: { not: 'ARQUIVADO' },
+          createdAt: { gte: startOfWeek },
+        },
+      }),
+
+      this.prisma.lead.count({
+        where: {
+          status: { not: 'ARQUIVADO' },
+          createdAt: { gte: startOfMonth },
+        },
       }),
     ]);
 
@@ -314,6 +336,8 @@ export class LeadsService {
 
     return {
       total,
+      weekCount,
+      monthCount,
       byStatus: Object.fromEntries(
         byStatus.map(s => [s.status, s._count])
       ),
