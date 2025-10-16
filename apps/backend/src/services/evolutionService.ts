@@ -19,12 +19,12 @@ const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://evolution-api
 const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || 'ferraco-crm';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://ferraco-crm-vps:3000';
 
-// API Key (opcional - Evolution API configurada sem autenticação para simplificar deploy)
+// API Key (obrigatória para Evolution API v2.2.3+)
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '';
 if (EVOLUTION_API_KEY) {
-  logger.info('🔑 Evolution API Key configurada');
+  logger.info('🔑 Evolution API autenticada com API Key');
 } else {
-  logger.info('🔓 Evolution API sem autenticação (modo simplificado)');
+  logger.warn('⚠️  EVOLUTION_API_KEY não configurada - instância não poderá ser criada');
 }
 
 // Tipos Evolution API

@@ -36,9 +36,10 @@ services:
       - CORS_METHODS=GET,POST,PUT,DELETE
       - CORS_CREDENTIALS=true
 
-      # Autenticação DESABILITADA para simplificar deploy inicial
-      # API Key será gerenciada internamente pelo backend se necessário
-      - AUTHENTICATION_TYPE=none
+      # Autenticação com API Key Global
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=B6D@9F2#K8L$4P7!Q3M@5N9^W1X&Y6Z
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
 
       # Database - Banco dedicado para Evolution API
       - DATABASE_ENABLED=true
@@ -148,7 +149,7 @@ services:
       WHATSAPP_SESSIONS_PATH: /app/sessions
       EVOLUTION_API_URL: http://evolution-api:8080
       EVOLUTION_INSTANCE_NAME: ferraco-crm
-      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      EVOLUTION_API_KEY: B6D@9F2#K8L$4P7!Q3M@5N9^W1X&Y6Z
       BACKEND_URL: http://ferraco-crm-vps:3000
 
     volumes:
