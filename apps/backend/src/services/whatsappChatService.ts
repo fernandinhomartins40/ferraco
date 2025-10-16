@@ -697,7 +697,7 @@ export class WhatsAppChatService {
       });
 
       if (updated.count > 0) {
-        logger.info(`✅ Status atualizado: ${whatsappMessageId} -> ${status}`);
+        logger.info(`✅ Status atualizado: ${whatsappMessageId} -> ${status} (${updated.count} mensagem(ns))`);
 
         // Buscar mensagem atualizada para obter o ID
         const message = await prisma.whatsAppMessage.findFirst({
@@ -705,16 +705,25 @@ export class WhatsAppChatService {
           select: { id: true },
         });
 
+        if (!message) {
+          logger.warn(`⚠️  Mensagem ${whatsappMessageId} não encontrada após update`);
+          return;
+        }
+
         // Emitir evento WebSocket
-        if (this.io && message) {
+        if (this.io) {
           this.io.emit('message:status', {
             messageIds: [message.id],
             status,
             readAt,
             deliveredAt,
           });
-          logger.debug(`📡 Evento message:status emitido para mensagem ${message.id}`);
+          logger.info(`📡 WebSocket emitido: message:status para ${message.id} com status ${status}`);
+        } else {
+          logger.warn('⚠️  Socket.io não disponível para emitir evento');
         }
+      } else {
+        logger.warn(`⚠️  Nenhuma mensagem encontrada com whatsappMessageId: ${whatsappMessageId}`);
       }
     } catch (error) {
       logger.error(`❌ Erro ao atualizar status da mensagem ${whatsappMessageId}:`, error);

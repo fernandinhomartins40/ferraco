@@ -267,10 +267,17 @@ class WhatsAppService {
     // Listener para mudanças de status (ACK)
     this.client.onAck(async (ack: any) => {
       try {
-        logger.info(`📨 ACK recebido: ${ack.id._serialized} - Status: ${ack.ack}`);
+        const messageId = ack.id?._serialized || ack.id;
+        const ackCode = ack.ack;
+
+        logger.info(`📨 ACK recebido:`, {
+          messageId,
+          ackCode,
+          statusName: ackCode === 1 ? 'PENDING' : ackCode === 2 ? 'SENT' : ackCode === 3 ? 'DELIVERED' : ackCode === 4 || ackCode === 5 ? 'READ' : 'UNKNOWN'
+        });
 
         // Atualizar status da mensagem no banco
-        await whatsappChatService.updateMessageStatus(ack.id._serialized, ack.ack);
+        await whatsappChatService.updateMessageStatus(messageId, ackCode);
 
       } catch (error) {
         logger.error('Erro ao processar ACK:', error);
