@@ -6,8 +6,10 @@ services:
       POSTGRES_USER: ferraco
       POSTGRES_PASSWORD: ferraco123
       POSTGRES_DB: ferraco_crm
+      POSTGRES_MULTIPLE_DATABASES: evolution_api
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./scripts/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
     networks:
       - ferraco-network
     restart: unless-stopped
@@ -38,10 +40,10 @@ services:
       # API Key será gerenciada internamente pelo backend se necessário
       - AUTHENTICATION_TYPE=none
 
-      # Database - Usa PostgreSQL compartilhado
+      # Database - Banco dedicado para Evolution API
       - DATABASE_ENABLED=true
       - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://ferraco:ferraco123@postgres:5432/ferraco_crm
+      - DATABASE_CONNECTION_URI=postgresql://ferraco:ferraco123@postgres:5432/evolution_api
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
       - DATABASE_SAVE_DATA_INSTANCE=true
       - DATABASE_SAVE_DATA_NEW_MESSAGE=true
