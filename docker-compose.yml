@@ -17,6 +17,9 @@ services:
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
       - CORS_ORIGIN=http://localhost:5173,http://localhost:3000
       - WHATSAPP_SESSIONS_PATH=/app/sessions
+      - WAHA_URL=http://waha:3000
+      - WAHA_API_KEY=1d27d04086bfadbf4f988f22b85889c4fbb92fd7e7d049aa09bb25ac223cd4b5
+      - WAHA_SESSION_NAME=ferraco-crm
     volumes:
       - ./apps/backend:/app
       - /app/node_modules
@@ -42,13 +45,13 @@ services:
       - WHATSAPP_HOOK_URL=http://backend:3000/webhooks/waha
       - WHATSAPP_HOOK_EVENTS=message,message.ack,session.status,state.change
       - WHATSAPP_SESSIONS_PATH=/app/.sessions
-      - WAHA_SECURITY_DISABLE=true
+      - WAHA_API_KEY=1d27d04086bfadbf4f988f22b85889c4fbb92fd7e7d049aa09bb25ac223cd4b5
     volumes:
       - waha-sessions:/app/.sessions
     networks:
       - ferraco-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "--header=X-Api-Key: 1d27d04086bfadbf4f988f22b85889c4fbb92fd7e7d049aa09bb25ac223cd4b5", "http://localhost:3000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
