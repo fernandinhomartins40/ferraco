@@ -24,11 +24,15 @@ import {
   RefreshCw,
   Settings,
   MessageSquare,
+  Users,
+  UserCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/apiClient';
 import ConversationList from '@/components/whatsapp/ConversationList';
 import ChatArea from '@/components/whatsapp/ChatArea';
+import GroupManagement from '@/components/whatsapp/GroupManagement';
+import ContactManagement from '@/components/whatsapp/ContactManagement';
 
 interface WhatsAppStatus {
   connected: boolean;
@@ -52,6 +56,8 @@ const AdminWhatsApp = () => {
   const [isSending, setIsSending] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showGroupManagement, setShowGroupManagement] = useState(false);
+  const [showContactManagement, setShowContactManagement] = useState(false);
 
   // Verificar status ao carregar
   useEffect(() => {
@@ -196,11 +202,35 @@ const AdminWhatsApp = () => {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">WhatsApp Business</h1>
-          <p className="text-muted-foreground">
-            Gerencie suas conversas e configure a integração WhatsApp
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">WhatsApp Business</h1>
+            <p className="text-muted-foreground">
+              Gerencie suas conversas e configure a integração WhatsApp
+            </p>
+          </div>
+          {status?.connected && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowContactManagement(true)}
+                className="flex items-center gap-2"
+              >
+                <UserCircle className="h-4 w-4" />
+                Contatos
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowGroupManagement(true)}
+                className="flex items-center gap-2"
+              >
+                <Users className="h-4 w-4" />
+                Criar Grupo
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -441,6 +471,17 @@ const AdminWhatsApp = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modais de Gerenciamento */}
+      <GroupManagement
+        open={showGroupManagement}
+        onOpenChange={setShowGroupManagement}
+        mode="create"
+      />
+      <ContactManagement
+        open={showContactManagement}
+        onOpenChange={setShowContactManagement}
+      />
     </AdminLayout>
   );
 };
