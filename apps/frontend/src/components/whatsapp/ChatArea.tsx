@@ -65,6 +65,17 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
         setMessages((prev) => [...prev, message]);
       }
     },
+    onMessageStatus: (data) => {
+      // Update message status in real-time
+      console.log('📨 Status de mensagem atualizado:', data);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          data.messageIds.includes(msg.id)
+            ? { ...msg, status: data.status }
+            : msg
+        )
+      );
+    },
     onTyping: (data) => {
       // Show typing indicator if it's from this contact
       const contactId = conversation?.contact.phone.replace(/\D/g, '');

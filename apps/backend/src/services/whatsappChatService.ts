@@ -699,14 +699,21 @@ export class WhatsAppChatService {
       if (updated.count > 0) {
         logger.info(`✅ Status atualizado: ${whatsappMessageId} -> ${status}`);
 
+        // Buscar mensagem atualizada para obter o ID
+        const message = await prisma.whatsAppMessage.findFirst({
+          where: { whatsappMessageId },
+          select: { id: true },
+        });
+
         // Emitir evento WebSocket
-        if (this.io) {
+        if (this.io && message) {
           this.io.emit('message:status', {
-            whatsappMessageId,
+            messageIds: [message.id],
             status,
             readAt,
             deliveredAt,
           });
+          logger.debug(`📡 Evento message:status emitido para mensagem ${message.id}`);
         }
       }
     } catch (error) {
