@@ -145,12 +145,6 @@ class WAHAService extends EventEmitter {
       }
 
     } catch (error: any) {
-      // Se WAHA não está disponível, apenas loga warning ao invés de throw
-      if (error.code === 'ECONNREFUSED' || error.code === 'EAI_AGAIN' || error.code === 'ENOTFOUND') {
-        console.warn('⚠️ WAHA não disponível:', error.message);
-        console.warn('⚠️ WhatsApp não estará disponível até que o WAHA seja configurado');
-        return;
-      }
       console.error('❌ Erro ao inicializar WAHA:', error.message);
       throw error;
     }
@@ -212,12 +206,8 @@ class WAHAService extends EventEmitter {
       const response = await this.api.get('/sessions');
       return response.data;
     } catch (error: any) {
-      // Se é erro de conexão, re-throw para o initialize() tratar
-      if (error.code === 'ECONNREFUSED' || error.code === 'EAI_AGAIN' || error.code === 'ENOTFOUND') {
-        throw error;
-      }
       console.error('❌ Erro ao buscar sessões:', error.message);
-      return [];
+      throw error;
     }
   }
 

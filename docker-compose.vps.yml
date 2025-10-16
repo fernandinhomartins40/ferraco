@@ -17,6 +17,25 @@ services:
       timeout: 5s
       retries: 5
 
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: ferraco-waha
+    restart: unless-stopped
+    environment:
+      - WHATSAPP_HOOK_URL=http://ferraco-crm-vps:3000/webhooks/waha
+      - WHATSAPP_HOOK_EVENTS=message,message.ack,session.status,state.change
+      - WHATSAPP_SESSIONS_PATH=/app/.sessions
+    volumes:
+      - waha-sessions:/app/.sessions
+    networks:
+      - ferraco-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
   ferraco-crm-vps:
     container_name: ferraco-crm-vps
     build:
@@ -49,8 +68,11 @@ services:
       # API
       API_PREFIX: ${API_PREFIX:-/api}
 
-      # WhatsApp
+      # WhatsApp / WAHA
       WHATSAPP_SESSIONS_PATH: /app/sessions
+      WAHA_URL: http://waha:3000
+      WAHA_SESSION_NAME: ferraco-crm
+      BACKEND_URL: http://ferraco-crm-vps:3000
 
     volumes:
       # Dados persistentes
@@ -62,6 +84,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      waha:
+        condition: service_started
 
     restart: unless-stopped
 
@@ -77,6 +101,7 @@ services:
 
 volumes:
   postgres-data:
+  waha-sessions:
 
 networks:
   ferraco-network:
