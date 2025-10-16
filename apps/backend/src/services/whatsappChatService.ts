@@ -313,10 +313,10 @@ export class WhatsAppChatService {
         },
       });
 
-      // Emitir evento WebSocket
+      // Emitir evento WebSocket (broadcast)
       if (this.io) {
-        this.io.emit('message:new', savedMessage);
-        this.io.emit('conversation:update', conversation.id);
+        this.io.sockets.emit('message:new', savedMessage);
+        this.io.sockets.emit('conversation:update', conversation.id);
       }
 
       logger.info(`✅ Mensagem enviada salva no banco: ${savedMessage.id}`);
@@ -489,13 +489,11 @@ export class WhatsAppChatService {
         },
       });
 
-      // 6. Emitir evento WebSocket
+      // 6. Emitir evento WebSocket (broadcast para todos os clientes)
       if (this.io) {
-        logger.info(`📡 Emitindo message:new para mensagem ${savedMessage.id}`);
-        this.io.emit('message:new', savedMessage);
-        this.io.emit('conversation:update', conversation.id);
-      } else {
-        logger.warn(`⚠️  Socket.IO não configurado, mensagem ${savedMessage.id} não será enviada via WebSocket`);
+        // Emit para todos os sockets conectados
+        this.io.sockets.emit('message:new', savedMessage);
+        this.io.sockets.emit('conversation:update', conversation.id);
       }
 
       logger.info(`✅ Mensagem salva: ${savedMessage.id}`);
@@ -727,17 +725,15 @@ export class WhatsAppChatService {
           return;
         }
 
-        // Emitir evento WebSocket
+        // Emitir evento WebSocket (broadcast para todos)
         if (this.io) {
-          this.io.emit('message:status', {
+          this.io.sockets.emit('message:status', {
             messageIds: [message.id],
             status,
             readAt,
             deliveredAt,
           });
-          logger.info(`📡 WebSocket emitido: message:status para ${message.id} com status ${status}`);
-        } else {
-          logger.warn('⚠️  Socket.io não disponível para emitir evento');
+          logger.info(`📡 Status atualizado: ${message.id} -> ${status}`);
         }
       } else {
         logger.warn(`⚠️  Nenhuma mensagem encontrada com whatsappMessageId: ${whatsappMessageId}`);
@@ -762,9 +758,9 @@ export class WhatsAppChatService {
       },
     });
 
-    // Emitir evento de atualização
+    // Emitir evento de atualização (broadcast)
     if (this.io && updated.count > 0) {
-      this.io.emit('message:status', { messageIds, status: MessageStatus.READ });
+      this.io.sockets.emit('message:status', { messageIds, status: MessageStatus.READ });
     }
 
     return updated;

@@ -264,23 +264,28 @@ class WhatsAppService {
       return;
     }
 
-    // Listener para mudanças de status (ACK) - MÚLTIPLO DISPATCH
+    // Listener para mudanças de status (ACK)
     this.client.onAck(async (ack: any) => {
       try {
-        const messageId = ack.id?._serialized || ack.id;
+        // Normalizar messageId (pode vir como objeto ou string)
+        let messageId: string;
+        if (typeof ack.id === 'string') {
+          messageId = ack.id;
+        } else if (ack.id?._serialized) {
+          messageId = ack.id._serialized;
+        } else if (typeof ack.id === 'object') {
+          messageId = JSON.stringify(ack.id);
+        } else {
+          logger.warn('⚠️  ACK com ID inválido:', ack);
+          return;
+        }
+
         const ackCode = ack.ack;
+        const statusName = ackCode === 1 ? 'PENDING' : ackCode === 2 ? 'SENT' : ackCode === 3 ? 'DELIVERED' : ackCode === 4 || ackCode === 5 ? 'READ' : 'UNKNOWN';
 
-        logger.info(`📨 ACK recebido:`, {
-          'ack.id': ack.id,
-          'ack.id._serialized': ack.id?._serialized,
-          'messageId usado': messageId,
-          'tipo messageId': typeof messageId,
-          ackCode,
-          statusName: ackCode === 1 ? 'PENDING' : ackCode === 2 ? 'SENT' : ackCode === 3 ? 'DELIVERED' : ackCode === 4 || ackCode === 5 ? 'READ' : 'UNKNOWN',
-          'full ack object': JSON.stringify(ack)
-        });
+        logger.info(`📨 ACK: ${messageId.substring(0, 20)}... -> ${statusName} (${ackCode})`);
 
-        // Atualizar status da mensagem no banco
+        // Atualizar status da mensagem no banco (já emite WebSocket internamente)
         await whatsappChatService.updateMessageStatus(messageId, ackCode);
 
       } catch (error) {
@@ -352,10 +357,13 @@ class WhatsAppService {
                 break;
             }
 
-            // Se o status mudou, atualizar
+            // Se o status mudou, atualizar BD e emitir WebSocket
             if (newStatus) {
-              logger.info(`🔄 Status atualizado via polling: ${msg.id} -> ${newStatus} (ACK=${currentAckCode})`);
+              logger.info(`🔄 Polling: ${msg.id} -> ${newStatus} (ACK=${currentAckCode})`);
               await whatsappChatService.updateMessageStatus(msg.whatsappMessageId, currentAckCode);
+
+              // CRÍTICO: Emitir WebSocket após polling atualizar
+              // updateMessageStatus já emite WebSocket internamente, mas vamos garantir
             }
           }
         } catch (error) {
