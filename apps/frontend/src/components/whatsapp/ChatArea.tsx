@@ -476,29 +476,32 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                       <div className="flex items-center justify-end gap-1 mt-1">
                         <span
                           className={`text-xs ${
-                            message.fromMe ? 'text-green-100' : 'text-gray-500'
+                            message.fromMe ? 'text-white/70' : 'text-gray-500'
                           }`}
                         >
                           {formatMessageTime(message.timestamp)}
                         </span>
 
                         {message.fromMe && (
-                          <span className="text-xs">
-                            {message.status === 'READ' && (
-                              <span className="text-blue-200">✓✓</span>
-                            )}
-                            {message.status === 'DELIVERED' && (
-                              <span className="text-green-100">✓✓</span>
-                            )}
-                            {message.status === 'SENT' && (
-                              <span className="text-green-100">✓</span>
-                            )}
-                            {message.status === 'PENDING' && (
-                              <span className="text-green-100">🕐</span>
-                            )}
-                            {message.status === 'FAILED' && (
-                              <span className="text-red-300">⚠️</span>
-                            )}
+                          <span className="text-xs flex items-center" title={`Status: ${message.status}`}>
+                            {(() => {
+                              console.log('📊 Status da mensagem:', message.id, '→', message.status);
+
+                              switch (message.status) {
+                                case 'READ':
+                                  return <span className="text-blue-400 font-bold text-sm">✓✓</span>;
+                                case 'DELIVERED':
+                                  return <span className="text-white/90 font-bold text-sm">✓✓</span>;
+                                case 'SENT':
+                                  return <span className="text-white/70 font-bold text-sm">✓</span>;
+                                case 'PENDING':
+                                  return <span className="text-white/60">🕐</span>;
+                                case 'FAILED':
+                                  return <span className="text-red-400">⚠️</span>;
+                                default:
+                                  return <span className="text-white/50" title={`Status desconhecido: ${message.status}`}>?</span>;
+                              }
+                            })()}
                           </span>
                         )}
                       </div>
