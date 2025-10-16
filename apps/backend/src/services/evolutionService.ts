@@ -19,11 +19,12 @@ const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://evolution-api
 const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || 'ferraco-crm';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://ferraco-crm-vps:3000';
 
-// Gerar API Key automática se não existir
-let EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '';
-if (!EVOLUTION_API_KEY) {
-  EVOLUTION_API_KEY = crypto.randomBytes(32).toString('hex');
-  logger.info('🔑 API Key Evolution gerada automaticamente');
+// API Key (opcional - Evolution API configurada sem autenticação para simplificar deploy)
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '';
+if (EVOLUTION_API_KEY) {
+  logger.info('🔑 Evolution API Key configurada');
+} else {
+  logger.info('🔓 Evolution API sem autenticação (modo simplificado)');
 }
 
 // Tipos Evolution API
@@ -95,19 +96,26 @@ class EvolutionService extends EventEmitter {
   constructor() {
     super();
 
+    // Configura headers baseado na presença da API Key
+    const headers: any = {
+      'Content-Type': 'application/json'
+    };
+
+    // Adiciona API Key apenas se estiver configurada
+    if (this.apiKey) {
+      headers['apikey'] = this.apiKey;
+    }
+
     this.api = axios.create({
       baseURL: `${EVOLUTION_API_URL}`,
       timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': this.apiKey
-      }
+      headers
     });
 
     logger.info('🚀 Evolution API Service inicializado', {
       url: EVOLUTION_API_URL,
       instance: this.instanceName,
-      hasApiKey: !!this.apiKey
+      authenticated: !!this.apiKey
     });
   }
 

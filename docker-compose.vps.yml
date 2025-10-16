@@ -34,9 +34,9 @@ services:
       - CORS_METHODS=GET,POST,PUT,DELETE
       - CORS_CREDENTIALS=true
 
-      # Autenticação com API Key (gerada automaticamente pelo backend)
-      - AUTHENTICATION_TYPE=apikey
-      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-}
+      # Autenticação DESABILITADA para simplificar deploy inicial
+      # API Key será gerenciada internamente pelo backend se necessário
+      - AUTHENTICATION_TYPE=none
 
       # Database - Usa PostgreSQL compartilhado
       - DATABASE_ENABLED=true
@@ -99,11 +99,11 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
 
   ferraco-crm-vps:
     container_name: ferraco-crm-vps
