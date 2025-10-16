@@ -208,8 +208,8 @@ class WhatsAppService {
     // Listener para todas as mensagens
     this.client.onMessage(async (message: Message) => {
       try {
-        // Ignorar mensagens de grupo e mensagens enviadas por nós
-        if (message.isGroupMsg || message.fromMe) {
+        // Ignorar mensagens de grupo, status/broadcast e mensagens enviadas por nós
+        if (message.isGroupMsg || message.fromMe || message.from === 'status@broadcast') {
           return;
         }
 
