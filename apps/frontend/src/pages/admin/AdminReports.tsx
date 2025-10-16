@@ -85,11 +85,16 @@ const AdminReports = () => {
 
   // Preparar dados de fontes para gráfico de pizza
   const leadsBySource = useMemo(() => {
+    console.log('🔍 statsBySource recebido:', statsBySource);
     if (!statsBySource) return [];
-    return Object.entries(statsBySource).map(([name, value]) => ({
+    const entries = Object.entries(statsBySource);
+    console.log('🔍 Entries processadas:', entries);
+    const mapped = entries.map(([name, value]) => ({
       name: name.charAt(0).toUpperCase() + name.slice(1),
       value: value as number,
     }));
+    console.log('🔍 Dados mapeados para gráfico:', mapped);
+    return mapped;
   }, [statsBySource]);
 
   // Preparar dados de status para gráfico de barras (funil)

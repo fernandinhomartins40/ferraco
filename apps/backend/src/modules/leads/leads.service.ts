@@ -324,12 +324,17 @@ export class LeadsService {
       select: { source: true },
     });
 
+    logger.debug('📊 Total leads encontrados para agrupar por source:', allLeads.length);
+    logger.debug('📊 Primeiros 5 leads:', allLeads.slice(0, 5));
+
     // Agrupar por source manualmente
     const sourceGroups = allLeads.reduce((acc, lead) => {
       const source = lead.source || 'Desconhecido';
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
+
+    logger.debug('📊 Source groups calculados:', sourceGroups);
 
     // Calculate conversion rate
     const convertedLeads = await this.prisma.lead.count({
