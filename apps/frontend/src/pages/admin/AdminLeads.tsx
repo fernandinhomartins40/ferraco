@@ -553,12 +553,11 @@ const AdminLeads = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="NOVO">Novo</SelectItem>
-                  <SelectItem value="QUALIFICADO">Qualificado</SelectItem>
-                  <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
-                  <SelectItem value="CONCLUIDO">Concluído</SelectItem>
-                  <SelectItem value="PERDIDO">Perdido</SelectItem>
-                  <SelectItem value="ARQUIVADO">Arquivado</SelectItem>
+                  {columns.map((column) => (
+                    <SelectItem key={column.id} value={column.status}>
+                      {column.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
