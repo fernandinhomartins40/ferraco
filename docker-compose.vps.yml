@@ -25,6 +25,7 @@ services:
       - WHATSAPP_HOOK_URL=http://ferraco-crm-vps:3000/webhooks/waha
       - WHATSAPP_HOOK_EVENTS=message,message.ack,session.status,state.change
       - WHATSAPP_SESSIONS_PATH=/app/.sessions
+      - WAHA_SECURITY_DISABLE=true
     volumes:
       - waha-sessions:/app/.sessions
     networks:
