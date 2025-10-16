@@ -7,12 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Paperclip, Smile, Mic } from 'lucide-react';
 import { toast } from 'sonner';
+import AdvancedMessageMenu from './AdvancedMessageMenu';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void>;
+  conversationPhone?: string;
+  onMessageSent?: () => void;
 }
 
-const MessageInput = ({ onSendMessage }: MessageInputProps) => {
+const MessageInput = ({
+  onSendMessage,
+  conversationPhone,
+  onMessageSent,
+}: MessageInputProps) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -58,6 +65,14 @@ const MessageInput = ({ onSendMessage }: MessageInputProps) => {
   return (
     <div className="border-t bg-white px-3 md:px-4 py-2 md:py-3">
       <div className="flex items-end gap-1.5 md:gap-2">
+        {/* Advanced Message Menu */}
+        {conversationPhone && (
+          <AdvancedMessageMenu
+            conversationPhone={conversationPhone}
+            onMessageSent={onMessageSent}
+          />
+        )}
+
         {/* Attachment Button */}
         <Button variant="ghost" size="icon" className="flex-shrink-0 hidden sm:flex">
           <Paperclip className="h-5 w-5 text-gray-500" />

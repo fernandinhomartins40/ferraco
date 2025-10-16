@@ -5,9 +5,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Loader2, Phone, Video, MoreVertical, ArrowLeft } from 'lucide-react';
+import { Loader2, Phone, Video, ArrowLeft } from 'lucide-react';
 import api from '@/lib/apiClient';
 import MessageInput from './MessageInput';
+import ChatActionsMenu from './ChatActionsMenu';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useWhatsAppWebSocket } from '@/hooks/useWhatsAppWebSocket';
@@ -45,7 +46,10 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchConversation();
@@ -59,6 +63,27 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       if (message.conversationId === conversationId) {
         console.log('📩 Nova mensagem recebida:', message);
         setMessages((prev) => [...prev, message]);
+      }
+    },
+    onTyping: (data) => {
+      // Show typing indicator if it's from this contact
+      const contactId = conversation?.contact.phone.replace(/\D/g, '');
+      const typingContactId = data.contactId.replace(/\D/g, '').replace(/@c\.us$/, '');
+
+      if (contactId === typingContactId) {
+        setIsTyping(data.isTyping);
+        setIsRecording(data.isRecording);
+
+        // Auto-hide typing indicator after 5 seconds
+        if (data.isTyping || data.isRecording) {
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+          }
+          typingTimeoutRef.current = setTimeout(() => {
+            setIsTyping(false);
+            setIsRecording(false);
+          }, 5000);
+        }
       }
     },
   });
@@ -203,7 +228,13 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
           <div className="min-w-0 flex-1">
             <h2 className="font-semibold truncate">{getDisplayName(conversation.contact)}</h2>
-            <p className="text-sm text-gray-500 truncate">{conversation.contact.phone}</p>
+            {isTyping || isRecording ? (
+              <p className="text-sm text-green-600 italic animate-pulse">
+                {isRecording ? '🎤 Gravando áudio...' : '⌨️ Digitando...'}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 truncate">{conversation.contact.phone}</p>
+            )}
           </div>
         </div>
 
@@ -214,9 +245,12 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
           <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Video className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-5 w-5" />
-          </Button>
+          <ChatActionsMenu
+            chatId={conversationId}
+            contactPhone={conversation.contact.phone}
+            contactName={conversation.contact.name || undefined}
+            onAction={fetchMessages}
+          />
         </div>
       </div>
 
@@ -263,10 +297,21 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
                       {message.fromMe && (
                         <span className="text-xs">
-                          {message.status === 'READ' && '✓✓'}
-                          {message.status === 'DELIVERED' && '✓✓'}
-                          {message.status === 'SENT' && '✓'}
-                          {message.status === 'PENDING' && '🕐'}
+                          {message.status === 'READ' && (
+                            <span className="text-blue-200">✓✓</span>
+                          )}
+                          {message.status === 'DELIVERED' && (
+                            <span className="text-green-100">✓✓</span>
+                          )}
+                          {message.status === 'SENT' && (
+                            <span className="text-green-100">✓</span>
+                          )}
+                          {message.status === 'PENDING' && (
+                            <span className="text-green-100">🕐</span>
+                          )}
+                          {message.status === 'FAILED' && (
+                            <span className="text-red-300">⚠️</span>
+                          )}
                         </span>
                       )}
                     </div>
@@ -281,7 +326,11 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
       {/* Message Input - Fixed at bottom */}
       <div className="flex-shrink-0">
-        <MessageInput onSendMessage={handleSendMessage} />
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          conversationPhone={conversation?.contact.phone}
+          onMessageSent={fetchMessages}
+        />
       </div>
     </div>
   );

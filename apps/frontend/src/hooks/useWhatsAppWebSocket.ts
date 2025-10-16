@@ -21,6 +21,9 @@ interface WebSocketEvents {
   onNewMessage?: (message: Message) => void;
   onMessageStatus?: (data: { messageIds: string[]; status: string }) => void;
   onConversationUpdate?: (conversationId: string) => void;
+  onTyping?: (data: { contactId: string; isTyping: boolean; isRecording: boolean }) => void;
+  onPresence?: (data: { contactId: string; state: string }) => void;
+  onReaction?: (data: { messageId: string; from: string; emoji: string }) => void;
 }
 
 export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
@@ -61,6 +64,19 @@ export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
 
     if (events.onConversationUpdate) {
       socket.on('conversation:update', events.onConversationUpdate);
+    }
+
+    // Extended WPPConnect events
+    if (events.onTyping) {
+      socket.on('whatsapp:typing', events.onTyping);
+    }
+
+    if (events.onPresence) {
+      socket.on('whatsapp:presence', events.onPresence);
+    }
+
+    if (events.onReaction) {
+      socket.on('whatsapp:reaction', events.onReaction);
     }
 
     // Cleanup on unmount
