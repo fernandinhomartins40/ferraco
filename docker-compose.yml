@@ -19,7 +19,7 @@ services:
       - WHATSAPP_SESSIONS_PATH=/app/sessions
       - WAHA_URL=http://waha:3000
       - WAHA_API_KEY=1d27d04086bfadbf4f988f22b85889c4fbb92fd7e7d049aa09bb25ac223cd4b5
-      - WAHA_SESSION_NAME=ferraco-crm
+      - WAHA_SESSION_NAME=default
     volumes:
       - ./apps/backend:/app
       - /app/node_modules

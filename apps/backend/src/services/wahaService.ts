@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
 // Configuração da API WAHA
 const WAHA_URL = process.env.WAHA_URL || 'http://waha:3000';
 const WAHA_API_KEY = process.env.WAHA_API_KEY || ''; // Opcional se não usar autenticação
-const SESSION_NAME = process.env.WAHA_SESSION_NAME || 'ferraco-crm';
+const SESSION_NAME = process.env.WAHA_SESSION_NAME || 'default'; // WAHA Core só suporta 'default'
 
 // Tipos WAHA
 export enum WAHAEngine {
