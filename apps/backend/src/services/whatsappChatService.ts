@@ -315,8 +315,10 @@ export class WhatsAppChatService {
 
       // Emitir evento WebSocket
       if (this.io) {
-        this.io.emit('message:new', savedMessage);
-        this.io.emit('conversation:update', conversation.id);
+        this.io.sockets.sockets.forEach((socket) => {
+          socket.emit('message:new', savedMessage);
+          socket.emit('conversation:update', conversation.id);
+        });
       }
 
       logger.info(`✅ Mensagem enviada salva no banco: ${savedMessage.id}`);
@@ -490,9 +492,19 @@ export class WhatsAppChatService {
       });
 
       // 6. Emitir evento WebSocket para TODOS os clientes conectados
-      if (this.io) {
-        this.io.emit('message:new', savedMessage);
-        this.io.emit('conversation:update', conversation.id);
+      const socketCount = this.io?.sockets.sockets.size || 0;
+      logger.info(`🔌 Sockets conectados: ${socketCount}, this.io existe: ${!!this.io}`);
+
+      if (this.io && socketCount > 0) {
+        this.io.sockets.sockets.forEach((socket) => {
+          socket.emit('message:new', savedMessage);
+          socket.emit('conversation:update', conversation.id);
+          logger.info(`📤 Emitido para socket ${socket.id}`);
+        });
+      } else if (!this.io) {
+        logger.error(`❌ Socket.IO NÃO CONFIGURADO em whatsappChatService!`);
+      } else {
+        logger.warn(`⚠️ Nenhum socket conectado`);
       }
 
       logger.info(`✅ Mensagem salva: ${savedMessage.id}`);
@@ -726,11 +738,13 @@ export class WhatsAppChatService {
 
         // Emitir evento WebSocket
         if (this.io) {
-          this.io.emit('message:status', {
-            messageIds: [message.id],
-            status,
-            readAt,
-            deliveredAt,
+          this.io.sockets.sockets.forEach((socket) => {
+            socket.emit('message:status', {
+              messageIds: [message.id],
+              status,
+              readAt,
+              deliveredAt,
+            });
           });
         }
       } else {
@@ -758,7 +772,9 @@ export class WhatsAppChatService {
 
     // Emitir evento de atualização
     if (this.io && updated.count > 0) {
-      this.io.emit('message:status', { messageIds, status: MessageStatus.READ });
+      this.io.sockets.sockets.forEach((socket) => {
+        socket.emit('message:status', { messageIds, status: MessageStatus.READ });
+      });
     }
 
     return updated;
