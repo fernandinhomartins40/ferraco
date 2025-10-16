@@ -271,7 +271,10 @@ class WhatsAppService {
         const ackCode = ack.ack;
 
         logger.info(`📨 ACK recebido:`, {
-          messageId,
+          'ack.id': ack.id,
+          'ack.id._serialized': ack.id?._serialized,
+          'messageId usado': messageId,
+          'tipo messageId': typeof messageId,
           ackCode,
           statusName: ackCode === 1 ? 'PENDING' : ackCode === 2 ? 'SENT' : ackCode === 3 ? 'DELIVERED' : ackCode === 4 || ackCode === 5 ? 'READ' : 'UNKNOWN'
         });
@@ -363,6 +366,11 @@ class WhatsAppService {
       const result = await this.client.sendText(formattedNumber, message);
 
       logger.info(`✅ Mensagem enviada para ${to}`);
+      logger.info(`📨 ID da mensagem retornado pelo WPPConnect:`, {
+        'result.id': result.id,
+        'tipo': typeof result.id,
+        'serialized': result.id?._serialized || 'N/A'
+      });
 
       // ✅ NOVO: Salvar mensagem enviada no banco (estratégia híbrida)
       await whatsappChatService.saveOutgoingMessage({
