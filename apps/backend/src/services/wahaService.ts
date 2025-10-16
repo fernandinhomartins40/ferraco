@@ -447,7 +447,15 @@ class WAHAService extends EventEmitter {
 
       case WAHASessionStatus.SCAN_QR_CODE:
         this.isConnected = false;
-        this.updateQRCode();
+        // QR code vem diretamente no webhook (WAHA Core não suporta GET /qr)
+        if (data?.qr) {
+          this.qrCode = data.qr;
+          this.emit('qr', this.qrCode);
+          console.log('📱 QR Code recebido via webhook');
+        } else {
+          // Fallback: tenta buscar via API (WAHA Plus)
+          this.updateQRCode();
+        }
         console.log('📱 Aguardando leitura do QR Code');
         break;
 
