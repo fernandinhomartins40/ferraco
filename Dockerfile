@@ -30,8 +30,8 @@ COPY apps ./apps
 # Instalar todas as dependências (workspaces)
 RUN npm ci
 
-# Build do frontend (deve ser executado da raiz do monorepo)
-RUN npm run build:frontend
+# Build do frontend (aumentar memória para evitar SIGSEGV)
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build:frontend
 
 # Gerar Prisma Client do backend (executar da raiz do monorepo)
 RUN npm run prisma:generate
