@@ -313,10 +313,10 @@ export class WhatsAppChatService {
         },
       });
 
-      // Emitir evento WebSocket (broadcast)
+      // Emitir evento WebSocket
       if (this.io) {
-        this.io.sockets.emit('message:new', savedMessage);
-        this.io.sockets.emit('conversation:update', conversation.id);
+        this.io.emit('message:new', savedMessage);
+        this.io.emit('conversation:update', conversation.id);
       }
 
       logger.info(`✅ Mensagem enviada salva no banco: ${savedMessage.id}`);
@@ -489,11 +489,10 @@ export class WhatsAppChatService {
         },
       });
 
-      // 6. Emitir evento WebSocket (broadcast para todos os clientes)
+      // 6. Emitir evento WebSocket para TODOS os clientes conectados
       if (this.io) {
-        // Emit para todos os sockets conectados
-        this.io.sockets.emit('message:new', savedMessage);
-        this.io.sockets.emit('conversation:update', conversation.id);
+        this.io.emit('message:new', savedMessage);
+        this.io.emit('conversation:update', conversation.id);
       }
 
       logger.info(`✅ Mensagem salva: ${savedMessage.id}`);
@@ -725,15 +724,14 @@ export class WhatsAppChatService {
           return;
         }
 
-        // Emitir evento WebSocket (broadcast para todos)
+        // Emitir evento WebSocket
         if (this.io) {
-          this.io.sockets.emit('message:status', {
+          this.io.emit('message:status', {
             messageIds: [message.id],
             status,
             readAt,
             deliveredAt,
           });
-          logger.info(`📡 Status atualizado: ${message.id} -> ${status}`);
         }
       } else {
         logger.warn(`⚠️  Nenhuma mensagem encontrada com whatsappMessageId: ${whatsappMessageId}`);
@@ -758,9 +756,9 @@ export class WhatsAppChatService {
       },
     });
 
-    // Emitir evento de atualização (broadcast)
+    // Emitir evento de atualização
     if (this.io && updated.count > 0) {
-      this.io.sockets.emit('message:status', { messageIds, status: MessageStatus.READ });
+      this.io.emit('message:status', { messageIds, status: MessageStatus.READ });
     }
 
     return updated;
