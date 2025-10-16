@@ -76,8 +76,12 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
   const { subscribeToConversation, unsubscribeFromConversation } = useWhatsAppWebSocket({
     onNewMessage: (message) => {
       if (message.conversationId === conversationId) {
-        console.log('📩 Nova mensagem recebida:', message);
-        setMessages((prev) => [...prev, message]);
+        setMessages((prev) => {
+          // Verificar se já existe para evitar duplicatas
+          const exists = prev.some(m => m.id === message.id);
+          if (exists) return prev;
+          return [...prev, message];
+        });
       }
     },
     onMessageStatus: (data) => {

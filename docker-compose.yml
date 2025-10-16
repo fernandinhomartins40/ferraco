@@ -32,6 +32,27 @@ services:
       retries: 3
       start_period: 40s
 
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: ferraco-waha
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      - WHATSAPP_HOOK_URL=http://backend:3000/webhooks/waha
+      - WHATSAPP_HOOK_EVENTS=message,message.ack,session.status,state.change
+      - WHATSAPP_SESSIONS_PATH=/app/.sessions
+    volumes:
+      - waha-sessions:/app/.sessions
+    networks:
+      - ferraco-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
   frontend:
     build:
       context: ./apps/frontend
@@ -59,3 +80,4 @@ volumes:
   backend-data:
   whatsapp-sessions:
   whatsapp-tokens:
+  waha-sessions:

@@ -4,8 +4,9 @@ import { connectDatabase, disconnectDatabase } from './config/database';
 import { PORT, NODE_ENV } from './config/constants';
 import { logger } from './utils/logger';
 import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
-import { whatsappService } from './services/whatsappService';
+import wahaService from './services/wahaService';
 import whatsappChatService from './services/whatsappChatService';
+import { setSocketIO } from './routes/wahaWebhooks';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
 
@@ -16,9 +17,6 @@ async function startServer(): Promise<void> {
 
     // Garantir que a coluna padrão do Kanban existe
     await ensureDefaultKanbanColumn();
-
-    // Inicializar WhatsApp Service (assíncrono, não bloqueia o servidor)
-    await whatsappService.initialize();
 
     // Create Express app
     const app = createApp();
@@ -55,9 +53,14 @@ async function startServer(): Promise<void> {
       });
     });
 
-    // Pass Socket.io instance to WhatsAppChatService and WhatsAppService
+    // Pass Socket.io instance to services
     whatsappChatService.setSocketServer(io);
-    whatsappService.setSocketServer(io);
+    setSocketIO(io);
+
+    // Inicializar WAHA Service (assíncrono)
+    wahaService.initialize().catch((error) => {
+      logger.error('❌ Erro ao inicializar WAHA:', error);
+    });
 
     // Start server
     const server = httpServer.listen(PORT, () => {
@@ -74,8 +77,8 @@ async function startServer(): Promise<void> {
       server.close(async () => {
         logger.info('Server closed');
 
-        // Desconectar WhatsApp
-        await whatsappService.disconnect();
+        // Desconectar WAHA
+        await wahaService.disconnect();
 
         await disconnectDatabase();
 

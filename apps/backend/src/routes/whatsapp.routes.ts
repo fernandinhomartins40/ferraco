@@ -17,7 +17,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { whatsappService } from '../services/whatsappService';
+import wahaService from '../services/wahaService';
 import whatsappChatService from '../services/whatsappChatService';
 import { authenticate } from '../middleware/auth';
 import { logger } from '../utils/logger';
@@ -31,7 +31,7 @@ const router = Router();
  */
 router.get('/qr', authenticate, async (req: Request, res: Response) => {
   try {
-    const qrCode = whatsappService.getQRCode();
+    const qrCode = wahaService.getQRCode();
 
     if (!qrCode) {
       return res.status(404).json({
@@ -40,10 +40,9 @@ router.get('/qr', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    // Retornar QR Code em base64
     res.json({
       success: true,
-      qrCode: qrCode, // Já vem no formato data:image/png;base64,...
+      qrCode: qrCode,
       message: 'Escaneie o QR Code com o WhatsApp no seu celular',
     });
 
@@ -63,16 +62,19 @@ router.get('/qr', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/status', authenticate, async (req: Request, res: Response) => {
   try {
-    const status = whatsappService.getStatus();
+    const isConnected = wahaService.getIsConnected();
+    const hasQR = !!wahaService.getQRCode();
+    const sessionStatus = wahaService.getSessionStatus();
 
     res.json({
       success: true,
       status: {
-        connected: status.connected,
-        hasQR: status.hasQR,
-        message: status.connected
+        connected: isConnected,
+        hasQR: hasQR,
+        sessionStatus: sessionStatus,
+        message: isConnected
           ? 'WhatsApp conectado'
-          : status.hasQR
+          : hasQR
           ? 'Aguardando leitura do QR Code'
           : 'Inicializando...',
       },
@@ -94,18 +96,22 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/account', authenticate, async (req: Request, res: Response) => {
   try {
-    if (!whatsappService.isWhatsAppConnected()) {
+    if (!wahaService.getIsConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
       });
     }
 
-    const accountInfo = await whatsappService.getAccountInfo();
+    const session = await wahaService.getSessionStatus();
 
     res.json({
       success: true,
-      account: accountInfo,
+      account: {
+        id: session?.me?.id || wahaService.getMyNumber(),
+        name: session?.me?.pushName || 'WhatsApp',
+        status: session?.status
+      },
     });
 
   } catch (error: any) {
@@ -132,7 +138,6 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
   try {
     const { to, message } = req.body;
 
-    // Validações
     if (!to || !message) {
       return res.status(400).json({
         success: false,
@@ -141,20 +146,20 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    if (!wahaService.getIsConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    // Enviar mensagem
-    await whatsappService.sendTextMessage(to, message);
+    const result = await wahaService.sendText(to, message);
 
     res.json({
       success: true,
       message: 'Mensagem enviada com sucesso',
       to,
+      messageId: result.id,
     });
 
   } catch (error: any) {
@@ -173,7 +178,7 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
  */
 router.post('/disconnect', authenticate, async (req: Request, res: Response) => {
   try {
-    await whatsappService.disconnect();
+    await wahaService.disconnect();
 
     res.json({
       success: true,
@@ -196,7 +201,8 @@ router.post('/disconnect', authenticate, async (req: Request, res: Response) => 
  */
 router.post('/reinitialize', authenticate, async (req: Request, res: Response) => {
   try {
-    await whatsappService.reinitialize();
+    await wahaService.stopSession();
+    await wahaService.startSession();
 
     res.json({
       success: true,
@@ -303,97 +309,11 @@ router.get('/conversations/:id/messages', authenticate, async (req: Request, res
   }
 });
 
-/**
- * POST /api/whatsapp/conversations/:id/load-history
- * Carregar histórico completo de mensagens de uma conversa
- */
-router.post('/conversations/:id/load-history', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    // Carregar histórico em background
-    whatsappChatService.loadChatHistory(id).catch((error) => {
-      logger.error('Erro ao carregar histórico em background:', error);
-    });
-
-    res.json({
-      success: true,
-      message: 'Carregando histórico de mensagens em background...',
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao iniciar carregamento de histórico:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao carregar histórico',
-      message: error.message,
-    });
-  }
-});
-
-/**
- * ✅ NOVA ROTA: POST /api/whatsapp/conversations/:id/load-incremental
- * Carregar mensagens incrementalmente (em lotes) para evitar timeout
- * Ideal para conversas com milhares de mensagens
- */
-router.post('/conversations/:id/load-incremental', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { batchSize } = req.body; // Opcional: tamanho do lote (padrão: 100)
-
-    // Carregar incrementalmente em background
-    whatsappChatService.loadMessagesIncrementally(id, batchSize).catch((error) => {
-      logger.error('Erro ao carregar mensagens incrementalmente em background:', error);
-    });
-
-    res.json({
-      success: true,
-      message: 'Carregando mensagens incrementalmente em background...',
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao iniciar carregamento incremental:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao carregar mensagens',
-      message: error.message,
-    });
-  }
-});
 
 /**
  * POST /api/whatsapp/sync-chats
  * Sincronizar todos os chats e contatos do WhatsApp
  */
-router.post('/sync-chats', authenticate, async (req: Request, res: Response) => {
-  try {
-    if (!whatsappService.isWhatsAppConnected()) {
-      return res.status(400).json({
-        success: false,
-        message: 'WhatsApp não está conectado',
-      });
-    }
-
-    // Sincronizar em background
-    whatsappChatService.syncAllChatsAndContacts().catch((error) => {
-      logger.error('Erro ao sincronizar chats em background:', error);
-    });
-
-    res.json({
-      success: true,
-      message: 'Sincronizando chats e contatos em background...',
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao iniciar sincronização:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao sincronizar chats',
-      message: error.message,
-    });
-  }
-});
-
 /**
  * POST /api/whatsapp/conversations/:id/read
  * Marcar mensagens de uma conversa como lidas
@@ -409,11 +329,9 @@ router.post('/conversations/:id/read', authenticate, async (req: Request, res: R
     const { messageIds } = req.body;
 
     if (messageIds && Array.isArray(messageIds)) {
-      // Marcar mensagens específicas
       await whatsappChatService.markAsRead(messageIds);
     }
 
-    // Atualizar contador de não lidas
     const unreadCount = await whatsappChatService.updateUnreadCount(id);
 
     res.json({
