@@ -175,33 +175,31 @@ class EvolutionService extends EventEmitter {
    */
   async createInstance(): Promise<void> {
     try {
-      const webhookUrl = `${BACKEND_URL}/api/webhooks/evolution`;
+      const webhookUrl = `${BACKEND_URL}/webhooks/evolution`;
 
       const response = await this.api.post('/instance/create', {
         instanceName: this.instanceName,
         qrcode: true,
         integration: 'WHATSAPP-BAILEYS',
-        webhook: webhookUrl,
-        webhook_by_events: true,
-        events: [
-          'QRCODE_UPDATED',
-          'CONNECTION_UPDATE',
-          'MESSAGES_UPSERT',
-          'MESSAGES_UPDATE',
-          'MESSAGES_DELETE',
-          'SEND_MESSAGE',
-          'CONTACTS_SET',
-          'CONTACTS_UPSERT',
-          'CONTACTS_UPDATE',
-          'PRESENCE_UPDATE',
-          'CHATS_SET',
-          'CHATS_UPSERT',
-          'CHATS_UPDATE',
-          'CHATS_DELETE',
-          'GROUPS_UPSERT',
-          'GROUPS_UPDATE',
-          'GROUP_PARTICIPANTS_UPDATE'
-        ]
+        webhook: {
+          url: webhookUrl,
+          byEvents: false,
+          base64: false,
+          events: [
+            'QRCODE_UPDATED',
+            'CONNECTION_UPDATE',
+            'MESSAGES_UPSERT',
+            'MESSAGES_UPDATE',
+            'SEND_MESSAGE',
+            'CONTACTS_SET',
+            'CONTACTS_UPSERT',
+            'CONTACTS_UPDATE',
+            'CHATS_SET',
+            'CHATS_UPSERT',
+            'CHATS_UPDATE',
+            'CONNECTION_UPDATE'
+          ]
+        }
       });
 
       logger.info('✅ Instância criada com sucesso:', response.data);
@@ -210,7 +208,13 @@ class EvolutionService extends EventEmitter {
       await this.connectInstance();
 
     } catch (error: any) {
-      logger.error('❌ Erro ao criar instância:', error.response?.data || error.message);
+      const errorDetails = {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      };
+      logger.error('❌ Erro ao criar instância:', errorDetails);
       throw error;
     }
   }
