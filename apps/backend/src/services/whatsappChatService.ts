@@ -491,8 +491,11 @@ export class WhatsAppChatService {
 
       // 6. Emitir evento WebSocket
       if (this.io) {
+        logger.info(`📡 Emitindo message:new para mensagem ${savedMessage.id}`);
         this.io.emit('message:new', savedMessage);
         this.io.emit('conversation:update', conversation.id);
+      } else {
+        logger.warn(`⚠️  Socket.IO não configurado, mensagem ${savedMessage.id} não será enviada via WebSocket`);
       }
 
       logger.info(`✅ Mensagem salva: ${savedMessage.id}`);
