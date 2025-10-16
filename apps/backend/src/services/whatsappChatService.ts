@@ -445,7 +445,21 @@ export class WhatsAppChatService {
       // 3. Determinar tipo de mensagem
       const messageType = this.getMessageType(message);
 
-      // 4. Salvar mensagem
+      // 4. Verificar se mensagem já existe (evitar duplicatas)
+      const existingMessage = await prisma.whatsAppMessage.findUnique({
+        where: { whatsappMessageId: message.id },
+        include: {
+          contact: true,
+          conversation: true,
+        },
+      });
+
+      if (existingMessage) {
+        logger.debug(`⚠️  Mensagem ${message.id} já existe, ignorando duplicata`);
+        return;
+      }
+
+      // 5. Salvar mensagem
       const savedMessage = await prisma.whatsAppMessage.create({
         data: {
           conversationId: conversation.id,
