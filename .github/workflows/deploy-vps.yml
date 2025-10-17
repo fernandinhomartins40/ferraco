@@ -187,6 +187,7 @@ jobs:
           # Remover containers se ainda existirem
           docker rm -f ferraco-crm-vps 2>/dev/null || true
           docker rm -f ferraco-postgres 2>/dev/null || true
+          docker rm -f ferraco-evolution 2>/dev/null || true
 
           # Liberar porta
           echo "🔓 Liberando porta ${{ env.APP_PORT }}..."
