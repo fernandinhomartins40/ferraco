@@ -92,8 +92,9 @@ services:
       # Instância
       - CONFIG_SESSION_PHONE_CLIENT=Ferraco CRM
       - CONFIG_SESSION_PHONE_NAME=Chrome
-      # CONFIG_SESSION_PHONE_VERSION removida (deprecated em v2.3+)
-      # Evolution API v2.3.1+ detecta versão automaticamente
+      # Versão WhatsApp Web comprovada funcionando em produção (2025)
+      # Fonte: https://devalexcode.com/aprende/evolution-api-no-genera-codigo-qr-solucion
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1023204200
 
       # Log
       - LOG_LEVEL=ERROR,WARN,DEBUG,INFO,LOG,VERBOSE,DARK,WEBHOOKS
