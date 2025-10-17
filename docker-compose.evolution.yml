@@ -104,4 +104,4 @@ volumes:
 networks:
   ferraco-network:
     external: true
-    name: ferraco-network
+    name: ferraco-crm_ferraco-network
