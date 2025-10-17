@@ -6,9 +6,11 @@ import { logger } from './utils/logger';
 import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
 import evolutionService from './services/evolutionService';
 import whatsappChatService from './services/whatsappChatService';
+import whatsappVersionManagerService from './services/whatsappVersionManager.service';
 import { setSocketIO } from './routes/evolutionWebhooks';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
+import cron from 'node-cron';
 
 async function startServer(): Promise<void> {
   try {
@@ -61,6 +63,18 @@ async function startServer(): Promise<void> {
     evolutionService.initialize().catch((error) => {
       logger.error('❌ Erro ao inicializar Evolution API:', error);
     });
+
+    // Iniciar Cron Job para verificação automática de versão WhatsApp
+    // Executa a cada 15 minutos
+    cron.schedule('*/15 * * * *', async () => {
+      try {
+        logger.info('⏰ Cron: Verificando versão WhatsApp Web...');
+        await whatsappVersionManagerService.checkAndUpdateVersion();
+      } catch (error: any) {
+        logger.error('❌ Erro no cron de verificação de versão:', error.message);
+      }
+    });
+    logger.info('✅ WhatsApp Version Manager Cron iniciado (executa a cada 15 minutos)');
 
     // Start server
     const server = httpServer.listen(PORT, () => {
