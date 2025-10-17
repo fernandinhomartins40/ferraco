@@ -290,14 +290,23 @@ jobs:
           fi
 
           # Iniciar aplicação principal (Postgres + Backend)
+          # Isso CRIA a rede ferraco-crm_ferraco-network automaticamente
           echo "🚀 Iniciando aplicação principal (Postgres + Backend)..."
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} up -d
 
-          # Aguardar aplicação principal iniciar
-          echo "⏳ Aguardando aplicação principal iniciar (30 segundos)..."
+          # Aguardar aplicação principal iniciar E rede ser criada
+          echo "⏳ Aguardando aplicação principal iniciar e rede ser criada (30 segundos)..."
           sleep 30
 
-          # Subir Evolution API separadamente
+          # Verificar se a rede foi criada
+          echo "🔍 Verificando rede Docker..."
+          docker network ls | grep ferraco-crm_ferraco-network || {
+            echo "❌ Rede ferraco-crm_ferraco-network não foi criada!"
+            echo "Tentando criar manualmente..."
+            docker network create ferraco-crm_ferraco-network 2>/dev/null || true
+          }
+
+          # Subir Evolution API separadamente (agora a rede existe)
           echo "📱 Iniciando Evolution API (container separado)..."
           docker compose -f docker-compose.evolution.yml up -d
 
