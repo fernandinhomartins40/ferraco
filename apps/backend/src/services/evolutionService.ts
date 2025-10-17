@@ -811,6 +811,33 @@ class EvolutionService extends EventEmitter {
   getApiKey(): string {
     return this.apiKey;
   }
+
+  /**
+   * Retorna status completo da conexão (para rotas HTTP)
+   */
+  getConnectionStatus() {
+    return {
+      isConnected: this.isConnected,
+      hasQR: !!this.qrCode,
+      state: this.connectionState,
+      myNumber: this.myNumber
+    };
+  }
+
+  /**
+   * Retorna informações da conta conectada
+   */
+  getAccountInfo() {
+    if (!this.isConnected || !this.myNumber) {
+      return null;
+    }
+
+    return {
+      phone: this.myNumber,
+      name: 'WhatsApp Business',
+      platform: 'Evolution API'
+    };
+  }
 }
 
 // Singleton

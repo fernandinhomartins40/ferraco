@@ -17,7 +17,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import wahaService from '../services/wahaService';
+import evolutionService from '../services/evolutionService';
 import whatsappChatService from '../services/whatsappChatService';
 import { authenticate } from '../middleware/auth';
 import { logger } from '../utils/logger';
@@ -31,7 +31,7 @@ const router = Router();
  */
 router.get('/qr', authenticate, async (req: Request, res: Response) => {
   try {
-    const qrCode = wahaService.getQRCode();
+    const qrCode = evolutionService.getQRCode();
 
     if (!qrCode) {
       return res.status(404).json({
@@ -62,19 +62,16 @@ router.get('/qr', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/status', authenticate, async (req: Request, res: Response) => {
   try {
-    const isConnected = wahaService.getIsConnected();
-    const hasQR = !!wahaService.getQRCode();
-    const sessionStatus = wahaService.getSessionStatus();
+    const status = evolutionService.getConnectionStatus();
 
     res.json({
       success: true,
       status: {
-        connected: isConnected,
-        hasQR: hasQR,
-        sessionStatus: sessionStatus,
-        message: isConnected
+        connected: status.isConnected,
+        hasQR: status.hasQR,
+        message: status.isConnected
           ? 'WhatsApp conectado'
-          : hasQR
+          : status.hasQR
           ? 'Aguardando leitura do QR Code'
           : 'Inicializando...',
       },
@@ -96,21 +93,23 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/account', authenticate, async (req: Request, res: Response) => {
   try {
-    if (!wahaService.getIsConnected()) {
+    const status = evolutionService.getConnectionStatus();
+
+    if (!status.isConnected) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
       });
     }
 
-    const session = await wahaService.getSessionStatus();
+    const accountInfo = evolutionService.getAccountInfo();
 
     res.json({
       success: true,
       account: {
-        id: session?.me?.id || wahaService.getMyNumber(),
-        name: session?.me?.pushName || 'WhatsApp',
-        status: session?.status
+        phone: accountInfo?.phone || status.myNumber || 'Desconhecido',
+        name: accountInfo?.name || 'WhatsApp',
+        platform: accountInfo?.platform || 'WhatsApp Web'
       },
     });
 
@@ -146,20 +145,21 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    if (!wahaService.getIsConnected()) {
+    const status = evolutionService.getConnectionStatus();
+    if (!status.isConnected) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const result = await wahaService.sendText(to, message);
+    const result = await evolutionService.sendTextMessage(to, message);
 
     res.json({
       success: true,
       message: 'Mensagem enviada com sucesso',
       to,
-      messageId: result.id,
+      messageId: result.key?.id,
     });
 
   } catch (error: any) {
@@ -178,7 +178,7 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
  */
 router.post('/disconnect', authenticate, async (req: Request, res: Response) => {
   try {
-    await wahaService.disconnect();
+    await evolutionService.disconnect();
 
     res.json({
       success: true,
@@ -201,8 +201,8 @@ router.post('/disconnect', authenticate, async (req: Request, res: Response) => 
  */
 router.post('/reinitialize', authenticate, async (req: Request, res: Response) => {
   try {
-    await wahaService.stopSession();
-    await wahaService.startSession();
+    await evolutionService.disconnect();
+    await evolutionService.initialize();
 
     res.json({
       success: true,
@@ -314,6 +314,25 @@ router.get('/conversations/:id/messages', authenticate, async (req: Request, res
  * POST /api/whatsapp/sync-chats
  * Sincronizar todos os chats e contatos do WhatsApp
  */
+router.post('/sync-chats', authenticate, async (req: Request, res: Response) => {
+  try {
+    const chats = await evolutionService.getAllChats();
+
+    res.json({
+      success: true,
+      message: `${chats.length} chats sincronizados`,
+      count: chats.length
+    });
+  } catch (error: any) {
+    logger.error('Erro ao sincronizar chats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao sincronizar chats',
+      message: error.message
+    });
+  }
+});
+
 /**
  * POST /api/whatsapp/conversations/:id/read
  * Marcar mensagens de uma conversa como lidas
