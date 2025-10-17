@@ -120,39 +120,90 @@ class EvolutionService extends EventEmitter {
   }
 
   /**
-   * Inicializa a instância Evolution API
+   * Inicializa a instância Evolution API com retry automático
+   *
+   * Retry é necessário pois Evolution API pode não estar disponível
+   * imediatamente após o backend subir (containers em redes separadas)
    */
   async initialize(): Promise<void> {
-    try {
-      logger.info('🔄 Verificando instância Evolution API...', { instance: this.instanceName });
+    const maxRetries = 5;
+    const retryDelay = 5000; // 5 segundos
 
-      // Verifica se instância existe
-      const exists = await this.checkInstanceExists();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.info(`🔄 Tentativa ${attempt}/${maxRetries} - Verificando instância Evolution API...`, {
+          instance: this.instanceName,
+          url: EVOLUTION_API_URL
+        });
 
-      if (!exists) {
-        logger.info('➕ Criando nova instância...', { instance: this.instanceName });
-        await this.createInstance();
-      } else {
-        logger.info('✅ Instância já existe', { instance: this.instanceName });
+        // Verifica se instância existe
+        const exists = await this.checkInstanceExists();
 
-        // Verifica status da conexão
-        const status = await this.getConnectionStatus();
-        if (status === EvolutionConnectionState.OPEN) {
-          this.isConnected = true;
-          this.connectionState = EvolutionConnectionState.OPEN;
-          logger.info('✅ WhatsApp já está conectado');
-          this.emit('ready');
+        if (!exists) {
+          logger.info('➕ Criando nova instância...', { instance: this.instanceName });
+          await this.createInstance();
         } else {
-          // Instância existe mas não está conectada - precisa conectar para gerar QR Code
-          logger.info('📱 Instância existe mas não está conectada. Iniciando conexão...');
-          await this.connectInstance();
-        }
-      }
+          logger.info('✅ Instância já existe', { instance: this.instanceName });
 
-    } catch (error: any) {
-      logger.error('❌ Erro ao inicializar Evolution API:', error.message);
-      throw error;
+          // Verifica status da conexão
+          const status = await this.getConnectionStatus();
+          if (status === EvolutionConnectionState.OPEN) {
+            this.isConnected = true;
+            this.connectionState = EvolutionConnectionState.OPEN;
+            logger.info('✅ WhatsApp já está conectado');
+            this.emit('ready');
+          } else {
+            // Instância existe mas não está conectada - precisa conectar para gerar QR Code
+            logger.info('📱 Instância existe mas não está conectada. Iniciando conexão...');
+            await this.connectInstance();
+          }
+        }
+
+        // Se chegou aqui, sucesso!
+        logger.info('✅ Evolution API inicializada com sucesso', {
+          attempt,
+          instance: this.instanceName
+        });
+        return;
+
+      } catch (error: any) {
+        const isLastAttempt = attempt === maxRetries;
+        const errorCode = error.code || error.response?.status;
+
+        // Erros de DNS/rede que podem ser resolvidos com retry
+        const isRetryableError =
+          error.code === 'EAI_AGAIN' ||
+          error.code === 'ENOTFOUND' ||
+          error.code === 'ECONNREFUSED' ||
+          error.code === 'ETIMEDOUT';
+
+        if (!isLastAttempt && isRetryableError) {
+          logger.warn(`⚠️  Tentativa ${attempt}/${maxRetries} falhou (${errorCode}) - Tentando novamente em ${retryDelay/1000}s...`, {
+            error: error.message,
+            code: errorCode
+          });
+          await this.sleep(retryDelay);
+          continue;
+        }
+
+        // Se chegou aqui: última tentativa OU erro não-retryable
+        logger.error('❌ Erro ao inicializar Evolution API:', {
+          attempt,
+          error: error.message,
+          code: errorCode,
+          isRetryable: isRetryableError
+        });
+
+        throw error;
+      }
     }
+  }
+
+  /**
+   * Sleep helper para retry
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
