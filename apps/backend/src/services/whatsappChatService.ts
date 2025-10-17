@@ -7,7 +7,6 @@
 import { PrismaClient, MessageType, MessageStatus } from '@prisma/client';
 import { Server as SocketIOServer } from 'socket.io';
 import logger from '../utils/logger';
-import wahaService from './wahaService';
 
 const prisma = new PrismaClient();
 

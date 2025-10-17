@@ -6,7 +6,7 @@
  */
 
 import { prisma } from '../config/database';
-import { whatsappService } from './whatsappService';
+import evolutionService from './evolutionService';
 import { logger } from '../utils/logger';
 
 export class WhatsAppAutomationService {
@@ -256,7 +256,7 @@ export class WhatsAppAutomationService {
     order: number
   ): Promise<void> {
     try {
-      const result = await whatsappService.sendTextMessage(phone, content);
+      const result = await evolutionService.sendText(phone, content);
 
       await prisma.whatsAppAutomationMessage.create({
         data: {
@@ -264,7 +264,7 @@ export class WhatsAppAutomationService {
           messageType: 'TEXT',
           content,
           status: 'SENT',
-          whatsappMessageId: result?.id || undefined,
+          whatsappMessageId: result?.key?.id || undefined,
           order,
           sentAt: new Date()
         }
@@ -288,7 +288,7 @@ export class WhatsAppAutomationService {
     order: number
   ): Promise<void> {
     try {
-      const msgId = await whatsappService.sendImage(phone, imageUrl);
+      const result = await evolutionService.sendImage(phone, imageUrl);
 
       await prisma.whatsAppAutomationMessage.create({
         data: {
@@ -296,7 +296,7 @@ export class WhatsAppAutomationService {
           messageType: 'IMAGE',
           mediaUrl: imageUrl,
           status: 'SENT',
-          whatsappMessageId: msgId || undefined,
+          whatsappMessageId: result?.key?.id || undefined,
           order,
           sentAt: new Date()
         }
@@ -320,7 +320,7 @@ export class WhatsAppAutomationService {
     order: number
   ): Promise<void> {
     try {
-      const msgId = await whatsappService.sendVideo(phone, videoUrl);
+      const result = await evolutionService.sendVideo(phone, videoUrl);
 
       await prisma.whatsAppAutomationMessage.create({
         data: {
@@ -328,7 +328,7 @@ export class WhatsAppAutomationService {
           messageType: 'VIDEO',
           mediaUrl: videoUrl,
           status: 'SENT',
-          whatsappMessageId: msgId || undefined,
+          whatsappMessageId: result?.key?.id || undefined,
           order,
           sentAt: new Date()
         }
