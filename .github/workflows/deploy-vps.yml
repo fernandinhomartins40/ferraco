@@ -182,6 +182,7 @@ jobs:
           echo "⏹️  Parando containers anteriores..."
           cd ${{ env.APP_DIR }} 2>/dev/null || true
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --remove-orphans 2>/dev/null || true
+          docker compose -f docker-compose.evolution.yml down --remove-orphans 2>/dev/null || true
           echo "✅ Volumes preservados (banco de dados mantido)"
 
           # Remover containers se ainda existirem
@@ -288,13 +289,29 @@ jobs:
               --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP
           fi
 
-          # Iniciar aplicação
-          echo "🚀 Iniciando aplicação..."
+          # Iniciar aplicação principal (Postgres + Backend)
+          echo "🚀 Iniciando aplicação principal (Postgres + Backend)..."
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} up -d
 
-          # Aguardar container iniciar
-          echo "⏳ Aguardando container iniciar (30 segundos)..."
+          # Aguardar aplicação principal iniciar
+          echo "⏳ Aguardando aplicação principal iniciar (30 segundos)..."
           sleep 30
+
+          # Subir Evolution API separadamente
+          echo "📱 Iniciando Evolution API (container separado)..."
+          docker compose -f docker-compose.evolution.yml up -d
+
+          echo "⏳ Aguardando Evolution API iniciar (15 segundos)..."
+          sleep 15
+
+          # Buscar versão atual do WhatsApp e atualizar
+          echo "🔄 Atualizando versão WhatsApp Web para versão atual..."
+          if [ -f "update-whatsapp-version.sh" ]; then
+            chmod +x update-whatsapp-version.sh
+            bash update-whatsapp-version.sh || echo "⚠️  Aviso: Falha ao atualizar versão WhatsApp (continuar mesmo assim)"
+          else
+            echo "⚠️  Script update-whatsapp-version.sh não encontrado - versão não atualizada"
+          fi
 
           # Mostrar logs iniciais
           echo "📋 Logs iniciais do container:"
