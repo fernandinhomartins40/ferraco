@@ -153,7 +153,7 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    const result = await evolutionService.sendTextMessage(to, message);
+    const result = await evolutionService.sendText(to, message);
 
     res.json({
       success: true,
