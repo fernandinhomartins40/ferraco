@@ -238,6 +238,31 @@ class EvolutionService extends EventEmitter {
   }
 
   /**
+   * Busca QR Code diretamente da Evolution API (fallback se webhook falhar)
+   */
+  async fetchQRCodeDirect(): Promise<string | null> {
+    try {
+      const response = await this.api.get(`/instance/connect/${this.instanceName}`);
+
+      if (response.data && response.data.code) {
+        // QR Code retornado diretamente
+        const qrCodeBase64 = `data:image/png;base64,${response.data.code}`;
+        logger.info('📱 QR Code obtido diretamente da API');
+        return qrCodeBase64;
+      }
+
+      if (response.data && response.data.pairingCode) {
+        logger.info('📱 Pairing code disponível:', response.data.pairingCode);
+      }
+
+      return null;
+    } catch (error: any) {
+      logger.error('❌ Erro ao buscar QR Code diretamente:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Obtém status da conexão
    */
   async getConnectionStatus(): Promise<EvolutionConnectionState> {
@@ -656,14 +681,11 @@ class EvolutionService extends EventEmitter {
    */
   async disconnect(): Promise<void> {
     try {
-      await this.api.delete(`/instance/logout/${this.instanceName}`);
+      // Para regenerar QR Code, precisamos deletar e recriar a instância
+      logger.info('🗑️ Deletando instância para regenerar QR Code...');
+      await this.deleteInstance();
 
-      this.isConnected = false;
-      this.connectionState = EvolutionConnectionState.CLOSE;
-      this.qrCode = null;
-      this.myNumber = null;
-
-      logger.info('⏹️ Instância desconectada');
+      logger.info('⏹️ Instância desconectada e deletada');
       this.emit('disconnected');
 
     } catch (error: any) {

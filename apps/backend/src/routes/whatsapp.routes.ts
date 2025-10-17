@@ -201,7 +201,16 @@ router.post('/disconnect', authenticate, async (req: Request, res: Response) => 
  */
 router.post('/reinitialize', authenticate, async (req: Request, res: Response) => {
   try {
+    logger.info('🔄 Reinicializando WhatsApp...');
+
+    // Deletar instância
     await evolutionService.disconnect();
+
+    // Aguardar 3 segundos para garantir que a instância foi deletada
+    logger.info('⏳ Aguardando 3 segundos antes de recriar...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Recriar instância
     await evolutionService.initialize();
 
     res.json({
