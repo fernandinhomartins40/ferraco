@@ -143,8 +143,9 @@ class EvolutionService extends EventEmitter {
           logger.info('✅ WhatsApp já está conectado');
           this.emit('ready');
         } else {
-          logger.info('📱 Aguardando conexão WhatsApp...');
-          // QR code virá via webhook
+          // Instância existe mas não está conectada - precisa conectar para gerar QR Code
+          logger.info('📱 Instância existe mas não está conectada. Iniciando conexão...');
+          await this.connectInstance();
         }
       }
 
