@@ -66,11 +66,11 @@ router.get('/history', authenticate, async (req: Request, res: Response) => {
 
 /**
  * POST /api/whatsapp/version/check
- * Forçar verificação e atualização manual
+ * Forçar verificação e atualização manual (monitoramento inteligente)
  */
 router.post('/check', authenticate, async (req: Request, res: Response) => {
   try {
-    logger.info('🔄 Verificação manual de versão solicitada');
+    logger.info('🔄 Verificação manual solicitada (monitoramento inteligente)');
 
     const result = await whatsappVersionManagerService.forceUpdate();
 
@@ -80,14 +80,18 @@ router.post('/check', authenticate, async (req: Request, res: Response) => {
         currentVersion: result.currentVersion,
         previousVersion: result.previousVersion,
         versionChanged: result.versionChanged,
-        appliedSuccessfully: result.appliedSuccessfully,
+        needsUpdate: result.needsUpdate,
+        updateApplied: result.updateApplied,
+        error: result.error,
         timestamp: result.timestamp,
       },
-      message: result.versionChanged
-        ? result.appliedSuccessfully
-          ? 'Versão atualizada com sucesso'
-          : `Versão mudou mas falhou ao aplicar: ${result.error}`
-        : 'Versão não mudou - nenhuma ação necessária',
+      message: result.updateApplied
+        ? `Atualização aplicada! ${result.previousVersion} → ${result.currentVersion}`
+        : result.needsUpdate
+        ? `Atualização necessária mas falhou: ${result.error}`
+        : result.error
+        ? `Nenhuma atualização: ${result.error}`
+        : 'Sistema funcionando corretamente - nenhuma ação necessária',
     });
 
   } catch (error: any) {
