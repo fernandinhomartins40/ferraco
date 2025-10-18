@@ -61,3 +61,5 @@ apps/frontend/.vite
 .pnpm-store
 .yarn
 bun.lockb
+package-lock.json
+**/package-lock.json

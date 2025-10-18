@@ -28,7 +28,8 @@ COPY packages ./packages
 COPY apps ./apps
 
 # Instalar todas as dependências (workspaces)
-RUN npm ci
+# Usar npm install pois package-lock pode estar desatualizado
+RUN npm install --legacy-peer-deps
 
 # Build do frontend (aumentar memória para evitar SIGSEGV)
 RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build:frontend
