@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
-import evolutionService from './evolutionService';
+import { whatsappService } from './whatsappService';
 
 const prisma = new PrismaClient();
 
@@ -111,8 +111,7 @@ class AutomationSchedulerService {
       const { lead, column } = position;
 
       // Verificar se WhatsApp está conectado
-      const status = evolutionService.getConnectionStatus();
-      if (!status.isConnected) {
+      if (!whatsappService.isClientConnected()) {
         logger.warn('WhatsApp não conectado, pulando envio');
         return;
       }
@@ -133,16 +132,16 @@ class AutomationSchedulerService {
       // Enviar mensagem
       logger.info(`📤 Enviando mensagem para ${lead.name} (${lead.phone})`);
 
-      await evolutionService.sendText(lead.phone, messageContent);
+      await whatsappService.sendMessage(lead.phone, messageContent);
 
       // Enviar mídias se houver
       if (column.messageTemplate?.mediaUrls) {
         const mediaUrls = JSON.parse(column.messageTemplate.mediaUrls);
         for (const mediaUrl of mediaUrls) {
           if (column.messageTemplate.mediaType === 'IMAGE') {
-            await evolutionService.sendImage(lead.phone, mediaUrl);
+            await whatsappService.sendImage(lead.phone, mediaUrl);
           } else if (column.messageTemplate.mediaType === 'VIDEO') {
-            await evolutionService.sendVideo(lead.phone, mediaUrl);
+            await whatsappService.sendVideo(lead.phone, mediaUrl);
           }
         }
       }

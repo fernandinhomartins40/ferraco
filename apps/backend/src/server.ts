@@ -4,13 +4,10 @@ import { connectDatabase, disconnectDatabase } from './config/database';
 import { PORT, NODE_ENV } from './config/constants';
 import { logger } from './utils/logger';
 import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
-import evolutionService from './services/evolutionService';
+import { whatsappService } from './services/whatsappService';
 import whatsappChatService from './services/whatsappChatService';
-import whatsappVersionManagerService from './services/whatsappVersionManager.service';
-import { setSocketIO } from './routes/evolutionWebhooks';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
-import cron from 'node-cron';
 
 async function startServer(): Promise<void> {
   try {
@@ -57,33 +54,11 @@ async function startServer(): Promise<void> {
 
     // Pass Socket.io instance to services
     whatsappChatService.setSocketServer(io);
-    setSocketIO(io);
 
-    // Inicializar Evolution API Service (assíncrono)
-    evolutionService.initialize().catch((error) => {
-      logger.error('❌ Erro ao inicializar Evolution API:', error);
+    // Inicializar WPPConnect Service (assíncrono, não bloqueia servidor)
+    whatsappService.initialize().catch((error) => {
+      logger.error('❌ Erro ao inicializar WPPConnect:', error);
     });
-
-    // Iniciar Cron Job para monitoramento inteligente WhatsApp
-    // Executa a cada 30 minutos - monitora saúde e atualiza se necessário
-    cron.schedule('*/30 * * * *', async () => {
-      try {
-        logger.info('⏰ Cron: Monitoramento inteligente WhatsApp...');
-        const result = await whatsappVersionManagerService.checkAndUpdateIfNeeded();
-
-        if (result.updateApplied) {
-          logger.info('✅ Cron: Atualização aplicada com sucesso!', {
-            oldVersion: result.previousVersion,
-            newVersion: result.currentVersion,
-          });
-        } else {
-          logger.info('✅ Cron: Verificação completa - nenhuma ação necessária');
-        }
-      } catch (error: any) {
-        logger.error('❌ Erro no cron de monitoramento WhatsApp:', error.message);
-      }
-    });
-    logger.info('✅ WhatsApp Version Manager Cron iniciado (executa a cada 30 minutos)');
 
     // Start server
     const server = httpServer.listen(PORT, () => {
@@ -100,8 +75,8 @@ async function startServer(): Promise<void> {
       server.close(async () => {
         logger.info('Server closed');
 
-        // Desconectar Evolution API
-        await evolutionService.disconnect();
+        // Desconectar WPPConnect
+        await whatsappService.disconnect();
 
         await disconnectDatabase();
 

@@ -17,7 +17,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import evolutionService from '../services/evolutionService';
+import { whatsappService } from '../services/whatsappService';
 import whatsappChatService from '../services/whatsappChatService';
 import { authenticate } from '../middleware/auth';
 import { logger } from '../utils/logger';
@@ -31,7 +31,7 @@ const router = Router();
  */
 router.get('/qr', authenticate, async (req: Request, res: Response) => {
   try {
-    const qrCode = evolutionService.getQRCode();
+    const qrCode = whatsappService.getQRCode();
 
     if (!qrCode) {
       return res.status(404).json({
@@ -62,7 +62,7 @@ router.get('/qr', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/status', authenticate, async (req: Request, res: Response) => {
   try {
-    const status = evolutionService.getConnectionStatus();
+    const status = whatsappService.getConnectionStatus();
 
     res.json({
       success: true,
@@ -93,7 +93,7 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/account', authenticate, async (req: Request, res: Response) => {
   try {
-    const status = evolutionService.getConnectionStatus();
+    const status = whatsappService.getConnectionStatus();
 
     if (!status.isConnected) {
       return res.status(400).json({
@@ -102,7 +102,7 @@ router.get('/account', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    const accountInfo = evolutionService.getAccountInfo();
+    const accountInfo = whatsappService.getAccountInfo();
 
     res.json({
       success: true,
@@ -145,7 +145,7 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    const status = evolutionService.getConnectionStatus();
+    const status = whatsappService.getConnectionStatus();
     if (!status.isConnected) {
       return res.status(400).json({
         success: false,
@@ -153,7 +153,7 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    const result = await evolutionService.sendText(to, message);
+    const result = await whatsappService.sendText(to, message);
 
     res.json({
       success: true,
@@ -178,7 +178,7 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
  */
 router.post('/disconnect', authenticate, async (req: Request, res: Response) => {
   try {
-    await evolutionService.disconnect();
+    await whatsappService.disconnect();
 
     res.json({
       success: true,
@@ -204,14 +204,14 @@ router.post('/reinitialize', authenticate, async (req: Request, res: Response) =
     logger.info('🔄 Reinicializando WhatsApp...');
 
     // Deletar instância
-    await evolutionService.disconnect();
+    await whatsappService.disconnect();
 
     // Aguardar 3 segundos para garantir que a instância foi deletada
     logger.info('⏳ Aguardando 3 segundos antes de recriar...');
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Recriar instância
-    await evolutionService.initialize();
+    await whatsappService.initialize();
 
     res.json({
       success: true,
@@ -325,7 +325,7 @@ router.get('/conversations/:id/messages', authenticate, async (req: Request, res
  */
 router.post('/sync-chats', authenticate, async (req: Request, res: Response) => {
   try {
-    const chats = await evolutionService.getAllChats();
+    const chats = await whatsappService.getAllChats();
 
     res.json({
       success: true,

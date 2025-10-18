@@ -182,13 +182,11 @@ jobs:
           echo "⏹️  Parando containers anteriores..."
           cd ${{ env.APP_DIR }} 2>/dev/null || true
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --remove-orphans 2>/dev/null || true
-          docker compose -f docker-compose.evolution.yml down --remove-orphans 2>/dev/null || true
           echo "✅ Volumes preservados (banco de dados mantido)"
 
           # Remover containers se ainda existirem
           docker rm -f ferraco-crm-vps 2>/dev/null || true
           docker rm -f ferraco-postgres 2>/dev/null || true
-          docker rm -f ferraco-evolution 2>/dev/null || true
 
           # Liberar porta
           echo "🔓 Liberando porta ${{ env.APP_PORT }}..."
@@ -289,38 +287,13 @@ jobs:
               --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP
           fi
 
-          # Iniciar aplicação principal (Postgres + Backend)
-          # Isso CRIA a rede ferraco-crm_ferraco-network automaticamente
-          echo "🚀 Iniciando aplicação principal (Postgres + Backend)..."
+          # Iniciar aplicação (Postgres + Backend com WPPConnect integrado)
+          echo "🚀 Iniciando aplicação (Postgres + Backend + WPPConnect)..."
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} up -d
 
-          # Aguardar aplicação principal iniciar E rede ser criada
-          echo "⏳ Aguardando aplicação principal iniciar e rede ser criada (30 segundos)..."
+          # Aguardar aplicação iniciar
+          echo "⏳ Aguardando aplicação iniciar (30 segundos)..."
           sleep 30
-
-          # Verificar se a rede foi criada
-          echo "🔍 Verificando rede Docker..."
-          docker network ls | grep ferraco-crm_ferraco-network || {
-            echo "❌ Rede ferraco-crm_ferraco-network não foi criada!"
-            echo "Tentando criar manualmente..."
-            docker network create ferraco-crm_ferraco-network 2>/dev/null || true
-          }
-
-          # Subir Evolution API separadamente (agora a rede existe)
-          echo "📱 Iniciando Evolution API (container separado)..."
-          docker compose -f docker-compose.evolution.yml up -d
-
-          echo "⏳ Aguardando Evolution API iniciar (15 segundos)..."
-          sleep 15
-
-          # Buscar versão atual do WhatsApp e atualizar
-          echo "🔄 Atualizando versão WhatsApp Web para versão atual..."
-          if [ -f "update-whatsapp-version.sh" ]; then
-            chmod +x update-whatsapp-version.sh
-            bash update-whatsapp-version.sh || echo "⚠️  Aviso: Falha ao atualizar versão WhatsApp (continuar mesmo assim)"
-          else
-            echo "⚠️  Script update-whatsapp-version.sh não encontrado - versão não atualizada"
-          fi
 
           # Mostrar logs iniciais
           echo "📋 Logs iniciais do container:"

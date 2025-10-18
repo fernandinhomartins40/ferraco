@@ -29,9 +29,6 @@ import landingPageRoutes from './routes/landing-page.routes';
 import whatsappRoutes from './routes/whatsapp.routes';
 import automationKanbanRoutes from './routes/automationKanban.routes';
 import whatsappMessageTemplateRoutes from './routes/whatsappMessageTemplate.routes';
-import evolutionWebhooks from './routes/evolutionWebhooks';
-import evolutionApiRoutes from './routes/evolutionApi.routes';
-import whatsappVersionRoutes from './routes/whatsappVersion.routes';
 import { automationSchedulerService } from './services/automationScheduler.service';
 
 export function createApp(): Application {
@@ -90,9 +87,6 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/whatsapp`, whatsappRoutes);
   app.use(`${API_PREFIX}/automation-kanban`, automationKanbanRoutes);
   app.use(`${API_PREFIX}/whatsapp-templates`, whatsappMessageTemplateRoutes);
-  app.use(`${API_PREFIX}/evolution`, evolutionApiRoutes);
-  app.use(`${API_PREFIX}/whatsapp/version`, whatsappVersionRoutes);
-  app.use('/webhooks', evolutionWebhooks);
 
   logger.info('✅ All routes registered successfully');
 

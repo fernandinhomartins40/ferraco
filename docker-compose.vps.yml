@@ -19,10 +19,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Evolution API foi movida para docker-compose.evolution.yml
-  # Para gerenciar separadamente e permitir atualizações sem afetar a aplicação principal
-  # Rodar: docker-compose -f docker-compose.evolution.yml up -d
-
   ferraco-crm-vps:
     container_name: ferraco-crm-vps
     build:
@@ -55,12 +51,8 @@ services:
       # API
       API_PREFIX: ${API_PREFIX:-/api}
 
-      # WhatsApp / Evolution API
+      # WhatsApp / WPPConnect
       WHATSAPP_SESSIONS_PATH: /app/sessions
-      EVOLUTION_API_URL: http://evolution-api:8080
-      EVOLUTION_INSTANCE_NAME: ferraco-crm
-      EVOLUTION_API_KEY: FERRACO2025
-      BACKEND_URL: http://ferraco-crm-vps:3000
 
     volumes:
       # Dados persistentes
