@@ -67,11 +67,11 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
     res.json({
       success: true,
       status: {
-        connected: status.isConnected,
-        hasQR: status.hasQR,
-        message: status.isConnected
+        connected: status.connected,
+        hasQR: !!status.qrCode,
+        message: status.connected
           ? 'WhatsApp conectado'
-          : status.hasQR
+          : status.qrCode
           ? 'Aguardando leitura do QR Code'
           : 'Inicializando...',
       },
