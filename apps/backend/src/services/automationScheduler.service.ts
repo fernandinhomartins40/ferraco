@@ -111,7 +111,7 @@ class AutomationSchedulerService {
       const { lead, column } = position;
 
       // Verificar se WhatsApp está conectado
-      if (!whatsappService.isClientConnected()) {
+      if (!whatsappService.isWhatsAppConnected()) {
         logger.warn('WhatsApp não conectado, pulando envio');
         return;
       }
@@ -132,7 +132,7 @@ class AutomationSchedulerService {
       // Enviar mensagem
       logger.info(`📤 Enviando mensagem para ${lead.name} (${lead.phone})`);
 
-      await whatsappService.sendMessage(lead.phone, messageContent);
+      await whatsappService.sendTextMessage(lead.phone, messageContent);
 
       // Enviar mídias se houver
       if (column.messageTemplate?.mediaUrls) {
