@@ -6,10 +6,8 @@ services:
       POSTGRES_USER: ferraco
       POSTGRES_PASSWORD: ferraco123
       POSTGRES_DB: ferraco_crm
-      POSTGRES_MULTIPLE_DATABASES: evolution_api
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./scripts/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
     networks:
       - ferraco-network
     restart: unless-stopped
@@ -36,10 +34,10 @@ services:
       # Database (conecta ao container postgres)
       DATABASE_URL: postgresql://ferraco:ferraco123@postgres:5432/ferraco_crm
 
-      # JWT
+      # JWT (valores do código: 8h e 30d)
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
-      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-15m}
-      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-8h}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-30d}
 
       # CORS
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
@@ -64,7 +62,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      # Evolution API removida do depends_on - agora gerenciada separadamente
 
     restart: unless-stopped
 

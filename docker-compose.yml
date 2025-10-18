@@ -15,77 +15,21 @@ services:
       - PORT=3000
       - DATABASE_URL=file:./dev.db
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - JWT_ACCESS_EXPIRATION=8h
+      - JWT_REFRESH_EXPIRATION=30d
       - CORS_ORIGIN=http://localhost:5173,http://localhost:3000
       - WHATSAPP_SESSIONS_PATH=/app/sessions
-      - EVOLUTION_API_URL=http://evolution-api:8080
-      - EVOLUTION_INSTANCE_NAME=ferraco-crm-dev
-      - EVOLUTION_API_KEY=DEV_B6D@9F2#K8L$4P7!Q3M@5N9^W1X&Y6Z
     volumes:
       - ./apps/backend:/app
       - /app/node_modules
       - backend-data:/app/prisma
       - whatsapp-sessions:/app/sessions
-      - whatsapp-tokens:/app/tokens
     networks:
       - ferraco-network
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 3s
-      retries: 3
-      start_period: 40s
-
-  evolution-api:
-    image: atendai/evolution-api:latest
-    container_name: ferraco-evolution-dev
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - SERVER_TYPE=http
-      - SERVER_PORT=8080
-      - SERVER_URL=http://localhost:8080
-      - CORS_ORIGIN=*
-      - CORS_METHODS=GET,POST,PUT,DELETE
-      - CORS_CREDENTIALS=true
-      - AUTHENTICATION_TYPE=apikey
-      - AUTHENTICATION_API_KEY=DEV_B6D@9F2#K8L$4P7!Q3M@5N9^W1X&Y6Z
-      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
-      - DATABASE_ENABLED=false
-      - CACHE_REDIS_ENABLED=false
-      - CACHE_REDIS_URI=
-      - CACHE_LOCAL_ENABLED=false
-      - WEBHOOK_GLOBAL_URL=http://backend:3000/webhooks/evolution
-      - WEBHOOK_GLOBAL_ENABLED=true
-      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=false
-      - WEBHOOK_EVENTS_QRCODE_UPDATED=true
-      - WEBHOOK_EVENTS_MESSAGES_SET=true
-      - WEBHOOK_EVENTS_MESSAGES_UPSERT=true
-      - WEBHOOK_EVENTS_MESSAGES_UPDATE=true
-      - WEBHOOK_EVENTS_SEND_MESSAGE=true
-      - WEBHOOK_EVENTS_CONTACTS_SET=true
-      - WEBHOOK_EVENTS_CONTACTS_UPSERT=true
-      - WEBHOOK_EVENTS_CONTACTS_UPDATE=true
-      - WEBHOOK_EVENTS_CHATS_SET=true
-      - WEBHOOK_EVENTS_CHATS_UPSERT=true
-      - WEBHOOK_EVENTS_CHATS_UPDATE=true
-      - WEBHOOK_EVENTS_CONNECTION_UPDATE=true
-      - QRCODE_LIMIT=30
-      - QRCODE_COLOR=#198754
-      - CONFIG_SESSION_PHONE_CLIENT=Ferraco CRM Dev
-      - CONFIG_SESSION_PHONE_NAME=Chrome
-      - LOG_LEVEL=ERROR,WARN,DEBUG,INFO,LOG,VERBOSE,DARK,WEBHOOKS
-      - LOG_COLOR=true
-      - LOG_BAILEYS=error
-    volumes:
-      - evolution-instances:/evolution/instances
-      - evolution-store:/evolution/store
-    networks:
-      - ferraco-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
-      interval: 30s
-      timeout: 10s
       retries: 3
       start_period: 40s
 
@@ -115,6 +59,3 @@ networks:
 volumes:
   backend-data:
   whatsapp-sessions:
-  whatsapp-tokens:
-  evolution-instances:
-  evolution-store:
