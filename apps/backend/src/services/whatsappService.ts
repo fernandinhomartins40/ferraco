@@ -392,6 +392,16 @@ class WhatsAppService {
   }
 
   /**
+   * Obter status da conexão (compatibilidade com Evolution API)
+   */
+  getConnectionStatus(): { connected: boolean; qrCode: string | null } {
+    return {
+      connected: this.isConnected,
+      qrCode: this.qrCode,
+    };
+  }
+
+  /**
    * Obter informações da conta conectada
    */
   async getAccountInfo(): Promise<any> {
