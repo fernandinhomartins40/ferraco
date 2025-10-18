@@ -87,8 +87,15 @@ export const useAuth = (): AuthContextType => {
       const response = await axios.post(`${API_URL}/login`, { email, password });
       const { user, accessToken, refreshToken } = response.data.data;
 
+      // Validar tokens antes de salvar
+      if (!accessToken || !refreshToken) {
+        logger.error('Login response missing tokens', { accessToken: !!accessToken, refreshToken: !!refreshToken });
+        throw new Error('Erro no servidor: tokens não foram retornados');
+      }
+
       setAuth(user, accessToken, refreshToken);
       logger.info('Login successful', { userId: user.id });
+      logger.info('Tokens saved', { hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
     } catch (error) {
       logger.error('Login failed', { error });
       throw error;
