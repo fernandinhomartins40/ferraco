@@ -18,6 +18,9 @@ export async function authenticate(
   next: NextFunction
 ): Promise<void> {
   try {
+    // Log detalhado para debug
+    console.log(`[AUTH] ${req.method} ${req.path} - Authorization:`, req.headers.authorization ? 'Present' : 'Missing');
+
     const token = extractTokenFromHeader(req.headers.authorization);
     const payload = verifyAccessToken(token);
 
@@ -28,18 +31,22 @@ export async function authenticate(
     });
 
     if (!user || !user.isActive) {
+      console.log(`[AUTH] User not found or inactive: ${payload.userId}`);
       unauthorizedResponse(res, 'User not found or inactive');
       return;
     }
 
+    console.log(`[AUTH] ✅ Authenticated: ${payload.email}`);
     req.user = payload;
     req.permissions = payload.permissions;
 
     next();
   } catch (error) {
     if (error instanceof Error) {
+      console.log(`[AUTH] ❌ Error: ${error.message}`);
       unauthorizedResponse(res, error.message);
     } else {
+      console.log(`[AUTH] ❌ Unknown error:`, error);
       unauthorizedResponse(res, 'Authentication failed');
     }
   }
