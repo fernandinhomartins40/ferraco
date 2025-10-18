@@ -95,19 +95,19 @@ router.get('/account', authenticate, async (req: Request, res: Response) => {
   try {
     const status = whatsappService.getConnectionStatus();
 
-    if (!status.isConnected) {
+    if (!status.connected) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
       });
     }
 
-    const accountInfo = whatsappService.getAccountInfo();
+    const accountInfo = await whatsappService.getAccountInfo();
 
     res.json({
       success: true,
       account: {
-        phone: accountInfo?.phone || status.myNumber || 'Desconhecido',
+        phone: accountInfo?.phone || 'Desconhecido',
         name: accountInfo?.name || 'WhatsApp',
         platform: accountInfo?.platform || 'WhatsApp Web'
       },
@@ -146,20 +146,19 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
     }
 
     const status = whatsappService.getConnectionStatus();
-    if (!status.isConnected) {
+    if (!status.connected) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const result = await whatsappService.sendText(to, message);
+    await whatsappService.sendTextMessage(to, message);
 
     res.json({
       success: true,
       message: 'Mensagem enviada com sucesso',
       to,
-      messageId: result.key?.id,
     });
 
   } catch (error: any) {
@@ -322,25 +321,26 @@ router.get('/conversations/:id/messages', authenticate, async (req: Request, res
 /**
  * POST /api/whatsapp/sync-chats
  * Sincronizar todos os chats e contatos do WhatsApp
+ * DESABILITADO: Funcionalidade não implementada no WPPConnect
  */
-router.post('/sync-chats', authenticate, async (req: Request, res: Response) => {
-  try {
-    const chats = await whatsappService.getAllChats();
-
-    res.json({
-      success: true,
-      message: `${chats.length} chats sincronizados`,
-      count: chats.length
-    });
-  } catch (error: any) {
-    logger.error('Erro ao sincronizar chats:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao sincronizar chats',
-      message: error.message
-    });
-  }
-});
+// router.post('/sync-chats', authenticate, async (req: Request, res: Response) => {
+//   try {
+//     const chats = await whatsappService.getAllChats();
+//
+//     res.json({
+//       success: true,
+//       message: `${chats.length} chats sincronizados`,
+//       count: chats.length
+//     });
+//   } catch (error: any) {
+//     logger.error('Erro ao sincronizar chats:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: 'Erro ao sincronizar chats',
+//       message: error.message
+//     });
+//   }
+// });
 
 /**
  * POST /api/whatsapp/conversations/:id/read

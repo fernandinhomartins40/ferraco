@@ -313,6 +313,126 @@ export class WhatsAppChatService {
       orderBy: { lastMessageAt: 'desc' },
     });
   }
+
+  /**
+   * ✅ NOVO: Salva mensagem recebida no banco
+   */
+  async handleIncomingMessage(message: any): Promise<void> {
+    try {
+      // Normalizar telefone
+      const phone = message.from.replace('@c.us', '').replace(/\D/g, '');
+
+      // Buscar ou criar contato
+      const contact = await this.findOrCreateContact(phone, message.notifyName || phone);
+
+      // Buscar ou criar conversa
+      const conversation = await this.findOrCreateConversation(contact.id);
+
+      // Determinar tipo de mensagem
+      const messageType = this.getMessageType(message);
+
+      // Salvar mensagem
+      await prisma.whatsAppMessage.create({
+        data: {
+          conversationId: conversation.id,
+          contactId: contact.id,
+          type: messageType,
+          content: message.body || '',
+          mediaUrl: message.mediaUrl || null,
+          fromMe: false,
+          status: 'READ',
+          whatsappMessageId: message.id?.toString() || null,
+          timestamp: new Date(message.timestamp * 1000 || Date.now()),
+        },
+      });
+
+      // Atualizar conversa
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          lastMessageAt: new Date(),
+          lastMessagePreview: this.getMessagePreview(message.body || '', messageType),
+          unreadCount: { increment: 1 },
+        },
+      });
+
+      // Emitir evento WebSocket
+      if (this.io) {
+        this.io.emit('message:new', {
+          conversationId: conversation.id,
+          contactId: contact.id,
+          message: message.body,
+        });
+      }
+
+      logger.info(`✅ Mensagem recebida salva: ${phone}`);
+    } catch (error) {
+      logger.error('Erro ao salvar mensagem recebida:', error);
+    }
+  }
+
+  /**
+   * ✅ NOVO: Salva mensagem enviada no banco
+   */
+  async saveOutgoingMessage(data: {
+    to: string;
+    content: string;
+    whatsappMessageId: string;
+    timestamp: Date;
+  }): Promise<void> {
+    try {
+      // Normalizar telefone
+      const phone = data.to.replace(/\D/g, '');
+
+      // Buscar ou criar contato
+      const contact = await this.findOrCreateContact(phone, phone);
+
+      // Buscar ou criar conversa
+      const conversation = await this.findOrCreateConversation(contact.id);
+
+      // Salvar mensagem
+      await prisma.whatsAppMessage.create({
+        data: {
+          conversationId: conversation.id,
+          contactId: contact.id,
+          type: 'TEXT',
+          content: data.content,
+          fromMe: true,
+          status: 'PENDING',
+          whatsappMessageId: data.whatsappMessageId,
+          timestamp: data.timestamp,
+        },
+      });
+
+      // Atualizar conversa
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          lastMessageAt: new Date(),
+          lastMessagePreview: this.getMessagePreview(data.content, 'TEXT'),
+        },
+      });
+
+      // Emitir evento WebSocket
+      if (this.io) {
+        this.io.emit('message:sent', {
+          conversationId: conversation.id,
+          content: data.content,
+        });
+      }
+
+      logger.info(`✅ Mensagem enviada salva: ${phone}`);
+    } catch (error) {
+      logger.error('Erro ao salvar mensagem enviada:', error);
+    }
+  }
+
+  /**
+   * Define cliente WhatsApp (chamado pelo whatsappService)
+   */
+  setWhatsAppClient(client: any): void {
+    logger.info('✅ Cliente WhatsApp configurado no ChatService');
+  }
 }
 
 export default new WhatsAppChatService();
