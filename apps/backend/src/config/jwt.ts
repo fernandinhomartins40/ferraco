@@ -2,8 +2,8 @@ import jwt from 'jsonwebtoken';
 import { User } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_EXPIRATION || '15m';
-const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '7d';
+const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_EXPIRATION || '8h'; // Aumentado de 15m para 8h
+const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '30d'; // Aumentado de 7d para 30d
 
 export interface JWTPayload {
   userId: string;
