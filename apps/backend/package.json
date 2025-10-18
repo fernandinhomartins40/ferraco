@@ -35,8 +35,7 @@
     "socket.io": "^4.8.1",
     "winston": "^3.11.0",
     "zod": "^3.22.4",
-    "@wppconnect-team/wppconnect": "^1.37.5",
-    "@wppconnect-team/wa-js": "2.23.3"
+    "@wppconnect-team/wppconnect": "^1.37.5"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
