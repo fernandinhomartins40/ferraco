@@ -469,4 +469,536 @@ router.get('/search', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================================
+// ⭐ FASE 2: NOVAS ROTAS
+// ============================================================================
+
+/**
+ * POST /api/whatsapp/send-audio
+ * Enviar áudio (Push-to-Talk) via WhatsApp
+ *
+ * Body:
+ * {
+ *   "to": "5511999999999",
+ *   "audioPath": "https://example.com/audio.ogg" ou caminho local
+ * }
+ */
+router.post('/send-audio', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { to, audioPath } = req.body;
+
+    if (!to || !audioPath) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros inválidos',
+        message: 'Os campos "to" e "audioPath" são obrigatórios',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    const messageId = await whatsappService.sendAudio(to, audioPath);
+
+    res.json({
+      success: true,
+      message: 'Áudio enviado com sucesso',
+      to,
+      messageId,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao enviar áudio:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao enviar áudio',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/send-reaction
+ * Enviar reação emoji a uma mensagem
+ *
+ * Body:
+ * {
+ *   "messageId": "true_5511999999999@c.us_3EB0...",
+ *   "emoji": "👍" ou false para remover
+ * }
+ */
+router.post('/send-reaction', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { messageId, emoji } = req.body;
+
+    if (!messageId || emoji === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros inválidos',
+        message: 'Os campos "messageId" e "emoji" são obrigatórios',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    const result = await whatsappService.sendReaction(messageId, emoji);
+
+    res.json({
+      success: true,
+      message: emoji === false ? 'Reação removida com sucesso' : 'Reação enviada com sucesso',
+      messageId,
+      emoji,
+      result,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao enviar reação:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao enviar reação',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/mark-read
+ * Marcar chat como lido no WhatsApp
+ *
+ * Body:
+ * {
+ *   "chatId": "5511999999999@c.us"
+ * }
+ */
+router.post('/mark-read', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { chatId } = req.body;
+
+    if (!chatId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetro inválido',
+        message: 'O campo "chatId" é obrigatório',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    await whatsappService.markAsRead(chatId);
+
+    res.json({
+      success: true,
+      message: 'Chat marcado como lido',
+      chatId,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao marcar como lido:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao marcar como lido',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/mark-unread
+ * Marcar chat como não lido no WhatsApp
+ *
+ * Body:
+ * {
+ *   "chatId": "5511999999999@c.us"
+ * }
+ */
+router.post('/mark-unread', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { chatId } = req.body;
+
+    if (!chatId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetro inválido',
+        message: 'O campo "chatId" é obrigatório',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    await whatsappService.markAsUnread(chatId);
+
+    res.json({
+      success: true,
+      message: 'Chat marcado como não lido',
+      chatId,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao marcar como não lido:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao marcar como não lido',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/delete-message
+ * Deletar mensagem (localmente ou para todos)
+ *
+ * Body:
+ * {
+ *   "chatId": "5511999999999@c.us",
+ *   "messageId": "true_5511999999999@c.us_3EB0..." ou ["msg1", "msg2"],
+ *   "forEveryone": true ou false (opcional, padrão: false)
+ * }
+ */
+router.post('/delete-message', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { chatId, messageId, forEveryone } = req.body;
+
+    if (!chatId || !messageId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros inválidos',
+        message: 'Os campos "chatId" e "messageId" são obrigatórios',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    await whatsappService.deleteMessage(chatId, messageId, forEveryone || false);
+
+    const messageCount = Array.isArray(messageId) ? messageId.length : 1;
+    const scope = forEveryone ? 'para todos' : 'localmente';
+
+    res.json({
+      success: true,
+      message: `${messageCount} mensagem(ns) deletada(s) ${scope}`,
+      chatId,
+      messageCount,
+      forEveryone: forEveryone || false,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao deletar mensagem:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao deletar mensagem',
+      message: error.message,
+    });
+  }
+});
+
+// ============================================================================
+// ⭐ FASE 3: ROTAS AVANÇADAS
+// ============================================================================
+
+/**
+ * POST /api/whatsapp/send-file
+ * Enviar arquivo genérico (documento, PDF, etc.)
+ *
+ * Body:
+ * {
+ *   "to": "5511999999999",
+ *   "filePath": "https://example.com/document.pdf" ou caminho local,
+ *   "filename": "Contrato.pdf" (opcional),
+ *   "caption": "Segue o documento" (opcional)
+ * }
+ */
+router.post('/send-file', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { to, filePath, filename, caption } = req.body;
+
+    if (!to || !filePath) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros inválidos',
+        message: 'Os campos "to" e "filePath" são obrigatórios',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    const messageId = await whatsappService.sendFile(to, filePath, filename, caption);
+
+    res.json({
+      success: true,
+      message: 'Arquivo enviado com sucesso',
+      to,
+      filename: filename || 'documento',
+      messageId,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao enviar arquivo:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao enviar arquivo',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/send-location
+ * Enviar localização
+ *
+ * Body:
+ * {
+ *   "to": "5511999999999",
+ *   "latitude": -23.5505,
+ *   "longitude": -46.6333,
+ *   "name": "São Paulo, SP" (opcional)
+ * }
+ */
+router.post('/send-location', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { to, latitude, longitude, name } = req.body;
+
+    if (!to || latitude === undefined || longitude === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros inválidos',
+        message: 'Os campos "to", "latitude" e "longitude" são obrigatórios',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    const messageId = await whatsappService.sendLocation(to, latitude, longitude, name);
+
+    res.json({
+      success: true,
+      message: 'Localização enviada com sucesso',
+      to,
+      latitude,
+      longitude,
+      name: name || 'Localização',
+      messageId,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao enviar localização:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao enviar localização',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/send-contact
+ * Enviar contato vCard
+ *
+ * Body:
+ * {
+ *   "to": "5511999999999",
+ *   "contactId": "5511888888888@c.us",
+ *   "name": "João Silva" (opcional)
+ * }
+ */
+router.post('/send-contact', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { to, contactId, name } = req.body;
+
+    if (!to || !contactId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros inválidos',
+        message: 'Os campos "to" e "contactId" são obrigatórios',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    const messageId = await whatsappService.sendContactVcard(to, contactId, name);
+
+    res.json({
+      success: true,
+      message: 'Contato enviado com sucesso',
+      to,
+      contactId,
+      name: name || 'Contato',
+      messageId,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao enviar contato:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao enviar contato',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/star-message
+ * Estrelar ou desestrelar mensagem
+ *
+ * Body:
+ * {
+ *   "messageId": "true_5511999999999@c.us_3EB0...",
+ *   "star": true ou false
+ * }
+ */
+router.post('/star-message', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { messageId, star } = req.body;
+
+    if (!messageId || star === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros inválidos',
+        message: 'Os campos "messageId" e "star" são obrigatórios',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    await whatsappService.starMessage(messageId, star);
+
+    res.json({
+      success: true,
+      message: star ? 'Mensagem estrelada com sucesso' : 'Estrela removida com sucesso',
+      messageId,
+      star,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao estrelar mensagem:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao estrelar mensagem',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/whatsapp/starred-messages
+ * Obter todas as mensagens estreladas
+ */
+router.get('/starred-messages', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    const starredMessages = await whatsappService.getStarredMessages();
+
+    res.json({
+      success: true,
+      messages: starredMessages,
+      total: starredMessages.length,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao buscar mensagens estreladas:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar mensagens estreladas',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/archive-chat
+ * Arquivar ou desarquivar conversa
+ *
+ * Body:
+ * {
+ *   "chatId": "5511999999999@c.us",
+ *   "archive": true ou false
+ * }
+ */
+router.post('/archive-chat', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { chatId, archive } = req.body;
+
+    if (!chatId || archive === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros inválidos',
+        message: 'Os campos "chatId" e "archive" são obrigatórios',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    await whatsappService.archiveChat(chatId, archive);
+
+    res.json({
+      success: true,
+      message: archive ? 'Conversa arquivada com sucesso' : 'Conversa desarquivada com sucesso',
+      chatId,
+      archive,
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao arquivar conversa:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao arquivar conversa',
+      message: error.message,
+    });
+  }
+});
+
 export default router;

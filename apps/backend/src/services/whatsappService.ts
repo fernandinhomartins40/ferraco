@@ -38,6 +38,8 @@ class WhatsAppService {
   private sessionsPath: string;
   private isInitializing: boolean = false;
   private listeners: WhatsAppListeners | null = null;
+  private pollingInterval: NodeJS.Timeout | null = null;
+  private isPolling: boolean = false;
 
   constructor() {
     // Diretório de sessões (será volume Docker)
@@ -180,6 +182,9 @@ class WhatsAppService {
       this.listeners.setupSyncListeners();
       this.listeners.setupBatteryListeners();
 
+      // ⭐ FASE 1: Configurar Phone Watchdog (monitoramento de conexão)
+      this.setupPhoneWatchdog();
+
       logger.info('✅ WhatsApp Service (WPPConnect) inicializado!');
       this.isInitializing = false;
 
@@ -256,6 +261,25 @@ class WhatsAppService {
   }
 
   /**
+   * ⭐ FASE 1: Configurar Phone Watchdog - Monitoramento ativo de conexão
+   * Verifica status do telefone a cada 30 segundos
+   */
+  private setupPhoneWatchdog(): void {
+    if (!this.client) {
+      logger.error('❌ Cliente WhatsApp não inicializado para Phone Watchdog');
+      return;
+    }
+
+    try {
+      // Iniciar monitoramento a cada 30 segundos
+      this.client.startPhoneWatchdog(30000);
+      logger.info('✅ Phone Watchdog ativado (verificação a cada 30s)');
+    } catch (error) {
+      logger.error('❌ Erro ao iniciar Phone Watchdog:', error);
+    }
+  }
+
+  /**
    * Configurar listeners para ACKs (confirmações de leitura/entrega)
    */
   private setupAckListeners(): void {
@@ -281,7 +305,16 @@ class WhatsAppService {
         }
 
         const ackCode = ack.ack;
-        const statusName = ackCode === 1 ? 'PENDING' : ackCode === 2 ? 'SENT' : ackCode === 3 ? 'DELIVERED' : ackCode === 4 || ackCode === 5 ? 'READ' : 'UNKNOWN';
+
+        // ⭐ FASE 2: Mapeamento completo de ACK incluindo PLAYED (ACK 5)
+        const statusName =
+          ackCode === 0 ? 'CLOCK' :      // Pendente no relógio
+          ackCode === 1 ? 'SENT' :       // Enviado (1 check)
+          ackCode === 2 ? 'SENT' :       // Server recebeu
+          ackCode === 3 ? 'DELIVERED' :  // Entregue (2 checks)
+          ackCode === 4 ? 'READ' :       // Lido (2 checks azuis)
+          ackCode === 5 ? 'PLAYED' :     // ⭐ Reproduzido (áudio/vídeo)
+          'UNKNOWN';
 
         logger.info(`📨 ACK: ${messageId.substring(0, 20)}... -> ${statusName} (${ackCode})`);
 
@@ -293,17 +326,36 @@ class WhatsAppService {
       }
     });
 
-    // ⭐ NOVO: Polling para verificar status de mensagens recentes
+    // ⭐ FASE 1: Polling com controle de concorrência e timeout
     // Como o onAck pode não disparar para DELIVERED/READ, vamos fazer polling
-    setInterval(async () => {
+    this.pollingInterval = setInterval(async () => {
+      if (this.isPolling) {
+        logger.warn('⚠️  Polling anterior ainda em execução, pulando iteração...');
+        return;
+      }
+
+      this.isPolling = true;
+
       try {
-        await this.checkRecentMessagesStatus();
-      } catch (error) {
-        logger.error('Erro ao verificar status de mensagens:', error);
+        // Timeout de 8 segundos para evitar travamentos
+        await Promise.race([
+          this.checkRecentMessagesStatus(),
+          new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error('Polling timeout')), 8000)
+          )
+        ]);
+      } catch (error: any) {
+        if (error.message === 'Polling timeout') {
+          logger.error('⏱️  Polling timeout - operação demorou mais de 8s');
+        } else {
+          logger.error('❌ Erro no polling de status:', error);
+        }
+      } finally {
+        this.isPolling = false;
       }
     }, 10000); // Verificar a cada 10 segundos
 
-    logger.info('✅ Listeners de ACK configurados + polling de status ativado');
+    logger.info('✅ Listeners de ACK configurados + polling de status ativado (com timeout)');
   }
 
   /**
@@ -434,125 +486,871 @@ class WhatsAppService {
   }
 
   /**
-   * Enviar mensagem de texto
+   * ⭐ FASE 1: Enviar mensagem de texto com validações e retry
    * @param to Número do destinatário (com código do país, ex: 5511999999999)
    * @param message Mensagem a ser enviada
    */
   async sendTextMessage(to: string, message: string): Promise<void> {
-    if (!this.client || !this.isConnected) {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
       throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
     }
 
-    try {
-      // Formatar número para o padrão do WhatsApp
-      const formattedNumber = this.formatPhoneNumber(to);
-
-      // Enviar mensagem via WPPConnect
-      const result = await this.client.sendText(formattedNumber, message);
-
-      logger.info(`✅ Mensagem enviada para ${to}`);
-      logger.info(`📨 ID da mensagem retornado pelo WPPConnect:`, {
-        'result.id': result.id,
-        'tipo': typeof result.id,
-        'serialized': result.id?._serialized || 'N/A'
-      });
-
-      // ✅ NOVO: Salvar mensagem enviada no banco (estratégia híbrida)
-      await whatsappChatService.saveOutgoingMessage({
-        to: to,
-        content: message,
-        whatsappMessageId: result.id || `${Date.now()}_${to}`,
-        timestamp: new Date(),
-      });
-
-    } catch (error) {
-      logger.error(`Erro ao enviar mensagem para ${to}:`, error);
-      throw error;
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+      throw new Error('Mensagem vazia não pode ser enviada');
     }
+
+    const timestamp = new Date().toISOString();
+    const toMasked = to.substring(0, 8) + '***';
+
+    // Log estruturado
+    logger.info('📨 Enviando mensagem de texto', {
+      to: toMasked,
+      messageLength: message.length,
+      timestamp,
+      sessionActive: this.isConnected,
+      clientInitialized: !!this.client,
+    });
+
+    // Usar retry logic
+    await this.sendWithRetry(async () => {
+      try {
+        // Formatar número para o padrão do WhatsApp (com validação)
+        const formattedNumber = this.formatPhoneNumber(to);
+
+        // Enviar mensagem via WPPConnect
+        const result = await this.client!.sendText(formattedNumber, message);
+
+        logger.info(`✅ Mensagem enviada com sucesso`, {
+          to: toMasked,
+          messageId: result.id?._serialized || result.id,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Salvar mensagem enviada no banco (estratégia híbrida)
+        await whatsappChatService.saveOutgoingMessage({
+          to: to,
+          content: message,
+          whatsappMessageId: result.id || `${Date.now()}_${to}`,
+          timestamp: new Date(),
+        });
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao enviar mensagem', {
+          error: error.message,
+          stack: error.stack,
+          to: toMasked,
+          attemptedAt: new Date().toISOString(),
+          wasConnected: this.isConnected,
+        });
+        throw error;
+      }
+    });
   }
 
   /**
-   * Enviar imagem via WhatsApp
+   * ⭐ FASE 1: Enviar imagem com validações e retry
    * @param to Número de destino
    * @param imageUrl URL da imagem
    * @param caption Legenda opcional
    * @returns ID da mensagem no WhatsApp
    */
   async sendImage(to: string, imageUrl: string, caption?: string): Promise<string | undefined> {
-    if (!this.client || !this.isConnected) {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
       throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
     }
 
-    try {
-      const formattedNumber = this.formatPhoneNumber(to);
-
-      // Enviar imagem via WPPConnect
-      const result = await this.client.sendImage(
-        formattedNumber,
-        imageUrl,
-        'image',
-        caption || ''
-      );
-
-      logger.info(`✅ Imagem enviada para ${to}`);
-
-      return result.id;
-
-    } catch (error) {
-      logger.error(`❌ Erro ao enviar imagem para ${to}:`, error);
-      throw error;
+    if (!imageUrl || typeof imageUrl !== 'string' || imageUrl.trim() === '') {
+      throw new Error('URL da imagem inválida');
     }
+
+    const toMasked = to.substring(0, 8) + '***';
+
+    logger.info('🖼️ Enviando imagem', {
+      to: toMasked,
+      imageUrl: imageUrl.substring(0, 50) + '...',
+      hasCaption: !!caption,
+      timestamp: new Date().toISOString(),
+    });
+
+    return await this.sendWithRetry(async () => {
+      try {
+        const formattedNumber = this.formatPhoneNumber(to);
+
+        // Enviar imagem via WPPConnect
+        const result = await this.client!.sendImage(
+          formattedNumber,
+          imageUrl,
+          'image',
+          caption || ''
+        );
+
+        logger.info(`✅ Imagem enviada com sucesso`, {
+          to: toMasked,
+          messageId: result.id,
+        });
+
+        return result.id;
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao enviar imagem', {
+          error: error.message,
+          to: toMasked,
+          imageUrl: imageUrl.substring(0, 50) + '...',
+        });
+        throw error;
+      }
+    });
   }
 
   /**
-   * Enviar vídeo via WhatsApp
+   * ⭐ FASE 1: Enviar vídeo com validações e retry
    * @param to Número de destino
    * @param videoUrl URL do vídeo
    * @param caption Legenda opcional
    * @returns ID da mensagem no WhatsApp
    */
   async sendVideo(to: string, videoUrl: string, caption?: string): Promise<string | undefined> {
-    if (!this.client || !this.isConnected) {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
       throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
     }
 
-    try {
-      const formattedNumber = this.formatPhoneNumber(to);
-
-      // Enviar vídeo via WPPConnect
-      const result = await this.client.sendVideoAsGif(
-        formattedNumber,
-        videoUrl,
-        'video.mp4',
-        caption || ''
-      );
-
-      logger.info(`✅ Vídeo enviado para ${to}`);
-
-      return result.id;
-
-    } catch (error) {
-      logger.error(`❌ Erro ao enviar vídeo para ${to}:`, error);
-      throw error;
+    if (!videoUrl || typeof videoUrl !== 'string' || videoUrl.trim() === '') {
+      throw new Error('URL do vídeo inválida');
     }
+
+    const toMasked = to.substring(0, 8) + '***';
+
+    logger.info('🎥 Enviando vídeo', {
+      to: toMasked,
+      videoUrl: videoUrl.substring(0, 50) + '...',
+      hasCaption: !!caption,
+      timestamp: new Date().toISOString(),
+    });
+
+    return await this.sendWithRetry(async () => {
+      try {
+        const formattedNumber = this.formatPhoneNumber(to);
+
+        // Enviar vídeo via WPPConnect
+        const result = await this.client!.sendVideoAsGif(
+          formattedNumber,
+          videoUrl,
+          'video.mp4',
+          caption || ''
+        );
+
+        logger.info(`✅ Vídeo enviado com sucesso`, {
+          to: toMasked,
+          messageId: result.id,
+        });
+
+        return result.id;
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao enviar vídeo', {
+          error: error.message,
+          to: toMasked,
+          videoUrl: videoUrl.substring(0, 50) + '...',
+        });
+        throw error;
+      }
+    });
   }
 
   /**
-   * Formatar número de telefone para o padrão WhatsApp
+   * ⭐ FASE 2: Enviar áudio (Push-to-Talk)
+   * @param to Número de destino
+   * @param audioPath Caminho ou URL do arquivo de áudio
+   * @param caption Legenda opcional
+   * @returns ID da mensagem no WhatsApp
+   */
+  async sendAudio(to: string, audioPath: string, caption?: string): Promise<string | undefined> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!audioPath || typeof audioPath !== 'string' || audioPath.trim() === '') {
+      throw new Error('Caminho do áudio inválido');
+    }
+
+    const toMasked = to.substring(0, 8) + '***';
+
+    logger.info('🎤 Enviando áudio (PTT)', {
+      to: toMasked,
+      audioPath: audioPath.substring(0, 50) + '...',
+      hasCaption: !!caption,
+      timestamp: new Date().toISOString(),
+    });
+
+    return await this.sendWithRetry(async () => {
+      try {
+        const formattedNumber = this.formatPhoneNumber(to);
+
+        // Enviar áudio como PTT (Push-to-Talk) via WPPConnect
+        const result = await this.client!.sendPtt(formattedNumber, audioPath);
+
+        logger.info(`✅ Áudio enviado com sucesso`, {
+          to: toMasked,
+          messageId: result.id,
+        });
+
+        return result.id;
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao enviar áudio', {
+          error: error.message,
+          to: toMasked,
+          audioPath: audioPath.substring(0, 50) + '...',
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 2: Enviar reação a uma mensagem
+   * @param messageId ID da mensagem (serialized)
+   * @param emoji Emoji da reação (ou false para remover)
+   * @returns Resultado da operação
+   */
+  async sendReaction(messageId: string, emoji: string | false): Promise<{ sendMsgResult: string }> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!messageId || typeof messageId !== 'string' || messageId.trim() === '') {
+      throw new Error('ID da mensagem inválido');
+    }
+
+    const action = emoji === false ? 'remover' : 'enviar';
+    const emojiDisplay = emoji === false ? '(removendo)' : emoji;
+
+    logger.info(`${emoji === false ? '🚫' : '👍'} ${action === 'remover' ? 'Removendo' : 'Enviando'} reação`, {
+      messageId: messageId.substring(0, 20) + '...',
+      emoji: emojiDisplay,
+      timestamp: new Date().toISOString(),
+    });
+
+    return await this.sendWithRetry(async () => {
+      try {
+        // Enviar reação via WPPConnect
+        const result = await this.client!.sendReactionToMessage(messageId, emoji);
+
+        logger.info(`✅ Reação ${action === 'remover' ? 'removida' : 'enviada'} com sucesso`, {
+          messageId: messageId.substring(0, 20) + '...',
+          emoji: emojiDisplay,
+        });
+
+        return result;
+
+      } catch (error: any) {
+        logger.error(`❌ Erro ao ${action} reação`, {
+          error: error.message,
+          messageId: messageId.substring(0, 20) + '...',
+          emoji: emojiDisplay,
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 2: Marcar mensagem como lida
+   * @param chatId ID do chat (ex: 5511999999999@c.us)
+   * @returns void
+   */
+  async markAsRead(chatId: string): Promise<void> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+      throw new Error('ID do chat inválido');
+    }
+
+    logger.info('👁️ Marcando chat como lido', {
+      chatId: chatId.substring(0, 20) + '...',
+      timestamp: new Date().toISOString(),
+    });
+
+    await this.sendWithRetry(async () => {
+      try {
+        // Marcar como lido via WPPConnect
+        await this.client!.sendSeen(chatId);
+
+        logger.info(`✅ Chat marcado como lido`, {
+          chatId: chatId.substring(0, 20) + '...',
+        });
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao marcar como lido', {
+          error: error.message,
+          chatId: chatId.substring(0, 20) + '...',
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 2: Marcar chat como não lido
+   * @param chatId ID do chat (ex: 5511999999999@c.us)
+   * @returns void
+   */
+  async markAsUnread(chatId: string): Promise<void> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+      throw new Error('ID do chat inválido');
+    }
+
+    logger.info('👀 Marcando chat como não lido', {
+      chatId: chatId.substring(0, 20) + '...',
+      timestamp: new Date().toISOString(),
+    });
+
+    await this.sendWithRetry(async () => {
+      try {
+        // Marcar como não lido via WPPConnect
+        await this.client!.markUnseenMessage(chatId);
+
+        logger.info(`✅ Chat marcado como não lido`, {
+          chatId: chatId.substring(0, 20) + '...',
+        });
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao marcar como não lido', {
+          error: error.message,
+          chatId: chatId.substring(0, 20) + '...',
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 2: Deletar mensagem
+   * @param chatId ID do chat
+   * @param messageId ID da mensagem ou array de IDs
+   * @param forEveryone Se true, deleta para todos; se false, deleta apenas localmente
+   * @returns void
+   */
+  async deleteMessage(
+    chatId: string,
+    messageId: string | string[],
+    forEveryone: boolean = false
+  ): Promise<void> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+      throw new Error('ID do chat inválido');
+    }
+
+    if (!messageId) {
+      throw new Error('ID da mensagem inválido');
+    }
+
+    const messageIds = Array.isArray(messageId) ? messageId : [messageId];
+    const scope = forEveryone ? 'para todos' : 'localmente';
+
+    logger.info(`🗑️ Deletando mensagem ${scope}`, {
+      chatId: chatId.substring(0, 20) + '...',
+      messageCount: messageIds.length,
+      forEveryone,
+      timestamp: new Date().toISOString(),
+    });
+
+    await this.sendWithRetry(async () => {
+      try {
+        // Deletar mensagem via WPPConnect
+        await this.client!.deleteMessage(chatId, messageIds, forEveryone);
+
+        logger.info(`✅ Mensagem deletada ${scope}`, {
+          chatId: chatId.substring(0, 20) + '...',
+          messageCount: messageIds.length,
+        });
+
+      } catch (error: any) {
+        logger.error(`❌ Erro ao deletar mensagem ${scope}`, {
+          error: error.message,
+          chatId: chatId.substring(0, 20) + '...',
+          messageCount: messageIds.length,
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 3: Enviar arquivo genérico (documento, PDF, etc.)
+   * @param to Número de destino
+   * @param filePath Caminho ou URL do arquivo
+   * @param filename Nome do arquivo a ser exibido
+   * @param caption Legenda opcional
+   * @returns ID da mensagem no WhatsApp
+   */
+  async sendFile(
+    to: string,
+    filePath: string,
+    filename?: string,
+    caption?: string
+  ): Promise<string | undefined> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
+      throw new Error('Caminho do arquivo inválido');
+    }
+
+    const toMasked = to.substring(0, 8) + '***';
+    const displayFilename = filename || 'documento';
+
+    logger.info('📎 Enviando arquivo', {
+      to: toMasked,
+      filePath: filePath.substring(0, 50) + '...',
+      filename: displayFilename,
+      hasCaption: !!caption,
+      timestamp: new Date().toISOString(),
+    });
+
+    return await this.sendWithRetry(async () => {
+      try {
+        const formattedNumber = this.formatPhoneNumber(to);
+
+        // Enviar arquivo via WPPConnect
+        const result = await this.client!.sendFile(
+          formattedNumber,
+          filePath,
+          displayFilename,
+          caption || ''
+        );
+
+        logger.info(`✅ Arquivo enviado com sucesso`, {
+          to: toMasked,
+          filename: displayFilename,
+          messageId: result.id,
+        });
+
+        return result.id;
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao enviar arquivo', {
+          error: error.message,
+          to: toMasked,
+          filePath: filePath.substring(0, 50) + '...',
+          filename: displayFilename,
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 3: Enviar localização
+   * @param to Número de destino
+   * @param latitude Latitude
+   * @param longitude Longitude
+   * @param name Nome do local (opcional)
+   * @returns ID da mensagem no WhatsApp
+   */
+  async sendLocation(
+    to: string,
+    latitude: number,
+    longitude: number,
+    name?: string
+  ): Promise<string | undefined> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      throw new Error('Latitude e longitude devem ser números');
+    }
+
+    if (latitude < -90 || latitude > 90) {
+      throw new Error('Latitude inválida. Deve estar entre -90 e 90');
+    }
+
+    if (longitude < -180 || longitude > 180) {
+      throw new Error('Longitude inválida. Deve estar entre -180 e 180');
+    }
+
+    const toMasked = to.substring(0, 8) + '***';
+    const locationName = name || 'Localização';
+
+    logger.info('📍 Enviando localização', {
+      to: toMasked,
+      latitude,
+      longitude,
+      name: locationName,
+      timestamp: new Date().toISOString(),
+    });
+
+    return await this.sendWithRetry(async () => {
+      try {
+        const formattedNumber = this.formatPhoneNumber(to);
+
+        // Enviar localização via WPPConnect
+        const result = await this.client!.sendLocation(
+          formattedNumber,
+          latitude,
+          longitude,
+          locationName
+        );
+
+        logger.info(`✅ Localização enviada com sucesso`, {
+          to: toMasked,
+          latitude,
+          longitude,
+          messageId: result.id,
+        });
+
+        return result.id;
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao enviar localização', {
+          error: error.message,
+          to: toMasked,
+          latitude,
+          longitude,
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 3: Enviar contato vCard
+   * @param to Número de destino
+   * @param contactId ID do contato no formato WhatsApp (ex: 5511999999999@c.us)
+   * @param name Nome do contato
+   * @returns ID da mensagem no WhatsApp
+   */
+  async sendContactVcard(
+    to: string,
+    contactId: string,
+    name?: string
+  ): Promise<string | undefined> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!contactId || typeof contactId !== 'string' || contactId.trim() === '') {
+      throw new Error('ID do contato inválido');
+    }
+
+    const toMasked = to.substring(0, 8) + '***';
+    const contactName = name || 'Contato';
+
+    logger.info('👤 Enviando contato vCard', {
+      to: toMasked,
+      contactId: contactId.substring(0, 15) + '...',
+      name: contactName,
+      timestamp: new Date().toISOString(),
+    });
+
+    return await this.sendWithRetry(async () => {
+      try {
+        const formattedNumber = this.formatPhoneNumber(to);
+
+        // Enviar vCard via WPPConnect
+        const result = await this.client!.sendContactVcard(
+          formattedNumber,
+          contactId,
+          contactName
+        );
+
+        logger.info(`✅ Contato vCard enviado com sucesso`, {
+          to: toMasked,
+          contactName,
+          messageId: result.id,
+        });
+
+        return result.id;
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao enviar contato vCard', {
+          error: error.message,
+          to: toMasked,
+          contactId: contactId.substring(0, 15) + '...',
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 3: Estrelar mensagem
+   * @param messageId ID da mensagem
+   * @param star Se true, estrela; se false, remove estrela
+   * @returns void
+   */
+  async starMessage(messageId: string, star: boolean = true): Promise<void> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!messageId || typeof messageId !== 'string' || messageId.trim() === '') {
+      throw new Error('ID da mensagem inválido');
+    }
+
+    const action = star ? 'estrelando' : 'removendo estrela';
+
+    logger.info(`⭐ ${star ? 'Estrelando' : 'Removendo estrela de'} mensagem`, {
+      messageId: messageId.substring(0, 20) + '...',
+      star,
+      timestamp: new Date().toISOString(),
+    });
+
+    await this.sendWithRetry(async () => {
+      try {
+        // Estrelar/desestrelar mensagem via WPPConnect
+        await this.client!.starMessage(messageId, star);
+
+        logger.info(`✅ Mensagem ${star ? 'estrelada' : 'não estrelada'} com sucesso`, {
+          messageId: messageId.substring(0, 20) + '...',
+          star,
+        });
+
+      } catch (error: any) {
+        logger.error(`❌ Erro ao ${action} mensagem`, {
+          error: error.message,
+          messageId: messageId.substring(0, 20) + '...',
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 3: Obter mensagens estreladas
+   * @returns Array de mensagens estreladas
+   */
+  async getStarredMessages(): Promise<any[]> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    logger.info('⭐ Buscando mensagens estreladas', {
+      timestamp: new Date().toISOString(),
+    });
+
+    return await this.sendWithRetry(async () => {
+      try {
+        // Obter mensagens estreladas via WPPConnect
+        const starredMessages = await this.client!.getStarredMessages();
+
+        logger.info(`✅ ${starredMessages.length} mensagens estreladas encontradas`);
+
+        return starredMessages;
+
+      } catch (error: any) {
+        logger.error('❌ Erro ao buscar mensagens estreladas', {
+          error: error.message,
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 3: Arquivar conversa
+   * @param chatId ID do chat
+   * @param archive Se true, arquiva; se false, desarquiva
+   * @returns void
+   */
+  async archiveChat(chatId: string, archive: boolean = true): Promise<void> {
+    // Validações iniciais
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
+    }
+
+    if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+      throw new Error('ID do chat inválido');
+    }
+
+    const action = archive ? 'arquivando' : 'desarquivando';
+
+    logger.info(`📦 ${archive ? 'Arquivando' : 'Desarquivando'} conversa`, {
+      chatId: chatId.substring(0, 20) + '...',
+      archive,
+      timestamp: new Date().toISOString(),
+    });
+
+    await this.sendWithRetry(async () => {
+      try {
+        // Arquivar/desarquivar chat via WPPConnect
+        await this.client!.archiveChat(chatId, archive);
+
+        logger.info(`✅ Conversa ${archive ? 'arquivada' : 'desarquivada'} com sucesso`, {
+          chatId: chatId.substring(0, 20) + '...',
+          archive,
+        });
+
+      } catch (error: any) {
+        logger.error(`❌ Erro ao ${action} conversa`, {
+          error: error.message,
+          chatId: chatId.substring(0, 20) + '...',
+        });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE 1: Retry Logic com Exponential Backoff
+   * @param fn Função assíncrona a ser executada
+   * @param retries Número de tentativas (padrão: 3)
+   * @param delay Delay inicial em ms (padrão: 2000ms)
+   * @returns Resultado da função
+   */
+  private async sendWithRetry<T>(
+    fn: () => Promise<T>,
+    retries: number = 3,
+    delay: number = 2000
+  ): Promise<T> {
+    let lastError: any;
+
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        lastError = error;
+
+        // Não fazer retry em erros permanentes
+        const errorMsg = error?.message || '';
+        const isPermanentError =
+          errorMsg.includes('não conectado') ||
+          errorMsg.includes('não inicializado') ||
+          errorMsg.includes('inválido');
+
+        if (isPermanentError) {
+          logger.error('❌ Erro permanente detectado, abortando retry:', errorMsg);
+          throw error;
+        }
+
+        if (i < retries - 1) {
+          logger.warn(`⚠️  Tentativa ${i + 1}/${retries} falhou. Retrying em ${delay}ms...`, {
+            error: errorMsg,
+          });
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Exponential backoff
+        }
+      }
+    }
+
+    logger.error(`❌ Todas as ${retries} tentativas falharam`);
+    throw lastError;
+  }
+
+  /**
+   * ⭐ FASE 1: Formatar e validar número de telefone
    * @param phoneNumber Número de telefone
    * @returns Número formatado (ex: 5511999999999@c.us)
+   * @throws Error se número inválido
    */
   private formatPhoneNumber(phoneNumber: string): string {
-    // Remover caracteres não numéricos
+    // Validar entrada não vazia
+    if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim() === '') {
+      throw new Error('Número de telefone vazio ou inválido');
+    }
+
+    // Remover todos os caracteres não numéricos
     let cleaned = phoneNumber.replace(/\D/g, '');
 
+    // Validações de comprimento
+    if (cleaned.length < 10) {
+      throw new Error(`Número muito curto: ${phoneNumber}. Mínimo 10 dígitos.`);
+    }
+
+    if (cleaned.length > 15) {
+      throw new Error(`Número muito longo: ${phoneNumber}. Máximo 15 dígitos.`);
+    }
+
     // Adicionar código do país se não tiver (Brasil = 55)
-    if (!cleaned.startsWith('55')) {
+    if (cleaned.length === 10 || cleaned.length === 11) {
       cleaned = '55' + cleaned;
     }
 
-    // Adicionar sufixo do WhatsApp
-    return `${cleaned}@c.us`;
+    // Formato WhatsApp: número@c.us
+    const formatted = `${cleaned}@c.us`;
+
+    logger.debug(`📞 Número formatado: ${phoneNumber} -> ${formatted}`);
+    return formatted;
   }
 
   /**
@@ -563,10 +1361,28 @@ class WhatsAppService {
   }
 
   /**
-   * Desconectar WhatsApp e limpar sessão
+   * ⭐ FASE 1: Desconectar WhatsApp com cleanup completo
    * Após desconectar, reinicializa automaticamente para gerar novo QR code
    */
   async disconnect(): Promise<void> {
+    // Parar polling
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+      logger.info('⏹️  Polling de status interrompido');
+    }
+
+    // Parar Phone Watchdog
+    if (this.client) {
+      try {
+        this.client.stopPhoneWatchdog?.();
+        logger.info('⏹️  Phone Watchdog interrompido');
+      } catch (error) {
+        logger.warn('⚠️  Erro ao parar Phone Watchdog:', error);
+      }
+    }
+
+    // Desconectar cliente
     if (this.client) {
       try {
         await this.client.close();

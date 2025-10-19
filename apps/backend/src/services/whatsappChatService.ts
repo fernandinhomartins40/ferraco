@@ -672,7 +672,7 @@ export class WhatsAppChatService {
    */
   async updateMessageStatus(whatsappMessageId: string, ackCode: number): Promise<void> {
     try {
-      // Mapear ACK code para MessageStatus
+      // ⭐ FASE 2: Mapear ACK code para MessageStatus (incluindo PLAYED)
       let status: MessageStatus;
       let readAt: Date | null = null;
       let deliveredAt: Date | null = null;
@@ -692,8 +692,13 @@ export class WhatsAppChatService {
           deliveredAt = new Date();
           break;
         case 4:
-        case 5:
           status = MessageStatus.READ;
+          readAt = new Date();
+          deliveredAt = new Date();
+          break;
+        case 5:
+          // ⭐ FASE 2: ACK 5 = PLAYED (áudio/vídeo reproduzido)
+          status = MessageStatus.PLAYED;
           readAt = new Date();
           deliveredAt = new Date();
           break;

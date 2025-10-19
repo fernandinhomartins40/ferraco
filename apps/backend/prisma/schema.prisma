@@ -1497,6 +1497,7 @@ enum MessageStatus {
   SENT
   DELIVERED
   READ
+  PLAYED      // ⭐ FASE 2: ACK 5 - Mensagem de áudio/vídeo reproduzida
   FAILED
 }
 
