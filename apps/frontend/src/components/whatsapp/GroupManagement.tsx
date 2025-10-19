@@ -87,20 +87,21 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
 
     try {
       setIsLoading(true);
-      const contactIds = selectedContacts.map((c) => `${c.phone}@c.us`);
+      // FASE C: Preparar números de telefone (backend formata automaticamente)
+      const participants = selectedContacts.map((c) => c.phone);
 
-      const response = await api.post('/whatsapp/extended/groups', {
-        groupName,
-        contacts: contactIds,
+      // FASE C: Endpoint correto para criar grupo
+      const response = await api.post('/whatsapp/groups', {
+        name: groupName,
+        participants,
       });
 
-      const newGroupId = response.data.group.id;
+      const newGroupId = response.data.data.gid;
 
       // Set description if provided
       if (groupDescription.trim()) {
-        await api.put(`/whatsapp/extended/groups/${newGroupId}/description`, {
-          description: groupDescription,
-        });
+        // TODO: Implementar endpoint de descrição de grupo se necessário
+        logger.warn('Descrição de grupo não implementada ainda');
       }
 
       toast.success('Grupo criado com sucesso!');

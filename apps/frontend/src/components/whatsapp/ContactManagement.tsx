@@ -67,8 +67,9 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
   const loadContacts = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/whatsapp/extended/contacts');
-      setContacts(response.data.contacts || []);
+      // FASE C: Endpoint correto para listar contatos
+      const response = await api.get('/whatsapp/contacts');
+      setContacts(response.data.data || []);
     } catch (error) {
       console.error('Erro ao carregar contatos:', error);
       toast.error('Erro ao carregar contatos');
@@ -85,13 +86,16 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
 
     try {
       setIsLoading(true);
-      const response = await api.post('/whatsapp/extended/contacts/check', {
-        number: verifyNumber,
+      // FASE C: Endpoint correto para verificar número
+      const response = await api.post('/whatsapp/contacts/check', {
+        phoneNumbers: verifyNumber, // Backend espera phoneNumbers
       });
 
-      setVerifyResult(response.data.result);
+      // Backend retorna array, pegar primeiro resultado
+      const result = response.data.data?.[0];
+      setVerifyResult(result);
 
-      if (response.data.result.exists) {
+      if (result?.exists) {
         toast.success('✅ Número existe no WhatsApp!');
       } else {
         toast.error('❌ Número não existe no WhatsApp');

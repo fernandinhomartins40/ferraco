@@ -59,39 +59,35 @@ const MediaUploader = ({ conversationPhone, onMediaSent }: MediaUploaderProps) =
 
     setIsUploading(true);
     try {
+      // FASE B: Upload de mídia para o servidor WhatsApp
       const formData = new FormData();
-      formData.append('file', previewDialog.file);
-      formData.append('to', conversationPhone);
-      if (caption) formData.append('caption', caption);
+      formData.append('media', previewDialog.file);
 
-      // Upload para servidor
-      const uploadResponse = await api.post('/upload', formData, {
+      const uploadResponse = await api.post('/whatsapp/upload-media', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      const filePath = uploadResponse.data.filePath;
+      const filePath = uploadResponse.data.data.filePath;
 
-      // Enviar via WhatsApp
+      // FASE A/B: Enviar via WhatsApp usando endpoints corretos
       if (previewDialog.type === 'image') {
-        await api.post('/whatsapp/send', {
+        await api.post('/whatsapp/send-image', {
           to: conversationPhone,
-          message: caption || '',
-          mediaUrl: filePath,
-          mediaType: 'image',
+          imagePath: filePath,
+          caption: caption || undefined,
         });
       } else if (previewDialog.type === 'video') {
-        await api.post('/whatsapp/send', {
+        await api.post('/whatsapp/send-video', {
           to: conversationPhone,
-          message: caption || '',
-          mediaUrl: filePath,
-          mediaType: 'video',
+          videoPath: filePath,
+          caption: caption || undefined,
         });
       } else if (previewDialog.type === 'document') {
-        await api.post('/whatsapp/extended/messages/file', {
+        await api.post('/whatsapp/send-file', {
           to: conversationPhone,
           filePath,
           filename: previewDialog.file.name,
-          caption: caption || '',
+          caption: caption || undefined,
         });
       }
 

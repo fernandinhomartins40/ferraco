@@ -1317,6 +1317,519 @@ class WhatsAppService {
     throw lastError;
   }
 
+  // ==========================================
+  // FASE C: FUNCIONALIDADES AUSENTES
+  // ==========================================
+
+  /**
+   * ⭐ FASE C: Download de mídia de uma mensagem
+   * @param messageId ID da mensagem
+   * @returns Buffer do arquivo
+   */
+  async downloadMedia(messageId: string): Promise<Buffer> {
+    logger.info(`📥 Baixando mídia da mensagem: ${messageId}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      // Baixar mídia usando WPPConnect
+      const mediaData = await this.client.decryptFile(messageId);
+      logger.info(`✅ Mídia baixada com sucesso: ${messageId}`);
+      return Buffer.from(mediaData);
+    } catch (error: any) {
+      logger.error(`❌ Erro ao baixar mídia: ${messageId}`, error);
+      throw new Error(`Erro ao baixar mídia: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE C: Encaminhar mensagem
+   * @param messageId ID da mensagem a encaminhar
+   * @param to Destinatário(s) - string ou array
+   */
+  async forwardMessage(messageId: string, to: string | string[]): Promise<void> {
+    logger.info(`📨 Encaminhando mensagem ${messageId} para:`, to);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const recipients = Array.isArray(to) ? to : [to];
+
+      for (const recipient of recipients) {
+        const formattedNumber = this.formatPhoneNumber(recipient);
+        await this.client.forwardMessages(formattedNumber, [messageId], false);
+        logger.info(`✅ Mensagem encaminhada para: ${formattedNumber}`);
+      }
+    } catch (error: any) {
+      logger.error(`❌ Erro ao encaminhar mensagem: ${messageId}`, error);
+      throw new Error(`Erro ao encaminhar mensagem: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE C: Fixar/Desafixar chat
+   * @param chatId ID do chat
+   * @param pin true para fixar, false para desafixar
+   */
+  async pinChat(chatId: string, pin: boolean = true): Promise<void> {
+    logger.info(`📌 ${pin ? 'Fixando' : 'Desfixando'} chat: ${chatId}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      await this.client.pinChat(chatId, pin);
+      logger.info(`✅ Chat ${pin ? 'fixado' : 'desfixado'}: ${chatId}`);
+    } catch (error: any) {
+      logger.error(`❌ Erro ao ${pin ? 'fixar' : 'desfixar'} chat: ${chatId}`, error);
+      throw new Error(`Erro ao ${pin ? 'fixar' : 'desfixar'} chat: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE C: Listar todos os contatos
+   * @returns Lista de contatos
+   */
+  async getContacts(): Promise<any[]> {
+    logger.info('📇 Listando contatos do WhatsApp');
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const contacts = await this.client.getAllContacts();
+      logger.info(`✅ ${contacts.length} contatos recuperados`);
+      return contacts;
+    } catch (error: any) {
+      logger.error('❌ Erro ao listar contatos:', error);
+      throw new Error(`Erro ao listar contatos: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE C: Verificar se número(s) está(ão) no WhatsApp
+   * @param phoneNumbers Número ou array de números
+   * @returns Array com status de cada número
+   */
+  async checkNumbersOnWhatsApp(phoneNumbers: string | string[]): Promise<any[]> {
+    logger.info('🔍 Verificando números no WhatsApp:', phoneNumbers);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const numbers = Array.isArray(phoneNumbers) ? phoneNumbers : [phoneNumbers];
+      const results = [];
+
+      for (const phoneNumber of numbers) {
+        try {
+          const formatted = this.formatPhoneNumber(phoneNumber);
+          const numberExists = await this.client.checkNumberStatus(formatted);
+
+          results.push({
+            phoneNumber,
+            formatted,
+            exists: numberExists.numberExists || false,
+            status: numberExists,
+          });
+
+          logger.info(`✅ ${phoneNumber} → ${numberExists.numberExists ? 'EXISTE' : 'NÃO EXISTE'}`);
+        } catch (error: any) {
+          results.push({
+            phoneNumber,
+            exists: false,
+            error: error.message,
+          });
+          logger.warn(`⚠️  Erro ao verificar ${phoneNumber}: ${error.message}`);
+        }
+      }
+
+      return results;
+    } catch (error: any) {
+      logger.error('❌ Erro ao verificar números:', error);
+      throw new Error(`Erro ao verificar números: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE C: Criar grupo
+   * @param name Nome do grupo
+   * @param participants Array de números dos participantes
+   * @returns Informações do grupo criado
+   */
+  async createGroup(name: string, participants: string[]): Promise<any> {
+    logger.info(`👥 Criando grupo: ${name} com ${participants.length} participantes`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    if (!name || name.trim() === '') {
+      throw new Error('Nome do grupo não pode ser vazio');
+    }
+
+    if (!participants || participants.length === 0) {
+      throw new Error('É necessário pelo menos 1 participante');
+    }
+
+    try {
+      // Formatar números dos participantes
+      const formattedParticipants = participants.map(p => this.formatPhoneNumber(p));
+
+      // Criar grupo
+      const group = await this.client.createGroup(name, formattedParticipants);
+
+      logger.info(`✅ Grupo criado: ${name} (ID: ${group.gid})`);
+      return group;
+    } catch (error: any) {
+      logger.error(`❌ Erro ao criar grupo: ${name}`, error);
+      throw new Error(`Erro ao criar grupo: ${error.message}`);
+    }
+  }
+
+  // ==========================================
+  // FASE D: FUNCIONALIDADES AVANÇADAS
+  // ==========================================
+
+  /**
+   * ⭐ FASE D: Enviar mensagem de lista interativa
+   * @param to Número do destinatário
+   * @param title Título da lista
+   * @param description Descrição
+   * @param buttonText Texto do botão
+   * @param sections Seções da lista com opções
+   */
+  async sendList(
+    to: string,
+    title: string,
+    description: string,
+    buttonText: string,
+    sections: Array<{ title: string; rows: Array<{ title: string; description?: string; rowId: string }> }>
+  ): Promise<string | undefined> {
+    logger.info(`📋 Enviando lista interativa para: ${to}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    const formattedNumber = this.formatPhoneNumber(to);
+
+    return this.sendWithRetry(async () => {
+      try {
+        const result = await this.client!.sendListMessage(formattedNumber, {
+          buttonText,
+          description,
+          title,
+          sections,
+        });
+
+        logger.info(`✅ Lista enviada para ${formattedNumber}`);
+        return result.id;
+      } catch (error: any) {
+        logger.error(`❌ Erro ao enviar lista para ${formattedNumber}:`, error);
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE D: Enviar mensagem com botões de resposta
+   * @param to Número do destinatário
+   * @param message Texto da mensagem
+   * @param buttons Array de botões (máx 3)
+   */
+  async sendButtons(
+    to: string,
+    message: string,
+    buttons: Array<{ buttonText: string; buttonId: string }>
+  ): Promise<string | undefined> {
+    logger.info(`🔘 Enviando mensagem com botões para: ${to}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    if (buttons.length > 3) {
+      throw new Error('WhatsApp permite no máximo 3 botões');
+    }
+
+    const formattedNumber = this.formatPhoneNumber(to);
+
+    return this.sendWithRetry(async () => {
+      try {
+        const result = await this.client!.sendButtons(formattedNumber, message, buttons);
+
+        logger.info(`✅ Mensagem com botões enviada para ${formattedNumber}`);
+        return result.id;
+      } catch (error: any) {
+        logger.error(`❌ Erro ao enviar botões para ${formattedNumber}:`, error);
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE D: Enviar enquete (poll)
+   * @param to Número do destinatário
+   * @param name Título da enquete
+   * @param options Array de opções (2-12 opções)
+   */
+  async sendPoll(
+    to: string,
+    name: string,
+    options: string[]
+  ): Promise<string | undefined> {
+    logger.info(`📊 Enviando enquete para: ${to}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    if (options.length < 2 || options.length > 12) {
+      throw new Error('Enquetes devem ter entre 2 e 12 opções');
+    }
+
+    const formattedNumber = this.formatPhoneNumber(to);
+
+    return this.sendWithRetry(async () => {
+      try {
+        const result = await this.client!.sendPollMessage(formattedNumber, name, options);
+
+        logger.info(`✅ Enquete enviada para ${formattedNumber}`);
+        return result.id;
+      } catch (error: any) {
+        logger.error(`❌ Erro ao enviar enquete para ${formattedNumber}:`, error);
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * ⭐ FASE D: Adicionar participante ao grupo
+   * @param groupId ID do grupo
+   * @param participantNumber Número do participante
+   */
+  async addParticipantToGroup(groupId: string, participantNumber: string): Promise<void> {
+    logger.info(`👤 Adicionando participante ${participantNumber} ao grupo ${groupId}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const formattedNumber = this.formatPhoneNumber(participantNumber);
+      await this.client.addParticipant(groupId, [formattedNumber]);
+
+      logger.info(`✅ Participante adicionado: ${formattedNumber}`);
+    } catch (error: any) {
+      logger.error(`❌ Erro ao adicionar participante:`, error);
+      throw new Error(`Erro ao adicionar participante: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE D: Remover participante do grupo
+   * @param groupId ID do grupo
+   * @param participantNumber Número do participante
+   */
+  async removeParticipantFromGroup(groupId: string, participantNumber: string): Promise<void> {
+    logger.info(`👤 Removendo participante ${participantNumber} do grupo ${groupId}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const formattedNumber = this.formatPhoneNumber(participantNumber);
+      await this.client.removeParticipant(groupId, [formattedNumber]);
+
+      logger.info(`✅ Participante removido: ${formattedNumber}`);
+    } catch (error: any) {
+      logger.error(`❌ Erro ao remover participante:`, error);
+      throw new Error(`Erro ao remover participante: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE D: Alterar descrição do grupo
+   * @param groupId ID do grupo
+   * @param description Nova descrição
+   */
+  async setGroupDescription(groupId: string, description: string): Promise<void> {
+    logger.info(`📝 Alterando descrição do grupo ${groupId}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      await this.client.setGroupDescription(groupId, description);
+      logger.info(`✅ Descrição do grupo atualizada`);
+    } catch (error: any) {
+      logger.error(`❌ Erro ao alterar descrição:`, error);
+      throw new Error(`Erro ao alterar descrição: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE D: Alterar assunto/nome do grupo
+   * @param groupId ID do grupo
+   * @param subject Novo nome
+   */
+  async setGroupSubject(groupId: string, subject: string): Promise<void> {
+    logger.info(`📝 Alterando nome do grupo ${groupId} para: ${subject}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      await this.client.setGroupSubject(groupId, subject);
+      logger.info(`✅ Nome do grupo atualizado`);
+    } catch (error: any) {
+      logger.error(`❌ Erro ao alterar nome:`, error);
+      throw new Error(`Erro ao alterar nome: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE D: Promover participante a admin
+   * @param groupId ID do grupo
+   * @param participantNumber Número do participante
+   */
+  async promoteParticipantToAdmin(groupId: string, participantNumber: string): Promise<void> {
+    logger.info(`👑 Promovendo ${participantNumber} a admin no grupo ${groupId}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const formattedNumber = this.formatPhoneNumber(participantNumber);
+      await this.client.promoteParticipant(groupId, [formattedNumber]);
+
+      logger.info(`✅ Participante promovido a admin`);
+    } catch (error: any) {
+      logger.error(`❌ Erro ao promover participante:`, error);
+      throw new Error(`Erro ao promover participante: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE D: Remover admin de participante
+   * @param groupId ID do grupo
+   * @param participantNumber Número do participante
+   */
+  async demoteParticipantFromAdmin(groupId: string, participantNumber: string): Promise<void> {
+    logger.info(`👤 Removendo admin de ${participantNumber} no grupo ${groupId}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const formattedNumber = this.formatPhoneNumber(participantNumber);
+      await this.client.demoteParticipant(groupId, [formattedNumber]);
+
+      logger.info(`✅ Admin removido do participante`);
+    } catch (error: any) {
+      logger.error(`❌ Erro ao remover admin:`, error);
+      throw new Error(`Erro ao remover admin: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE D: Listar participantes do grupo
+   * @param groupId ID do grupo
+   */
+  async getGroupParticipants(groupId: string): Promise<any[]> {
+    logger.info(`👥 Listando participantes do grupo ${groupId}`);
+
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const metadata = await this.client.getGroupMetadata(groupId);
+      logger.info(`✅ ${metadata.participants.length} participantes recuperados`);
+      return metadata.participants;
+    } catch (error: any) {
+      logger.error(`❌ Erro ao listar participantes:`, error);
+      throw new Error(`Erro ao listar participantes: ${error.message}`);
+    }
+  }
+
   /**
    * ⭐ FASE 1: Formatar e validar número de telefone
    * @param phoneNumber Número de telefone

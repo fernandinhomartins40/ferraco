@@ -236,7 +236,7 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
   const handleReact = async (messageId: string, emoji: string) => {
     try {
-      await api.post('/whatsapp/extended/messages/react', {
+      await api.post('/whatsapp/send-reaction', {
         messageId,
         emoji,
       });
@@ -252,11 +252,21 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
     toast.success('Texto copiado!');
   };
 
-  const handleDelete = async (messageId: string) => {
-    if (confirm('Deseja deletar esta mensagem?')) {
+  const handleDelete = async (message: Message, forEveryone: boolean = false) => {
+    const confirmMsg = forEveryone
+      ? 'Deseja deletar esta mensagem para todos?'
+      : 'Deseja deletar esta mensagem apenas para você?';
+
+    if (confirm(confirmMsg)) {
       try {
-        await api.delete(`/whatsapp/messages/${messageId}`);
-        setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+        // FASE C: Endpoint correto para deletar mensagem (Fase 2)
+        await api.post('/whatsapp/delete-message', {
+          chatId: conversation?.id || message.from,
+          messageId: message.id,
+          forEveryone,
+        });
+
+        setMessages((prev) => prev.filter((msg) => msg.id !== message.id));
         toast.success('Mensagem deletada');
       } catch (error) {
         console.error('Erro ao deletar:', error);
@@ -265,33 +275,48 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
     }
   };
 
-  const handleEdit = async (message: Message) => {
-    const newContent = prompt('Editar mensagem:', message.content);
-    if (newContent && newContent !== message.content) {
-      try {
-        await api.put(`/whatsapp/messages/${message.id}`, {
-          content: newContent,
-        });
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === message.id ? { ...msg, content: newContent } : msg
-          )
-        );
-        toast.success('Mensagem editada');
-      } catch (error) {
-        console.error('Erro ao editar:', error);
-        toast.error('Erro ao editar mensagem');
-      }
+  const handleStar = async (message: Message) => {
+    try {
+      // FASE C: Favoritar/Desfavoritar mensagem (Fase 3)
+      const isStarred = (message as any).isStarred || false;
+      await api.post('/whatsapp/star-message', {
+        messageId: message.id,
+        star: !isStarred,
+      });
+
+      toast.success(isStarred ? 'Mensagem desfavoritada' : 'Mensagem favoritada');
+    } catch (error) {
+      console.error('Erro ao favoritar:', error);
+      toast.error('Erro ao favoritar mensagem');
     }
   };
 
-  const handleDownload = async (mediaUrl: string) => {
+  const handleEdit = async (message: Message) => {
+    // WhatsApp não suporta edição de mensagens
+    toast.error('WhatsApp não suporta edição de mensagens');
+  };
+
+  const handleDownload = async (message: Message) => {
     try {
-      const response = await api.post('/whatsapp/extended/utils/download-media', {
-        mediaUrl,
+      // FASE C: Download de mídia usando endpoint correto
+      const response = await api.post('/whatsapp/download-media', {
+        messageId: message.id,
+      }, {
+        responseType: 'blob', // Importante para receber arquivo binário
       });
-      const downloadUrl = response.data.downloadUrl;
-      window.open(downloadUrl, '_blank');
+
+      // Criar URL temporária para download
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `media-${message.id}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Download concluído!');
     } catch (error) {
       console.error('Erro ao baixar:', error);
       toast.error('Erro ao baixar mídia');
@@ -434,8 +459,8 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                         onReact={(msg) => {}}
                         onCopy={handleCopy}
                         onDelete={handleDelete}
-                        onEdit={handleEdit}
-                        onDownload={message.mediaUrl ? () => handleDownload(message.mediaUrl!) : undefined}
+                        onStar={handleStar}
+                        onDownload={message.mediaUrl ? () => handleDownload(message) : undefined}
                       />
                     )}
 
@@ -496,6 +521,8 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                               switch (message.status) {
                                 case 'READ':
                                   return <span className="text-blue-400 font-bold text-sm">✓✓</span>;
+                                case 'PLAYED':
+                                  return <span className="text-blue-400 font-bold text-sm">▶✓✓</span>;
                                 case 'DELIVERED':
                                   return <span className="text-white/90 font-bold text-sm">✓✓</span>;
                                 case 'SENT':

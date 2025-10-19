@@ -93,15 +93,20 @@ const ForwardDialog = ({ open, onOpenChange, messageId }: ForwardDialogProps) =>
 
     setIsSending(true);
     try {
+      // FASE C: Coletar números de telefone dos contatos selecionados
+      const phoneNumbers: string[] = [];
       for (const convId of selectedIds) {
         const conv = conversations.find((c) => c.id === convId);
         if (conv) {
-          await api.post('/whatsapp/extended/messages/forward', {
-            to: conv.contact.phone,
-            messageId,
-          });
+          phoneNumbers.push(conv.contact.phone);
         }
       }
+
+      // FASE C: Encaminhar para múltiplos contatos de uma vez
+      await api.post('/whatsapp/forward-message', {
+        messageId,
+        to: phoneNumbers, // Enviar array de números
+      });
 
       toast.success(`Mensagem encaminhada para ${selectedIds.length} contato(s)`);
       setSelectedIds([]);

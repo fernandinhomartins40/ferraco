@@ -68,9 +68,11 @@ const AdvancedMessageMenu = ({
   });
 
   // Document state
-  const [document, setDocument] = useState({
-    filePath: '',
-    filename: '',
+  const [document, setDocument] = useState<{
+    file: File | null;
+    caption: string;
+  }>({
+    file: null,
     caption: '',
   });
 
@@ -102,11 +104,11 @@ const AdvancedMessageMenu = ({
   const handleSendLocation = async () => {
     try {
       setIsSending(true);
-      await api.post('/whatsapp/extended/messages/location', {
+      await api.post('/whatsapp/send-location', {
         to: conversationPhone,
         latitude: parseFloat(location.latitude),
         longitude: parseFloat(location.longitude),
-        description: location.description,
+        name: location.description,
       });
 
       toast.success('Localização enviada!');
@@ -124,7 +126,7 @@ const AdvancedMessageMenu = ({
   const handleSendContact = async () => {
     try {
       setIsSending(true);
-      await api.post('/whatsapp/extended/messages/contact', {
+      await api.post('/whatsapp/send-contact', {
         to: conversationPhone,
         contactId: contact.contactId,
         name: contact.name,
@@ -143,18 +145,35 @@ const AdvancedMessageMenu = ({
   };
 
   const handleSendDocument = async () => {
+    if (!document.file) {
+      toast.error('Selecione um arquivo');
+      return;
+    }
+
     try {
       setIsSending(true);
-      await api.post('/whatsapp/extended/messages/file', {
+
+      // FASE B: Upload de mídia para o servidor WhatsApp
+      const formData = new FormData();
+      formData.append('media', document.file);
+
+      const uploadResponse = await api.post('/whatsapp/upload-media', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const filePath = uploadResponse.data.data.filePath;
+
+      // FASE A: Enviar arquivo via WhatsApp (endpoint correto)
+      await api.post('/whatsapp/send-file', {
         to: conversationPhone,
-        filePath: document.filePath,
-        filename: document.filename,
-        caption: document.caption,
+        filePath,
+        filename: document.file.name,
+        caption: document.caption || undefined,
       });
 
       toast.success('Documento enviado!');
       setOpenDialog(null);
-      setDocument({ filePath: '', filename: '', caption: '' });
+      setDocument({ file: null, caption: '' });
       onMessageSent?.();
     } catch (error) {
       console.error('Erro:', error);
@@ -396,22 +415,22 @@ const AdvancedMessageMenu = ({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="filePath">Caminho do Arquivo</Label>
+              <Label htmlFor="file">Selecionar Arquivo</Label>
               <Input
-                id="filePath"
-                value={document.filePath}
-                onChange={(e) => setDocument({ ...document, filePath: e.target.value })}
-                placeholder="/path/to/document.pdf"
+                id="file"
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setDocument({ ...document, file });
+                  }
+                }}
               />
-            </div>
-            <div>
-              <Label htmlFor="filename">Nome do Arquivo</Label>
-              <Input
-                id="filename"
-                value={document.filename}
-                onChange={(e) => setDocument({ ...document, filename: e.target.value })}
-                placeholder="Contrato.pdf"
-              />
+              {document.file && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {document.file.name} ({(document.file.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="caption">Legenda (opcional)</Label>
@@ -424,7 +443,7 @@ const AdvancedMessageMenu = ({
             </div>
             <Button
               onClick={handleSendDocument}
-              disabled={isSending || !document.filePath || !document.filename}
+              disabled={isSending || !document.file}
               className="w-full"
             >
               {isSending ? 'Enviando...' : 'Enviar Documento'}

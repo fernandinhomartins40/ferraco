@@ -60,7 +60,7 @@ const ChatActionsMenu = ({
   const handleArchive = async () => {
     try {
       setIsLoading(true);
-      await api.post('/whatsapp/extended/chat/archive', {
+      await api.post('/whatsapp/archive-chat', {
         chatId,
         archive: !isArchived,
       });
@@ -78,7 +78,8 @@ const ChatActionsMenu = ({
   const handlePin = async () => {
     try {
       setIsLoading(true);
-      await api.post('/whatsapp/extended/chat/pin', {
+      // FASE C: Endpoint correto para fixar chat
+      await api.post('/whatsapp/pin-chat', {
         chatId,
         pin: !isPinned,
       });
@@ -132,7 +133,7 @@ const ChatActionsMenu = ({
   const handleMarkAsRead = async () => {
     try {
       setIsLoading(true);
-      await api.post('/whatsapp/extended/chat/mark-read', {
+      await api.post('/whatsapp/mark-read', {
         chatId,
       });
 
@@ -160,6 +161,23 @@ const ChatActionsMenu = ({
           <DropdownMenuItem onClick={handleMarkAsRead}>
             <Search className="mr-2 h-4 w-4" />
             <span>Marcar como lido</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={async () => {
+            try {
+              setIsLoading(true);
+              await api.post('/whatsapp/mark-unread', { chatId });
+              toast.success('Marcado como não lido!');
+              onAction?.();
+            } catch (error) {
+              console.error('Erro:', error);
+              toast.error('Erro ao marcar como não lido');
+            } finally {
+              setIsLoading(false);
+            }
+          }}>
+            <Search className="mr-2 h-4 w-4" />
+            <span>Marcar como não lido</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem onClick={handlePin}>

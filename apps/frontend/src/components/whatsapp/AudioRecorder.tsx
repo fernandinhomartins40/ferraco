@@ -87,21 +87,20 @@ const AudioRecorder = ({ conversationPhone, onAudioSent }: AudioRecorderProps) =
 
     setIsSending(true);
     try {
-      // Upload áudio
+      // FASE B: Upload de mídia para o servidor WhatsApp
       const formData = new FormData();
-      formData.append('file', audioFile);
+      formData.append('media', audioFile);
 
-      const uploadResponse = await api.post('/upload', formData, {
+      const uploadResponse = await api.post('/whatsapp/upload-media', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      const audioPath = uploadResponse.data.filePath;
+      const audioPath = uploadResponse.data.data.filePath;
 
-      // Enviar via WhatsApp
-      await api.post('/whatsapp/extended/messages/audio', {
+      // FASE A: Enviar áudio via WhatsApp (endpoint correto)
+      await api.post('/whatsapp/send-audio', {
         to: conversationPhone,
         audioPath,
-        ptt: true, // Push-to-Talk
       });
 
       toast.success('Áudio enviado!');
