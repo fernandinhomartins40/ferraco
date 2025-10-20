@@ -369,7 +369,7 @@ const AdminWhatsApp = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={checkStatus}
+                      onClick={requestStatus}
                       title="Atualizar status"
                     >
                       <RefreshCw className="h-4 w-4" />
