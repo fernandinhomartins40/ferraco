@@ -182,15 +182,9 @@ class WhatsAppService {
               // ✅ FASE 2: Emitir evento de conexão pronta via Socket.IO
               this.emitReady();
 
-              // ⭐ SYNC AUTOMÁTICO: Carregar últimos 20 chats ao conectar
-              if (this.client) {
-                whatsappChatService.setWhatsAppClient(this.client);
-                
-                // Sync em background (não bloqueia)
-                whatsappChatService.syncRecentChats(20).catch((error) => {
-                  logger.error('Erro no sync automático:', error);
-                });
-              }
+              // ⚠️ ARQUITETURA STATELESS 2025: Sync automático removido
+              // Conversas são carregadas on-demand via getAllConversations()
+              logger.info('📱 WhatsApp pronto - arquitetura stateless (sem sync automático)');
               break;
 
             case 'notLogged':
