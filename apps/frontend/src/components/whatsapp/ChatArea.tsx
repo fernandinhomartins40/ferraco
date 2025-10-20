@@ -68,8 +68,24 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    fetchConversation();
-    fetchMessages();
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        // 1. Buscar conversa primeiro para obter o phone
+        const convResponse = await api.get(`/whatsapp/conversations/${conversationId}`);
+        setConversation(convResponse.data.conversation);
+
+        // 2. Usar o phone para buscar mensagens (v2)
+        const phone = convResponse.data.conversation.contact.phone;
+        const msgResponse = await api.get(`/whatsapp/conversations/${phone}/messages/v2`);
+        setMessages(msgResponse.data.messages);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
   }, [conversationId]);
 
   // WebSocket for real-time messages
@@ -146,24 +162,19 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
     scrollToBottom();
   }, [messages]);
 
-  const fetchConversation = async () => {
-    try {
-      const response = await api.get(`/whatsapp/conversations/${conversationId}`);
-      setConversation(response.data.conversation);
-    } catch (error) {
-      console.error('Erro ao buscar conversa:', error);
-    }
-  };
-
+  // ✅ STATELESS: Busca mensagens direto do WhatsApp (via API v2)
   const fetchMessages = async () => {
     try {
-      setIsLoading(true);
-      const response = await api.get(`/whatsapp/conversations/${conversationId}/messages`);
+      // Precisa ter conversation.contact.phone para usar v2 API
+      if (!conversation?.contact.phone) {
+        console.error('Phone não disponível para buscar mensagens');
+        return;
+      }
+
+      const response = await api.get(`/whatsapp/conversations/${conversation.contact.phone}/messages/v2`);
       setMessages(response.data.messages);
     } catch (error) {
       console.error('Erro ao buscar mensagens:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
