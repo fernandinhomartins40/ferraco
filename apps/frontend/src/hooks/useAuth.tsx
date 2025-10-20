@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger';
 import type { User } from '@ferraco/shared';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import axios from 'axios';
+import apiClient from '@/lib/apiClient';
 
 const API_URL = '/api/auth';
 
@@ -84,7 +84,7 @@ export const useAuth = (): AuthContextType => {
     try {
       logger.info('Attempting login', { email });
 
-      const response = await axios.post(`${API_URL}/login`, { email, password });
+      const response = await apiClient.post(`${API_URL}/login`, { email, password });
       const { user, accessToken, refreshToken } = response.data.data;
 
       setAuth(user, accessToken, refreshToken);
@@ -114,7 +114,7 @@ export const useAuth = (): AuthContextType => {
     try {
       logger.info('Refreshing token');
 
-      const response = await axios.post(`${API_URL}/refresh`, {
+      const response = await apiClient.post(`${API_URL}/refresh`, {
         refreshToken: storedRefreshToken,
       });
 
@@ -139,9 +139,7 @@ export const useAuth = (): AuthContextType => {
     try {
       logger.info('Checking authentication');
 
-      const response = await axios.get(`${API_URL}/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get(`${API_URL}/me`);
 
       setUser(response.data);
       logger.info('Auth check successful');
@@ -169,9 +167,7 @@ export const useAuth = (): AuthContextType => {
     try {
       logger.info('Updating user', { userData });
 
-      const response = await axios.put(`${API_URL}/profile`, userData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.put(`${API_URL}/profile`, userData);
 
       setUser(response.data);
       logger.info('User updated successfully');
