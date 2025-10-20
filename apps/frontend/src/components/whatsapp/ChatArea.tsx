@@ -71,12 +71,22 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        // 1. Buscar conversa primeiro para obter o phone
-        const convResponse = await api.get(`/whatsapp/conversations/${conversationId}`);
-        setConversation(convResponse.data.conversation);
 
-        // 2. Usar o phone para buscar mensagens (v2)
-        const phone = convResponse.data.conversation.contact.phone;
+        // Extrair phone do conversationId (conversationId é o phone ou id do WhatsApp)
+        // Exemplo: "553196219989@c.us" ou "553196219989"
+        const phone = conversationId.replace('@c.us', '').replace(/\D/g, '');
+
+        // Buscar conversas para encontrar a conversa específica
+        const convsResponse = await api.get('/whatsapp/conversations/v2');
+        const conversation = convsResponse.data.conversations.find((c: any) =>
+          c.phone === phone || c.id === conversationId
+        );
+
+        if (conversation) {
+          setConversation(conversation);
+        }
+
+        // Buscar mensagens usando phone
         const msgResponse = await api.get(`/whatsapp/conversations/${phone}/messages/v2`);
         setMessages(msgResponse.data.messages);
       } catch (error) {
