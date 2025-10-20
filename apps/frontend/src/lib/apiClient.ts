@@ -2,6 +2,12 @@
  * API Client Centralizado
  * Cliente axios configurado com interceptors de autenticação
  * e tratamento automático de refresh token
+ *
+ * SOLUÇÃO PROFISSIONAL:
+ * - Evita loop infinito de refresh
+ * - Queue de requisições pendentes
+ * - Detecção automática de token expirado
+ * - Logs detalhados para debugging
  */
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
@@ -103,7 +109,11 @@ const clearAuth = () => {
     parsed.state.isAuthenticated = false;
 
     localStorage.setItem('ferraco-auth-storage', JSON.stringify(parsed));
-    logger.info('Autenticação limpa');
+    logger.info('🔓 Autenticação limpa');
+
+    // Resetar estado do refresh
+    isRefreshing = false;
+    failedQueue = [];
 
     // Redirecionar para login
     if (window.location.pathname !== '/login') {
@@ -149,10 +159,25 @@ const createApiClient = (): AxiosInstance => {
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+      // ✅ SOLUÇÃO: Ignora erros 401 da própria rota de refresh (evita loop infinito)
+      if (originalRequest?.url?.includes('/auth/refresh')) {
+        logger.error('❌ Refresh token inválido ou expirado');
+        isRefreshing = false;
+        processQueue(error as Error, null);
+        clearAuth();
+        return Promise.reject(error);
+      }
+
+      // ✅ SOLUÇÃO: Ignora erros 401 da rota de login
+      if (originalRequest?.url?.includes('/auth/login')) {
+        return Promise.reject(error);
+      }
+
       // Se erro 401 e não é tentativa de refresh
       if (error.response?.status === 401 && !originalRequest._retry) {
-        // Se já está refreshing, adiciona à fila
+        // ✅ SOLUÇÃO: Se já está refreshing, adiciona à fila (evita múltiplos refresh simultâneos)
         if (isRefreshing) {
+          logger.info('⏳ Requisição adicionada à fila de refresh');
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
           })
@@ -171,14 +196,16 @@ const createApiClient = (): AxiosInstance => {
         const refreshToken = getRefreshToken();
 
         if (!refreshToken) {
-          logger.warn('Sem refresh token disponível');
+          logger.warn('⚠️ Sem refresh token disponível');
+          isRefreshing = false;
           clearAuth();
           return Promise.reject(error);
         }
 
         try {
-          logger.info('Tentando refresh do token');
+          logger.info('🔄 Tentando refresh do token...');
 
+          // ✅ SOLUÇÃO: Usar axios diretamente (não o client) para evitar interceptor recursivo
           const response = await axios.post('/api/auth/refresh', {
             refreshToken,
           });
@@ -194,10 +221,10 @@ const createApiClient = (): AxiosInstance => {
           processQueue(null, accessToken);
           isRefreshing = false;
 
-          logger.info('Token refreshed com sucesso');
+          logger.info('✅ Token refreshed com sucesso');
           return client(originalRequest);
         } catch (refreshError) {
-          logger.error('Erro ao fazer refresh do token', { refreshError });
+          logger.error('❌ Erro ao fazer refresh do token', { refreshError });
           processQueue(refreshError as Error, null);
           isRefreshing = false;
           clearAuth();
@@ -205,19 +232,23 @@ const createApiClient = (): AxiosInstance => {
         }
       }
 
-      // Log de erros
-      if (error.response) {
-        logger.error('Erro na resposta da API', {
+      // Log de erros (apenas para debugging, sem poluir console)
+      if (error.response?.status === 401) {
+        logger.warn('⚠️ Requisição não autorizada', {
+          url: error.config?.url,
+        });
+      } else if (error.response) {
+        logger.error('❌ Erro na resposta da API', {
           status: error.response.status,
           data: error.response.data,
           url: error.config?.url,
         });
       } else if (error.request) {
-        logger.error('Erro na requisição (sem resposta)', {
+        logger.error('❌ Erro na requisição (sem resposta)', {
           url: error.config?.url,
         });
       } else {
-        logger.error('Erro ao configurar requisição', {
+        logger.error('❌ Erro ao configurar requisição', {
           message: error.message,
         });
       }
