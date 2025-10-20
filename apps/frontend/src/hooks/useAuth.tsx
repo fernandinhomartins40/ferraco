@@ -4,7 +4,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import apiClient from '@/lib/apiClient';
 
-const API_URL = '/api/auth';
+// apiClient já tem baseURL: '/api', então só precisamos do path
+const API_URL = '/auth';
 
 export type AuthContextType = {
   user: User | null;
