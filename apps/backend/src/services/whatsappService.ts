@@ -454,13 +454,14 @@ class WhatsAppService {
     try {
       const { prisma } = await import('../config/database');
 
-      // Buscar mensagens enviadas nos últimos 5 minutos que ainda não foram lidas
+      // ⭐ FIX: Buscar mensagens enviadas nos últimos 5 minutos que ainda não foram lidas
+      // INCLUINDO mensagens DELIVERED para detectar mudança para READ
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
       const recentMessages = await prisma.whatsAppMessage.findMany({
         where: {
           fromMe: true,
-          status: { in: ['PENDING', 'SENT', 'DELIVERED'] },
+          status: { in: ['PENDING', 'SENT', 'DELIVERED'] }, // ✅ DELIVERED incluído para detectar READ
           timestamp: { gte: fiveMinutesAgo },
           whatsappMessageId: { not: null },
         },
