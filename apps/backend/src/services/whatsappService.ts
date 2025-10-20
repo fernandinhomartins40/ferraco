@@ -303,97 +303,57 @@ class WhatsAppService {
       return;
     }
 
-    // Listener para todas as mensagens
+    // ✅ ARQUITETURA STATELESS: Listener apenas emite WebSocket (NÃO persiste)
     this.client.onMessage(async (message: Message) => {
-      // 🔍 DEBUG CRÍTICO: Log de TODAS as mensagens que chegam (antes de qualquer filtro)
-      logger.info(`🔍 [DEBUG] MENSAGEM RECEBIDA - from: ${message.from}, fromMe: ${message.fromMe}, isGroup: ${message.isGroupMsg}, body: ${message.body?.substring(0, 30) || '(vazio)'}`);
-
-      // ✅ MELHORIA: Implementar retry com exponential backoff
-      const maxRetries = 3;
-      let attempt = 0;
-      let lastError: any = null;
-
-      while (attempt < maxRetries) {
-        try {
-          // Filtros de mensagens
-          if (message.isGroupMsg) {
-            logger.debug(`⏭️  Ignorando mensagem de grupo: ${message.from}`);
-            return;
-          }
-
-          if (message.from === 'status@broadcast') {
-            logger.debug(`⏭️  Ignorando status/broadcast`);
-            return;
-          }
-
-          if (message.fromMe) {
-            logger.debug(`⏭️  Ignorando mensagem enviada por nós (fromMe=true): ${message.from}`);
-            return;
-          }
-
-          logger.info(`📩 Mensagem recebida de ${message.from}: ${message.body?.substring(0, 50) || '(sem conteúdo)'}${message.body?.length > 50 ? '...' : ''}`);
-
-          // Normalizar número de telefone
-          const normalizedPhone = message.from.replace('@c.us', '').replace(/\D/g, '');
-
-          // ⭐ NOVO: Verificar se existe sessão ativa do bot do WhatsApp
-          try {
-            const { prisma } = await import('../config/database');
-
-            const botSession = await prisma.whatsAppBotSession.findFirst({
-              where: {
-                phone: normalizedPhone,
-                isActive: true,
-                handedOffToHuman: false,
-              },
-            });
-
-            // Se houver sessão ativa do bot, rotear para o bot
-            if (botSession) {
-              logger.info(`🤖 Mensagem roteada para bot do WhatsApp - Sessão ${botSession.id}`);
-
-              const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
-              await whatsappBotService.processUserMessage(normalizedPhone, message.body);
-              return; // Sucesso - sair do loop
-            }
-          } catch (error) {
-            logger.error('Erro ao verificar sessão do bot:', error);
-            // Continuar para atendimento humano em caso de erro
-          }
-
-          // Caso contrário, rotear para atendimento humano (sistema de chat existente)
-          logger.info(`👤 Mensagem roteada para atendimento humano`);
-          await whatsappChatService.handleIncomingMessage(message);
-
-          // ✅ Sucesso - sair do loop
+      try {
+        // Filtros de mensagens
+        if (message.isGroupMsg || message.from === 'status@broadcast' || message.fromMe) {
           return;
+        }
 
-        } catch (error: any) {
-          lastError = error;
-          attempt++;
+        logger.info(`📩 Nova mensagem de ${message.from}: ${message.body?.substring(0, 50) || '(mídia)'}...`);
 
-          logger.error(`❌ Erro ao processar mensagem (tentativa ${attempt}/${maxRetries}):`, {
-            error: error.message,
-            messageId: message?.id,
-            from: message?.from,
+        const normalizedPhone = message.from.replace('@c.us', '');
+
+        // Verificar se tem bot ativo
+        try {
+          const { prisma } = await import('../config/database');
+
+          const botSession = await prisma.whatsAppBotSession.findFirst({
+            where: {
+              phone: normalizedPhone.replace(/\D/g, ''),
+              isActive: true,
+              handedOffToHuman: false,
+            },
           });
 
-          // Se ainda há tentativas, aguardar antes de tentar novamente
-          if (attempt < maxRetries) {
-            const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Exponential backoff (max 5s)
-            logger.info(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
+          if (botSession) {
+            logger.info(`🤖 Roteando para bot - Sessão ${botSession.id}`);
+            const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
+            await whatsappBotService.processUserMessage(normalizedPhone.replace(/\D/g, ''), message.body);
+            return;
           }
+        } catch (error) {
+          logger.error('Erro ao verificar bot:', error);
         }
-      }
 
-      // ⚠️ CRÍTICO: Todas as tentativas falharam
-      logger.error(`❌ FALHA CRÍTICA: Não foi possível processar mensagem após ${maxRetries} tentativas`, {
-        messageId: message?.id,
-        from: message?.from,
-        finalError: lastError?.message,
-        action: 'Mensagem será perdida - considere implementar fila de mensagens',
-      });
+        // ✅ STATELESS: Apenas emitir WebSocket (frontend busca do WPP on-demand)
+        if (this.io) {
+          this.io.sockets.emit('message:new', {
+            from: message.from,
+            phone: normalizedPhone,
+            body: message.body || '',
+            type: message.type,
+            timestamp: new Date(message.timestamp * 1000),
+            fromMe: false,
+          });
+
+          logger.info(`📡 WebSocket emitido para ${normalizedPhone}`);
+        }
+
+      } catch (error: any) {
+        logger.error('Erro ao processar mensagem:', error);
+      }
     });
 
     logger.info('✅ Listeners de mensagens configurados');
@@ -2064,6 +2024,143 @@ class WhatsAppService {
     // Reinicializar para gerar novo QR code
     this.isInitializing = false;
     await this.initialize();
+  }
+
+  // ============================================================================
+  // ✅ NOVA ARQUITETURA STATELESS (WPPConnect-First)
+  // ============================================================================
+
+  /**
+   * ✅ STATELESS: Busca todas as conversas direto do WhatsApp
+   * Enriquece com metadata do PostgreSQL (tags, leadId, etc)
+   */
+  async getAllConversations(limit: number = 50): Promise<any[]> {
+    if (!this.client) {
+      throw new Error('WhatsApp não conectado');
+    }
+
+    try {
+      // 1. Buscar TODAS as conversas do WhatsApp
+      const allChats = await this.client.getAllChats();
+
+      // 2. Filtrar apenas conversas privadas (não grupos)
+      const privateChats = allChats
+        .filter((chat: any) => !chat.isGroup)
+        .sort((a: any, b: any) => (b.t || 0) - (a.t || 0))
+        .slice(0, limit);
+
+      // 3. Enriquecer com metadata do PostgreSQL
+      const { prisma } = await import('../config/database');
+
+      const enrichedChats = await Promise.all(
+        privateChats.map(async (chat: any) => {
+          const phone = chat.id._serialized.replace('@c.us', '');
+
+          // Buscar metadata do contato no PostgreSQL
+          const contactMetadata = await prisma.whatsAppContact.findUnique({
+            where: { phone },
+            include: {
+              lead: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  status: true,
+                },
+              },
+            },
+          });
+
+          return {
+            id: chat.id._serialized,
+            phone,
+            name: chat.name || contactMetadata?.name || phone,
+            profilePicUrl: chat.profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+            lastMessageAt: chat.t ? new Date(chat.t * 1000) : null,
+            lastMessagePreview: chat.lastMessage?.body || null,
+            unreadCount: chat.unreadCount || 0,
+            isPinned: chat.pin || false,
+            isArchived: chat.archive || false,
+            // Metadata do CRM
+            lead: contactMetadata?.lead || null,
+            tags: contactMetadata?.tags || [],
+            contact: {
+              id: phone,
+              phone,
+              name: chat.name || contactMetadata?.name || phone,
+              profilePicUrl: chat.profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+            },
+          };
+        })
+      );
+
+      return enrichedChats;
+    } catch (error: any) {
+      logger.error('Erro ao buscar conversas do WhatsApp:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ STATELESS: Busca mensagens de uma conversa direto do WhatsApp
+   */
+  async getChatMessages(phone: string, count: number = 100): Promise<any[]> {
+    if (!this.client) {
+      throw new Error('WhatsApp não conectado');
+    }
+
+    try {
+      // Formatar chat ID
+      const cleanPhone = phone.replace(/\D/g, '');
+      const chatId = cleanPhone.includes('@c.us') ? cleanPhone : `${cleanPhone}@c.us`;
+
+      // Buscar mensagens DIRETO do WPPConnect
+      const messages = await this.client.getMessages(chatId, {
+        count,
+        direction: 'before',
+      });
+
+      // Formatar mensagens para o formato esperado pelo frontend
+      return messages.map((msg: any) => ({
+        id: msg.id,
+        conversationId: chatId,
+        type: msg.type,
+        content: msg.body || '',
+        mediaUrl: msg.mediaUrl || null,
+        mediaType: msg.mimetype || null,
+        fromMe: msg.fromMe || false,
+        status: this.mapAckToStatus(msg.ack),
+        timestamp: new Date(msg.timestamp * 1000),
+        quotedMessage: msg.quotedMsg ? {
+          id: msg.quotedMsg.id,
+          content: msg.quotedMsg.body || '',
+          fromMe: msg.quotedMsg.fromMe || false,
+        } : null,
+        contact: {
+          id: cleanPhone,
+          phone: cleanPhone,
+          name: cleanPhone,
+        },
+      }));
+    } catch (error: any) {
+      logger.error(`Erro ao buscar mensagens de ${phone}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper: Mapear ACK do WhatsApp para status
+   */
+  private mapAckToStatus(ack?: number): string {
+    switch (ack) {
+      case 0: return 'ERROR';
+      case 1: return 'PENDING';
+      case 2: return 'SENT';
+      case 3: return 'DELIVERED';
+      case 4: return 'READ';
+      case 5: return 'PLAYED';
+      default: return 'SENT';
+    }
   }
 
   /**

@@ -282,12 +282,49 @@ router.post('/reinitialize', authenticate, async (req: Request, res: Response) =
 });
 
 // ============================================================================
-// ROTAS DE CHAT
+// ROTAS DE CHAT - NOVA ARQUITETURA STATELESS (WPPConnect-First)
 // ============================================================================
 
 /**
- * GET /api/whatsapp/conversations
- * Listar todas as conversas (ordenadas por última mensagem)
+ * ✅ NOVO: GET /api/whatsapp/conversations/v2
+ * Busca conversas DIRETAMENTE do WhatsApp (stateless)
+ * Enriquece com metadata do PostgreSQL (tags, anotações, vínculo CRM)
+ */
+router.get('/conversations/v2', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    const limit = parseInt(req.query.limit as string) || 50;
+
+    // Buscar conversas DIRETO do WPPConnect
+    const conversations = await whatsappService.getAllConversations(limit);
+
+    res.json({
+      success: true,
+      conversations,
+      total: conversations.length,
+      source: 'whatsapp-live', // Indica que veio direto do WPP
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao listar conversas (v2):', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao listar conversas',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * DEPRECATED: GET /api/whatsapp/conversations
+ * Mantido para compatibilidade - será removido na v3.0
+ * USE: /api/whatsapp/conversations/v2
  */
 router.get('/conversations', authenticate, async (req: Request, res: Response) => {
   try {
@@ -298,6 +335,8 @@ router.get('/conversations', authenticate, async (req: Request, res: Response) =
       success: true,
       conversations,
       total: conversations.length,
+      deprecated: true,
+      message: 'Este endpoint será removido. Use /api/whatsapp/conversations/v2',
     });
 
   } catch (error: any) {
@@ -311,8 +350,45 @@ router.get('/conversations', authenticate, async (req: Request, res: Response) =
 });
 
 /**
- * GET /api/whatsapp/conversations/:id
- * Obter detalhes de uma conversa específica
+ * ✅ NOVO: GET /api/whatsapp/conversations/:phone/messages/v2
+ * Busca mensagens DIRETAMENTE do WhatsApp (stateless)
+ * @param phone - Número do telefone (com ou sem código de país)
+ */
+router.get('/conversations/:phone/messages/v2', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    const { phone } = req.params;
+    const count = parseInt(req.query.count as string) || 100;
+
+    // Buscar mensagens DIRETO do WPPConnect
+    const messages = await whatsappService.getChatMessages(phone, count);
+
+    res.json({
+      success: true,
+      messages,
+      total: messages.length,
+      source: 'whatsapp-live',
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao listar mensagens (v2):', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao listar mensagens',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * DEPRECATED: GET /api/whatsapp/conversations/:id
+ * Mantido para compatibilidade
  */
 router.get('/conversations/:id', authenticate, async (req: Request, res: Response) => {
   try {
@@ -329,6 +405,7 @@ router.get('/conversations/:id', authenticate, async (req: Request, res: Respons
     res.json({
       success: true,
       conversation,
+      deprecated: true,
     });
 
   } catch (error: any) {
@@ -342,8 +419,8 @@ router.get('/conversations/:id', authenticate, async (req: Request, res: Respons
 });
 
 /**
- * GET /api/whatsapp/conversations/:id/messages
- * Listar mensagens de uma conversa (com paginação)
+ * DEPRECATED: GET /api/whatsapp/conversations/:id/messages
+ * Mantido para compatibilidade - USE: /conversations/:phone/messages/v2
  */
 router.get('/conversations/:id/messages', authenticate, async (req: Request, res: Response) => {
   try {
@@ -359,6 +436,8 @@ router.get('/conversations/:id/messages', authenticate, async (req: Request, res
       total: messages.length,
       limit,
       offset,
+      deprecated: true,
+      message: 'Use /api/whatsapp/conversations/:phone/messages/v2',
     });
 
   } catch (error: any) {

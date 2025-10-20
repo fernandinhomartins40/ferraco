@@ -40,11 +40,11 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ✅ FASE 4: useCallback para estabilizar referências
+  // ✅ STATELESS: Busca conversas direto do WhatsApp (via API v2)
   const fetchConversations = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/whatsapp/conversations');
+      const response = await api.get('/whatsapp/conversations/v2');
       setConversations(response.data.conversations);
     } catch (error) {
       console.error('Erro ao buscar conversas:', error);
