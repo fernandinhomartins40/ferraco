@@ -393,11 +393,24 @@ const AdminWhatsApp = () => {
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">
                   <div className="bg-white p-4 rounded-lg border-2 border-green-500">
-                    <img
-                      src={qrCode}
-                      alt="QR Code WhatsApp"
-                      className="w-64 h-64"
-                    />
+                    {qrCode.startsWith('data:image') ? (
+                      <img
+                        src={qrCode}
+                        alt="QR Code WhatsApp"
+                        className="w-64 h-64"
+                        onError={(e) => {
+                          console.error('Erro ao carregar QR Code');
+                          toast.error('Erro ao exibir QR Code. Tente reinicializar.');
+                        }}
+                      />
+                    ) : (
+                      <div className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded">
+                        <p className="text-sm text-gray-500 text-center px-4">
+                          Formato de QR Code inválido.<br/>
+                          Clique em "Gerar Novo QR Code" abaixo.
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <Alert>
                     <Info className="h-4 w-4" />
