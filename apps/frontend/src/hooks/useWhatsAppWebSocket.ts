@@ -5,7 +5,6 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-// Use a mesma origem do frontend (funciona tanto em dev quanto em prod)
 const BACKEND_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 interface Message {
@@ -29,9 +28,13 @@ interface WebSocketEvents {
 
 export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
   const socketRef = useRef<Socket | null>(null);
+  const eventsRef = useRef(events);
 
   useEffect(() => {
-    // Connect to WebSocket server
+    eventsRef.current = events;
+  }, [events]);
+
+  useEffect(() => {
     const socket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -41,7 +44,6 @@ export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
 
     socketRef.current = socket;
 
-    // Connection events
     socket.on('connect', () => {
       console.log('🔌 WebSocket conectado:', socket.id);
     });
@@ -54,63 +56,54 @@ export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
       console.error('❌ Erro de conexão WebSocket:', error);
     });
 
-    // WhatsApp events
-    if (events.onNewMessage) {
-      socket.on('message:new', (data) => {
-        console.log('🔍 [DEBUG] EVENT message:new RECEBIDO:', data);
-        events.onNewMessage(data);
-      });
-    } else {
-      console.warn('⚠️ onNewMessage não foi fornecido ao hook');
-    }
-
-    if (events.onMessageStatus) {
-      socket.on('message:status', (data) => {
-        console.log('🔍 [DEBUG] EVENT message:status RECEBIDO:', data);
-        events.onMessageStatus(data);
-      });
-    }
-
-    if (events.onConversationUpdate) {
-      socket.on('conversation:update', (conversationId) => {
-        console.log('🔍 [DEBUG] EVENT conversation:update RECEBIDO:', conversationId);
-        events.onConversationUpdate(conversationId);
-      });
-    }
-
-    // 🔍 DEBUG: Escutar TODOS os eventos para debugging
-    socket.onAny((eventName, ...args) => {
-      console.log(`🔍 [DEBUG] EVENTO WEBSOCKET: ${eventName}`, args);
+    socket.on('message:new', (data) => {
+      if (eventsRef.current.onNewMessage) {
+        eventsRef.current.onNewMessage(data);
+      }
     });
 
-    // Extended WPPConnect events
-    if (events.onTyping) {
-      socket.on('whatsapp:typing', events.onTyping);
-    }
+    socket.on('message:status', (data) => {
+      if (eventsRef.current.onMessageStatus) {
+        eventsRef.current.onMessageStatus(data);
+      }
+    });
 
-    if (events.onPresence) {
-      socket.on('whatsapp:presence', events.onPresence);
-    }
+    socket.on('conversation:update', (conversationId) => {
+      if (eventsRef.current.onConversationUpdate) {
+        eventsRef.current.onConversationUpdate(conversationId);
+      }
+    });
 
-    if (events.onReaction) {
-      socket.on('whatsapp:reaction', events.onReaction);
-    }
+    socket.on('whatsapp:typing', (data) => {
+      if (eventsRef.current.onTyping) {
+        eventsRef.current.onTyping(data);
+      }
+    });
 
-    // Cleanup on unmount
+    socket.on('whatsapp:presence', (data) => {
+      if (eventsRef.current.onPresence) {
+        eventsRef.current.onPresence(data);
+      }
+    });
+
+    socket.on('whatsapp:reaction', (data) => {
+      if (eventsRef.current.onReaction) {
+        eventsRef.current.onReaction(data);
+      }
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
   }, []);
 
-  // Helper to subscribe to a specific conversation
   const subscribeToConversation = (conversationId: string) => {
     if (socketRef.current) {
       socketRef.current.emit('subscribe:conversation', conversationId);
     }
   };
 
-  // Helper to unsubscribe from a conversation
   const unsubscribeFromConversation = (conversationId: string) => {
     if (socketRef.current) {
       socketRef.current.emit('unsubscribe:conversation', conversationId);
