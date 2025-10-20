@@ -258,7 +258,7 @@ jobs:
           # Configurar variáveis de ambiente para Docker
           echo "⚙️  Configurando ambiente Docker..."
           export BUILD_TIMESTAMP=$(date +%s)
-          export JWT_SECRET="ferraco-vps-jwt-${{ github.sha }}"
+          export JWT_SECRET="ferraco-vps-jwt-production-secret-2025"
           export CORS_ORIGIN="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export ALLOWED_ORIGINS="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export LOG_LEVEL=info
