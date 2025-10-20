@@ -6,7 +6,24 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
-const queryClient = new QueryClient();
+// Configuração do QueryClient com tratamento de autenticação
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Não refetch automaticamente em erro de autenticação
+      refetchOnWindowFocus: false,
+      // Retry apenas se não for erro 401/403
+      retry: (failureCount, error: any) => {
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return false; // Não retry em erros de autenticação
+        }
+        return failureCount < 3; // Retry até 3 vezes para outros erros
+      },
+      // Tempo que os dados ficam "fresh" antes de refetch
+      staleTime: 5 * 60 * 1000, // 5 minutos
+    },
+  },
+});
 
 // Lazy import para páginas
 const Index = lazy(() => import("./pages/Index"));
