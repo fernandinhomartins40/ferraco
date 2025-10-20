@@ -9,7 +9,10 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 3000,
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -59,20 +62,36 @@ export default defineConfig(({ mode }) => ({
 
           // Animation vendor chunk (~30kb)
           'animation-vendor': ['framer-motion'],
-        }
-      }
+
+          // ✅ FASE 4: WhatsApp chunk (code splitting)
+          'whatsapp-vendor': ['socket.io-client'],
+        },
+      },
     },
     chunkSizeWarningLimit: 500,
     sourcemap: mode === 'development',
     minify: mode === 'production' ? 'esbuild' : false,
+    // ✅ FASE 4: Otimizações de build
+    target: 'es2015',
+    cssCodeSplit: true,
+    assetsInlineLimit: 4096, // 4kb
   },
-  // Optimization for development
+  // ✅ FASE 4: Otimizações para development
   optimizeDeps: {
     include: [
       'react',
       'react-dom',
       'react-router-dom',
       '@tanstack/react-query',
+      'socket.io-client',
+      'date-fns',
+      'axios',
     ],
+    exclude: ['@wppconnect-team/wppconnect'], // Backend only
+  },
+  // ✅ FASE 4: Performance hints
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' },
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
   },
 }));

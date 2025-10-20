@@ -1,8 +1,9 @@
 /**
  * ConversationList - Lista de conversas do WhatsApp (sidebar)
+ * FASE 4: Otimizado com React.memo e useMemo
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,19 +40,8 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  // WebSocket for real-time updates
-  useWhatsAppWebSocket({
-    onConversationUpdate: (conversationId) => {
-      console.log('📡 Conversa atualizada:', conversationId);
-      fetchConversations();
-    },
-  });
-
-  const fetchConversations = async () => {
+  // ✅ FASE 4: useCallback para estabilizar referências
+  const fetchConversations = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await api.get('/whatsapp/conversations');
@@ -61,9 +51,22 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleSearch = async (query: string) => {
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // WebSocket for real-time updates
+  useWhatsAppWebSocket({
+    onConversationUpdate: useCallback((conversationId: string) => {
+      console.log('📡 Conversa atualizada:', conversationId);
+      fetchConversations();
+    }, [fetchConversations]),
+  });
+
+  // ✅ FASE 4: useCallback para handleSearch
+  const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query);
 
     if (query.trim().length < 2) {
@@ -79,13 +82,14 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
     } catch (error) {
       console.error('Erro ao buscar conversas:', error);
     }
-  };
+  }, [fetchConversations]);
 
-  const getDisplayName = (contact: Contact) => {
+  // ✅ FASE 4: useMemo para funções utilitárias (evita recriação)
+  const getDisplayName = useMemo(() => (contact: Contact) => {
     return contact.name || contact.phone;
-  };
+  }, []);
 
-  const formatTime = (dateString: string) => {
+  const formatTime = useMemo(() => (dateString: string) => {
     try {
       return formatDistanceToNow(new Date(dateString), {
         addSuffix: true,
@@ -94,7 +98,19 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
     } catch {
       return '';
     }
-  };
+  }, []);
+
+  // ✅ FASE 4: useMemo para filtrar/ordenar conversas
+  const sortedConversations = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      // Pinned first
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+
+      // Then by last message date
+      return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+    });
+  }, [conversations]);
 
   if (isLoading) {
     return (
@@ -122,13 +138,13 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
 
       {/* Conversations List */}
       <ScrollArea className="flex-1">
-        {conversations.length === 0 ? (
+        {sortedConversations.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <p>Nenhuma conversa encontrada</p>
           </div>
         ) : (
           <div className="divide-y">
-            {conversations.map((conversation) => (
+            {sortedConversations.map((conversation) => (
               <div
                 key={conversation.id}
                 onClick={() => onSelectConversation(conversation.id)}
@@ -190,4 +206,5 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
   );
 };
 
-export default ConversationList;
+// ✅ FASE 4: React.memo para evitar re-renders desnecessários
+export default memo(ConversationList);

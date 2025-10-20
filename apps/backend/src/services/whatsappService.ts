@@ -40,6 +40,7 @@ class WhatsAppService {
   private listeners: WhatsAppListeners | null = null;
   private pollingInterval: NodeJS.Timeout | null = null;
   private isPolling: boolean = false;
+  private io: SocketIOServer | null = null; // ✅ FASE 2: Socket.IO instance
 
   constructor() {
     // Diretório de sessões (será volume Docker)
@@ -50,6 +51,76 @@ class WhatsAppService {
       fs.mkdirSync(this.sessionsPath, { recursive: true });
       logger.info(`📁 Diretório de sessões criado: ${this.sessionsPath}`);
     }
+  }
+
+  /**
+   * ✅ FASE 2: Configurar Socket.IO para eventos em tempo real
+   */
+  setSocketIO(io: SocketIOServer): void {
+    this.io = io;
+    logger.info('✅ Socket.IO configurado no WhatsAppService');
+
+    // Listener para solicitar status/QR via Socket.IO
+    this.io.on('connection', (socket) => {
+      logger.info(`🔌 Cliente Socket.IO conectado: ${socket.id}`);
+
+      // Cliente solicitou status atual
+      socket.on('whatsapp:request-status', () => {
+        logger.info('📡 Cliente solicitou status via Socket.IO');
+        this.emitStatus();
+      });
+
+      // Cliente solicitou QR Code
+      socket.on('whatsapp:request-qr', () => {
+        logger.info('📡 Cliente solicitou QR Code via Socket.IO');
+        if (this.qrCode) {
+          socket.emit('whatsapp:qr', this.qrCode);
+        }
+      });
+    });
+  }
+
+  /**
+   * ✅ FASE 2: Emitir status atual via Socket.IO
+   */
+  private emitStatus(): void {
+    if (!this.io) return;
+
+    const status = this.isConnected ? 'CONNECTED' : (this.isInitializing ? 'INITIALIZING' : 'DISCONNECTED');
+    this.io.emit('whatsapp:status', status);
+    logger.info(`📡 Status emitido via Socket.IO: ${status}`);
+  }
+
+  /**
+   * ✅ FASE 2: Emitir QR Code via Socket.IO
+   */
+  private emitQRCode(qrCode: string): void {
+    if (!this.io) return;
+
+    this.io.emit('whatsapp:qr', qrCode);
+    logger.info('📡 QR Code emitido via Socket.IO');
+  }
+
+  /**
+   * ✅ FASE 2: Emitir evento de conexão pronta via Socket.IO
+   */
+  private emitReady(): void {
+    if (!this.io) return;
+
+    this.io.emit('whatsapp:ready');
+    this.io.emit('whatsapp:status', 'CONNECTED');
+    logger.info('📡 WhatsApp pronto - evento emitido via Socket.IO');
+  }
+
+  /**
+   * ✅ FASE 2: Emitir evento de desconexão via Socket.IO
+   */
+  private emitDisconnected(reason: string): void {
+    if (!this.io) return;
+
+    this.io.emit('whatsapp:disconnected', reason);
+    this.io.emit('whatsapp:status', 'DISCONNECTED');
+    logger.info(`📡 WhatsApp desconectado - evento emitido via Socket.IO: ${reason}`);
   }
 
   /**
@@ -88,6 +159,9 @@ class WhatsAppService {
           logger.info(`📱 QR Code gerado! Tentativa ${attempt}`);
           logger.info('✅ Acesse /api/whatsapp/qr para visualizar o QR Code');
 
+          // ✅ FASE 2: Emitir QR Code via Socket.IO
+          this.emitQRCode(base64Qrimg);
+
           // QR code é regenerado automaticamente pelo WPPConnect
           // Não anular o código, sempre manter o mais recente disponível
         },
@@ -105,6 +179,9 @@ class WhatsAppService {
               this.isInitializing = false;
               logger.info('✅ WhatsApp conectado com sucesso!');
 
+              // ✅ FASE 2: Emitir evento de conexão pronta via Socket.IO
+              this.emitReady();
+
               // ✅ SIMPLIFICADO: Apenas define o cliente, sem sync automática
               // O sistema só envia mensagens, não precisa carregar histórico
               if (this.client) {
@@ -117,6 +194,9 @@ class WhatsAppService {
             case 'qrReadFail':
               this.isConnected = false;
               logger.info('⏳ Aguardando leitura do QR Code...');
+
+              // ✅ FASE 2: Emitir status via Socket.IO
+              this.emitStatus();
               break;
 
             case 'desconnectedMobile':
@@ -125,6 +205,9 @@ class WhatsAppService {
               this.isConnected = false;
               this.qrCode = null;
               logger.warn('⚠️  WhatsApp desconectado');
+
+              // ✅ FASE 2: Emitir evento de desconexão via Socket.IO
+              this.emitDisconnected(statusSession);
               break;
 
             case 'autocloseCalled':
@@ -132,10 +215,16 @@ class WhatsAppService {
               this.isConnected = false;
               this.isInitializing = false;
               logger.warn('🔄 Navegador fechado');
+
+              // ✅ FASE 2: Emitir evento de desconexão via Socket.IO
+              this.emitDisconnected(statusSession);
               break;
 
             default:
               logger.debug(`🔄 Status: ${statusSession}`);
+
+              // ✅ FASE 2: Emitir status genérico via Socket.IO
+              this.emitStatus();
           }
         },
         undefined, // onLoadingScreen
@@ -1968,10 +2057,15 @@ class WhatsAppService {
   }
 
   /**
-   * Configurar Socket.IO para listeners avançados
+   * ✅ FASE 2: Configurar Socket.IO (unificado)
+   * Substitui setSocketServer() - agora usa setSocketIO() declarado acima
    * @param io Instância do Socket.IO
    */
   setSocketServer(io: SocketIOServer): void {
+    // Configurar Socket.IO no serviço principal
+    this.setSocketIO(io);
+
+    // Configurar Socket.IO nos listeners avançados
     if (this.listeners) {
       this.listeners.setSocketServer(io);
       logger.info('✅ Socket.IO configurado para listeners avançados do WhatsApp');

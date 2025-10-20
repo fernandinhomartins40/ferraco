@@ -3,9 +3,10 @@
  *
  * Aba 1: Configurações e Conexão
  * Aba 2: Chat (histórico de conversas + área de mensagens)
+ * FASE 4: Otimizado com lazy loading e code splitting
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,10 +30,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/apiClient';
-import ConversationList from '@/components/whatsapp/ConversationList';
-import ChatArea from '@/components/whatsapp/ChatArea';
-import GroupManagement from '@/components/whatsapp/GroupManagement';
-import ContactManagement from '@/components/whatsapp/ContactManagement';
+import { useWhatsAppSocket, type WhatsAppStatus as SocketWhatsAppStatus } from '@/hooks/useWhatsAppSocket';
+
+// ✅ FASE 4: Lazy loading de componentes pesados (code splitting)
+const ConversationList = lazy(() => import('@/components/whatsapp/ConversationList'));
+const ChatArea = lazy(() => import('@/components/whatsapp/ChatArea'));
+const GroupManagement = lazy(() => import('@/components/whatsapp/GroupManagement'));
+const ContactManagement = lazy(() => import('@/components/whatsapp/ContactManagement'));
 
 interface WhatsAppStatus {
   connected: boolean;
@@ -49,7 +53,6 @@ interface WhatsAppAccount {
 const AdminWhatsApp = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState<WhatsAppStatus | null>(null);
-  const [qrCode, setQrCode] = useState<string | null>(null);
   const [account, setAccount] = useState<WhatsAppAccount | null>(null);
   const [testPhone, setTestPhone] = useState('');
   const [testMessage, setTestMessage] = useState('');
@@ -59,90 +62,83 @@ const AdminWhatsApp = () => {
   const [showGroupManagement, setShowGroupManagement] = useState(false);
   const [showContactManagement, setShowContactManagement] = useState(false);
 
-  // Verificar status ao carregar
+  // ✅ FASE 3: Socket.IO + State Machine
+  const {
+    connectionState,
+    qrCode,
+    status: socketStatus,
+    isConnected,
+    error: socketError,
+    account: whatsappAccount,
+    requestStatus,
+    reconnect,
+    connectionStatus,
+    isQRAvailable: hasQR,
+    isAuthenticating,
+  } = useWhatsAppSocket({
+    onQRCode: (qr) => {
+      console.log('📱 QR Code recebido via Socket.IO');
+      toast.success('QR Code atualizado! Escaneie com seu telefone.');
+    },
+    onStatusChange: (newStatus) => {
+      console.log('🔄 Status alterado via Socket.IO:', newStatus);
+
+      // Mapear status do socket para status antigo (compatibilidade)
+      const mappedStatus: WhatsAppStatus = {
+        connected: newStatus === 'CONNECTED',
+        hasQR: hasQR,
+        message: getStatusMessage(newStatus),
+      };
+
+      setStatus(mappedStatus);
+      setIsLoading(false);
+    },
+    onReady: () => {
+      console.log('✅ WhatsApp pronto para uso');
+      toast.success('WhatsApp conectado com sucesso!');
+    },
+    onDisconnected: (reason) => {
+      console.log('❌ WhatsApp desconectado:', reason);
+      toast.error(`WhatsApp desconectado: ${reason}`);
+      setAccount(null);
+    },
+    onError: (error) => {
+      console.error('❌ Erro no Socket.IO:', error);
+      toast.error(`Erro: ${error}`);
+    },
+  });
+
+  // ✅ FASE 3: Sincronizar account do State Machine com estado local
   useEffect(() => {
-    checkStatus();
-    const interval = setInterval(checkStatus, 5000); // Verificar a cada 5 segundos
-    return () => clearInterval(interval);
-  }, []);
-
-  // Buscar QR Code quando disponível (polling a cada 3 segundos)
-  useEffect(() => {
-    let qrInterval: NodeJS.Timeout | null = null;
-
-    if (status?.hasQR && !status?.connected) {
-      // Buscar imediatamente
-      fetchQRCode();
-
-      // Polling para manter QR code atualizado
-      qrInterval = setInterval(() => {
-        fetchQRCode();
-      }, 3000);
+    if (whatsappAccount) {
+      setAccount(whatsappAccount);
     }
+  }, [whatsappAccount]);
 
-    return () => {
-      if (qrInterval) clearInterval(qrInterval);
+  // Helper: Mapear status do socket para mensagem
+  const getStatusMessage = (status: SocketWhatsAppStatus): string => {
+    const messages: Record<SocketWhatsAppStatus, string> = {
+      CONNECTED: 'Conectado ao WhatsApp',
+      DISCONNECTED: 'Desconectado',
+      INITIALIZING: 'Inicializando conexão...',
+      notConnected: 'Não conectado',
+      qrReadSuccess: 'QR Code lido com sucesso',
+      qrReadFail: 'Falha ao ler QR Code',
+      autocloseCalled: 'Sessão encerrada',
+      desconnectedMobile: 'Desconectado do celular',
+      browserClose: 'Navegador fechado',
     };
-  }, [status]);
+    return messages[status] || 'Status desconhecido';
+  };
 
-  // Buscar info da conta quando conectado
+  // Solicitar status inicial ao carregar (Socket.IO)
   useEffect(() => {
-    if (status?.connected && !account) {
-      fetchAccountInfo();
-    }
-  }, [status?.connected]);
+    requestStatus();
+    setIsLoading(false);
+  }, [requestStatus]);
 
-  const checkStatus = async () => {
-    try {
-      const response = await api.get('/whatsapp/status');
-      setStatus(response.data.status);
-      setIsLoading(false);
-    } catch (error: any) {
-      console.error('Erro ao verificar status:', error);
-
-      // Tratamento de erros com feedback visual
-      if (error.response?.status === 401) {
-        toast.error('Sessão expirada. Faça login novamente.');
-        // apiClient já redireciona automaticamente para /login
-      } else if (error.response?.status === 500) {
-        toast.error('Erro no servidor. Tente novamente mais tarde.');
-      } else if (!error.response) {
-        toast.error('Erro de conexão. Verifique sua internet.');
-      }
-
-      setIsLoading(false);
-    }
-  };
-
-  const fetchQRCode = async (retries = 3) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const response = await api.get('/whatsapp/qr');
-        setQrCode(response.data.qrCode);
-        return; // Sucesso
-      } catch (error: any) {
-        console.error(`Tentativa ${i + 1}/${retries} de obter QR Code falhou:`, error);
-
-        if (error.response?.status === 401) {
-          toast.error('Sessão expirada. Faça login novamente.');
-          return; // Não tentar novamente se não autenticado
-        }
-
-        if (error.response?.status === 404) {
-          // QR Code ainda não disponível (normal)
-          return;
-        }
-
-        if (i === retries - 1) {
-          // Última tentativa falhou
-          toast.error('Não foi possível obter QR Code. Tente reinicializar a conexão.');
-        } else {
-          // Aguardar 1 segundo antes de tentar novamente
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    }
-  };
+  // ✅ REMOVIDO: checkStatus() - substituído por Socket.IO
+  // ✅ REMOVIDO: fetchQRCode() - substituído por Socket.IO
 
   const fetchAccountInfo = async () => {
     try {
@@ -306,16 +302,29 @@ const AdminWhatsApp = () => {
                 <div className="flex h-full overflow-hidden">
                   {/* Sidebar - Lista de Conversas */}
                   <div className={`w-full md:w-96 border-r flex-shrink-0 bg-white ${selectedConversationId ? 'hidden md:block' : 'block'}`}>
-                    <ConversationList
-                      selectedId={selectedConversationId}
-                      onSelectConversation={setSelectedConversationId}
-                    />
+                    {/* ✅ FASE 4: Suspense para lazy loading */}
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                      </div>
+                    }>
+                      <ConversationList
+                        selectedId={selectedConversationId}
+                        onSelectConversation={setSelectedConversationId}
+                      />
+                    </Suspense>
                   </div>
 
                   {/* Área Principal - Chat */}
                   <div className={`flex-1 flex flex-col bg-gray-50 ${selectedConversationId ? 'block' : 'hidden md:flex'}`}>
                     {selectedConversationId ? (
-                      <ChatArea conversationId={selectedConversationId} onBack={() => setSelectedConversationId(null)} />
+                      <Suspense fallback={
+                        <div className="flex items-center justify-center h-full">
+                          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                        </div>
+                      }>
+                        <ChatArea conversationId={selectedConversationId} onBack={() => setSelectedConversationId(null)} />
+                      </Suspense>
                     ) : (
                       <div className="flex-1 flex items-center justify-center text-gray-400">
                         <div className="text-center">
@@ -518,15 +527,24 @@ const AdminWhatsApp = () => {
       </div>
 
       {/* Modais de Gerenciamento */}
-      <GroupManagement
-        open={showGroupManagement}
-        onOpenChange={setShowGroupManagement}
-        mode="create"
-      />
-      <ContactManagement
-        open={showContactManagement}
-        onOpenChange={setShowContactManagement}
-      />
+      {/* ✅ FASE 4: Lazy loading condicional (só carrega se modal aberto) */}
+      {showGroupManagement && (
+        <Suspense fallback={null}>
+          <GroupManagement
+            open={showGroupManagement}
+            onOpenChange={setShowGroupManagement}
+            mode="create"
+          />
+        </Suspense>
+      )}
+      {showContactManagement && (
+        <Suspense fallback={null}>
+          <ContactManagement
+            open={showContactManagement}
+            onOpenChange={setShowContactManagement}
+          />
+        </Suspense>
+      )}
     </AdminLayout>
   );
 };
