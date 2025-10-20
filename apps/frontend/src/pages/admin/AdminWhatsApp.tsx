@@ -345,9 +345,6 @@ const AdminWhatsApp = () => {
 
           {/* ABA 2: CONFIGURAÇÕES - Conexão e Testes */}
           <TabsContent value="config" className="mt-6 space-y-6">
-            {/* Debug Card - Temporário */}
-            <SocketDebug />
-
             {/* Status Card */}
             <Alert className={status?.connected ? 'border-green-500' : 'border-gray-300'}>
               {status?.connected ? (
