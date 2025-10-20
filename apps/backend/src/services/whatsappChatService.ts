@@ -113,6 +113,83 @@ export class WhatsAppChatService {
     }
   }
 
+
+  /**
+   * Sincronizar apenas os chats recentes (últimos N chats)
+   * Usado na conexão inicial para UX rápido
+   */
+  async syncRecentChats(limit = 20): Promise<number> {
+    if (!this.whatsappClient) {
+      logger.warn('⚠️  Cliente WhatsApp não disponível para sincronização');
+      return 0;
+    }
+
+    try {
+      logger.info(`🔄 Sincronizando últimos ${limit} chats...`);
+
+      const allChats = await this.whatsappClient.getAllChats();
+      
+      // Ordenar por última mensagem (mais recentes primeiro)
+      const sortedChats = allChats
+        .filter((chat: any) => !chat.id._serialized.includes('@g.us')) // Pular grupos
+        .sort((a: any, b: any) => (b.t || 0) - (a.t || 0))
+        .slice(0, limit);
+
+      logger.info(`📋 Processando ${sortedChats.length} chats recentes`);
+
+      let synced = 0;
+      for (const chat of sortedChats) {
+        try {
+          const phone = chat.id._serialized.replace('@c.us', '');
+          const contactInfo = await this.whatsappClient.getContact(chat.id._serialized);
+          const contactName = contactInfo?.name || contactInfo?.pushname || phone;
+
+          // Criar/atualizar contato
+          const contact = await prisma.whatsAppContact.upsert({
+            where: { phone },
+            create: {
+              phone,
+              name: contactName,
+              profilePicUrl: chat.profilePicThumb?.eurl || null,
+            },
+            update: {
+              name: contactName,
+              profilePicUrl: chat.profilePicThumb?.eurl || null,
+            },
+          });
+
+          // Criar/atualizar conversa
+          await prisma.whatsAppConversation.upsert({
+            where: { contactId: contact.id },
+            create: {
+              contactId: contact.id,
+              lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
+              lastMessagePreview: chat.lastMessage?.body || null,
+              unreadCount: chat.unreadCount || 0,
+              isPinned: chat.pin || false,
+            },
+            update: {
+              lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
+              lastMessagePreview: chat.lastMessage?.body || null,
+              unreadCount: chat.unreadCount || 0,
+              isPinned: chat.pin || false,
+            },
+          });
+
+          synced++;
+          logger.info(`✅ [${synced}/${sortedChats.length}] ${contactName}`);
+        } catch (error) {
+          logger.error(`❌ Erro ao sincronizar chat:`, error);
+        }
+      }
+
+      logger.info(`✅ Sincronização rápida concluída: ${synced} chats`);
+      return synced;
+    } catch (error) {
+      logger.error('❌ Erro ao sincronizar chats recentes:', error);
+      return 0;
+    }
+  }
   /**
    * Sincronizar mensagens de um chat específico
    * Similar ao loadChatHistory mas usando chatId diretamente
