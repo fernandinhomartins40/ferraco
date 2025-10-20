@@ -66,7 +66,7 @@ const ForwardDialog = ({ open, onOpenChange, messageId }: ForwardDialogProps) =>
   const fetchConversations = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/whatsapp/conversations');
+      const response = await api.get('/whatsapp/conversations/v2');
       setConversations(response.data.conversations);
       setFilteredConversations(response.data.conversations);
     } catch (error) {

@@ -323,30 +323,16 @@ router.get('/conversations/v2', authenticate, async (req: Request, res: Response
 
 /**
  * DEPRECATED: GET /api/whatsapp/conversations
- * Mantido para compatibilidade - será removido na v3.0
+ * ⚠️ Removido - Arquitetura Stateless 2025
  * USE: /api/whatsapp/conversations/v2
  */
 router.get('/conversations', authenticate, async (req: Request, res: Response) => {
-  try {
-    const limit = parseInt(req.query.limit as string) || 50;
-    const conversations = await whatsappChatService.getConversations(limit);
-
-    res.json({
-      success: true,
-      conversations,
-      total: conversations.length,
-      deprecated: true,
-      message: 'Este endpoint será removido. Use /api/whatsapp/conversations/v2',
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao listar conversas:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao listar conversas',
-      message: error.message,
-    });
-  }
+  return res.status(410).json({
+    success: false,
+    error: 'Endpoint removido',
+    message: 'Este endpoint foi removido na arquitetura stateless 2025. Use /api/whatsapp/conversations/v2',
+    newEndpoint: '/api/whatsapp/conversations/v2',
+  });
 });
 
 /**
@@ -388,124 +374,57 @@ router.get('/conversations/:phone/messages/v2', authenticate, async (req: Reques
 
 /**
  * DEPRECATED: GET /api/whatsapp/conversations/:id
- * Mantido para compatibilidade
+ * ⚠️ Removido - Arquitetura Stateless 2025
+ * USE: /api/whatsapp/conversations/v2
  */
 router.get('/conversations/:id', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const conversation = await whatsappChatService.getConversation(id);
-
-    if (!conversation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Conversa não encontrada',
-      });
-    }
-
-    res.json({
-      success: true,
-      conversation,
-      deprecated: true,
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao obter conversa:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao obter conversa',
-      message: error.message,
-    });
-  }
+  return res.status(410).json({
+    success: false,
+    error: 'Endpoint removido',
+    message: 'Este endpoint foi removido na arquitetura stateless 2025. Use /api/whatsapp/conversations/v2',
+    newEndpoint: '/api/whatsapp/conversations/v2',
+  });
 });
 
 /**
  * DEPRECATED: GET /api/whatsapp/conversations/:id/messages
- * Mantido para compatibilidade - USE: /conversations/:phone/messages/v2
+ * ⚠️ Removido - Arquitetura Stateless 2025
+ * USE: /api/whatsapp/conversations/:phone/messages/v2
  */
 router.get('/conversations/:id/messages', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const limit = parseInt(req.query.limit as string) || 100;
-    const offset = parseInt(req.query.offset as string) || 0;
-
-    const messages = await whatsappChatService.getMessages(id, limit, offset);
-
-    res.json({
-      success: true,
-      messages,
-      total: messages.length,
-      limit,
-      offset,
-      deprecated: true,
-      message: 'Use /api/whatsapp/conversations/:phone/messages/v2',
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao listar mensagens:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao listar mensagens',
-      message: error.message,
-    });
-  }
+  return res.status(410).json({
+    success: false,
+    error: 'Endpoint removido',
+    message: 'Este endpoint foi removido na arquitetura stateless 2025. Use /api/whatsapp/conversations/:phone/messages/v2',
+    newEndpoint: '/api/whatsapp/conversations/:phone/messages/v2',
+  });
 });
 
 /**
- * POST /api/whatsapp/conversations/:id/load-history
- * Carregar histórico completo de mensagens de uma conversa
+ * DEPRECATED: POST /api/whatsapp/conversations/:id/load-history
+ * ⚠️ Removido - Arquitetura Stateless 2025
+ * Mensagens são carregadas on-demand do WhatsApp
  */
 router.post('/conversations/:id/load-history', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    // Carregar histórico em background
-    whatsappChatService.loadChatHistory(id).catch((error) => {
-      logger.error('Erro ao carregar histórico em background:', error);
-    });
-
-    res.json({
-      success: true,
-      message: 'Carregando histórico de mensagens em background...',
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao iniciar carregamento de histórico:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao carregar histórico',
-      message: error.message,
-    });
-  }
+  return res.status(410).json({
+    success: false,
+    error: 'Endpoint removido',
+    message: 'Arquitetura stateless não persiste mensagens. Use GET /api/whatsapp/conversations/:phone/messages/v2',
+    newEndpoint: '/api/whatsapp/conversations/:phone/messages/v2',
+  });
 });
 
 /**
- * ✅ NOVA ROTA: POST /api/whatsapp/conversations/:id/load-incremental
- * Carregar mensagens incrementalmente (em lotes) para evitar timeout
- * Ideal para conversas com milhares de mensagens
+ * DEPRECATED: POST /api/whatsapp/conversations/:id/load-incremental
+ * ⚠️ Removido - Arquitetura Stateless 2025
  */
 router.post('/conversations/:id/load-incremental', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { batchSize } = req.body; // Opcional: tamanho do lote (padrão: 100)
-
-    // Carregar incrementalmente em background
-    whatsappChatService.loadMessagesIncrementally(id, batchSize).catch((error) => {
-      logger.error('Erro ao carregar mensagens incrementalmente em background:', error);
-    });
-
-    res.json({
-      success: true,
-      message: 'Carregando mensagens incrementalmente em background...',
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao iniciar carregamento incremental:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao carregar mensagens',
-      message: error.message,
-    });
-  }
+  return res.status(410).json({
+    success: false,
+    error: 'Endpoint removido',
+    message: 'Arquitetura stateless não persiste mensagens. Use GET /api/whatsapp/conversations/:phone/messages/v2',
+    newEndpoint: '/api/whatsapp/conversations/:phone/messages/v2',
+  });
 });
 
 /**

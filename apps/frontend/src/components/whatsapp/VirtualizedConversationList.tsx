@@ -47,11 +47,11 @@ const VirtualizedConversationList = ({ selectedId, onSelectConversation }: Virtu
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerHeight, setContainerHeight] = useState(0);
 
-  // ✅ FASE 4: useCallback para estabilizar referências
+  // ✅ STATELESS: Busca conversas direto do WhatsApp (via API v2)
   const fetchConversations = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/whatsapp/conversations');
+      const response = await api.get('/whatsapp/conversations/v2');
       setConversations(response.data.conversations);
     } catch (error) {
       console.error('Erro ao buscar conversas:', error);

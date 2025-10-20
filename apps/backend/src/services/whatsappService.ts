@@ -458,73 +458,12 @@ class WhatsAppService {
   }
 
   /**
-   * ⭐ NOVO: Verificar status de mensagens recentes
+   * ⚠️ DEPRECATED - ARQUITETURA STATELESS 2025
+   * Polling desabilitado pois não há mais tabela whatsAppMessage
    */
   private async checkRecentMessagesStatus(): Promise<void> {
-    try {
-      const { prisma } = await import('../config/database');
-
-      // ⭐ FIX: Buscar mensagens enviadas nos últimos 5 minutos que ainda não foram lidas
-      // INCLUINDO mensagens DELIVERED para detectar mudança para READ
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
-      const recentMessages = await prisma.whatsAppMessage.findMany({
-        where: {
-          fromMe: true,
-          status: { in: ['PENDING', 'SENT', 'DELIVERED'] }, // ✅ DELIVERED incluído para detectar READ
-          timestamp: { gte: fiveMinutesAgo },
-          whatsappMessageId: { not: null },
-        },
-        take: 50, // Limitar para não sobrecarregar
-      });
-
-      if (recentMessages.length === 0) return;
-
-      logger.debug(`🔍 Verificando status de ${recentMessages.length} mensagens recentes`);
-
-      // Verificar status de cada mensagem no WhatsApp
-      for (const msg of recentMessages) {
-        try {
-          if (!msg.whatsappMessageId || !this.client) continue;
-
-          // Buscar status atualizado da mensagem via WPPConnect
-          const messageStatus = await this.client.getMessageById(msg.whatsappMessageId);
-
-          if (messageStatus && messageStatus.ack) {
-            const currentAckCode = messageStatus.ack;
-
-            // Mapear para nosso enum
-            let newStatus: string | null = null;
-            switch (currentAckCode) {
-              case 3:
-                if (msg.status !== 'DELIVERED' && msg.status !== 'READ') {
-                  newStatus = 'DELIVERED';
-                }
-                break;
-              case 4:
-              case 5:
-                if (msg.status !== 'READ') {
-                  newStatus = 'READ';
-                }
-                break;
-            }
-
-            // Se o status mudou, atualizar BD e emitir WebSocket
-            if (newStatus) {
-              logger.info(`🔄 Polling: ${msg.id} -> ${newStatus} (ACK=${currentAckCode})`);
-              await whatsappChatService.updateMessageStatus(msg.whatsappMessageId, currentAckCode);
-
-              // CRÍTICO: Emitir WebSocket após polling atualizar
-              // updateMessageStatus já emite WebSocket internamente, mas vamos garantir
-            }
-          }
-        } catch (error) {
-          // Silencioso - mensagem pode não existir mais no WhatsApp
-        }
-      }
-    } catch (error) {
-      logger.error('Erro no polling de status:', error);
-    }
+    // Polling desabilitado - arquitetura stateless não persiste mensagens
+    return;
   }
 
   /**
