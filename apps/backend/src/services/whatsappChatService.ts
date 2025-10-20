@@ -1,7 +1,21 @@
 /**
  * WhatsApp Chat Service
- * Sincroniza mensagens do WPPConnect com o banco PostgreSQL
- * Gerencia conversas e mensagens em tempo real
+ * ⚠️ DEPRECATED - ARQUITETURA STATELESS 2025
+ *
+ * Este serviço foi DEPRECADO e será removido em versões futuras.
+ *
+ * NOVA ARQUITETURA (Stateless):
+ * - Mensagens e conversas são buscadas diretamente do WhatsApp via WPPConnect
+ * - Não há mais persistência de mensagens/conversas no PostgreSQL
+ * - Endpoints novos: /api/whatsapp/conversations/v2 e /api/whatsapp/conversations/:phone/messages/v2
+ *
+ * MOTIVO DA DEPRECAÇÃO:
+ * - Elimina duplicação de dados entre WhatsApp e PostgreSQL
+ * - Reduz complexidade de sincronização
+ * - Melhora performance (on-demand fetching)
+ * - Segue best practices da comunidade WPPConnect 2025
+ *
+ * Use whatsappService.getAllConversations() e whatsappService.getChatMessages() em vez disso.
  */
 
 import { PrismaClient, MessageType, MessageStatus } from '@prisma/client';
