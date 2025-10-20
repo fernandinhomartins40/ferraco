@@ -236,7 +236,6 @@ model User {
   signatures            DigitalSignature[]
   dashboardConfigs      DashboardConfig[]
   notifications         Notification[]
-  WhatsAppConversation  WhatsAppConversation[]
 
   @@index([email])
   @@index([username])
@@ -1477,9 +1476,13 @@ model FileUpload {
 }
 
 // ============================================================================
-// WHATSAPP CHAT SYSTEM
+// WHATSAPP CHAT SYSTEM - STATELESS ARCHITECTURE (2025)
+// ============================================================================
+// 🔄 ARQUITETURA STATELESS: Mensagens são buscadas diretamente do WhatsApp
+// PostgreSQL armazena APENAS metadados de negócio (tags, CRM, notas)
 // ============================================================================
 
+// Enums (mantidos para compatibilidade com Automation System)
 enum MessageType {
   TEXT
   IMAGE
@@ -1497,11 +1500,11 @@ enum MessageStatus {
   SENT
   DELIVERED
   READ
-  PLAYED      // ⭐ FASE 2: ACK 5 - Mensagem de áudio/vídeo reproduzida
+  PLAYED
   FAILED
 }
 
-// Contato do WhatsApp (pode ou não ser um Lead)
+// ✅ MANTIDO: Contato do WhatsApp (Metadata + CRM Integration)
 model WhatsAppContact {
   id            String  @id @default(cuid())
   phone         String  @unique // Formato: 5511999999999
@@ -1512,6 +1515,9 @@ model WhatsAppContact {
   leadId String? @unique
   lead   Lead?   @relation(fields: [leadId], references: [id])
 
+  // Tags de negócio
+  tags String[] @default([]) // Tags personalizadas
+
   // Metadados
   isBlocked  Boolean   @default(false)
   lastSeenAt DateTime?
@@ -1519,93 +1525,31 @@ model WhatsAppContact {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relações
-  conversations WhatsAppConversation[]
-  messages      WhatsAppMessage[]
+  // ✅ NOVO: Notas internas
+  notes WhatsAppNote[]
 
   @@index([phone])
   @@index([leadId])
   @@map("whatsapp_contacts")
 }
 
-// Conversa (agrupamento de mensagens com um contato)
-model WhatsAppConversation {
-  id        String @id @default(cuid())
-  contactId String
-
-  // Estado da conversa
-  lastMessageAt      DateTime @default(now())
-  lastMessagePreview String? // Prévia da última mensagem
-  unreadCount        Int      @default(0)
-  isArchived         Boolean  @default(false)
-  isPinned           Boolean  @default(false)
-
-  // Flags de sincronização (sistema de cache inteligente)
-  fullySynced        Boolean   @default(false) // Indica se todas as mensagens foram sincronizadas
-  lastSyncedAt       DateTime? // Última vez que sincronizou mensagens
-  syncedMessageCount Int       @default(0) // Total de mensagens sincronizadas
-
-  // Atribuição (quem está atendendo)
-  assignedToId String?
-  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
+// ✅ NOVO: Notas internas sobre conversas (Não são mensagens do WhatsApp)
+model WhatsAppNote {
+  id           String @id @default(cuid())
+  contactPhone String
+  userId       String
+  content      String @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relações
-  contact  WhatsAppContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  messages WhatsAppMessage[]
+  contact WhatsAppContact @relation(fields: [contactPhone], references: [phone], onDelete: Cascade)
 
-  @@index([contactId])
-  @@index([lastMessageAt])
-  @@index([unreadCount])
-  @@index([assignedToId])
-  @@index([fullySynced])
-  @@map("whatsapp_conversations")
-}
-
-// Mensagem individual
-model WhatsAppMessage {
-  id             String @id @default(cuid())
-  conversationId String
-  contactId      String
-
-  // Conteúdo
-  type         MessageType
-  content      String // Texto ou caption
-  mediaUrl     String? // URL do arquivo (se houver mídia)
-  mediaType    String? // MIME type
-  mediaSize    Int? // Tamanho em bytes
-  thumbnailUrl String? // Miniatura (para vídeos/imagens)
-
-  // Direção
-  fromMe Boolean // true = enviada por nós, false = recebida
-
-  // Status (apenas para mensagens enviadas)
-  status MessageStatus @default(PENDING)
-
-  // IDs externos (WhatsApp)
-  whatsappMessageId String? @unique // ID da mensagem no WhatsApp
-
-  // Timestamps
-  timestamp   DateTime  @default(now())
-  deliveredAt DateTime?
-  readAt      DateTime?
-
-  // Metadados
-  metadata  String? // JSON: dados extras (localização, contato, etc)
-  isDeleted Boolean @default(false)
-
-  // Relações
-  conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  contact      WhatsAppContact      @relation(fields: [contactId], references: [id])
-
-  @@index([conversationId])
-  @@index([contactId])
-  @@index([timestamp])
-  @@index([fromMe])
-  @@index([whatsappMessageId])
-  @@map("whatsapp_messages")
+  @@index([contactPhone])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("whatsapp_notes")
 }
 
 // ============================================================================
