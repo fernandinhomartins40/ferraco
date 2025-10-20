@@ -97,18 +97,50 @@ const AdminWhatsApp = () => {
       const response = await api.get('/whatsapp/status');
       setStatus(response.data.status);
       setIsLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao verificar status:', error);
+
+      // Tratamento de erros com feedback visual
+      if (error.response?.status === 401) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        // apiClient já redireciona automaticamente para /login
+      } else if (error.response?.status === 500) {
+        toast.error('Erro no servidor. Tente novamente mais tarde.');
+      } else if (!error.response) {
+        toast.error('Erro de conexão. Verifique sua internet.');
+      }
+
       setIsLoading(false);
     }
   };
 
-  const fetchQRCode = async () => {
-    try {
-      const response = await api.get('/whatsapp/qr');
-      setQrCode(response.data.qrCode);
-    } catch (error) {
-      console.error('Erro ao obter QR Code:', error);
+  const fetchQRCode = async (retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await api.get('/whatsapp/qr');
+        setQrCode(response.data.qrCode);
+        return; // Sucesso
+      } catch (error: any) {
+        console.error(`Tentativa ${i + 1}/${retries} de obter QR Code falhou:`, error);
+
+        if (error.response?.status === 401) {
+          toast.error('Sessão expirada. Faça login novamente.');
+          return; // Não tentar novamente se não autenticado
+        }
+
+        if (error.response?.status === 404) {
+          // QR Code ainda não disponível (normal)
+          return;
+        }
+
+        if (i === retries - 1) {
+          // Última tentativa falhou
+          toast.error('Não foi possível obter QR Code. Tente reinicializar a conexão.');
+        } else {
+          // Aguardar 1 segundo antes de tentar novamente
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
     }
   };
 
