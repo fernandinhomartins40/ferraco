@@ -31,7 +31,7 @@ import {
 import { toast } from 'sonner';
 import api from '@/lib/apiClient';
 import { useWhatsAppSocket, type WhatsAppStatus as SocketWhatsAppStatus } from '@/hooks/useWhatsAppSocket';
-import { SocketDebug } from '@/components/debug/SocketDebug';
+// import { SocketDebug } from '@/components/debug/SocketDebug'; // ✅ Debug removido - problema resolvido
 
 // ✅ FASE 4: Lazy loading de componentes pesados (code splitting)
 const ConversationList = lazy(() => import('@/components/whatsapp/ConversationList'));
@@ -393,7 +393,8 @@ const AdminWhatsApp = () => {
             </Alert>
 
             {/* QR Code Card */}
-            {status?.hasQR && !status?.connected && qrCode && (
+            {/* ✅ FIX: Usar qrCode do Socket diretamente, não status?.hasQR */}
+            {qrCode && !isConnected && (
               <Card className="border-2 border-green-500">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
