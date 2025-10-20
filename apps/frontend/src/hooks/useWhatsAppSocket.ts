@@ -48,81 +48,7 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
   // ✅ FASE 3: Substituir useState por useReducer + State Machine
   const [connectionState, dispatch] = useReducer(whatsappReducer, initialWhatsAppState);
 
-  // ✅ FASE 3: Atualizar QR Code via State Machine
-  const handleQRCode = useCallback((qrCode: string) => {
-    console.log('📱 [Socket.IO] QR Code recebido');
-    qrAttemptRef.current += 1;
-
-    dispatch({
-      type: 'QR_RECEIVED',
-      qrCode,
-      attempt: qrAttemptRef.current,
-    });
-
-    events?.onQRCode?.(qrCode);
-  }, [events]);
-
-  // ✅ FASE 3: Atualizar status via State Machine
-  const handleStatusChange = useCallback((status: WhatsAppStatus) => {
-    console.log('🔄 [Socket.IO] Status alterado:', status);
-
-    // Mapear status para ação da State Machine
-    const action = mapSocketStatusToAction(status, connectionState);
-    if (action) {
-      dispatch(action);
-    }
-
-    events?.onStatusChange?.(status);
-
-    // Se QR scaneado com sucesso, transitar para authenticating
-    if (status === 'qrReadSuccess') {
-      dispatch({ type: 'QR_SCANNED' });
-    }
-  }, [events, connectionState]);
-
-  // ✅ FASE 3: WhatsApp pronto via State Machine
-  const handleReady = useCallback((account?: WhatsAppAccount) => {
-    console.log('✅ [Socket.IO] WhatsApp pronto para uso');
-
-    // Se account não fornecido, criar placeholder
-    const accountData: WhatsAppAccount = account || {
-      phone: 'Conectado',
-      name: 'WhatsApp',
-      platform: 'web',
-    };
-
-    dispatch({
-      type: 'CONNECTED',
-      account: accountData,
-    });
-
-    events?.onReady?.();
-  }, [events]);
-
-  // ✅ FASE 3: Desconexão via State Machine
-  const handleDisconnected = useCallback((reason?: string) => {
-    console.log('❌ [Socket.IO] WhatsApp desconectado:', reason);
-
-    dispatch({
-      type: 'DISCONNECTED',
-      reason: reason || 'Desconectado',
-    });
-
-    events?.onDisconnected?.(reason || 'Desconectado');
-  }, [events]);
-
-  // ✅ FASE 3: Erro via State Machine
-  const handleError = useCallback((error: string, recoverable: boolean = true) => {
-    console.error('❌ [Socket.IO] Erro:', error);
-
-    dispatch({
-      type: 'ERROR',
-      error,
-      recoverable,
-    });
-
-    events?.onError?.(error);
-  }, [events]);
+  // ✅ Removidas funções useCallback que causavam dependências no useEffect
 
   // ✅ FASE 3: Conectar Socket.IO e inicializar State Machine
   useEffect(() => {
@@ -153,23 +79,72 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
 
     socket.on('connect_error', (error) => {
       console.error('❌ [Socket.IO] Erro de conexão:', error);
-      handleError(`Erro de conexão: ${error.message}`, true);
     });
 
-    // Eventos do WhatsApp
-    socket.on('whatsapp:qr', handleQRCode);
-    socket.on('whatsapp:status', handleStatusChange);
-    socket.on('whatsapp:ready', handleReady);
-    socket.on('whatsapp:disconnected', handleDisconnected);
-    socket.on('whatsapp:error', (error: string) => handleError(error, true));
+    // Eventos do WhatsApp - usar funções inline para evitar dependências
+    socket.on('whatsapp:qr', (qrCode: string) => {
+      console.log('📱 [Socket.IO] QR Code recebido');
+      qrAttemptRef.current += 1;
+      dispatch({
+        type: 'QR_RECEIVED',
+        qrCode,
+        attempt: qrAttemptRef.current,
+      });
+      events?.onQRCode?.(qrCode);
+    });
+
+    socket.on('whatsapp:status', (status: WhatsAppStatus) => {
+      console.log('🔄 [Socket.IO] Status alterado:', status);
+      const action = mapSocketStatusToAction(status, connectionState);
+      if (action) {
+        dispatch(action);
+      }
+      events?.onStatusChange?.(status);
+      if (status === 'qrReadSuccess') {
+        dispatch({ type: 'QR_SCANNED' });
+      }
+    });
+
+    socket.on('whatsapp:ready', (account?: WhatsAppAccount) => {
+      console.log('✅ [Socket.IO] WhatsApp pronto para uso');
+      const accountData: WhatsAppAccount = account || {
+        phone: 'Conectado',
+        name: 'WhatsApp',
+        platform: 'web',
+      };
+      dispatch({
+        type: 'CONNECTED',
+        account: accountData,
+      });
+      events?.onReady?.();
+    });
+
+    socket.on('whatsapp:disconnected', (reason?: string) => {
+      console.log('❌ [Socket.IO] WhatsApp desconectado:', reason);
+      dispatch({
+        type: 'DISCONNECTED',
+        reason: reason || 'Desconectado',
+      });
+      events?.onDisconnected?.(reason || 'Desconectado');
+    });
+
+    socket.on('whatsapp:error', (error: string) => {
+      console.error('❌ [Socket.IO] Erro:', error);
+      dispatch({
+        type: 'ERROR',
+        error,
+        recoverable: true,
+      });
+      events?.onError?.(error);
+    });
 
     // Cleanup ao desmontar
     return () => {
       console.log('🔌 [Socket.IO] Desconectando...');
-      socket.off('whatsapp:qr', handleQRCode);
-      socket.off('whatsapp:status', handleStatusChange);
-      socket.off('whatsapp:ready', handleReady);
-      socket.off('whatsapp:disconnected', handleDisconnected);
+      socket.off('whatsapp:qr');
+      socket.off('whatsapp:status');
+      socket.off('whatsapp:ready');
+      socket.off('whatsapp:disconnected');
       socket.off('whatsapp:error');
       socket.disconnect();
       socketRef.current = null;
@@ -177,7 +152,7 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
       // Resetar state machine
       dispatch({ type: 'RESET' });
     };
-  }, [handleQRCode, handleStatusChange, handleReady, handleDisconnected, handleError]);
+  }, []); // ✅ FIX: Array vazio - só conecta uma vez
 
   // Helper: Solicitar status atual
   const requestStatus = useCallback(() => {
