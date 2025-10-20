@@ -671,9 +671,18 @@ class WhatsAppService {
           timestamp: new Date().toISOString(),
         });
 
+        // ✅ CRÍTICO: Extrair número limpo do ID retornado pelo WhatsApp para garantir consistência
+        // O WhatsApp retorna IDs no formato: true_5511999999999@c.us_MESSAGEID ou 5511999999999@c.us
+        let phoneFromResult = formattedNumber.replace('@c.us', '');
+        if (result.id?._serialized) {
+          const parts = result.id._serialized.split('@')[0].split('_');
+          // Pegar a última parte que contém o número (ignora 'true' e outros prefixos)
+          phoneFromResult = parts[parts.length - 1];
+        }
+
         // Salvar mensagem enviada no banco (estratégia híbrida)
         await whatsappChatService.saveOutgoingMessage({
-          to: to,
+          to: phoneFromResult, // ✅ Usar número do WhatsApp, não o número original
           content: message,
           whatsappMessageId: result.id || `${Date.now()}_${to}`,
           timestamp: new Date(),
