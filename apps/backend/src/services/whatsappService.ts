@@ -2068,6 +2068,11 @@ class WhatsAppService {
           id: msg.quotedMsg.id,
           content: msg.quotedMsg.body || '',
           fromMe: msg.quotedMsg.fromMe || false,
+          contact: {
+            id: cleanPhone,
+            phone: cleanPhone,
+            name: cleanPhone,
+          },
         } : null,
         contact: {
           id: cleanPhone,
