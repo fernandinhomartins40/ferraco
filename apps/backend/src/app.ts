@@ -31,6 +31,7 @@ import whatsappExtendedRoutes from './routes/whatsappExtended.routes';
 import automationKanbanRoutes from './routes/automationKanban.routes';
 import whatsappMessageTemplateRoutes from './routes/whatsappMessageTemplate.routes';
 import { automationSchedulerService } from './services/automationScheduler.service';
+import { tokenCleanupService } from './services/token-cleanup.service';
 
 export function createApp(): Application {
   const app = express();
@@ -95,6 +96,10 @@ export function createApp(): Application {
   // Iniciar Automation Scheduler
   automationSchedulerService.start();
   logger.info('✅ Automation Scheduler started');
+
+  // Iniciar limpeza automática de tokens
+  tokenCleanupService.start();
+  logger.info('✅ Token cleanup service started');
 
   // 404 handler
   app.use(notFoundHandler);

@@ -88,9 +88,26 @@ export class RefreshTokenService {
       return null;
     }
 
-    // Get user with permissions
+    // Atualizar lastUsedAt antes de revogar
+    await this.updateLastUsed(oldToken);
+
+    // Get user with permissions (incluir dados completos para o frontend)
     const user = await prisma.user.findUnique({
       where: { id: tokenData.userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        name: true,
+        role: true,
+        avatar: true,
+        phone: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        lastLogin: true,
+        isFirstLogin: true,
+      },
     });
 
     if (!user || !user.isActive) {
@@ -111,7 +128,14 @@ export class RefreshTokenService {
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
     await this.createRefreshToken(user.id, tokens.refreshToken, expiresAt);
 
-    return tokens;
+    // Retornar tokens + dados do usuário (necessário para frontend)
+    return {
+      ...tokens,
+      user: {
+        ...user,
+        permissions,
+      },
+    };
   }
 
   /**

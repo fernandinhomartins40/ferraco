@@ -38,6 +38,7 @@ export interface RefreshTokenResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: string;
+  user: UserWithPermissions; // Necessário para o frontend atualizar estado
 }
 
 /**

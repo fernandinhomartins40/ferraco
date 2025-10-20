@@ -1,7 +1,61 @@
 import jwt from 'jsonwebtoken';
 import { User } from '@prisma/client';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+/**
+ * Validar configuração JWT
+ * Garante que o JWT_SECRET seja seguro e adequado para o ambiente
+ */
+function validateJWTConfig(): string {
+  const secret = process.env.JWT_SECRET;
+  const nodeEnv = process.env.NODE_ENV;
+
+  // Produção: JWT_SECRET é obrigatório
+  if (nodeEnv === 'production') {
+    if (!secret) {
+      throw new Error(
+        '❌ JWT_SECRET é obrigatório em produção!\n' +
+        'Configure via variável de ambiente ou GitHub Secrets'
+      );
+    }
+
+    if (secret.length < 32) {
+      throw new Error(
+        `❌ JWT_SECRET deve ter no mínimo 32 caracteres (atual: ${secret.length})\n` +
+        'Gere um secret seguro com: openssl rand -hex 32'
+      );
+    }
+
+    if (secret === 'your-secret-key-change-in-production') {
+      throw new Error(
+        '❌ JWT_SECRET padrão detectado em produção!\n' +
+        'Altere para um valor seguro gerado aleatoriamente'
+      );
+    }
+
+    console.log('✅ JWT_SECRET configurado corretamente (produção)');
+    return secret;
+  }
+
+  // Desenvolvimento: usar secret padrão com warning
+  if (!secret) {
+    console.warn(
+      '⚠️  JWT_SECRET não configurado - usando valor padrão de desenvolvimento\n' +
+      'ATENÇÃO: NÃO USE EM PRODUÇÃO!'
+    );
+    return 'development-secret-DO-NOT-USE-IN-PRODUCTION-PLEASE-CHANGE-ME';
+  }
+
+  if (secret === 'your-secret-key-change-in-production') {
+    console.warn(
+      '⚠️  JWT_SECRET padrão detectado - altere para um valor personalizado\n' +
+      'Gere um secret seguro com: openssl rand -hex 32'
+    );
+  }
+
+  return secret;
+}
+
+const JWT_SECRET = validateJWTConfig();
 const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_EXPIRATION || '15m';
 const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '7d';
 
