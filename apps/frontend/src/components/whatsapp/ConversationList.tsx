@@ -63,6 +63,11 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
       console.log('📡 Conversa atualizada:', conversationId);
       fetchConversations();
     }, [fetchConversations]),
+    onNewMessage: useCallback((message: any) => {
+      console.log('📩 Nova mensagem recebida na ConversationList:', message);
+      // Atualizar lista de conversas quando nova mensagem chega
+      fetchConversations();
+    }, [fetchConversations]),
   });
 
   // ✅ FASE 4: useCallback para handleSearch

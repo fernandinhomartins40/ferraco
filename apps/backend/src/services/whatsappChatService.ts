@@ -735,15 +735,13 @@ export class WhatsAppChatService {
 
   /**
    * Lista todas as conversas (ordenadas por última mensagem)
-   * ✅ SIMPLIFICADO: Só retorna conversas onde O SISTEMA enviou mensagens
+   * ✅ RETORNA TODAS AS CONVERSAS, incluindo as que só receberam mensagens
    */
   async getConversations(limit = 50) {
     return prisma.whatsAppConversation.findMany({
       where: {
         messages: {
-          some: {
-            fromMe: true, // ✅ Só conversas com mensagens enviadas pelo sistema
-          },
+          some: {}, // ✅ Qualquer conversa que tenha pelo menos 1 mensagem
         },
       },
       take: limit,
