@@ -86,9 +86,19 @@ export const useAuth = (): AuthContextType => {
       logger.info('Attempting login', { email });
 
       const response = await apiClient.post(`${API_URL}/login`, { email, password });
+      console.log('🔍 LOGIN RESPONSE:', response);
+      console.log('🔍 RESPONSE DATA:', response.data);
+
       const { user, accessToken, refreshToken } = response.data.data;
+      console.log('🔍 EXTRACTED DATA:', { user, accessToken, refreshToken });
 
       setAuth(user, accessToken, refreshToken);
+      console.log('🔍 setAuth CHAMADO');
+
+      // Verificar se foi salvo no localStorage
+      const saved = localStorage.getItem('ferraco-auth-storage');
+      console.log('🔍 LOCAL STORAGE APÓS setAuth:', saved);
+
       logger.info('Login successful', { userId: user.id });
     } catch (error) {
       logger.error('Login failed', { error });
