@@ -107,18 +107,21 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       }
     },
     onMessageStatus: (data) => {
-      console.log('📨 Status de mensagem atualizado:', JSON.stringify(data, null, 2));
-      console.log('📨 messageIds recebidos:', data.messageIds);
-      console.log('📨 Novo status:', data.status);
-      console.log('📨 IDs das mensagens atuais (closure):', messages.map(m => m.id));
+      console.log('📨 Status de mensagem atualizado via WebSocket:', data);
 
       setMessages((prev) => {
-        console.log('📨 IDs das mensagens atuais (prev dentro setMessages):', prev.map(m => m.id));
-
         return prev.map((msg) => {
-          const shouldUpdate = data.messageIds.includes(msg.id);
-          console.log(`📨 Mensagem ${msg.id}: shouldUpdate=${shouldUpdate}, status atual=${msg.status}, novo=${data.status}`);
-          return shouldUpdate ? { ...msg, status: data.status } : msg;
+          // ✅ CRÍTICO: Comparar com messageIds (pode ser whatsappMessageId ou id interno)
+          const shouldUpdate = data.messageIds.some((msgId: string) =>
+            msg.id === msgId || msg.id.includes(msgId) || msgId.includes(msg.id)
+          );
+
+          if (shouldUpdate) {
+            console.log(`✅ Atualizando status: ${msg.id.substring(0, 30)}... de ${msg.status} para ${data.status}`);
+            return { ...msg, status: data.status };
+          }
+
+          return msg;
         });
       });
     },
@@ -156,6 +159,42 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
             : msg
         )
       );
+    },
+    // ✅ NOVOS EVENTOS NATIVOS DO WPPCONNECT
+    onMessageRevoked: (data) => {
+      console.log('🗑️ Mensagem deletada:', data);
+      setMessages((prev) => prev.filter((msg) => msg.id !== data.messageId));
+      toast.info('Mensagem deletada');
+    },
+    onMessageEdited: (data) => {
+      console.log('✏️ Mensagem editada:', data);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === data.messageId
+            ? { ...msg, content: data.newContent }
+            : msg
+        )
+      );
+    },
+    onPresence: (data) => {
+      // Atualizar presença (typing agora vem de onPresence nativo)
+      const contactId = conversation?.contact.phone.replace(/\D/g, '');
+      const presenceContactId = data.contactId.replace(/\D/g, '').replace(/@c\.us$/, '');
+
+      if (contactId === presenceContactId) {
+        setIsTyping(data.isTyping);
+        setIsRecording(data.isRecording);
+
+        if (data.isTyping || data.isRecording) {
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+          }
+          typingTimeoutRef.current = setTimeout(() => {
+            setIsTyping(false);
+            setIsRecording(false);
+          }, 5000);
+        }
+      }
     },
   });
 
@@ -535,25 +574,76 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                         </span>
 
                         {message.fromMe && (
-                          <span className="text-xs flex items-center" title={`Status: ${message.status}`}>
+                          <span className="text-xs flex items-center ml-1" title={`Status: ${message.status}`}>
                             {(() => {
-                              console.log('📊 Status da mensagem:', message.id, '→', message.status);
-
+                              // ✅ VISUAL IDÊNTICO AO WHATSAPP WEB
                               switch (message.status) {
                                 case 'READ':
-                                  return <span className="text-blue-400 font-bold text-sm">✓✓</span>;
+                                  // 2 checks azuis (lido)
+                                  return (
+                                    <span className="inline-flex gap-[1px]">
+                                      <svg width="16" height="11" viewBox="0 0 16 11" className="fill-blue-400">
+                                        <path d="M11.071.653a.498.498 0 00-.699-.111L5.023 4.135 2.78 2.07a.5.5 0 00-.695.718l2.652 2.444a.5.5 0 00.677.017l5.85-4a.498.498 0 00.111-.699l-.304.103z"/>
+                                      </svg>
+                                      <svg width="16" height="11" viewBox="0 0 16 11" className="fill-blue-400 -ml-1.5">
+                                        <path d="M11.071.653a.498.498 0 00-.699-.111L5.023 4.135 2.78 2.07a.5.5 0 00-.695.718l2.652 2.444a.5.5 0 00.677.017l5.85-4a.498.498 0 00.111-.699l-.304.103z"/>
+                                      </svg>
+                                    </span>
+                                  );
                                 case 'PLAYED':
-                                  return <span className="text-blue-400 font-bold text-sm">▶✓✓</span>;
+                                  // 2 checks azuis + ícone play (áudio/vídeo reproduzido)
+                                  return (
+                                    <span className="inline-flex gap-[1px] items-center">
+                                      <svg width="16" height="11" viewBox="0 0 16 11" className="fill-blue-400">
+                                        <path d="M11.071.653a.498.498 0 00-.699-.111L5.023 4.135 2.78 2.07a.5.5 0 00-.695.718l2.652 2.444a.5.5 0 00.677.017l5.85-4a.498.498 0 00.111-.699l-.304.103z"/>
+                                      </svg>
+                                      <svg width="16" height="11" viewBox="0 0 16 11" className="fill-blue-400 -ml-1.5">
+                                        <path d="M11.071.653a.498.498 0 00-.699-.111L5.023 4.135 2.78 2.07a.5.5 0 00-.695.718l2.652 2.444a.5.5 0 00.677.017l5.85-4a.498.498 0 00.111-.699l-.304.103z"/>
+                                      </svg>
+                                    </span>
+                                  );
                                 case 'DELIVERED':
-                                  return <span className="text-white/90 font-bold text-sm">✓✓</span>;
+                                  // 2 checks cinza (entregue)
+                                  return (
+                                    <span className="inline-flex gap-[1px]">
+                                      <svg width="16" height="11" viewBox="0 0 16 11" className="fill-white/70">
+                                        <path d="M11.071.653a.498.498 0 00-.699-.111L5.023 4.135 2.78 2.07a.5.5 0 00-.695.718l2.652 2.444a.5.5 0 00.677.017l5.85-4a.498.498 0 00.111-.699l-.304.103z"/>
+                                      </svg>
+                                      <svg width="16" height="11" viewBox="0 0 16 11" className="fill-white/70 -ml-1.5">
+                                        <path d="M11.071.653a.498.498 0 00-.699-.111L5.023 4.135 2.78 2.07a.5.5 0 00-.695.718l2.652 2.444a.5.5 0 00.677.017l5.85-4a.498.498 0 00.111-.699l-.304.103z"/>
+                                      </svg>
+                                    </span>
+                                  );
                                 case 'SENT':
-                                  return <span className="text-white/70 font-bold text-sm">✓</span>;
+                                  // 1 check cinza (enviado)
+                                  return (
+                                    <svg width="16" height="11" viewBox="0 0 16 11" className="fill-white/70">
+                                      <path d="M11.071.653a.498.498 0 00-.699-.111L5.023 4.135 2.78 2.07a.5.5 0 00-.695.718l2.652 2.444a.5.5 0 00.677.017l5.85-4a.498.498 0 00.111-.699l-.304.103z"/>
+                                    </svg>
+                                  );
                                 case 'PENDING':
-                                  return <span className="text-white/60">🕐</span>;
+                                  // Relógio (pendente)
+                                  return (
+                                    <svg width="16" height="16" viewBox="0 0 16 16" className="fill-white/60">
+                                      <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14.5a6.5 6.5 0 110-13 6.5 6.5 0 010 13z"/>
+                                      <path d="M8.75 4h-1.5v4.25L11 10.4l.75-1.23-3-1.92V4z"/>
+                                    </svg>
+                                  );
+                                case 'ERROR':
                                 case 'FAILED':
-                                  return <span className="text-red-400">⚠️</span>;
+                                  // Erro (triângulo com exclamação)
+                                  return (
+                                    <svg width="16" height="16" viewBox="0 0 16 16" className="fill-red-400">
+                                      <path d="M8 0L0 14h16L8 0zm1 13H7v-2h2v2zm0-3H7V5h2v5z"/>
+                                    </svg>
+                                  );
                                 default:
-                                  return <span className="text-white/50" title={`Status desconhecido: ${message.status}`}>?</span>;
+                                  // Status desconhecido
+                                  return (
+                                    <span className="text-white/50 text-xs" title={`Status desconhecido: ${message.status}`}>
+                                      ?
+                                    </span>
+                                  );
                               }
                             })()}
                           </span>

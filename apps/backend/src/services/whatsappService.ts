@@ -165,65 +165,11 @@ class WhatsAppService {
           // QR code é regenerado automaticamente pelo WPPConnect
           // Não anular o código, sempre manter o mais recente disponível
         },
-        // Callback status
+        // ✅ DEPRECATED: Callback antigo (manter para compatibilidade)
+        // Use onStateChange() para novo código
         (statusSession: string, session: string) => {
-          logger.info(`📊 [${session}] Status: ${statusSession}`);
-
-          switch (statusSession) {
-            case 'inChat':
-            case 'isLogged':
-            case 'qrReadSuccess':
-            case 'chatsAvailable':
-              this.isConnected = true;
-              this.qrCode = null;
-              this.isInitializing = false;
-              logger.info('✅ WhatsApp conectado com sucesso!');
-
-              // ✅ FASE 2: Emitir evento de conexão pronta via Socket.IO
-              this.emitReady();
-
-              // ⚠️ ARQUITETURA STATELESS 2025: Sync automático removido
-              // Conversas são carregadas on-demand via getAllConversations()
-              logger.info('📱 WhatsApp pronto - arquitetura stateless (sem sync automático)');
-              break;
-
-            case 'notLogged':
-            case 'qrReadError':
-            case 'qrReadFail':
-              this.isConnected = false;
-              logger.info('⏳ Aguardando leitura do QR Code...');
-
-              // ✅ FASE 2: Emitir status via Socket.IO
-              this.emitStatus();
-              break;
-
-            case 'desconnectedMobile':
-            case 'serverClose':
-            case 'deleteToken':
-              this.isConnected = false;
-              this.qrCode = null;
-              logger.warn('⚠️  WhatsApp desconectado');
-
-              // ✅ FASE 2: Emitir evento de desconexão via Socket.IO
-              this.emitDisconnected(statusSession);
-              break;
-
-            case 'autocloseCalled':
-            case 'browserClose':
-              this.isConnected = false;
-              this.isInitializing = false;
-              logger.warn('🔄 Navegador fechado');
-
-              // ✅ FASE 2: Emitir evento de desconexão via Socket.IO
-              this.emitDisconnected(statusSession);
-              break;
-
-            default:
-              logger.debug(`🔄 Status: ${statusSession}`);
-
-              // ✅ FASE 2: Emitir status genérico via Socket.IO
-              this.emitStatus();
-          }
+          logger.debug(`📊 [${session}] Status Callback (legacy): ${statusSession}`);
+          // Processamento agora feito em onStateChange()
         },
         undefined, // onLoadingScreen
         undefined, // catchLinkCode
@@ -255,11 +201,11 @@ class WhatsAppService {
         }
       );
 
-      // Configurar listeners de mensagens
-      this.setupMessageListeners();
-
-      // Configurar listeners de ACK (confirmação de leitura/entrega)
-      this.setupAckListeners();
+      // ✅ REFATORADO: Listeners nativos
+      this.setupStateChangeListener();      // onStateChange (NOVO)
+      this.setupMessageListeners();         // onAnyMessage (REFATORADO)
+      this.setupAckListeners();             // onAck (mantido)
+      this.setupPresenceListener();         // onPresenceChanged (NOVO)
 
       // Configurar listeners avançados (presença, digitando, chamadas, etc.)
       this.listeners = new WhatsAppListeners(this.client);
@@ -289,7 +235,91 @@ class WhatsAppService {
   }
 
   /**
-   * Configurar listeners para mensagens recebidas
+   * ✅ NOVO: Listener nativo onStateChange (substitui callback de status)
+   * Monitora mudanças de estado da conexão (CONNECTED, DISCONNECTED, etc)
+   */
+  private setupStateChangeListener(): void {
+    if (!this.client) {
+      logger.error('Cliente WhatsApp não inicializado');
+      return;
+    }
+
+    // ✅ NATIVO: onStateChange com enums tipados
+    this.client.onStateChange((state: any) => {
+      logger.info(`🔄 Estado da conexão: ${state}`);
+
+      // Mapear estados para comportamento
+      switch (state) {
+        case 'CONNECTED':
+        case 'OPENING':
+          this.isConnected = true;
+          this.qrCode = null;
+          this.isInitializing = false;
+          logger.info('✅ WhatsApp conectado com sucesso!');
+          this.emitReady();
+          break;
+
+        case 'DISCONNECTED':
+        case 'TIMEOUT':
+          this.isConnected = false;
+          logger.warn('⚠️  WhatsApp desconectado');
+          this.emitDisconnected(state);
+          break;
+
+        case 'UNPAIRED':
+        case 'UNPAIRED_IDLE':
+          this.isConnected = false;
+          this.qrCode = null;
+          logger.warn('⚠️  WhatsApp desconectado (dispositivo não pareado)');
+          this.emitDisconnected(state);
+          break;
+
+        default:
+          logger.debug(`🔄 Estado: ${state}`);
+          this.emitStatus();
+      }
+    });
+
+    logger.info('✅ Listener onStateChange configurado');
+  }
+
+  /**
+   * ✅ NOVO: Listener nativo onPresenceChanged
+   * Monitora mudanças de presença (online, offline, digitando, gravando áudio)
+   */
+  private setupPresenceListener(): void {
+    if (!this.client) {
+      logger.error('Cliente WhatsApp não inicializado');
+      return;
+    }
+
+    // ✅ NATIVO: onPresenceChanged
+    this.client.onPresenceChanged((event: any) => {
+      try {
+        logger.debug(`👤 Presença mudou: ${event.id} → ${event.state}`);
+
+        // Emitir via WebSocket
+        if (this.io) {
+          this.io.sockets.emit('whatsapp:presence', {
+            contactId: event.id,
+            state: event.state,              // 'available', 'unavailable', 'composing', 'recording'
+            isOnline: event.isOnline,
+            isTyping: event.state === 'composing',
+            isRecording: event.state === 'recording',
+            lastSeen: event.t ? new Date(event.t * 1000) : null,
+          });
+        }
+      } catch (error) {
+        logger.error('Erro ao processar mudança de presença:', error);
+      }
+    });
+
+    logger.info('✅ Listener onPresenceChanged configurado');
+  }
+
+  /**
+   * ✅ REFATORADO: Configurar listeners para TODAS as mensagens (enviadas + recebidas)
+   * Usa onAnyMessage() nativo ao invés de onMessage() para capturar mensagens enviadas também
    */
   private setupMessageListeners(): void {
     if (!this.client) {
@@ -297,52 +327,60 @@ class WhatsAppService {
       return;
     }
 
-    // ✅ ARQUITETURA STATELESS: Listener apenas emite WebSocket (NÃO persiste)
-    this.client.onMessage(async (message: Message) => {
+    // ✅ NATIVO: onAnyMessage captura TODAS mensagens (enviadas + recebidas)
+    this.client.onAnyMessage(async (message: Message) => {
       try {
-        // Filtros de mensagens
-        if (message.isGroupMsg || message.from === 'status@broadcast' || message.fromMe) {
+        // Filtrar broadcasts e grupos (opcional)
+        if (message.from === 'status@broadcast') {
           return;
         }
 
-        logger.info(`📩 Nova mensagem de ${message.from}: ${message.body?.substring(0, 50) || '(mídia)'}...`);
+        const direction = message.fromMe ? '📤 Enviada' : '📩 Recebida';
+        const normalizedPhone = message.from.replace('@c.us', '').replace('@g.us', '');
 
-        const normalizedPhone = message.from.replace('@c.us', '');
+        logger.info(`${direction} de ${normalizedPhone}: ${message.body?.substring(0, 50) || '(mídia)'}...`);
 
-        // Verificar se tem bot ativo
-        try {
-          const { prisma } = await import('../config/database');
+        // ✅ MELHORIA: Processar mensagens recebidas (não enviadas por nós)
+        if (!message.fromMe) {
+          // Verificar se tem bot ativo
+          try {
+            const { prisma } = await import('../config/database');
 
-          const botSession = await prisma.whatsAppBotSession.findFirst({
-            where: {
-              phone: normalizedPhone.replace(/\D/g, ''),
-              isActive: true,
-              handedOffToHuman: false,
-            },
-          });
+            const botSession = await prisma.whatsAppBotSession.findFirst({
+              where: {
+                phone: normalizedPhone.replace(/\D/g, ''),
+                isActive: true,
+                handedOffToHuman: false,
+              },
+            });
 
-          if (botSession) {
-            logger.info(`🤖 Roteando para bot - Sessão ${botSession.id}`);
-            const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
-            await whatsappBotService.processUserMessage(normalizedPhone.replace(/\D/g, ''), message.body);
-            return;
+            if (botSession) {
+              logger.info(`🤖 Roteando para bot - Sessão ${botSession.id}`);
+              const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
+              await whatsappBotService.processUserMessage(normalizedPhone.replace(/\D/g, ''), message.body);
+              return;
+            }
+          } catch (error) {
+            logger.error('Erro ao verificar bot:', error);
           }
-        } catch (error) {
-          logger.error('Erro ao verificar bot:', error);
         }
 
-        // ✅ STATELESS: Apenas emitir WebSocket (frontend busca do WPP on-demand)
+        // ✅ STATELESS: Emitir WebSocket para TODAS mensagens (enviadas + recebidas)
         if (this.io) {
           this.io.sockets.emit('message:new', {
+            id: message.id,
             from: message.from,
+            to: message.to,
             phone: normalizedPhone,
             body: message.body || '',
             type: message.type,
             timestamp: new Date(message.timestamp * 1000),
-            fromMe: false,
+            fromMe: message.fromMe || false,
+            ack: message.ack,
+            status: this.mapAckToStatus(message.ack),
           });
 
-          logger.info(`📡 WebSocket emitido para ${normalizedPhone}`);
+          logger.debug(`📡 WebSocket: message:new (${direction}) - ${normalizedPhone}`);
         }
 
       } catch (error: any) {
@@ -350,7 +388,61 @@ class WhatsAppService {
       }
     });
 
-    logger.info('✅ Listeners de mensagens configurados');
+    // ✅ NOVO: Listener para mensagens deletadas (revoked)
+    this.client.onRevokedMessage((data: any) => {
+      try {
+        logger.info(`🗑️ Mensagem deletada: ${data.id}`);
+
+        if (this.io) {
+          this.io.sockets.emit('message:revoked', {
+            messageId: data.id,
+            from: data.from,
+            to: data.to,
+            refId: data.refId,
+          });
+        }
+      } catch (error) {
+        logger.error('Erro ao processar mensagem deletada:', error);
+      }
+    });
+
+    // ✅ NOVO: Listener para reações
+    this.client.onReactionMessage((reaction: any) => {
+      try {
+        logger.info(`👍 Reação: ${reaction.reactionText} na mensagem ${reaction.msgId}`);
+
+        if (this.io) {
+          this.io.sockets.emit('whatsapp:reaction', {
+            messageId: reaction.msgId,
+            emoji: reaction.reactionText,
+            timestamp: new Date(reaction.timestamp * 1000),
+            read: reaction.read,
+          });
+        }
+      } catch (error) {
+        logger.error('Erro ao processar reação:', error);
+      }
+    });
+
+    // ✅ NOVO: Listener para edições de mensagens
+    this.client.onMessageEdit?.((chatId: any, msgId: string, newMessage: Message) => {
+      try {
+        logger.info(`✏️ Mensagem editada: ${msgId}`);
+
+        if (this.io) {
+          this.io.sockets.emit('message:edited', {
+            chatId: typeof chatId === 'string' ? chatId : chatId._serialized,
+            messageId: msgId,
+            newContent: newMessage.body,
+            timestamp: new Date(newMessage.timestamp * 1000),
+          });
+        }
+      } catch (error) {
+        logger.error('Erro ao processar edição de mensagem:', error);
+      }
+    });
+
+    logger.info('✅ Listeners nativos configurados (onAnyMessage, onRevokedMessage, onReactionMessage, onMessageEdit)');
   }
 
   /**
@@ -399,19 +491,30 @@ class WhatsAppService {
 
         const ackCode = ack.ack;
 
-        // ⭐ FASE 2: Mapeamento completo de ACK incluindo PLAYED (ACK 5)
+        // ✅ MAPEAMENTO COMPLETO DE ACK (padrão WhatsApp Web)
         const statusName =
-          ackCode === 0 ? 'CLOCK' :      // Pendente no relógio
-          ackCode === 1 ? 'SENT' :       // Enviado (1 check)
-          ackCode === 2 ? 'SENT' :       // Server recebeu
-          ackCode === 3 ? 'DELIVERED' :  // Entregue (2 checks)
+          ackCode === -1 ? 'ERROR' :     // Erro no envio
+          ackCode === 0 ? 'PENDING' :    // Pendente (relógio)
+          ackCode === 1 ? 'SENT' :       // Enviado (1 check cinza)
+          ackCode === 2 ? 'SENT' :       // Server recebeu (1 check cinza)
+          ackCode === 3 ? 'DELIVERED' :  // Entregue (2 checks cinza)
           ackCode === 4 ? 'READ' :       // Lido (2 checks azuis)
-          ackCode === 5 ? 'PLAYED' :     // ⭐ Reproduzido (áudio/vídeo)
+          ackCode === 5 ? 'PLAYED' :     // Reproduzido (áudio/vídeo)
           'UNKNOWN';
 
-        logger.info(`📨 ACK: ${messageId.substring(0, 20)}... -> ${statusName} (${ackCode})`);
+        logger.info(`📨 ACK recebido: ${messageId.substring(0, 20)}... -> ${statusName} (ACK ${ackCode})`);
 
-        // Atualizar status da mensagem no banco (já emite WebSocket internamente)
+        // ✅ STATELESS: Emitir WebSocket diretamente (não persiste no banco)
+        if (this.io) {
+          this.io.sockets.emit('message:status', {
+            messageIds: [messageId],
+            status: statusName,
+            ackCode,
+          });
+          logger.debug(`📡 WebSocket emitido: message:status -> ${messageId.substring(0, 20)}... (${statusName})`);
+        }
+
+        // ✅ HÍBRIDO: Atualizar status no banco (para mensagens salvas na estratégia híbrida)
         await whatsappChatService.updateMessageStatus(messageId, ackCode);
 
       } catch (error) {
@@ -1964,7 +2067,7 @@ class WhatsAppService {
   // ============================================================================
 
   /**
-   * ✅ STATELESS: Busca todas as conversas direto do WhatsApp
+   * ✅ REFATORADO: Busca conversas usando listChats() nativo (ao invés de getAllChats deprecated)
    * Enriquece com metadata do PostgreSQL (tags, leadId, etc)
    */
   async getAllConversations(limit: number = 50): Promise<any[]> {
@@ -1973,20 +2076,20 @@ class WhatsAppService {
     }
 
     try {
-      // 1. Buscar TODAS as conversas do WhatsApp
-      const allChats = await this.client.getAllChats();
+      // ✅ NATIVO: listChats() com opções
+      const chats = await this.client.listChats({
+        onlyUsers: true,      // ✅ Apenas conversas privadas (não grupos)
+        onlyWithUnreadMessage: false,  // Incluir lidas também
+        count: limit,         // Limitar quantidade
+      });
 
-      // 2. Filtrar apenas conversas privadas (não grupos)
-      const privateChats = allChats
-        .filter((chat: any) => !chat.isGroup)
-        .sort((a: any, b: any) => (b.t || 0) - (a.t || 0))
-        .slice(0, limit);
+      logger.info(`📋 ${chats.length} conversas carregadas via listChats()`);
 
-      // 3. Enriquecer com metadata do PostgreSQL
+      // 2. Enriquecer com metadata do PostgreSQL
       const { prisma } = await import('../config/database');
 
       const enrichedChats = await Promise.all(
-        privateChats.map(async (chat: any) => {
+        chats.map(async (chat: any) => {
           const phone = chat.id._serialized.replace('@c.us', '');
 
           // Buscar metadata do contato no PostgreSQL
@@ -2014,6 +2117,9 @@ class WhatsAppService {
             unreadCount: chat.unreadCount || 0,
             isPinned: chat.pin || false,
             isArchived: chat.archive || false,
+            // ✅ NOVO: Informações adicionais do WPPConnect
+            isMuted: chat.muteExpiration > 0,
+            labels: chat.labels || [],
             // Metadata do CRM
             lead: contactMetadata?.lead || null,
             tags: contactMetadata?.tags || [],
@@ -2054,32 +2160,41 @@ class WhatsAppService {
       });
 
       // Formatar mensagens para o formato esperado pelo frontend
-      return messages.map((msg: any) => ({
-        id: msg.id,
-        conversationId: chatId,
-        type: msg.type,
-        content: msg.body || '',
-        mediaUrl: msg.mediaUrl || null,
-        mediaType: msg.mimetype || null,
-        fromMe: msg.fromMe || false,
-        status: this.mapAckToStatus(msg.ack),
-        timestamp: new Date(msg.timestamp * 1000),
-        quotedMessage: msg.quotedMsg ? {
-          id: msg.quotedMsg.id,
-          content: msg.quotedMsg.body || '',
-          fromMe: msg.quotedMsg.fromMe || false,
+      return messages.map((msg: any) => {
+        // ✅ CRÍTICO: Usar ACK real do WhatsApp
+        const ack = msg.ack !== undefined ? msg.ack : (msg.fromMe ? 1 : -1);
+        const status = this.mapAckToStatus(ack);
+
+        logger.debug(`📊 Mensagem ${msg.id?.substring(0, 20)}... - ACK: ${ack} -> Status: ${status}`);
+
+        return {
+          id: msg.id,
+          conversationId: chatId,
+          type: msg.type,
+          content: msg.body || '',
+          mediaUrl: msg.mediaUrl || null,
+          mediaType: msg.mimetype || null,
+          fromMe: msg.fromMe || false,
+          status,
+          ack, // ✅ Incluir ACK original para debug
+          timestamp: new Date(msg.timestamp * 1000),
+          quotedMessage: msg.quotedMsg ? {
+            id: msg.quotedMsg.id,
+            content: msg.quotedMsg.body || '',
+            fromMe: msg.quotedMsg.fromMe || false,
+            contact: {
+              id: cleanPhone,
+              phone: cleanPhone,
+              name: cleanPhone,
+            },
+          } : null,
           contact: {
             id: cleanPhone,
             phone: cleanPhone,
             name: cleanPhone,
           },
-        } : null,
-        contact: {
-          id: cleanPhone,
-          phone: cleanPhone,
-          name: cleanPhone,
-        },
-      }));
+        };
+      });
     } catch (error: any) {
       logger.error(`Erro ao buscar mensagens de ${phone}:`, error);
       throw error;
@@ -2088,15 +2203,24 @@ class WhatsAppService {
 
   /**
    * Helper: Mapear ACK do WhatsApp para status
+   * ACK codes (padrão WhatsApp Web):
+   * -1 = ERROR (erro no envio)
+   * 0 = CLOCK (pendente, relógio)
+   * 1 = SENT (enviado ao servidor, 1 check cinza)
+   * 2 = SENT (recebido pelo servidor, 1 check cinza)
+   * 3 = DELIVERED (entregue ao destinatário, 2 checks cinza)
+   * 4 = READ (lido pelo destinatário, 2 checks azuis)
+   * 5 = PLAYED (áudio/vídeo reproduzido, 2 checks azuis)
    */
   private mapAckToStatus(ack?: number): string {
     switch (ack) {
-      case 0: return 'ERROR';
-      case 1: return 'PENDING';
-      case 2: return 'SENT';
-      case 3: return 'DELIVERED';
-      case 4: return 'READ';
-      case 5: return 'PLAYED';
+      case -1: return 'ERROR';
+      case 0: return 'PENDING';      // Relógio (aguardando envio)
+      case 1: return 'SENT';          // 1 check cinza
+      case 2: return 'SENT';          // 1 check cinza (servidor recebeu)
+      case 3: return 'DELIVERED';     // 2 checks cinza
+      case 4: return 'READ';          // 2 checks azuis
+      case 5: return 'PLAYED';        // 2 checks azuis + ícone play
       default: return 'SENT';
     }
   }

@@ -22,8 +22,12 @@ interface WebSocketEvents {
   onMessageStatus?: (data: { messageIds: string[]; status: string }) => void;
   onConversationUpdate?: (conversationId: string) => void;
   onTyping?: (data: { contactId: string; isTyping: boolean; isRecording: boolean }) => void;
-  onPresence?: (data: { contactId: string; state: string }) => void;
-  onReaction?: (data: { messageId: string; from: string; emoji: string }) => void;
+  onPresence?: (data: { contactId: string; state: string; isOnline: boolean; isTyping: boolean; isRecording: boolean }) => void;
+  onReaction?: (data: { messageId: string; emoji: string; timestamp: Date }) => void;
+  // ✅ NOVOS EVENTOS NATIVOS
+  onMessageRevoked?: (data: { messageId: string; from: string; to: string }) => void;
+  onMessageEdited?: (data: { chatId: string; messageId: string; newContent: string; timestamp: Date }) => void;
+  onStateChange?: (state: string) => void;
 }
 
 export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
@@ -89,6 +93,25 @@ export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
     socket.on('whatsapp:reaction', (data) => {
       if (eventsRef.current.onReaction) {
         eventsRef.current.onReaction(data);
+      }
+    });
+
+    // ✅ NOVOS EVENTOS NATIVOS
+    socket.on('message:revoked', (data) => {
+      if (eventsRef.current.onMessageRevoked) {
+        eventsRef.current.onMessageRevoked(data);
+      }
+    });
+
+    socket.on('message:edited', (data) => {
+      if (eventsRef.current.onMessageEdited) {
+        eventsRef.current.onMessageEdited(data);
+      }
+    });
+
+    socket.on('whatsapp:state-change', (state) => {
+      if (eventsRef.current.onStateChange) {
+        eventsRef.current.onStateChange(state);
       }
     });
 
