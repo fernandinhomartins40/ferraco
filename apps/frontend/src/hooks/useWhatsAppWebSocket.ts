@@ -56,16 +56,32 @@ export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
 
     // WhatsApp events
     if (events.onNewMessage) {
-      socket.on('message:new', events.onNewMessage);
+      socket.on('message:new', (data) => {
+        console.log('🔍 [DEBUG] EVENT message:new RECEBIDO:', data);
+        events.onNewMessage(data);
+      });
+    } else {
+      console.warn('⚠️ onNewMessage não foi fornecido ao hook');
     }
 
     if (events.onMessageStatus) {
-      socket.on('message:status', events.onMessageStatus);
+      socket.on('message:status', (data) => {
+        console.log('🔍 [DEBUG] EVENT message:status RECEBIDO:', data);
+        events.onMessageStatus(data);
+      });
     }
 
     if (events.onConversationUpdate) {
-      socket.on('conversation:update', events.onConversationUpdate);
+      socket.on('conversation:update', (conversationId) => {
+        console.log('🔍 [DEBUG] EVENT conversation:update RECEBIDO:', conversationId);
+        events.onConversationUpdate(conversationId);
+      });
     }
+
+    // 🔍 DEBUG: Escutar TODOS os eventos para debugging
+    socket.onAny((eventName, ...args) => {
+      console.log(`🔍 [DEBUG] EVENTO WEBSOCKET: ${eventName}`, args);
+    });
 
     // Extended WPPConnect events
     if (events.onTyping) {
