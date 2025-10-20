@@ -301,6 +301,9 @@ class WhatsAppService {
 
     // Listener para todas as mensagens
     this.client.onMessage(async (message: Message) => {
+      // 🔍 DEBUG CRÍTICO: Log de TODAS as mensagens que chegam (antes de qualquer filtro)
+      logger.info(`🔍 [DEBUG] MENSAGEM RECEBIDA - from: ${message.from}, fromMe: ${message.fromMe}, isGroup: ${message.isGroupMsg}, body: ${message.body?.substring(0, 30) || '(vazio)'}`);
+
       // ✅ MELHORIA: Implementar retry com exponential backoff
       const maxRetries = 3;
       let attempt = 0;
@@ -308,8 +311,19 @@ class WhatsAppService {
 
       while (attempt < maxRetries) {
         try {
-          // Ignorar mensagens de grupo, status/broadcast e mensagens enviadas por nós
-          if (message.isGroupMsg || message.fromMe || message.from === 'status@broadcast') {
+          // Filtros de mensagens
+          if (message.isGroupMsg) {
+            logger.debug(`⏭️  Ignorando mensagem de grupo: ${message.from}`);
+            return;
+          }
+
+          if (message.from === 'status@broadcast') {
+            logger.debug(`⏭️  Ignorando status/broadcast`);
+            return;
+          }
+
+          if (message.fromMe) {
+            logger.debug(`⏭️  Ignorando mensagem enviada por nós (fromMe=true): ${message.from}`);
             return;
           }
 
