@@ -301,49 +301,81 @@ class WhatsAppService {
 
     // Listener para todas as mensagens
     this.client.onMessage(async (message: Message) => {
-      try {
-        // Ignorar mensagens de grupo, status/broadcast e mensagens enviadas por nós
-        if (message.isGroupMsg || message.fromMe || message.from === 'status@broadcast') {
-          return;
-        }
+      // ✅ MELHORIA: Implementar retry com exponential backoff
+      const maxRetries = 3;
+      let attempt = 0;
+      let lastError: any = null;
 
-        logger.info(`📩 Mensagem recebida de ${message.from}: ${message.body}`);
-
-        // Normalizar número de telefone
-        const normalizedPhone = message.from.replace('@c.us', '').replace(/\D/g, '');
-
-        // ⭐ NOVO: Verificar se existe sessão ativa do bot do WhatsApp
+      while (attempt < maxRetries) {
         try {
-          const { prisma } = await import('../config/database');
-
-          const botSession = await prisma.whatsAppBotSession.findFirst({
-            where: {
-              phone: normalizedPhone,
-              isActive: true,
-              handedOffToHuman: false,
-            },
-          });
-
-          // Se houver sessão ativa do bot, rotear para o bot
-          if (botSession) {
-            logger.info(`🤖 Mensagem roteada para bot do WhatsApp - Sessão ${botSession.id}`);
-
-            const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
-            await whatsappBotService.processUserMessage(normalizedPhone, message.body);
+          // Ignorar mensagens de grupo, status/broadcast e mensagens enviadas por nós
+          if (message.isGroupMsg || message.fromMe || message.from === 'status@broadcast') {
             return;
           }
-        } catch (error) {
-          logger.error('Erro ao verificar sessão do bot:', error);
-          // Continuar para atendimento humano em caso de erro
+
+          logger.info(`📩 Mensagem recebida de ${message.from}: ${message.body?.substring(0, 50) || '(sem conteúdo)'}${message.body?.length > 50 ? '...' : ''}`);
+
+          // Normalizar número de telefone
+          const normalizedPhone = message.from.replace('@c.us', '').replace(/\D/g, '');
+
+          // ⭐ NOVO: Verificar se existe sessão ativa do bot do WhatsApp
+          try {
+            const { prisma } = await import('../config/database');
+
+            const botSession = await prisma.whatsAppBotSession.findFirst({
+              where: {
+                phone: normalizedPhone,
+                isActive: true,
+                handedOffToHuman: false,
+              },
+            });
+
+            // Se houver sessão ativa do bot, rotear para o bot
+            if (botSession) {
+              logger.info(`🤖 Mensagem roteada para bot do WhatsApp - Sessão ${botSession.id}`);
+
+              const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
+              await whatsappBotService.processUserMessage(normalizedPhone, message.body);
+              return; // Sucesso - sair do loop
+            }
+          } catch (error) {
+            logger.error('Erro ao verificar sessão do bot:', error);
+            // Continuar para atendimento humano em caso de erro
+          }
+
+          // Caso contrário, rotear para atendimento humano (sistema de chat existente)
+          logger.info(`👤 Mensagem roteada para atendimento humano`);
+          await whatsappChatService.handleIncomingMessage(message);
+
+          // ✅ Sucesso - sair do loop
+          return;
+
+        } catch (error: any) {
+          lastError = error;
+          attempt++;
+
+          logger.error(`❌ Erro ao processar mensagem (tentativa ${attempt}/${maxRetries}):`, {
+            error: error.message,
+            messageId: message?.id,
+            from: message?.from,
+          });
+
+          // Se ainda há tentativas, aguardar antes de tentar novamente
+          if (attempt < maxRetries) {
+            const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Exponential backoff (max 5s)
+            logger.info(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
         }
-
-        // Caso contrário, rotear para atendimento humano (sistema de chat existente)
-        logger.info(`👤 Mensagem roteada para atendimento humano`);
-        await whatsappChatService.handleIncomingMessage(message);
-
-      } catch (error) {
-        logger.error('Erro ao processar mensagem:', error);
       }
+
+      // ⚠️ CRÍTICO: Todas as tentativas falharam
+      logger.error(`❌ FALHA CRÍTICA: Não foi possível processar mensagem após ${maxRetries} tentativas`, {
+        messageId: message?.id,
+        from: message?.from,
+        finalError: lastError?.message,
+        action: 'Mensagem será perdida - considere implementar fila de mensagens',
+      });
     });
 
     logger.info('✅ Listeners de mensagens configurados');
@@ -2032,9 +2064,18 @@ class WhatsAppService {
   }
 
   /**
-   * Obter status da conexão
+   * ✅ MELHORIA: Obter status da conexão com informações de WebSocket
    */
-  getStatus(): { connected: boolean; hasQR: boolean; message: string; isInitializing: boolean } {
+  getStatus(): {
+    connected: boolean;
+    hasQR: boolean;
+    message: string;
+    isInitializing: boolean;
+    socketIO: {
+      initialized: boolean;
+      connectedClients: number;
+    };
+  } {
     let message = 'Inicializando...';
 
     if (this.isConnected) {
@@ -2049,11 +2090,25 @@ class WhatsAppService {
       message = 'Aguardando QR Code...';
     }
 
+    // ✅ MELHORIA: Incluir informações de WebSocket
+    let connectedClients = 0;
+    try {
+      if (this.io && this.io.engine) {
+        connectedClients = this.io.engine.clientsCount || 0;
+      }
+    } catch (error) {
+      // Silencioso - apenas retornar 0
+    }
+
     return {
       connected: this.isConnected,
       hasQR: this.qrCode !== null,
       message,
       isInitializing: this.isInitializing,
+      socketIO: {
+        initialized: this.io !== null,
+        connectedClients,
+      },
     };
   }
 

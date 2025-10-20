@@ -456,17 +456,42 @@ export class WhatsAppChatService {
 
       if (existingMessage) {
         logger.debug(`⚠️  Mensagem ${message.id} já existe, ignorando duplicata`);
+
+        // ✅ MELHORIA: Mesmo sendo duplicata, emitir WebSocket para garantir que frontend receba
+        if (this.io) {
+          this.io.sockets.emit('message:new', existingMessage);
+          this.io.sockets.emit('conversation:update', conversation.id);
+          logger.debug(`📡 WebSocket emitido para mensagem duplicada (garantia de entrega)`);
+        }
         return;
       }
 
-      // 5. Salvar mensagem
+      // 5. ✅ MELHORIA: Processar mídia com tratamento de erro robusto
+      let mediaUrl: string | null = null;
+      if (message.mimetype) {
+        try {
+          logger.debug(`📎 Processando mídia: ${message.mimetype}`);
+          mediaUrl = await this.getMediaUrl(message);
+          logger.debug(`✅ Mídia processada com sucesso`);
+        } catch (mediaError: any) {
+          // ⭐ CRÍTICO: Não bloquear salvamento se mídia falhar
+          logger.error(`❌ Erro ao processar mídia, salvando mensagem sem mídia:`, {
+            error: mediaError.message,
+            messageId: message.id,
+            mimetype: message.mimetype,
+          });
+          mediaUrl = null; // Salvar mensagem sem mídia
+        }
+      }
+
+      // 6. Salvar mensagem
       const savedMessage = await prisma.whatsAppMessage.create({
         data: {
           conversationId: conversation.id,
           contactId: contact.id,
           type: messageType,
           content: message.body || '',
-          mediaUrl: message.mimetype ? await this.getMediaUrl(message) : null,
+          mediaUrl,
           mediaType: message.mimetype || null,
           fromMe: isFromMe,
           status: MessageStatus.DELIVERED,
@@ -479,7 +504,7 @@ export class WhatsAppChatService {
         },
       });
 
-      // 5. Atualizar conversa com última mensagem
+      // 7. Atualizar conversa com última mensagem
       await prisma.whatsAppConversation.update({
         where: { id: conversation.id },
         data: {
@@ -489,16 +514,43 @@ export class WhatsAppChatService {
         },
       });
 
-      // 6. Emitir evento WebSocket (broadcast para todos os clientes)
+      // 8. ✅ MELHORIA: Emitir evento WebSocket com validação e logs robustos
       if (this.io) {
-        // Emit para todos os sockets conectados
-        this.io.sockets.emit('message:new', savedMessage);
-        this.io.sockets.emit('conversation:update', conversation.id);
+        try {
+          const connectedClients = this.io.engine.clientsCount;
+          logger.info(`📡 Emitindo WebSocket para ${connectedClients} cliente(s) conectado(s)`);
+
+          // Emit para todos os sockets conectados
+          this.io.sockets.emit('message:new', savedMessage);
+          this.io.sockets.emit('conversation:update', conversation.id);
+
+          logger.info(`✅ WebSocket emitido: message:new (${savedMessage.id})`);
+        } catch (wsError: any) {
+          // ⭐ CRÍTICO: Não bloquear processamento se WebSocket falhar
+          logger.error(`❌ Erro ao emitir WebSocket (mensagem foi salva no BD):`, {
+            error: wsError.message,
+            messageId: savedMessage.id,
+          });
+        }
+      } else {
+        // ⚠️ ALERTA: WebSocket não inicializado
+        logger.warn(`⚠️  WebSocket não inicializado! Mensagem salva mas não enviada em tempo real.`, {
+          messageId: savedMessage.id,
+          solution: 'Verifique se setSocketServer() foi chamado na inicialização',
+        });
       }
 
-      logger.info(`✅ Mensagem salva: ${savedMessage.id}`);
-    } catch (error) {
-      logger.error('❌ Erro ao processar mensagem:', error);
+      logger.info(`✅ Mensagem processada com sucesso: ${savedMessage.id}`);
+    } catch (error: any) {
+      logger.error('❌ Erro crítico ao processar mensagem:', {
+        error: error.message,
+        stack: error.stack,
+        messageFrom: message?.from,
+        messageId: message?.id,
+      });
+
+      // ✅ MELHORIA: Re-throw para permitir retry em níveis superiores se necessário
+      throw error;
     }
   }
 
