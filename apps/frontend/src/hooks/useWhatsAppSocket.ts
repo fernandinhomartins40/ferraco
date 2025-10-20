@@ -15,7 +15,11 @@ import {
 } from '@/types/whatsapp.types';
 import { whatsappReducer, initialWhatsAppState, mapSocketStatusToAction } from '@/reducers/whatsapp.reducer';
 
+// ✅ FIX: Garantir URL correta em produção
 const BACKEND_URL = import.meta.env.VITE_API_URL || window.location.origin;
+console.log('🔌 [Socket.IO] VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('🔌 [Socket.IO] window.location.origin:', window.location.origin);
+console.log('🔌 [Socket.IO] BACKEND_URL final:', BACKEND_URL);
 
 // Manter compatibilidade com Fase 2
 export type WhatsAppStatus =
@@ -59,11 +63,14 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
 
     const socket = io(BACKEND_URL, {
       path: '/socket.io/',
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // ✅ FIX: polling primeiro (mais compatível)
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 10,
       timeout: 20000,
+      withCredentials: true, // ✅ FIX: Enviar cookies para autenticação
+      autoConnect: true,
+      forceNew: false,
     });
 
     socketRef.current = socket;
@@ -71,6 +78,7 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
     // Eventos de conexão Socket.IO
     socket.on('connect', () => {
       console.log('✅ [Socket.IO] Conectado com ID:', socket.id);
+      console.log('✅ [Socket.IO] Transport:', socket.io.engine.transport.name);
     });
 
     socket.on('disconnect', (reason) => {
@@ -79,6 +87,20 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
 
     socket.on('connect_error', (error) => {
       console.error('❌ [Socket.IO] Erro de conexão:', error);
+      console.error('❌ [Socket.IO] Erro detalhe:', error.message);
+      console.error('❌ [Socket.IO] Tentando URL:', BACKEND_URL);
+    });
+
+    socket.io.on('error', (error) => {
+      console.error('❌ [Socket.IO Engine] Erro:', error);
+    });
+
+    socket.io.on('reconnect_attempt', (attempt) => {
+      console.log(`🔄 [Socket.IO] Tentativa de reconexão ${attempt}`);
+    });
+
+    socket.io.on('reconnect_failed', () => {
+      console.error('❌ [Socket.IO] Falha em todas as tentativas de reconexão');
     });
 
     // Eventos do WhatsApp - usar funções inline para evitar dependências
