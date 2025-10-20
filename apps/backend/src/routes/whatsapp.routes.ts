@@ -286,6 +286,39 @@ router.post('/reinitialize', authenticate, async (req: Request, res: Response) =
 // ============================================================================
 
 /**
+ * GET /api/whatsapp/conversations
+ * Compatibilidade: redireciona para lógica v2
+ */
+router.get('/conversations', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    const limit = parseInt(req.query.limit as string) || 50;
+    const conversations = await whatsappService.getAllConversations(limit);
+
+    res.json({
+      success: true,
+      conversations,
+      total: conversations.length,
+      source: 'whatsapp-live',
+    });
+
+  } catch (error: any) {
+    logger.error('Erro ao listar conversas:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao listar conversas',
+      message: error.message,
+    });
+  }
+});
+
+/**
  * ✅ NOVO: GET /api/whatsapp/conversations/v2
  * Busca conversas DIRETAMENTE do WhatsApp (stateless)
  * Enriquece com metadata do PostgreSQL (tags, anotações, vínculo CRM)
@@ -319,20 +352,6 @@ router.get('/conversations/v2', authenticate, async (req: Request, res: Response
       message: error.message,
     });
   }
-});
-
-/**
- * DEPRECATED: GET /api/whatsapp/conversations
- * ⚠️ Removido - Arquitetura Stateless 2025
- * USE: /api/whatsapp/conversations/v2
- */
-router.get('/conversations', authenticate, async (req: Request, res: Response) => {
-  return res.status(410).json({
-    success: false,
-    error: 'Endpoint removido',
-    message: 'Este endpoint foi removido na arquitetura stateless 2025. Use /api/whatsapp/conversations/v2',
-    newEndpoint: '/api/whatsapp/conversations/v2',
-  });
 });
 
 /**
@@ -373,134 +392,8 @@ router.get('/conversations/:phone/messages/v2', authenticate, async (req: Reques
 });
 
 /**
- * DEPRECATED: GET /api/whatsapp/conversations/:id
- * ⚠️ Removido - Arquitetura Stateless 2025
- * USE: /api/whatsapp/conversations/v2
- */
-router.get('/conversations/:id', authenticate, async (req: Request, res: Response) => {
-  return res.status(410).json({
-    success: false,
-    error: 'Endpoint removido',
-    message: 'Este endpoint foi removido na arquitetura stateless 2025. Use /api/whatsapp/conversations/v2',
-    newEndpoint: '/api/whatsapp/conversations/v2',
-  });
-});
-
-/**
- * DEPRECATED: GET /api/whatsapp/conversations/:id/messages
- * ⚠️ Removido - Arquitetura Stateless 2025
- * USE: /api/whatsapp/conversations/:phone/messages/v2
- */
-router.get('/conversations/:id/messages', authenticate, async (req: Request, res: Response) => {
-  return res.status(410).json({
-    success: false,
-    error: 'Endpoint removido',
-    message: 'Este endpoint foi removido na arquitetura stateless 2025. Use /api/whatsapp/conversations/:phone/messages/v2',
-    newEndpoint: '/api/whatsapp/conversations/:phone/messages/v2',
-  });
-});
-
-/**
- * DEPRECATED: POST /api/whatsapp/conversations/:id/load-history
- * ⚠️ Removido - Arquitetura Stateless 2025
- * Mensagens são carregadas on-demand do WhatsApp
- */
-router.post('/conversations/:id/load-history', authenticate, async (req: Request, res: Response) => {
-  return res.status(410).json({
-    success: false,
-    error: 'Endpoint removido',
-    message: 'Arquitetura stateless não persiste mensagens. Use GET /api/whatsapp/conversations/:phone/messages/v2',
-    newEndpoint: '/api/whatsapp/conversations/:phone/messages/v2',
-  });
-});
-
-/**
- * DEPRECATED: POST /api/whatsapp/conversations/:id/load-incremental
- * ⚠️ Removido - Arquitetura Stateless 2025
- */
-router.post('/conversations/:id/load-incremental', authenticate, async (req: Request, res: Response) => {
-  return res.status(410).json({
-    success: false,
-    error: 'Endpoint removido',
-    message: 'Arquitetura stateless não persiste mensagens. Use GET /api/whatsapp/conversations/:phone/messages/v2',
-    newEndpoint: '/api/whatsapp/conversations/:phone/messages/v2',
-  });
-});
-
-/**
- * POST /api/whatsapp/sync-chats
- * Sincronizar todos os chats e contatos do WhatsApp
- */
-router.post('/sync-chats', authenticate, async (req: Request, res: Response) => {
-  try {
-    if (!whatsappService.isWhatsAppConnected()) {
-      return res.status(400).json({
-        success: false,
-        message: 'WhatsApp não está conectado',
-      });
-    }
-
-    // Sincronizar em background
-    whatsappChatService.syncAllChatsAndContacts().catch((error) => {
-      logger.error('Erro ao sincronizar chats em background:', error);
-    });
-
-    res.json({
-      success: true,
-      message: 'Sincronizando chats e contatos em background...',
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao iniciar sincronização:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao sincronizar chats',
-      message: error.message,
-    });
-  }
-});
-
-/**
- * POST /api/whatsapp/conversations/:id/read
- * Marcar mensagens de uma conversa como lidas
- *
- * Body:
- * {
- *   "messageIds": ["msg1", "msg2", ...]  // Opcional: IDs específicos
- * }
- */
-router.post('/conversations/:id/read', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { messageIds } = req.body;
-
-    if (messageIds && Array.isArray(messageIds)) {
-      // Marcar mensagens específicas
-      await whatsappChatService.markAsRead(messageIds);
-    }
-
-    // Atualizar contador de não lidas
-    const unreadCount = await whatsappChatService.updateUnreadCount(id);
-
-    res.json({
-      success: true,
-      message: 'Mensagens marcadas como lidas',
-      unreadCount,
-    });
-
-  } catch (error: any) {
-    logger.error('Erro ao marcar mensagens como lidas:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao marcar mensagens como lidas',
-      message: error.message,
-    });
-  }
-});
-
-/**
  * GET /api/whatsapp/search
- * Buscar conversas por nome ou telefone
+ * Buscar conversas por nome ou telefone (stateless - busca direto do WhatsApp)
  *
  * Query params:
  * - q: termo de busca
@@ -516,7 +409,12 @@ router.get('/search', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    const conversations = await whatsappChatService.searchConversations(query.trim());
+    // Na arquitetura stateless, buscar todas conversas e filtrar
+    const allConversations = await whatsappService.getAllConversations(100);
+    const conversations = allConversations.filter(conv =>
+      conv.name?.toLowerCase().includes(query.toLowerCase()) ||
+      conv.phone.includes(query)
+    );
 
     res.json({
       success: true,
