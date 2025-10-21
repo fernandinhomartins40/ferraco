@@ -248,88 +248,90 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredContacts.map((contact) =>
-                    contact && contact.id ? (
-                    <div
-                      key={contact.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex items-center gap-3 flex-1">
-                        {contact.profilePicUrl ? (
-                          <img
-                            src={contact.profilePicUrl}
-                            alt={contact.name}
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                            <User className="h-5 w-5 text-gray-500" />
-                          </div>
-                        )}
+                  {filteredContacts.map((contact) => {
+                    if (!contact || !contact.id) return null;
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium truncate">{contact.name}</p>
-                            {contact.isBlocked && (
-                              <Badge variant="destructive" className="text-xs">
-                                Bloqueado
-                              </Badge>
+                    return (
+                      <div
+                        key={contact.id}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          {contact.profilePicUrl ? (
+                            <img
+                              src={contact.profilePicUrl}
+                              alt={contact.name}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                              <User className="h-5 w-5 text-gray-500" />
+                            </div>
+                          )}
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{contact.name}</p>
+                              {contact.isBlocked && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Bloqueado
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-500">{contact.phone}</p>
+                            {contact.status && (
+                              <p className="text-xs text-gray-400 italic truncate">
+                                {contact.status}
+                              </p>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500">{contact.phone}</p>
-                          {contact.status && (
-                            <p className="text-xs text-gray-400 italic truncate">
-                              {contact.status}
-                            </p>
-                          )}
                         </div>
-                      </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" disabled={isLoading}>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleViewContactDetails(contact)}
-                          >
-                            <User className="mr-2 h-4 w-4" />
-                            Ver Detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              window.open(
-                                `https://wa.me/${contact.phone}`,
-                                '_blank'
-                              )
-                            }
-                          >
-                            <Phone className="mr-2 h-4 w-4" />
-                            Abrir Conversa
-                          </DropdownMenuItem>
-                          {contact.isBlocked ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" disabled={isLoading}>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => handleUnblockContact(contact)}
+                              onClick={() => handleViewContactDetails(contact)}
                             >
-                              <UserCheck className="mr-2 h-4 w-4" />
-                              Desbloquear
+                              <User className="mr-2 h-4 w-4" />
+                              Ver Detalhes
                             </DropdownMenuItem>
-                          ) : (
                             <DropdownMenuItem
-                              onClick={() => handleBlockContact(contact)}
-                              className="text-red-600"
+                              onClick={() =>
+                                window.open(
+                                  `https://wa.me/${contact.phone}`,
+                                  '_blank'
+                                )
+                              }
                             >
-                              <UserX className="mr-2 h-4 w-4" />
-                              Bloquear
+                              <Phone className="mr-2 h-4 w-4" />
+                              Abrir Conversa
                             </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    ) : null
-                  )}
+                            {contact.isBlocked ? (
+                              <DropdownMenuItem
+                                onClick={() => handleUnblockContact(contact)}
+                              >
+                                <UserCheck className="mr-2 h-4 w-4" />
+                                Desbloquear
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => handleBlockContact(contact)}
+                                className="text-red-600"
+                              >
+                                <UserX className="mr-2 h-4 w-4" />
+                                Bloquear
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>

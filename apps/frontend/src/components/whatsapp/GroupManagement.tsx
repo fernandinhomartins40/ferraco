@@ -365,23 +365,25 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
                 {mode === 'create' ? 'Selecionar Participantes *' : 'Adicionar Participantes'}
               </Label>
               <ScrollArea className="h-48 border rounded-md p-2 mt-2">
-                {Array.isArray(contacts) && contacts.map((contact) =>
-                  contact && contact.id ? (
-                  <div
-                    key={contact.id}
-                    className="flex items-center space-x-2 py-2 hover:bg-gray-50 rounded px-2"
-                  >
-                    <Checkbox
-                      checked={contact.selected}
-                      onCheckedChange={() => toggleContactSelection(contact.id)}
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium">{contact.name}</p>
-                      <p className="text-sm text-gray-500">{contact.phone}</p>
+                {Array.isArray(contacts) && contacts.map((contact) => {
+                  if (!contact || !contact.id) return null;
+
+                  return (
+                    <div
+                      key={contact.id}
+                      className="flex items-center space-x-2 py-2 hover:bg-gray-50 rounded px-2"
+                    >
+                      <Checkbox
+                        checked={contact.selected}
+                        onCheckedChange={() => toggleContactSelection(contact.id)}
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">{contact.name}</p>
+                        <p className="text-sm text-gray-500">{contact.phone}</p>
+                      </div>
                     </div>
-                  </div>
-                  ) : null
-                ))}
+                  );
+                })}
               </ScrollArea>
               <p className="text-sm text-gray-500 mt-2">
                 {selectedContacts.length} contato(s) selecionado(s)
@@ -404,58 +406,60 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
           <TabsContent value="members" className="mt-4">
             <ScrollArea className="h-96">
               <div className="space-y-2">
-                {Array.isArray(members) && members.map((member) =>
-                  member && member.id ? (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{member.name}</p>
-                        {member.isAdmin && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Crown className="h-3 w-3 mr-1" />
-                            Admin
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500">{member.phone}</p>
-                    </div>
+                {Array.isArray(members) && members.map((member) => {
+                  if (!member || !member.id) return null;
 
-                    <div className="flex gap-2">
-                      {member.isAdmin ? (
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{member.name}</p>
+                          {member.isAdmin && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Crown className="h-3 w-3 mr-1" />
+                              Admin
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500">{member.phone}</p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        {member.isAdmin ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDemoteAdmin(member.phone)}
+                            disabled={isLoading}
+                          >
+                            Rebaixar
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePromoteAdmin(member.phone)}
+                            disabled={isLoading}
+                          >
+                            <Crown className="h-4 w-4 mr-1" />
+                            Promover
+                          </Button>
+                        )}
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={() => handleDemoteAdmin(member.phone)}
+                          variant="destructive"
+                          onClick={() => handleRemoveMember(member.id, member.phone)}
                           disabled={isLoading}
                         >
-                          Rebaixar
+                          <UserMinus className="h-4 w-4" />
                         </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handlePromoteAdmin(member.phone)}
-                          disabled={isLoading}
-                        >
-                          <Crown className="h-4 w-4 mr-1" />
-                          Promover
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRemoveMember(member.id, member.phone)}
-                        disabled={isLoading}
-                      >
-                        <UserMinus className="h-4 w-4" />
-                      </Button>
+                      </div>
                     </div>
-                  </div>
-                  ) : null
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </TabsContent>
