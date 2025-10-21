@@ -350,6 +350,21 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
 
           {/* Tab: Verify */}
           <TabsContent value="verify" className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-start gap-2">
+                <Search className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">
+                    Verificação Real via WhatsApp
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Esta função consulta diretamente os servidores do WhatsApp para verificar
+                    se o número informado possui uma conta ativa registrada.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="verifyNumber">Número do WhatsApp</Label>
               <p className="text-sm text-gray-500 mb-2">
@@ -366,13 +381,23 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
                       handleVerifyNumber();
                     }
                   }}
+                  disabled={isLoading}
                 />
                 <Button
                   onClick={handleVerifyNumber}
                   disabled={isLoading || !verifyNumber.trim()}
                 >
-                  <Search className="h-4 w-4 mr-2" />
-                  Verificar
+                  {isLoading ? (
+                    <>
+                      <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Verificando...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 mr-2" />
+                      Verificar
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -394,26 +419,64 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
 
                   <div className="flex-1">
                     <p
-                      className={`font-semibold ${
+                      className={`font-semibold text-lg ${
                         verifyResult.exists ? 'text-green-900' : 'text-red-900'
                       }`}
                     >
                       {verifyResult.exists
-                        ? '✅ Número existe no WhatsApp!'
-                        : '❌ Número não encontrado'}
-                    </p>
-                    <p
-                      className={`text-sm mt-1 ${
-                        verifyResult.exists ? 'text-green-700' : 'text-red-700'
-                      }`}
-                    >
-                      {verifyResult.exists
-                        ? `Este número está registrado no WhatsApp com o ID: ${verifyResult.jid}`
-                        : 'Este número não possui uma conta do WhatsApp ativa'}
+                        ? '✅ Número Verificado com Sucesso!'
+                        : '❌ Número Não Registrado'}
                     </p>
 
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className={`font-medium ${
+                          verifyResult.exists ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                          Número consultado:
+                        </span>
+                        <span className={`font-mono ${
+                          verifyResult.exists ? 'text-green-700' : 'text-red-700'
+                        }`}>
+                          {verifyResult.phoneNumber || verifyNumber}
+                        </span>
+                      </div>
+
+                      {verifyResult.formatted && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="font-medium text-gray-700">
+                            Número formatado:
+                          </span>
+                          <span className="font-mono text-gray-600">
+                            {verifyResult.formatted}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className={`font-medium ${
+                          verifyResult.exists ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                          Status:
+                        </span>
+                        <Badge variant={verifyResult.exists ? 'default' : 'destructive'}>
+                          {verifyResult.exists ? 'ATIVO NO WHATSAPP' : 'NÃO ENCONTRADO'}
+                        </Badge>
+                      </div>
+
+                      {verifyResult.status?.numberExists !== undefined && (
+                        <p className={`text-xs mt-2 ${
+                          verifyResult.exists ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {verifyResult.exists
+                            ? '✓ Verificado diretamente nos servidores do WhatsApp'
+                            : '✗ Este número não possui uma conta WhatsApp registrada'}
+                        </p>
+                      )}
+                    </div>
+
                     {verifyResult.exists && (
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-4 flex gap-2">
                         <Button
                           size="sm"
                           onClick={() =>
