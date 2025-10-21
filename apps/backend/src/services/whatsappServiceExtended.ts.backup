@@ -1,0 +1,837 @@
+/**
+ * WhatsApp Service - Extended Functionalities
+ * TODAS as 97 funcionalidades nativas do WPPConnect organizadas por categoria
+ */
+
+import type { Whatsapp } from '@wppconnect-team/wppconnect';
+import { logger } from '../utils/logger';
+
+export class WhatsAppServiceExtended {
+  constructor(private client: Whatsapp) {}
+
+  // ============================================================================
+  // 📨 MENSAGENS - 27 FUNÇÕES ADICIONAIS
+  // ============================================================================
+
+  /**
+   * Enviar localização
+   */
+  async sendLocation(to: string, latitude: string, longitude: string, title: string): Promise<any> {
+    try {
+      const result = await this.client.sendLocation(to, latitude, longitude, title);
+      logger.info(`📍 Localização enviada para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar localização:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar cartão de contato (vCard)
+   */
+  async sendContactVcard(to: string, contactId: string, name?: string): Promise<any> {
+    try {
+      const result = await this.client.sendContactVcard(to, contactId, name);
+      logger.info(`👤 Contato enviado para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar contato:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar lista de contatos (vCard)
+   */
+  async sendContactVcardList(to: string, contacts: (string | { id: string; name: string })[]): Promise<any> {
+    try {
+      const result = await this.client.sendContactVcardList(to, contacts);
+      logger.info(`👥 Lista de contatos enviada para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar lista de contatos:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar vídeo como GIF
+   */
+  async sendVideoAsGif(to: string, filePath: string, filename?: string, caption?: string): Promise<any> {
+    try {
+      const result = await this.client.sendVideoAsGif(to, filePath, filename, caption);
+      logger.info(`🎬 Vídeo como GIF enviado para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar vídeo como GIF:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar vídeo como GIF from base64
+   */
+  async sendVideoAsGifFromBase64(to: string, base64: string, filename: string, caption?: string): Promise<any> {
+    try {
+      const result = await this.client.sendVideoAsGifFromBase64(to, base64, filename, caption);
+      logger.info(`🎬 Vídeo como GIF (base64) enviado para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar vídeo como GIF base64:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar imagem como sticker
+   */
+  async sendImageAsSticker(to: string, pathOrBase64: string, options?: any): Promise<any> {
+    try {
+      const result = await this.client.sendImageAsSticker(to, pathOrBase64, options);
+      logger.info(`🎨 Sticker enviado para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar sticker:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar GIF como sticker animado
+   */
+  async sendImageAsStickerGif(to: string, pathOrBase64: string, options?: any): Promise<any> {
+    try {
+      const result = await this.client.sendImageAsStickerGif(to, pathOrBase64, options);
+      logger.info(`🎨 Sticker GIF enviado para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar sticker GIF:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar chave PIX (Brasil)
+   */
+  async sendPixKey(to: string, params: any, options?: any): Promise<any> {
+    try {
+      const result = await this.client.sendPixKey(to, params, options);
+      logger.info(`💰 Chave PIX enviada para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar PIX:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar PTT (áudio) from base64
+   */
+  async sendPttFromBase64(to: string, base64: string, filename: string, caption?: string, quotedMessageId?: string): Promise<any> {
+    try {
+      const result = await this.client.sendPttFromBase64(to, base64, filename, caption, quotedMessageId);
+      logger.info(`🎤 Áudio PTT (base64) enviado para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar PTT base64:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar imagem from base64
+   */
+  async sendImageFromBase64(to: string, base64: string, filename: string, caption?: string, quotedMessageId?: string): Promise<any> {
+    try {
+      const result = await this.client.sendImageFromBase64(to, base64, filename, caption, quotedMessageId);
+      logger.info(`🖼️ Imagem (base64) enviada para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar imagem base64:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar GIF
+   */
+  async sendGif(to: string, filePath: string, filename?: string, caption?: string): Promise<any> {
+    try {
+      const result = await this.client.sendGif(to, filePath, filename, caption);
+      logger.info(`🎥 GIF enviado para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar GIF:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar GIF from base64
+   */
+  async sendGifFromBase64(to: string, base64: string, filename: string, caption?: string): Promise<any> {
+    try {
+      const result = await this.client.sendGifFromBase64(to, base64, filename, caption);
+      logger.info(`🎥 GIF (base64) enviado para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar GIF base64:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Responder mensagem (deprecated - use sendText with quotedMsg)
+   */
+  async reply(to: string, content: string, quotedMsg: string): Promise<any> {
+    try {
+      const result = await this.client.reply(to, content, quotedMsg);
+      logger.info(`↩️ Resposta enviada para ${to}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao responder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Definir estado do chat (typing/recording)
+   */
+  async setChatState(chatId: string, state: any): Promise<void> {
+    try {
+      await this.client.setChatState(chatId, state);
+      logger.debug(`💬 Estado do chat ${chatId} definido como ${state}`);
+    } catch (error: any) {
+      logger.error('Erro ao definir estado do chat:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar mensagem com opções avançadas
+   */
+  async sendMessageOptions(chat: any, content: any, options?: any): Promise<any> {
+    try {
+      const result = await this.client.sendMessageOptions(chat, content, options);
+      logger.info(`📝 Mensagem com opções enviada`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao enviar mensagem com opções:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download de mídia
+   */
+  async downloadMedia(messageId: string): Promise<string> {
+    try {
+      return await this.client.downloadMedia(messageId);
+    } catch (error: any) {
+      logger.error('Erro ao fazer download de mídia:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Descriptografar arquivo
+   */
+  async decryptFile(message: any): Promise<Buffer> {
+    try {
+      return await this.client.decryptFile(message);
+    } catch (error: any) {
+      logger.error('Erro ao descriptografar arquivo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Buscar mensagem por ID
+   */
+  async getMessageById(messageId: string): Promise<any> {
+    try {
+      return await this.client.getMessageById(messageId);
+    } catch (error: any) {
+      logger.error('Erro ao buscar mensagem por ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter reações de uma mensagem
+   */
+  async getReactions(msgId: string): Promise<any> {
+    try {
+      return await this.client.getReactions(msgId);
+    } catch (error: any) {
+      logger.error('Erro ao obter reações:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter votos de uma enquete
+   */
+  async getVotes(msgId: string): Promise<any> {
+    try {
+      return await this.client.getVotes(msgId);
+    } catch (error: any) {
+      logger.error('Erro ao obter votos da enquete:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter plataforma da mensagem (android/iphone/web)
+   */
+  async getPlatformFromMessage(msgId: string): Promise<string> {
+    try {
+      return await this.client.getPlatformFromMessage(msgId);
+    } catch (error: any) {
+      logger.error('Erro ao obter plataforma da mensagem:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 👤 CONTATOS - 10 FUNÇÕES
+  // ============================================================================
+
+  /**
+   * Obter todos os contatos
+   */
+  async getAllContacts(): Promise<any[]> {
+    try {
+      const contacts = await this.client.getAllContacts();
+      logger.info(`📇 ${contacts.length} contatos obtidos`);
+      return contacts;
+    } catch (error: any) {
+      logger.error('Erro ao obter contatos:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter chat por ID
+   */
+  async getChatById(contactId: string): Promise<any> {
+    try {
+      return await this.client.getChatById(contactId);
+    } catch (error: any) {
+      logger.error('Erro ao obter chat por ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter status/bio do contato
+   */
+  async getStatus(contactId: string): Promise<any> {
+    try {
+      return await this.client.getStatus(contactId);
+    } catch (error: any) {
+      logger.error('Erro ao obter status do contato:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter foto de perfil do servidor
+   */
+  async getProfilePicFromServer(chatId: string): Promise<any> {
+    try {
+      return await this.client.getProfilePicFromServer(chatId);
+    } catch (error: any) {
+      logger.error('Erro ao obter foto de perfil:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verificar se contato está online
+   */
+  async getChatIsOnline(chatId: string): Promise<boolean> {
+    try {
+      return await this.client.getChatIsOnline(chatId);
+    } catch (error: any) {
+      logger.error('Erro ao verificar se está online:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter último visto
+   */
+  async getLastSeen(chatId: string): Promise<number | boolean> {
+    try {
+      return await this.client.getLastSeen(chatId);
+    } catch (error: any) {
+      logger.error('Erro ao obter último visto:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter lista de bloqueados
+   */
+  async getBlockList(): Promise<string[]> {
+    try {
+      return await this.client.getBlockList();
+    } catch (error: any) {
+      logger.error('Erro ao obter lista de bloqueados:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter todas mensagens não lidas
+   */
+  async getAllUnreadMessages(): Promise<any[]> {
+    try {
+      return await this.client.getAllUnreadMessages();
+    } catch (error: any) {
+      logger.error('Erro ao obter mensagens não lidas:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 📖 STATUS/STORIES - 4 FUNÇÕES
+  // ============================================================================
+
+  /**
+   * Enviar imagem para status
+   */
+  async sendImageStatus(pathOrBase64: string, options?: any): Promise<void> {
+    try {
+      await this.client.sendImageStatus(pathOrBase64, options);
+      logger.info(`📖 Imagem postada no status`);
+    } catch (error: any) {
+      logger.error('Erro ao postar imagem no status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar vídeo para status
+   */
+  async sendVideoStatus(pathOrBase64: string, options?: any): Promise<void> {
+    try {
+      await this.client.sendVideoStatus(pathOrBase64, options);
+      logger.info(`📖 Vídeo postado no status`);
+    } catch (error: any) {
+      logger.error('Erro ao postar vídeo no status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar texto para status
+   */
+  async sendTextStatus(text: string, options: { backgroundColor?: string; font?: number }): Promise<void> {
+    try {
+      await this.client.sendTextStatus(text, options);
+      logger.info(`📖 Texto postado no status`);
+    } catch (error: any) {
+      logger.error('Erro ao postar texto no status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marcar status como lido
+   */
+  async sendReadStatus(chatId: string, statusId: string): Promise<void> {
+    try {
+      await this.client.sendReadStatus(chatId, statusId);
+      logger.debug(`👁️ Status marcado como lido`);
+    } catch (error: any) {
+      logger.error('Erro ao marcar status como lido:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 🛍️ CATÁLOGO/PRODUTOS (WhatsApp Business) - 8 FUNÇÕES
+  // ============================================================================
+
+  /**
+   * Criar produto no catálogo
+   */
+  async createProduct(name: string, image: string, description: string, price: number, isHidden: boolean, url: string, retailerId: string, currency?: string): Promise<any> {
+    try {
+      const result = await this.client.createProduct(name, image, description, price, isHidden, url, retailerId, currency || 'BRL');
+      logger.info(`🛍️ Produto criado: ${name}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao criar produto:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter produtos do catálogo
+   */
+  async getProducts(id: string, qnt: number = 10): Promise<any[]> {
+    try {
+      return await this.client.getProducts(id, qnt);
+    } catch (error: any) {
+      logger.error('Erro ao obter produtos:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter produto por ID
+   */
+  async getProductById(id: string, productId: string): Promise<any> {
+    try {
+      return await this.client.getProductById(id, productId);
+    } catch (error: any) {
+      logger.error('Erro ao obter produto por ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Editar produto
+   */
+  async editProduct(productId: string, options: any): Promise<any> {
+    try {
+      const result = await this.client.editProduct(productId, options);
+      logger.info(`✏️ Produto editado: ${productId}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao editar produto:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletar produtos
+   */
+  async delProducts(productsId: string[]): Promise<any> {
+    try {
+      const result = await this.client.delProducts(productsId);
+      logger.info(`🗑️ ${productsId.length} produto(s) deletado(s)`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao deletar produtos:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter pedido (order)
+   */
+  async getOrder(msgId: string): Promise<any> {
+    try {
+      return await this.client.getOrder(msgId);
+    } catch (error: any) {
+      logger.error('Erro ao obter pedido:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 🏘️ COMUNIDADES (WhatsApp Communities) - 6 FUNÇÕES
+  // ============================================================================
+
+  /**
+   * Criar comunidade
+   */
+  async createCommunity(name: string, description: string, groupIds: string[]): Promise<any> {
+    try {
+      const result = await this.client.createCommunity(name, description, groupIds);
+      logger.info(`🏘️ Comunidade criada: ${name}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao criar comunidade:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Desativar comunidade
+   */
+  async deactivateCommunity(communityId: string): Promise<any> {
+    try {
+      const result = await this.client.deactivateCommunity(communityId);
+      logger.info(`🏘️ Comunidade desativada: ${communityId}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao desativar comunidade:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Adicionar grupos à comunidade
+   */
+  async addSubgroupsCommunity(communityId: string, groupsIds: string[]): Promise<any> {
+    try {
+      const result = await this.client.addSubgroupsCommunity(communityId, groupsIds);
+      logger.info(`🏘️ ${groupsIds.length} grupo(s) adicionado(s) à comunidade`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao adicionar grupos à comunidade:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remover grupos da comunidade
+   */
+  async removeSubgroupsCommunity(communityId: string, groupsIds: string[]): Promise<any> {
+    try {
+      const result = await this.client.removeSubgroupsCommunity(communityId, groupsIds);
+      logger.info(`🏘️ ${groupsIds.length} grupo(s) removido(s) da comunidade`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao remover grupos da comunidade:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Promover participante a admin da comunidade
+   */
+  async promoteCommunityParticipant(communityId: string, participantId: string | string[]): Promise<any> {
+    try {
+      const result = await this.client.promoteCommunityParticipant(communityId, participantId);
+      logger.info(`🏘️ Participante promovido a admin da comunidade`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao promover participante da comunidade:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remover admin de participante da comunidade
+   */
+  async demoteCommunityParticipant(communityId: string, participantId: string | string[]): Promise<any> {
+    try {
+      const result = await this.client.demoteCommunityParticipant(communityId, participantId);
+      logger.info(`🏘️ Admin removido de participante da comunidade`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao rebaixar participante da comunidade:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter participantes da comunidade
+   */
+  async getCommunityParticipants(communityId: string): Promise<any> {
+    try {
+      return await this.client.getCommunityParticipants(communityId);
+    } catch (error: any) {
+      logger.error('Erro ao obter participantes da comunidade:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 📞 CHAMADAS - 2 FUNÇÕES
+  // ============================================================================
+
+  /**
+   * Rejeitar chamada
+   */
+  async rejectCall(callId?: string): Promise<boolean> {
+    try {
+      const result = await this.client.rejectCall(callId);
+      logger.info(`📞 Chamada rejeitada${callId ? `: ${callId}` : ''}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao rejeitar chamada:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 🏷️ LABELS/ETIQUETAS - 5 FUNÇÕES
+  // ============================================================================
+
+  /**
+   * Obter todas as labels/etiquetas
+   */
+  async getLabels(): Promise<any[]> {
+    try {
+      return await this.client.getAllLabels();
+    } catch (error: any) {
+      logger.error('Erro ao obter labels:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Adicionar nova label
+   */
+  async addNewLabel(name: string): Promise<any> {
+    try {
+      const result = await this.client.addNewLabel(name);
+      logger.info(`🏷️ Label criada: ${name}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao criar label:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletar label
+   */
+  async deleteLabel(labelId: string): Promise<any> {
+    try {
+      const result = await this.client.deleteLabel(labelId);
+      logger.info(`🗑️ Label deletada: ${labelId}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao deletar label:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Adicionar ou remover labels em chat
+   */
+  async addOrRemoveLabels(chatId: string, labelIds: string[], type: 'add' | 'remove'): Promise<any> {
+    try {
+      const options = labelIds.map(labelId => ({ labelId, type }));
+      const result = await this.client.addOrRemoveLabels(chatId, options);
+      logger.info(`🏷️ Labels ${type === 'add' ? 'adicionadas' : 'removidas'} do chat ${chatId}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao adicionar/remover labels:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // 👤 PERFIL/HOST - 9 FUNÇÕES
+  // ============================================================================
+
+  /**
+   * Definir foto de perfil
+   */
+  async setProfilePic(pathOrBase64: string): Promise<any> {
+    try {
+      const result = await this.client.setProfilePic(pathOrBase64);
+      logger.info(`📸 Foto de perfil atualizada`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao definir foto de perfil:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Definir nome de perfil
+   */
+  async setProfileName(name: string): Promise<boolean> {
+    try {
+      const result = await this.client.setProfileName(name);
+      logger.info(`✏️ Nome de perfil atualizado: ${name}`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao definir nome:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Definir status/bio
+   */
+  async setProfileStatus(status: string): Promise<any> {
+    try {
+      const result = await this.client.setProfileStatus(status);
+      logger.info(`📝 Status/bio atualizado`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao definir status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter token da sessão
+   */
+  async getSessionTokenBrowser(removePath?: boolean): Promise<any> {
+    try {
+      return await this.client.getSessionTokenBrowser(removePath);
+    } catch (error: any) {
+      logger.error('Erro ao obter token da sessão:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obter tema atual (light/dark)
+   */
+  async getTheme(): Promise<string> {
+    try {
+      return await this.client.getTheme();
+    } catch (error: any) {
+      logger.error('Erro ao obter tema:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fazer logout
+   */
+  async logout(): Promise<boolean> {
+    try {
+      const result = await this.client.logout();
+      logger.info(`🚪 Logout realizado`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao fazer logout:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Screenshot do WhatsApp Web
+   */
+  async takeScreenshot(): Promise<string> {
+    try {
+      return await this.client.takeScreenshot();
+    } catch (error: any) {
+      logger.error('Erro ao tirar screenshot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clicar em "Usar aqui"
+   */
+  async useHere(): Promise<boolean> {
+    try {
+      const result = await this.client.useHere();
+      logger.info(`✅ "Usar aqui" clicado`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao clicar em usar aqui:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fechar sessão/navegador
+   */
+  async close(): Promise<boolean> {
+    try {
+      const result = await this.client.close();
+      logger.info(`🔒 Sessão fechada`);
+      return result;
+    } catch (error: any) {
+      logger.error('Erro ao fechar sessão:', error);
+      throw error;
+    }
+  }
+}

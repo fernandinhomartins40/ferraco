@@ -1282,6 +1282,7 @@ model ChatbotSession {
 
   startedAt DateTime  @default(now())
   endedAt   DateTime?
+  updatedAt DateTime  @updatedAt
 
   lead     Lead?            @relation(fields: [leadId], references: [id])
   messages ChatbotMessage[]

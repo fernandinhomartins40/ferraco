@@ -106,7 +106,10 @@
       "Bash(echo \"Para configurar os secrets no GitHub Actions, siga estes passos:\n\n1. Acesse: https://github.com/fernandinhomartins40/ferraco/settings/secrets/actions\n\n2. Clique em ''New repository secret''\n\n3. Configure os seguintes secrets:\n\n   Nome: DATABASE_URL\n   Valor: postgresql://usuario:senha@host:5432/ferraco_crm\n   (Use a URL real do PostgreSQL da sua VPS)\n\n   Nome: VPS_PASSWORD\n   Valor: [senha do root da VPS 72.60.10.108]\n\n4. Após configurar, execute o workflow novamente\")",
       "Bash(rsync:*)",
       "Read(//c/c/**)",
-      "Bash(npm test)"
+      "Bash(npm test)",
+      "Bash(git reset:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

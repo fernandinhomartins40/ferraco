@@ -8,6 +8,7 @@ import { ensureDefaultChatbotConfig } from './scripts/ensure-chatbot-config';
 import { whatsappService } from './services/whatsappService';
 import whatsappChatService from './services/whatsappChatService';
 import { chatbotAutosaveService } from './modules/chatbot/chatbot-autosave.service';
+import { automationSchedulerService } from './services/automationScheduler.service';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
 
@@ -28,6 +29,10 @@ async function startServer(): Promise<void> {
     // ⭐ Inicializar Auto-save Service do Chatbot (verifica a cada 2 minutos)
     chatbotAutosaveService.start(2);
     logger.info('💾 Chatbot auto-save service iniciado');
+
+    // ⭐ Inicializar Automation Scheduler Service (processa a cada 30 segundos)
+    automationSchedulerService.start();
+    logger.info('🤖 Automation Scheduler iniciado');
 
     // Create Express app
     const app = createApp();
@@ -85,6 +90,9 @@ async function startServer(): Promise<void> {
 
         // Parar auto-save service
         chatbotAutosaveService.stop();
+
+        // Parar automation scheduler
+        automationSchedulerService.stop();
 
         // Desconectar WhatsApp
         await whatsappService.disconnect();

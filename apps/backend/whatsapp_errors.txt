@@ -1,0 +1,84 @@
+src/routes/whatsappExtended.routes.ts(10,41): error TS2307: Cannot find module '../services/whatsappServiceExtended' or its corresponding type declarations.
+src/routes/whatsappExtended.routes.ts(14,3): error TS6133: 'groupMessageRateLimit' is declared but its value is never read.
+src/routes/whatsappExtended.routes.ts(15,3): error TS6133: 'groupActionRateLimit' is declared but its value is never read.
+src/routes/whatsappExtended.routes.ts(16,3): error TS6133: 'profileChangeRateLimit' is declared but its value is never read.
+src/routes/whatsappExtended.routes.ts(17,3): error TS6133: 'statusPostRateLimit' is declared but its value is never read.
+src/routes/whatsappExtended.routes.ts(18,3): error TS6133: 'queryRateLimit' is declared but its value is never read.
+src/routes/whatsappExtended.routes.ts(57,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(72,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(87,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(102,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(117,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(132,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(147,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(162,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(177,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(196,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(211,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(226,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ chatId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(242,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ messageId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(258,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ messageId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(273,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(288,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(303,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(319,17): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(321,17): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(338,17): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(340,17): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(360,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(376,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(392,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(408,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(424,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(439,28): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(454,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(469,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(485,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(501,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(517,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(532,31): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ groupId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(551,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(566,31): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ contactId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(580,32): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(595,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ contactId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(610,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ contactId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(625,27): error TS2339: Property 'wppExtended' does not exist on type 'Request<{ contactId: string; }, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(639,29): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(658,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(673,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(687,32): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(706,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(721,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(736,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(750,31): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(769,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(783,32): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(798,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(812,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(831,30): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(845,31): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/routes/whatsappExtended.routes.ts(859,15): error TS2339: Property 'wppExtended' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+src/services/whatsappService.ts(150,31): error TS6133: 'asciiQR' is declared but its value is never read.
+src/services/whatsappService.ts(344,45): error TS2551: Property 'whatsAppBotSession' does not exist on type 'PrismaClient<{ log: ({ emit: "event"; level: "query"; } | { emit: "event"; level: "error"; } | { emit: "event"; level: "warn"; })[]; }, "error" | "query" | "warn", DefaultArgs>'. Did you mean 'chatbotSession'?
+src/services/whatsappService.ts(355,95): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/services/whatsappService.ts(661,33): error TS2339: Property '_serialized' does not exist on type 'string'.
+src/services/whatsappService.ts(668,24): error TS2339: Property '_serialized' does not exist on type 'string'.
+src/services/whatsappService.ts(669,35): error TS2339: Property '_serialized' does not exist on type 'string'.
+src/services/whatsappService.ts(854,22): error TS18046: 'result' is of type 'unknown'.
+src/services/whatsappService.ts(857,16): error TS18046: 'result' is of type 'unknown'.
+src/services/whatsappService.ts(1191,11): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/whatsappService.ts(1351,52): error TS2551: Property 'getStarredMessages' does not exist on type 'Whatsapp'. Did you mean 'getUnreadMessages'?
+src/services/whatsappService.ts(1482,55): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Message'.
+src/services/whatsappService.ts(1512,27): error TS2551: Property 'forwardMessages' does not exist on type 'Whatsapp'. Did you mean 'forwardMessage'?
+src/services/whatsappService.ts(1627,9): error TS2393: Duplicate function implementation.
+src/services/whatsappService.ts(1698,11): error TS2322: Type '{ title: string; rows: { title: string; description?: string | undefined; rowId: string; }[]; }[]' is not assignable to type '{ title: string; rows: { rowId: string; title: string; description: string; }[]; }[]'.
+src/services/whatsappService.ts(1718,5): error TS6133: 'message' is declared but its value is never read.
+src/services/whatsappService.ts(1735,11): error TS6133: 'formattedNumber' is declared but its value is never read.
+src/services/whatsappService.ts(1841,9): error TS2393: Duplicate function implementation.
+src/services/whatsappService.ts(1866,9): error TS2393: Duplicate function implementation.
+src/services/whatsappService.ts(1956,42): error TS2339: Property 'getGroupMetadata' does not exist on type 'Whatsapp'.
+src/services/whatsappService.ts(2023,21): error TS2554: Expected 1 arguments, but got 0.
+src/services/whatsappService.ts(2059,9): error TS2393: Duplicate function implementation.
+src/services/whatsappService.ts(2253,9): error TS2393: Duplicate function implementation.
+src/services/whatsappService.ts(2269,9): error TS2393: Duplicate function implementation.
+src/services/whatsappService.ts(2398,48): error TS2339: Property 'whatsAppContact' does not exist on type 'PrismaClient<{ log: ({ emit: "event"; level: "query"; } | { emit: "event"; level: "error"; } | { emit: "event"; level: "warn"; })[]; }, "error" | "query" | "warn", DefaultArgs>'.
