@@ -172,7 +172,7 @@ class AutomationSchedulerService {
       // Enviar mensagem
       logger.info(`📤 Enviando mensagem para ${lead.name} (${lead.phone})`);
 
-      await whatsappService.sendMessage(lead.phone, messageContent);
+      await whatsappService.sendTextMessage(lead.phone, messageContent);
 
       // Enviar mídias se houver
       if (column.messageTemplate?.mediaUrls) {
