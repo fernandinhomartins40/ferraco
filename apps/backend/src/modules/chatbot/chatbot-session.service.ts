@@ -203,9 +203,14 @@ export class ChatbotSessionService {
       return this.createFallbackResponse(session, config);
     }
 
-    // Executar ações do step atual
+    // Executar ações do step atual (ações ao sair do step)
     if (currentStep.actions) {
       await this.executeActions(currentStep.actions, session.id);
+    }
+
+    // Executar ações do próximo step (ações ao entrar no step)
+    if (nextStep.actions) {
+      await this.executeActions(nextStep.actions, session.id);
     }
 
     // Calcular novo score com contagem de mensagens
@@ -390,7 +395,11 @@ export class ChatbotSessionService {
    * Executa ações do step
    */
   private async executeActions(actions: any[], sessionId: string) {
+    logger.debug(`🔧 Executando ${actions.length} ação(ões) para sessão ${sessionId}`);
+
     for (const action of actions) {
+      logger.debug(`🔧 Executando ação: ${action.type}`);
+
       switch (action.type) {
         case 'increment_score':
           // Score já é calculado automaticamente
@@ -400,12 +409,15 @@ export class ChatbotSessionService {
             where: { id: sessionId },
             data: { isQualified: action.value },
           });
+          logger.info(`✅ Sessão ${sessionId} marcada como qualificada: ${action.value}`);
           break;
         case 'create_lead':
+          logger.info(`🎯 Criando lead para sessão ${sessionId}`);
           await this.createLeadFromSession(sessionId);
           break;
         case 'send_notification':
           // TODO: Implementar notificação para equipe
+          logger.debug(`📧 Notificação para equipe (não implementado)`);
           break;
       }
     }
@@ -415,23 +427,43 @@ export class ChatbotSessionService {
    * Cria um lead a partir da sessão qualificada
    */
   private async createLeadFromSession(sessionId: string) {
+    logger.info(`📝 Iniciando criação de lead para sessão ${sessionId}`);
+
     const session = await prisma.chatbotSession.findUnique({
       where: { id: sessionId },
     });
 
-    if (!session) return;
+    if (!session) {
+      logger.warn(`⚠️ Sessão ${sessionId} não encontrada`);
+      return;
+    }
 
     // Verificar se já existe lead
-    if (session.leadId) return;
+    if (session.leadId) {
+      logger.info(`ℹ️ Lead já existe para sessão ${sessionId}: ${session.leadId}`);
+      return;
+    }
 
     // Criar lead se tiver pelo menos nome e telefone
+    if (!session.capturedName || !session.capturedPhone) {
+      logger.warn(`⚠️ Sessão ${sessionId} não possui dados mínimos (nome: ${session.capturedName}, telefone: ${session.capturedPhone})`);
+      return;
+    }
+
+    logger.info(`✅ Sessão ${sessionId} possui dados válidos - criando lead...`);
+
     if (session.capturedName && session.capturedPhone) {
       // Buscar um usuário admin/system para ser o creator
       const systemUser = await prisma.user.findFirst({
         where: { role: 'ADMIN' },
       });
 
-      if (!systemUser) return;
+      if (!systemUser) {
+        logger.error(`❌ Nenhum usuário ADMIN encontrado no sistema - não foi possível criar lead`);
+        return;
+      }
+
+      logger.info(`👤 Usando usuário ${systemUser.name} (${systemUser.email}) como criador do lead`);
 
       // Extrair source e campaign do conversationData
       let conversationData: any = {};
@@ -448,13 +480,13 @@ export class ChatbotSessionService {
       const userResponses = JSON.parse(session.userResponses || '{}');
       const isHumanHandoff = session.currentStepId === 'human_handoff';
 
-      // Determinar status e prioridade baseado no contexto
+      // Determinar prioridade baseado no contexto
+      // Status sempre será "NOVO" - a movimentação entre colunas é feita manualmente no Kanban
       let status = 'NOVO';
       let priority: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
 
       if (isHumanHandoff) {
         // ⭐ HANDOFF HUMANO - Prioridade máxima
-        status = 'ATENDIMENTO_HUMANO';
         priority = 'HIGH';
       } else {
         // Prioridade baseada no score
@@ -475,6 +507,8 @@ export class ChatbotSessionService {
       else if (userResponses.urgency?.includes('1 ou 2 meses')) urgency = '1_2_meses';
       else if (userResponses.urgency?.includes('3 meses')) urgency = '3_meses_mais';
       else if (userResponses.urgency?.includes('não tenho prazo')) urgency = 'sem_prazo';
+
+      logger.info(`💾 Criando lead no banco de dados - Nome: ${session.capturedName}, Telefone: ${session.capturedPhone}, Status: ${status}, Prioridade: ${priority}`);
 
       const lead = await prisma.lead.create({
         data: {
@@ -510,11 +544,18 @@ export class ChatbotSessionService {
         },
       });
 
+      logger.info(`✅ Lead criado com sucesso! ID: ${lead.id}, Nome: ${lead.name}, Status: ${lead.status}`);
+
       // Atualizar sessão com o leadId
       await prisma.chatbotSession.update({
         where: { id: sessionId },
-        data: { leadId: lead.id },
+        data: {
+          leadId: lead.id,
+          isQualified: true, // Marcar como qualificado ao criar lead
+        },
       });
+
+      logger.info(`✅ Sessão ${sessionId} atualizada com leadId: ${lead.id}`);
 
       // ✅ NOVO: Criar automação WhatsApp em background
       logger.info(`🤖 Criando automação WhatsApp para lead ${lead.id} (${lead.name})`);
