@@ -1084,23 +1084,36 @@ class WhatsAppService {
       for (const phoneNumber of numbers) {
         try {
           const formatted = this.formatPhoneNumber(phoneNumber);
-          const numberExists = await this.client!.checkNumberStatus(formatted);
+
+          logger.debug(`🔍 Verificando número formatado: ${formatted}`);
+
+          const statusResult = await this.client!.checkNumberStatus(formatted);
+
+          logger.debug(`📊 Resultado bruto para ${phoneNumber}:`, JSON.stringify(statusResult, null, 2));
+
+          // ✅ CORREÇÃO: Verificar múltiplas propriedades para determinar se número existe
+          // Diferentes versões do WPPConnect podem retornar propriedades diferentes
+          const exists =
+            statusResult.canReceiveMessage === true ||
+            statusResult.numberExists === true ||
+            (statusResult.id && statusResult.id._serialized && statusResult.id._serialized.includes('@'));
 
           results.push({
             phoneNumber,
             formatted,
-            exists: numberExists.numberExists || false,
-            status: numberExists,
+            exists,
+            status: statusResult,
           });
 
-          logger.info(`✅ ${phoneNumber} → ${numberExists.numberExists ? 'EXISTE' : 'NÃO EXISTE'}`);
+          logger.info(`${exists ? '✅' : '❌'} ${phoneNumber} → ${exists ? 'EXISTE NO WHATSAPP' : 'NÃO ENCONTRADO'}`);
         } catch (error: any) {
+          logger.warn(`⚠️  Erro ao verificar ${phoneNumber}: ${error.message}`);
+
           results.push({
             phoneNumber,
             exists: false,
             error: error.message,
           });
-          logger.warn(`⚠️  Erro ao verificar ${phoneNumber}: ${error.message}`);
         }
       }
 
@@ -1511,9 +1524,22 @@ class WhatsAppService {
       throw new Error(`Número muito longo: ${phoneNumber}. Máximo 15 dígitos.`);
     }
 
-    // Adicionar código do país se não tiver (Brasil = 55)
-    if (cleaned.length === 10 || cleaned.length === 11) {
-      cleaned = '55' + cleaned;
+    // ✅ MELHORIA: Adicionar código do país de forma mais robusta
+    if (!cleaned.startsWith('55')) {
+      // Se não começa com código do país, verificar se é número brasileiro
+      if (cleaned.length === 10 || cleaned.length === 11) {
+        // Número brasileiro sem código do país
+        cleaned = '55' + cleaned;
+      }
+    }
+
+    // ✅ VALIDAÇÃO: Verificar formato brasileiro após adicionar código
+    if (cleaned.startsWith('55')) {
+      // Formato brasileiro: 55 + DDD(2) + Número(8 ou 9)
+      // Total: 12 ou 13 dígitos
+      if (cleaned.length < 12 || cleaned.length > 13) {
+        logger.warn(`⚠️  Número brasileiro com formato suspeito: ${phoneNumber} (${cleaned.length} dígitos)`);
+      }
     }
 
     // Formato WhatsApp: número@c.us
