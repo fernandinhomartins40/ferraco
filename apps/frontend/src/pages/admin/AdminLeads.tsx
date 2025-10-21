@@ -632,7 +632,7 @@ const AdminLeads = () => {
               automationColumns={automationColumns}
               leadsInAutomation={leadsInAutomation}
               onMoveLeadToAutomationColumn={(leadId, columnId) => {
-                moveToAutomationColumn({ leadId, columnId });
+                moveToAutomationColumn.mutate({ leadId, columnId });
               }}
               onRemoveLeadFromAutomation={removeLeadFromAutomation.mutate}
               onEditAutomationColumn={openEditAutomationColumnDialog}
