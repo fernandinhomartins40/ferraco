@@ -970,8 +970,45 @@ router.post('/archive-chat', authenticate, async (req: Request, res: Response) =
 // ==========================================
 
 /**
+ * GET /api/whatsapp/media/:messageId
+ * Servir mídia inline (para exibição no chat)
+ *
+ * @params messageId - ID da mensagem
+ * @returns Arquivo binário inline
+ */
+router.get('/media/:messageId', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { messageId } = req.params;
+
+    if (!messageId) {
+      return res.status(400).json({
+        success: false,
+        message: 'messageId é obrigatório',
+      });
+    }
+
+    logger.info(`📥 Servindo mídia inline: ${messageId}`);
+
+    const mediaBuffer = await whatsappService.downloadMedia(messageId);
+
+    // Retornar arquivo inline (não como download)
+    res.set('Content-Type', 'application/octet-stream');
+    res.set('Content-Disposition', 'inline'); // ✅ INLINE para exibir no navegador
+    res.send(mediaBuffer);
+
+  } catch (error: any) {
+    logger.error('❌ Erro ao servir mídia:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao servir mídia',
+      message: error.message,
+    });
+  }
+});
+
+/**
  * POST /api/whatsapp/download-media
- * Baixar mídia de uma mensagem
+ * Baixar mídia de uma mensagem (download forçado)
  *
  * @body { messageId: string }
  * @returns Arquivo binário
@@ -991,7 +1028,7 @@ router.post('/download-media', authenticate, async (req: Request, res: Response)
 
     const mediaBuffer = await whatsappService.downloadMedia(messageId);
 
-    // Retornar arquivo binário
+    // Retornar arquivo binário como download
     res.set('Content-Type', 'application/octet-stream');
     res.set('Content-Disposition', `attachment; filename="media-${messageId}"`);
     res.send(mediaBuffer);

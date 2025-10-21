@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface MediaViewerProps {
-  type: 'image' | 'video' | 'audio' | 'document';
+  type: 'image' | 'video' | 'audio' | 'ptt' | 'document' | 'sticker';
   url: string;
   filename?: string;
   onDownload?: () => void;
@@ -124,8 +124,8 @@ const MediaViewer = ({ type, url, filename, onDownload }: MediaViewerProps) => {
     );
   }
 
-  // Audio
-  if (type === 'audio') {
+  // Audio & PTT (Push-to-Talk)
+  if (type === 'audio' || type === 'ptt') {
     return (
       <div className="flex items-center gap-3 bg-green-50 px-4 py-2 rounded-full max-w-xs">
         <Button
@@ -168,6 +168,20 @@ const MediaViewer = ({ type, url, filename, onDownload }: MediaViewerProps) => {
             <Download className="h-3 w-3" />
           </Button>
         )}
+      </div>
+    );
+  }
+
+  // Sticker
+  if (type === 'sticker') {
+    return (
+      <div className="relative">
+        <img
+          src={url}
+          alt="Sticker"
+          className="max-w-[150px] max-h-[150px] object-contain"
+          style={{ imageRendering: 'crisp-edges' }}
+        />
       </div>
     );
   }

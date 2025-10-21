@@ -1687,32 +1687,54 @@ class WhatsAppService {
       });
 
       // Formatar mensagens para o formato esperado pelo frontend
-      return messages.map((msg: any) => ({
-        id: msg.id,
-        conversationId: chatId,
-        type: msg.type,
-        content: msg.body || '',
-        mediaUrl: msg.mediaUrl || null,
-        mediaType: msg.mimetype || null,
-        fromMe: msg.fromMe || false,
-        status: this.mapAckToStatus(msg.ack),
-        timestamp: new Date(msg.timestamp * 1000),
-        quotedMessage: msg.quotedMsg ? {
-          id: msg.quotedMsg.id,
-          content: msg.quotedMsg.body || '',
-          fromMe: msg.quotedMsg.fromMe || false,
+      return messages.map((msg: any) => {
+        // ✅ CRÍTICO: Gerar mediaUrl para tipos de mídia
+        let mediaUrl = msg.mediaUrl || null;
+
+        // Se a mensagem tem mídia mas não tem URL, tentar obter do WPPConnect
+        const hasMediaType = ['image', 'video', 'audio', 'ptt', 'sticker', 'document'].includes(msg.type);
+
+        if (hasMediaType && !mediaUrl) {
+          // WPPConnect: verificar se há media data disponível
+          if (msg.media || msg.body?.startsWith('data:')) {
+            mediaUrl = msg.body; // Base64 inline
+          } else if (msg.deprecatedMms3Url) {
+            mediaUrl = msg.deprecatedMms3Url;
+          } else if (msg.clientUrl) {
+            mediaUrl = msg.clientUrl;
+          } else {
+            // Criar URL de download via backend
+            mediaUrl = `/api/whatsapp/media/${msg.id}`;
+          }
+        }
+
+        return {
+          id: msg.id,
+          conversationId: chatId,
+          type: msg.type,
+          content: msg.body || '',
+          mediaUrl,
+          mediaType: msg.mimetype || null,
+          fromMe: msg.fromMe || false,
+          status: this.mapAckToStatus(msg.ack),
+          timestamp: new Date(msg.timestamp * 1000),
+          quotedMessage: msg.quotedMsg ? {
+            id: msg.quotedMsg.id,
+            content: msg.quotedMsg.body || '',
+            fromMe: msg.quotedMsg.fromMe || false,
+            contact: {
+              id: cleanPhone,
+              phone: cleanPhone,
+              name: cleanPhone,
+            },
+          } : null,
           contact: {
             id: cleanPhone,
             phone: cleanPhone,
             name: cleanPhone,
           },
-        } : null,
-        contact: {
-          id: cleanPhone,
-          phone: cleanPhone,
-          name: cleanPhone,
-        },
-      }));
+        };
+      });
     } catch (error: any) {
       logger.error(`Erro ao buscar mensagens de ${phone}:`, error);
       throw error;

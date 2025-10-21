@@ -63,7 +63,7 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
   // ✅ Helper: Verificar se mensagem tem mídia
   const hasMedia = (message: Message): boolean => {
-    return !!(
+    const hasMediaType = !!(
       message.mediaUrl ||
       message.type === 'image' ||
       message.type === 'video' ||
@@ -72,6 +72,19 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       message.type === 'sticker' ||
       message.type === 'document'
     );
+
+    // 🔍 DEBUG: Log para mensagens com mídia
+    if (hasMediaType) {
+      console.log('📎 Mensagem com mídia detectada:', {
+        id: message.id.substring(0, 20),
+        type: message.type,
+        mediaUrl: message.mediaUrl ? message.mediaUrl.substring(0, 50) + '...' : null,
+        mediaType: message.mediaType,
+        content: message.content?.substring(0, 30),
+      });
+    }
+
+    return hasMediaType;
   };
 
   // ✅ Helper: Verificar se é mensagem apenas de mídia (sem texto)
