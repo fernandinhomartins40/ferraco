@@ -92,22 +92,61 @@ Sistema integrado de dois chatbots que trabalham em sinergia:
 
 ### 1. Captação no Chat Web
 
+#### Fluxo Inteligente de Seleção de Produtos
+
+Quando o usuário clica em um produto, o bot **NÃO** exibe mais a mensagem "Desculpe, não entendi". Em vez disso:
+
+1. **Mensagem Inteligente**: Informa que a equipe será contatada para enviar informações
+2. **Lista de Produtos Selecionados**: Mostra todos os produtos já escolhidos
+3. **Opção de Adicionar Mais**: Permite selecionar produtos adicionais
+4. **Integração com Tags**: Todos os produtos são automaticamente taggeados no lead
+
 ```typescript
-// Usuario completa conversa no /chat
+// Exemplo de sessão após seleção de múltiplos produtos
 chatbotSession = {
   capturedName: "João Silva",
   capturedPhone: "45999070479",
   capturedEmail: "joao@example.com",
   interest: "Bebedouro e Freestall",
   userResponses: {
-    selected_products: ["Bebedouro", "Freestall"],
-    wants_pricing: true,
-    wants_human: true,
-    user_type: "Produtor rural",
-    activity: "Pecuária leiteira"
+    selected_product: "📦 Freestall", // Último produto selecionado
+    selected_products: ["📦 Bebedouro", "📦 Freestall"], // Array acumulado
+    wants_pricing: false, // Não pediu orçamento direto
+    wants_human: false, // Não pediu handoff ainda
+    user_type: "🐄 Sim, sou produtor rural",
+    activity: "🥛 Pecuária leiteira"
   },
   qualificationScore: 85,
-  currentStepId: "human_handoff"
+  currentStepId: "product_interest" // Step intermediário inteligente
+}
+```
+
+#### Steps do Fluxo de Produto
+
+**Step `show_products`**: Exibe lista de produtos com opções dinâmicas
+- Cada produto é uma opção clicável
+- `nextStepId: 'product_interest'` para todos os produtos
+
+**Step `product_interest` (NOVO)**: Intermediário inteligente
+- Mensagem: "Vou solicitar à nossa equipe que entre em contato..."
+- Mostra lista de produtos já selecionados: `{selectedProductsList}`
+- Opções:
+  - ✅ "Sim, quero ver mais produtos" → volta para `show_products`
+  - 💬 "Não, pode prosseguir" → vai para `product_interest_confirm`
+  - 👤 "Falar com a equipe agora" → vai para `human_handoff`
+
+**Step `product_interest_confirm` (NOVO)**: Confirmação final
+- Mensagem: "Nossa equipe vai entrar em contato em breve..."
+- Opções de marketing opt-in
+- **Ações**: `create_lead` + `send_notification`
+
+```typescript
+// Exemplo de userResponses após múltiplas seleções
+userResponses = {
+  selected_product: "📦 Freestall", // Último
+  selected_products: ["📦 Bebedouro", "📦 Freestall", "📦 Ordenhadeira"], // Acumulado
+  explore_more: "✅ Sim, quero ver mais produtos", // Usuário voltou 2x
+  marketing_opt_in: "✅ Pode avisar sim"
 }
 ```
 
@@ -152,24 +191,87 @@ lead = {
 
 ### 3. Sistema de Tags Automáticas
 
+#### Lógica de Múltiplos Produtos
+
+O sistema agora acumula produtos selecionados em um array e cria tags para **todos** os produtos:
+
 ```typescript
-// Tags criadas automaticamente após criar lead
+// chatbot-session.service.ts - Captura de produtos
+if (selectedOption.captureAs === 'selected_product') {
+  // Inicializar array se não existir
+  if (!userResponses.selected_products) {
+    userResponses.selected_products = [];
+  }
+
+  // Adicionar produto se ainda não estiver na lista
+  if (!userResponses.selected_products.includes(selectedOption.label)) {
+    userResponses.selected_products.push(selectedOption.label);
+  }
+}
+
+// lead-tagging.service.ts - Criação de tags
+// 1. Produto único (compatibilidade)
+if (userResponses.selected_product) {
+  tags.push(`interesse-${slugify(productName)}`);
+}
+
+// 2. Múltiplos produtos (NOVO)
+if (userResponses.selected_products && Array.isArray(userResponses.selected_products)) {
+  userResponses.selected_products.forEach((product: string) => {
+    tags.push(`interesse-${slugify(product)}`);
+  });
+}
+```
+
+#### Tags Criadas Automaticamente
+
+```typescript
+// Exemplo com 3 produtos selecionados
 tags = [
   { name: "interesse-bebedouro", color: "#3B82F6" },
-  { name: "interesse-freestall", color: "#10B981" },
-  { name: "quer-orcamento", color: "#F59E0B" },
-  { name: "handoff-humano", color: "#EF4444" },
-  { name: "score-alto", color: "#8B5CF6" } // Score >= 60
+  { name: "interesse-freestall", color: "#3B82F6" },
+  { name: "interesse-ordenhadeira", color: "#3B82F6" },
+  { name: "score-alto", color: "#34D399" }, // Score >= 60
+  { name: "produtor-rural", color: "#6B7280" },
+  { name: "pecuaria-leiteira", color: "#6B7280" }
 ]
 
 // Vinculação automática
 leadTags = [
   { leadId: "abc123", tagId: "tag1" }, // interesse-bebedouro
   { leadId: "abc123", tagId: "tag2" }, // interesse-freestall
-  { leadId: "abc123", tagId: "tag3" }, // quer-orcamento
-  { leadId: "abc123", tagId: "tag4" }, // handoff-humano
-  { leadId: "abc123", tagId: "tag5" }  // score-alto
+  { leadId: "abc123", tagId: "tag3" }, // interesse-ordenhadeira
+  { leadId: "abc123", tagId: "tag4" }, // score-alto
+  { leadId: "abc123", tagId: "tag5" }, // produtor-rural
+  { leadId: "abc123", tagId: "tag6" }  // pecuaria-leiteira
 ]
+```
+
+#### Extração de Produtos para Metadata
+
+```typescript
+// lead-tagging.service.ts
+extractSelectedProducts(userResponses: any): string[] {
+  const products: string[] = [];
+
+  // Produto único
+  if (userResponses.selected_product) {
+    const product = this.extractProductName(userResponses.selected_product);
+    if (product) products.push(product);
+  }
+
+  // Múltiplos produtos (sem duplicatas)
+  if (userResponses.selected_products && Array.isArray(userResponses.selected_products)) {
+    userResponses.selected_products.forEach((product: string) => {
+      const cleaned = this.extractProductName(product); // Remove emojis
+      if (cleaned && !products.includes(cleaned)) {
+        products.push(cleaned);
+      }
+    });
+  }
+
+  return products; // ["Bebedouro", "Freestall", "Ordenhadeira"]
+}
 ```
 
 ### 4. Trigger do Bot WhatsApp

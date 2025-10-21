@@ -166,6 +166,40 @@ export const conversationFlowV3: ConversationStep[] = [
   },
 
   // ========================================
+  // ETAPA 5.5: INTERESSE NO PRODUTO (NOVO - Intermediário Inteligente)
+  // ========================================
+  {
+    id: 'product_interest',
+    stage: 5,
+    name: 'Interesse no Produto',
+    botMessage: 'Ótima escolha, {nome}! 😊\n\nVou solicitar à nossa equipe que entre em contato com você para enviar mais informações sobre:\n\n{selectedProductsList}\n\nEles vão te mandar todos os detalhes, especificações técnicas e valores diretamente no WhatsApp {capturedPhone}. 📱\n\nQuer adicionar mais algum produto de interesse?',
+    options: [
+      { id: 'opt1', label: '✅ Sim, quero ver mais produtos', nextStepId: 'show_products', captureAs: 'explore_more' },
+      { id: 'opt2', label: '💬 Não, pode prosseguir', nextStepId: 'product_interest_confirm', captureAs: 'single_product' },
+      { id: 'opt_human', label: '👤 Falar com a equipe agora', nextStepId: 'human_handoff', captureAs: 'wants_human' },
+    ],
+    actions: [{ type: 'increment_score', value: 15 }],
+  },
+
+  // ========================================
+  // ETAPA 5.6: CONFIRMAÇÃO DE INTERESSE (NOVO)
+  // ========================================
+  {
+    id: 'product_interest_confirm',
+    stage: 5,
+    name: 'Confirmação de Interesse',
+    botMessage: 'Perfeito! Nossa equipe vai entrar em contato em breve com todas as informações sobre os produtos que você selecionou. 🤝\n\nPosso te avisar quando houver promoções?',
+    options: [
+      { id: 'opt1', label: '✅ Pode avisar sim', nextStepId: 'closing_with_lead', captureAs: 'marketing_opt_in' },
+      { id: 'opt2', label: '❌ Não precisa, obrigado', nextStepId: 'closing_with_lead', captureAs: 'marketing_opt_out' },
+    ],
+    actions: [
+      { type: 'create_lead' },
+      { type: 'send_notification' },
+    ],
+  },
+
+  // ========================================
   // ETAPA 6: DETALHES DO PRODUTO (Dados Reais)
   // ========================================
   {

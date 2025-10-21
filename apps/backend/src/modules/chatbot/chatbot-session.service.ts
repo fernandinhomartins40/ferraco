@@ -140,6 +140,17 @@ export class ChatbotSessionService {
           capturedData[selectedOption.captureAs] = selectedOption.label;
           userResponses[selectedOption.captureAs] = selectedOption.label;
 
+          // ⭐ NOVO: Acumular produtos selecionados em um array
+          if (selectedOption.captureAs === 'selected_product') {
+            if (!userResponses.selected_products) {
+              userResponses.selected_products = [];
+            }
+            // Adicionar produto se ainda não estiver na lista
+            if (!userResponses.selected_products.includes(selectedOption.label)) {
+              userResponses.selected_products.push(selectedOption.label);
+            }
+          }
+
           // Atualizar campos específicos
           if (selectedOption.captureAs === 'segment') {
             capturedData.segment = selectedOption.label;
@@ -263,7 +274,7 @@ export class ChatbotSessionService {
       const productOptions = products.map((p: any, idx: number) => ({
         id: `prod${idx + 1}`,
         label: `📦 ${p.name}`,
-        nextStepId: 'product_interest',
+        nextStepId: 'product_interest', // Step intermediário para capturar interesse
         captureAs: 'selected_product',
       }));
 
@@ -286,6 +297,23 @@ export class ChatbotSessionService {
         faqAnswer = `**${bestFAQ.question}**\n\n${bestFAQ.answer}`;
       } else {
         faqAnswer = 'Hmm, não encontrei uma resposta exata para essa dúvida. 🤔\n\nMas posso te conectar com um especialista que vai te ajudar!';
+      }
+    }
+
+    // Preparar lista de produtos já selecionados (para mostrar no product_interest)
+    let selectedProductsList = '';
+    if (nextStepId === 'product_interest') {
+      // Pegar todos os produtos selecionados ou usar o produto atual
+      const allProducts = userResponses.selected_products && userResponses.selected_products.length > 0
+        ? userResponses.selected_products
+        : [userResponses.selected_product].filter(Boolean);
+
+      if (allProducts.length > 0) {
+        selectedProductsList = allProducts
+          .map((p: string, idx: number) => `${idx + 1}. ${p}`)
+          .join('\n');
+      } else {
+        selectedProductsList = '(nenhum produto selecionado ainda)';
       }
     }
 
@@ -330,6 +358,7 @@ export class ChatbotSessionService {
       productBenefits,
       relatedProducts,
       selectedProduct: userResponses.selected_product || '',
+      selectedProductsList, // ⭐ NOVA variável para lista de produtos já selecionados
       faqAnswer,
     });
 
