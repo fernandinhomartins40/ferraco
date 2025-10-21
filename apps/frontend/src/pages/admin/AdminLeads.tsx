@@ -40,8 +40,7 @@ import {
 } from 'lucide-react';
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
-import KanbanView from '@/components/admin/KanbanView';
-import AutomationKanbanView from '@/components/admin/AutomationKanbanView';
+import UnifiedKanbanView from '@/components/admin/UnifiedKanbanView';
 import { useToast } from '@/hooks/use-toast';
 import { useKanbanColumns } from '@/hooks/useKanbanColumns';
 import { useAutomationKanban } from '@/hooks/useAutomationKanban';
@@ -564,9 +563,33 @@ const AdminLeads = () => {
           </CardContent>
         </Card>
 
-        {/* Kanban View - Full width */}
+        {/* Título do Kanban de Automação */}
+        <div className="flex items-center justify-between px-6 mt-8">
+          <div>
+            <div className="flex items-center gap-2">
+              <Bot className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-bold">Automação de Mensagens WhatsApp</h2>
+            </div>
+            <p className="text-muted-foreground mt-1">
+              Arraste leads entre colunas de status e automação para gerenciar o fluxo de vendas
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              resetAutomationColumnForm();
+              setIsEditAutomationColumnMode(false);
+              setIsAutomationColumnDialogOpen(true);
+            }}
+          >
+            <Settings2 className="mr-2 h-4 w-4" />
+            Nova Coluna de Automação
+          </Button>
+        </div>
+
+        {/* Kanban Unificado - Full width */}
         <div className="-mx-6">
-          {isLoading || isLoadingColumns ? (
+          {isLoading || isLoadingColumns || isLoadingAutomationColumns ? (
             <div className="flex items-center justify-center py-12 px-6">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
@@ -592,7 +615,8 @@ const AdminLeads = () => {
               </Card>
             </div>
           ) : (
-            <KanbanView
+            <UnifiedKanbanView
+              // Kanban Normal
               leads={leads}
               columns={columns}
               onUpdateLeadStatus={handleUpdateStatus}
@@ -604,79 +628,17 @@ const AdminLeads = () => {
               }}
               onEditColumn={openEditColumnDialog}
               onDeleteColumn={handleDeleteColumn}
+              // Kanban de Automação
+              automationColumns={automationColumns}
+              leadsInAutomation={leadsInAutomation}
+              onMoveLeadToAutomationColumn={(leadId, columnId) => {
+                moveToAutomationColumn({ leadId, columnId });
+              }}
+              onRemoveLeadFromAutomation={removeLeadFromAutomation.mutate}
+              onEditAutomationColumn={openEditAutomationColumnDialog}
+              onDeleteAutomationColumn={handleDeleteAutomationColumn}
             />
           )}
-        </div>
-
-        {/* Separador e Título do Kanban de Automação */}
-        <Separator className="my-8" />
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <Bot className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl font-bold">Automação de Mensagens WhatsApp</h2>
-              </div>
-              <p className="text-muted-foreground mt-1">
-                Arraste leads para colunas de automação para agendar envios automáticos de mensagens
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                resetAutomationColumnForm();
-                setIsEditAutomationColumnMode(false);
-                setIsAutomationColumnDialogOpen(true);
-              }}
-            >
-              <Settings2 className="mr-2 h-4 w-4" />
-              Nova Coluna de Automação
-            </Button>
-          </div>
-
-          {/* Kanban de Automação */}
-          <div className="-mx-6">
-            {isLoadingAutomationColumns ? (
-              <div className="flex items-center justify-center py-12 px-6">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : automationColumns.length === 0 ? (
-              <div className="px-6">
-                <Card>
-                  <CardContent className="text-center py-12 text-muted-foreground">
-                    <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium">Nenhuma coluna de automação configurada</p>
-                    <p className="text-sm">Configure colunas para automatizar o envio de mensagens</p>
-                    <Button
-                      className="mt-4"
-                      onClick={() => {
-                        toast({
-                          title: 'Em desenvolvimento',
-                          description: 'Funcionalidade em breve.',
-                        });
-                      }}
-                    >
-                      <Settings2 className="mr-2 h-4 w-4" />
-                      Criar Primeira Coluna
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <AutomationKanbanView
-                columns={automationColumns}
-                leadsPositions={leadsInAutomation}
-                availableLeads={leads}
-                onMoveLeadToColumn={(leadId, columnId) => {
-                  moveToAutomationColumn({ leadId, columnId });
-                }}
-                onRemoveLeadFromAutomation={removeLeadFromAutomation.mutate}
-                onEditColumn={openEditAutomationColumnDialog}
-                onDeleteColumn={handleDeleteAutomationColumn}
-              />
-            )}
-          </div>
         </div>
 
         {/* Edit Dialog */}
