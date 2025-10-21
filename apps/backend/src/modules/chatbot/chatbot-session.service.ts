@@ -13,6 +13,7 @@ import {
 import { whatsappAutomationService } from '../../services/whatsappAutomation.service';
 import { logger } from '../../utils/logger';
 import { leadTaggingService } from './lead-tagging.service';
+import { chatbotConfigCache } from './chatbot-config-cache.service';
 
 export class ChatbotSessionService {
   /**
@@ -26,11 +27,8 @@ export class ChatbotSessionService {
   }) {
     const sessionId = randomUUID();
 
-    // Buscar config do chatbot
-    const config = await prisma.chatbotConfig.findFirst();
-    if (!config) {
-      throw new Error('Chatbot config not found');
-    }
+    // Buscar config do chatbot (COM CACHE)
+    const config = await chatbotConfigCache.getConfig();
 
     // Criar sessão
     const session = await prisma.chatbotSession.create({
@@ -108,11 +106,8 @@ export class ChatbotSessionService {
       throw new Error('Session is not active');
     }
 
-    // Buscar config
-    const config = await prisma.chatbotConfig.findFirst();
-    if (!config) {
-      throw new Error('Chatbot config not found');
-    }
+    // Buscar config (COM CACHE)
+    const config = await chatbotConfigCache.getConfig();
 
     // Salvar mensagem do usuário
     await prisma.chatbotMessage.create({

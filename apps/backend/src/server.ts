@@ -4,6 +4,7 @@ import { connectDatabase, disconnectDatabase } from './config/database';
 import { PORT, NODE_ENV } from './config/constants';
 import { logger } from './utils/logger';
 import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
+import { ensureDefaultChatbotConfig } from './scripts/ensure-chatbot-config';
 import { whatsappService } from './services/whatsappService';
 import whatsappChatService from './services/whatsappChatService';
 import { Server as SocketIOServer } from 'socket.io';
@@ -16,6 +17,9 @@ async function startServer(): Promise<void> {
 
     // Garantir que a coluna padrão do Kanban existe
     await ensureDefaultKanbanColumn();
+
+    // Garantir que a configuração do chatbot existe
+    await ensureDefaultChatbotConfig();
 
     // Inicializar WhatsApp Service (assíncrono, não bloqueia o servidor)
     await whatsappService.initialize();

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { ChatbotService } from './chatbot.service';
 import { successResponse, errorResponse } from '../../utils/response';
 import { logger } from '../../utils/logger';
+import { chatbotConfigCache } from './chatbot-config-cache.service';
 
 export class ChatbotController {
   private chatbotService: ChatbotService;
@@ -32,6 +33,11 @@ export class ChatbotController {
     try {
       const configData = req.body;
       const config = await this.chatbotService.updateConfig(configData);
+
+      // Invalidar cache quando config é atualizada
+      chatbotConfigCache.invalidate();
+      logger.info('🗑️ Cache de configuração invalidado após atualização');
+
       successResponse(res, config, 'Configuração atualizada com sucesso');
     } catch (error) {
       logger.error('Error updating chatbot config:', error);
