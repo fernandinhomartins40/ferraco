@@ -65,6 +65,7 @@ export interface JWTPayload {
   role: string;
   permissions: string[];
   type: 'access' | 'refresh';
+  name?: string;
 }
 
 export interface TokenPair {
@@ -88,19 +89,13 @@ export function createJWTPayload(
 }
 
 export function generateAccessToken(payload: Omit<JWTPayload, 'type'>): string {
-  return jwt.sign(
-    { ...payload, type: 'access' },
-    JWT_SECRET,
-    { expiresIn: JWT_ACCESS_EXPIRATION }
-  );
+  const tokenPayload: JWTPayload = { ...payload, type: 'access' };
+  return jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRATION });
 }
 
 export function generateRefreshToken(payload: Omit<JWTPayload, 'type'>): string {
-  return jwt.sign(
-    { ...payload, type: 'refresh' },
-    JWT_SECRET,
-    { expiresIn: JWT_REFRESH_EXPIRATION }
-  );
+  const tokenPayload: JWTPayload = { ...payload, type: 'refresh' };
+  return jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRATION });
 }
 
 export function generateTokenPair(

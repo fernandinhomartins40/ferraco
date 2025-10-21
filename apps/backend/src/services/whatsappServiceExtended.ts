@@ -130,15 +130,23 @@ export class WhatsAppServiceExtended {
   }
 
   /**
-   * 14. Enviar mensagem com botões
+   * 14. Enviar mensagem com botões (formatada como texto)
+   * NOTA: sendButtons() foi deprecado pelo WhatsApp, usando sendText() com formatação
    */
   async sendButtons(to: string, message: string, buttons: Array<{ buttonText: string }>): Promise<any> {
     try {
-      const result = await this.client.sendButtons(to, message, buttons);
-      logger.info(`✅ Botões enviados para ${to}`);
+      // Formatar mensagem com opções numeradas
+      let formattedMessage = message + '\n\n';
+      buttons.forEach((btn, idx) => {
+        formattedMessage += `${idx + 1}. ${btn.buttonText}\n`;
+      });
+      formattedMessage += '\nResponda com o número da opção desejada.';
+
+      const result = await this.client.sendText(to, formattedMessage);
+      logger.info(`✅ Opções enviadas para ${to}`);
       return result;
     } catch (error) {
-      logger.error(`❌ Erro ao enviar botões:`, error);
+      logger.error(`❌ Erro ao enviar opções:`, error);
       throw error;
     }
   }

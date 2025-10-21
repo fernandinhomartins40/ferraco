@@ -11,10 +11,26 @@
  * ✅ Callbacks estáveis
  * ✅ Melhor suporte para produção
  * ✅ Documentação clara
+ *
+ * ⭐ ARQUITETURA STATELESS (FASE 4 - 2025):
+ * ═══════════════════════════════════════════════════════════
+ * ✅ Mensagens e conversas são buscadas DIRETO do WhatsApp via WPPConnect
+ * ✅ ZERO persistência de mensagens no PostgreSQL
+ * ✅ PostgreSQL armazena APENAS metadata (tags, leadId, notes)
+ * ✅ On-demand fetching para máxima consistência
+ * ✅ getAllConversations() e getChatMessages() buscam do WhatsApp em tempo real
+ *
+ * BENEFÍCIOS:
+ * - Elimina duplicação de dados
+ * - Sem problemas de sincronização
+ * - Sempre mostra dados atualizados
+ * - Melhor performance (sem overhead de sync)
+ * - Segue best practices WPPConnect 2025
  */
 
 import * as wppconnect from '@wppconnect-team/wppconnect';
-import type { Whatsapp, Message } from '@wppconnect-team/wppconnect';
+import type { Whatsapp } from '@wppconnect-team/wppconnect';
+import type { Message, Contact, Chat, GroupMember } from '../types/wppconnect';
 import { logger } from '../utils/logger';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -22,13 +38,12 @@ import whatsappChatService from './whatsappChatService';
 import { WhatsAppListeners } from './whatsappListeners';
 import { Server as SocketIOServer } from 'socket.io';
 
-interface WhatsAppMessage {
-  from: string;
-  to: string;
-  body: string;
-  timestamp: Date;
-  isGroup: boolean;
-  fromMe: boolean;
+interface NumberCheckResult {
+  phoneNumber: string;
+  formatted?: string;
+  exists: boolean;
+  status?: any;
+  error?: string;
 }
 
 class WhatsAppService {
@@ -165,11 +180,65 @@ class WhatsAppService {
           // QR code é regenerado automaticamente pelo WPPConnect
           // Não anular o código, sempre manter o mais recente disponível
         },
-        // ✅ DEPRECATED: Callback antigo (manter para compatibilidade)
-        // Use onStateChange() para novo código
+        // Callback status
         (statusSession: string, session: string) => {
-          logger.debug(`📊 [${session}] Status Callback (legacy): ${statusSession}`);
-          // Processamento agora feito em onStateChange()
+          logger.info(`📊 [${session}] Status: ${statusSession}`);
+
+          switch (statusSession) {
+            case 'inChat':
+            case 'isLogged':
+            case 'qrReadSuccess':
+            case 'chatsAvailable':
+              this.isConnected = true;
+              this.qrCode = null;
+              this.isInitializing = false;
+              logger.info('✅ WhatsApp conectado com sucesso!');
+
+              // ✅ FASE 2: Emitir evento de conexão pronta via Socket.IO
+              this.emitReady();
+
+              // ⚠️ ARQUITETURA STATELESS 2025: Sync automático removido
+              // Conversas são carregadas on-demand via getAllConversations()
+              logger.info('📱 WhatsApp pronto - arquitetura stateless (sem sync automático)');
+              break;
+
+            case 'notLogged':
+            case 'qrReadError':
+            case 'qrReadFail':
+              this.isConnected = false;
+              logger.info('⏳ Aguardando leitura do QR Code...');
+
+              // ✅ FASE 2: Emitir status via Socket.IO
+              this.emitStatus();
+              break;
+
+            case 'desconnectedMobile':
+            case 'serverClose':
+            case 'deleteToken':
+              this.isConnected = false;
+              this.qrCode = null;
+              logger.warn('⚠️  WhatsApp desconectado');
+
+              // ✅ FASE 2: Emitir evento de desconexão via Socket.IO
+              this.emitDisconnected(statusSession);
+              break;
+
+            case 'autocloseCalled':
+            case 'browserClose':
+              this.isConnected = false;
+              this.isInitializing = false;
+              logger.warn('🔄 Navegador fechado');
+
+              // ✅ FASE 2: Emitir evento de desconexão via Socket.IO
+              this.emitDisconnected(statusSession);
+              break;
+
+            default:
+              logger.debug(`🔄 Status: ${statusSession}`);
+
+              // ✅ FASE 2: Emitir status genérico via Socket.IO
+              this.emitStatus();
+          }
         },
         undefined, // onLoadingScreen
         undefined, // catchLinkCode
@@ -201,11 +270,11 @@ class WhatsAppService {
         }
       );
 
-      // ✅ REFATORADO: Listeners nativos
-      this.setupStateChangeListener();      // onStateChange (NOVO)
-      this.setupMessageListeners();         // onAnyMessage (REFATORADO)
-      this.setupAckListeners();             // onAck (mantido)
-      this.setupPresenceListener();         // onPresenceChanged (NOVO)
+      // Configurar listeners de mensagens
+      this.setupMessageListeners();
+
+      // Configurar listeners de ACK (confirmação de leitura/entrega)
+      this.setupAckListeners();
 
       // Configurar listeners avançados (presença, digitando, chamadas, etc.)
       this.listeners = new WhatsAppListeners(this.client);
@@ -235,91 +304,7 @@ class WhatsAppService {
   }
 
   /**
-   * ✅ NOVO: Listener nativo onStateChange (substitui callback de status)
-   * Monitora mudanças de estado da conexão (CONNECTED, DISCONNECTED, etc)
-   */
-  private setupStateChangeListener(): void {
-    if (!this.client) {
-      logger.error('Cliente WhatsApp não inicializado');
-      return;
-    }
-
-    // ✅ NATIVO: onStateChange com enums tipados
-    this.client.onStateChange((state: any) => {
-      logger.info(`🔄 Estado da conexão: ${state}`);
-
-      // Mapear estados para comportamento
-      switch (state) {
-        case 'CONNECTED':
-        case 'OPENING':
-          this.isConnected = true;
-          this.qrCode = null;
-          this.isInitializing = false;
-          logger.info('✅ WhatsApp conectado com sucesso!');
-          this.emitReady();
-          break;
-
-        case 'DISCONNECTED':
-        case 'TIMEOUT':
-          this.isConnected = false;
-          logger.warn('⚠️  WhatsApp desconectado');
-          this.emitDisconnected(state);
-          break;
-
-        case 'UNPAIRED':
-        case 'UNPAIRED_IDLE':
-          this.isConnected = false;
-          this.qrCode = null;
-          logger.warn('⚠️  WhatsApp desconectado (dispositivo não pareado)');
-          this.emitDisconnected(state);
-          break;
-
-        default:
-          logger.debug(`🔄 Estado: ${state}`);
-          this.emitStatus();
-      }
-    });
-
-    logger.info('✅ Listener onStateChange configurado');
-  }
-
-  /**
-   * ✅ NOVO: Listener nativo onPresenceChanged
-   * Monitora mudanças de presença (online, offline, digitando, gravando áudio)
-   */
-  private setupPresenceListener(): void {
-    if (!this.client) {
-      logger.error('Cliente WhatsApp não inicializado');
-      return;
-    }
-
-    // ✅ NATIVO: onPresenceChanged
-    this.client.onPresenceChanged((event: any) => {
-      try {
-        logger.debug(`👤 Presença mudou: ${event.id} → ${event.state}`);
-
-        // Emitir via WebSocket
-        if (this.io) {
-          this.io.sockets.emit('whatsapp:presence', {
-            contactId: event.id,
-            state: event.state,              // 'available', 'unavailable', 'composing', 'recording'
-            isOnline: event.isOnline,
-            isTyping: event.state === 'composing',
-            isRecording: event.state === 'recording',
-            lastSeen: event.t ? new Date(event.t * 1000) : null,
-          });
-        }
-      } catch (error) {
-        logger.error('Erro ao processar mudança de presença:', error);
-      }
-    });
-
-    logger.info('✅ Listener onPresenceChanged configurado');
-  }
-
-  /**
-   * ✅ REFATORADO: Configurar listeners para TODAS as mensagens (enviadas + recebidas)
-   * Usa onAnyMessage() nativo ao invés de onMessage() para capturar mensagens enviadas também
+   * Configurar listeners para mensagens recebidas
    */
   private setupMessageListeners(): void {
     if (!this.client) {
@@ -327,60 +312,52 @@ class WhatsAppService {
       return;
     }
 
-    // ✅ NATIVO: onAnyMessage captura TODAS mensagens (enviadas + recebidas)
-    this.client.onAnyMessage(async (message: Message) => {
+    // ✅ ARQUITETURA STATELESS: Listener apenas emite WebSocket (NÃO persiste)
+    this.client.onMessage(async (message: Message) => {
       try {
-        // Filtrar broadcasts e grupos (opcional)
-        if (message.from === 'status@broadcast') {
+        // Filtros de mensagens
+        if (message.isGroupMsg || message.from === 'status@broadcast' || message.fromMe) {
           return;
         }
 
-        const direction = message.fromMe ? '📤 Enviada' : '📩 Recebida';
-        const normalizedPhone = message.from.replace('@c.us', '').replace('@g.us', '');
+        logger.info(`📩 Nova mensagem de ${message.from}: ${message.body?.substring(0, 50) || '(mídia)'}...`);
 
-        logger.info(`${direction} de ${normalizedPhone}: ${message.body?.substring(0, 50) || '(mídia)'}...`);
+        const normalizedPhone = message.from.replace('@c.us', '');
 
-        // ✅ MELHORIA: Processar mensagens recebidas (não enviadas por nós)
-        if (!message.fromMe) {
-          // Verificar se tem bot ativo
-          try {
-            const { prisma } = await import('../config/database');
+        // Verificar se tem bot ativo
+        try {
+          const { prisma } = await import('../config/database');
 
-            const botSession = await prisma.whatsAppBotSession.findFirst({
-              where: {
-                phone: normalizedPhone.replace(/\D/g, ''),
-                isActive: true,
-                handedOffToHuman: false,
-              },
-            });
+          const botSession = await prisma.whatsAppBotSession.findFirst({
+            where: {
+              phone: normalizedPhone.replace(/\D/g, ''),
+              isActive: true,
+              handedOffToHuman: false,
+            },
+          });
 
-            if (botSession) {
-              logger.info(`🤖 Roteando para bot - Sessão ${botSession.id}`);
-              const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
-              await whatsappBotService.processUserMessage(normalizedPhone.replace(/\D/g, ''), message.body);
-              return;
-            }
-          } catch (error) {
-            logger.error('Erro ao verificar bot:', error);
+          if (botSession) {
+            logger.info(`🤖 Roteando para bot - Sessão ${botSession.id}`);
+            const { whatsappBotService } = await import('../modules/whatsapp-bot/whatsapp-bot.service');
+            await whatsappBotService.processUserMessage(normalizedPhone.replace(/\D/g, ''), message.body);
+            return;
           }
+        } catch (error) {
+          logger.error('Erro ao verificar bot:', error);
         }
 
-        // ✅ STATELESS: Emitir WebSocket para TODAS mensagens (enviadas + recebidas)
+        // ✅ STATELESS: Apenas emitir WebSocket (frontend busca do WPP on-demand)
         if (this.io) {
           this.io.sockets.emit('message:new', {
-            id: message.id,
             from: message.from,
-            to: message.to,
             phone: normalizedPhone,
             body: message.body || '',
             type: message.type,
             timestamp: new Date(message.timestamp * 1000),
-            fromMe: message.fromMe || false,
-            ack: message.ack,
-            status: this.mapAckToStatus(message.ack),
+            fromMe: false,
           });
 
-          logger.debug(`📡 WebSocket: message:new (${direction}) - ${normalizedPhone}`);
+          logger.info(`📡 WebSocket emitido para ${normalizedPhone}`);
         }
 
       } catch (error: any) {
@@ -388,61 +365,7 @@ class WhatsAppService {
       }
     });
 
-    // ✅ NOVO: Listener para mensagens deletadas (revoked)
-    this.client.onRevokedMessage((data: any) => {
-      try {
-        logger.info(`🗑️ Mensagem deletada: ${data.id}`);
-
-        if (this.io) {
-          this.io.sockets.emit('message:revoked', {
-            messageId: data.id,
-            from: data.from,
-            to: data.to,
-            refId: data.refId,
-          });
-        }
-      } catch (error) {
-        logger.error('Erro ao processar mensagem deletada:', error);
-      }
-    });
-
-    // ✅ NOVO: Listener para reações
-    this.client.onReactionMessage((reaction: any) => {
-      try {
-        logger.info(`👍 Reação: ${reaction.reactionText} na mensagem ${reaction.msgId}`);
-
-        if (this.io) {
-          this.io.sockets.emit('whatsapp:reaction', {
-            messageId: reaction.msgId,
-            emoji: reaction.reactionText,
-            timestamp: new Date(reaction.timestamp * 1000),
-            read: reaction.read,
-          });
-        }
-      } catch (error) {
-        logger.error('Erro ao processar reação:', error);
-      }
-    });
-
-    // ✅ NOVO: Listener para edições de mensagens
-    this.client.onMessageEdit?.((chatId: any, msgId: string, newMessage: Message) => {
-      try {
-        logger.info(`✏️ Mensagem editada: ${msgId}`);
-
-        if (this.io) {
-          this.io.sockets.emit('message:edited', {
-            chatId: typeof chatId === 'string' ? chatId : chatId._serialized,
-            messageId: msgId,
-            newContent: newMessage.body,
-            timestamp: new Date(newMessage.timestamp * 1000),
-          });
-        }
-      } catch (error) {
-        logger.error('Erro ao processar edição de mensagem:', error);
-      }
-    });
-
-    logger.info('✅ Listeners nativos configurados (onAnyMessage, onRevokedMessage, onReactionMessage, onMessageEdit)');
+    logger.info('✅ Listeners de mensagens configurados');
   }
 
   /**
@@ -491,30 +414,19 @@ class WhatsAppService {
 
         const ackCode = ack.ack;
 
-        // ✅ MAPEAMENTO COMPLETO DE ACK (padrão WhatsApp Web)
+        // ⭐ FASE 2: Mapeamento completo de ACK incluindo PLAYED (ACK 5)
         const statusName =
-          ackCode === -1 ? 'ERROR' :     // Erro no envio
-          ackCode === 0 ? 'PENDING' :    // Pendente (relógio)
-          ackCode === 1 ? 'SENT' :       // Enviado (1 check cinza)
-          ackCode === 2 ? 'SENT' :       // Server recebeu (1 check cinza)
-          ackCode === 3 ? 'DELIVERED' :  // Entregue (2 checks cinza)
+          ackCode === 0 ? 'CLOCK' :      // Pendente no relógio
+          ackCode === 1 ? 'SENT' :       // Enviado (1 check)
+          ackCode === 2 ? 'SENT' :       // Server recebeu
+          ackCode === 3 ? 'DELIVERED' :  // Entregue (2 checks)
           ackCode === 4 ? 'READ' :       // Lido (2 checks azuis)
-          ackCode === 5 ? 'PLAYED' :     // Reproduzido (áudio/vídeo)
+          ackCode === 5 ? 'PLAYED' :     // ⭐ Reproduzido (áudio/vídeo)
           'UNKNOWN';
 
-        logger.info(`📨 ACK recebido: ${messageId.substring(0, 20)}... -> ${statusName} (ACK ${ackCode})`);
+        logger.info(`📨 ACK: ${messageId.substring(0, 20)}... -> ${statusName} (${ackCode})`);
 
-        // ✅ STATELESS: Emitir WebSocket diretamente (não persiste no banco)
-        if (this.io) {
-          this.io.sockets.emit('message:status', {
-            messageIds: [messageId],
-            status: statusName,
-            ackCode,
-          });
-          logger.debug(`📡 WebSocket emitido: message:status -> ${messageId.substring(0, 20)}... (${statusName})`);
-        }
-
-        // ✅ HÍBRIDO: Atualizar status no banco (para mensagens salvas na estratégia híbrida)
+        // Atualizar status da mensagem no banco (já emite WebSocket internamente)
         await whatsappChatService.updateMessageStatus(messageId, ackCode);
 
       } catch (error) {
@@ -589,7 +501,7 @@ class WhatsAppService {
 
     try {
       // Tentar obter informações do dispositivo
-      const hostDevice: any = await this.client.getHostDevice().catch(() => null);
+      const hostDevice: any = await this.client!.getHostDevice().catch(() => null);
 
       // Se getHostDevice falhar, tentar alternativas
       if (hostDevice) {
@@ -622,139 +534,44 @@ class WhatsAppService {
   }
 
   /**
-   * ⭐ FASE 1: Enviar mensagem de texto com validações e retry
+   * ⭐ FASE 2: Enviar mensagem de texto (SIMPLIFICADO)
    * @param to Número do destinatário (com código do país, ex: 5511999999999)
    * @param message Mensagem a ser enviada
+   * @param options Opções adicionais para envio
+   * @returns Resultado do envio com ID da mensagem
    */
-  async sendTextMessage(to: string, message: string): Promise<void> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
+  async sendTextMessage(to: string, message: string, options?: any): Promise<any> {
+    this.validateConnection();
 
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (!message || typeof message !== 'string' || message.trim() === '') {
+    if (!message?.trim()) {
       throw new Error('Mensagem vazia não pode ser enviada');
     }
 
-    const timestamp = new Date().toISOString();
-    const toMasked = to.substring(0, 8) + '***';
+    const formatted = this.formatPhoneNumber(to);
+    const result = await this.client!.sendText(formatted, message, options);
 
-    // Log estruturado
-    logger.info('📨 Enviando mensagem de texto', {
-      to: toMasked,
-      messageLength: message.length,
-      timestamp,
-      sessionActive: this.isConnected,
-      clientInitialized: !!this.client,
-    });
+    logger.info(`📨 Mensagem enviada: ${to}`, { messageId: result.id });
 
-    // Usar retry logic
-    await this.sendWithRetry(async () => {
-      try {
-        // Formatar número para o padrão do WhatsApp (com validação)
-        const formattedNumber = this.formatPhoneNumber(to);
-
-        // Enviar mensagem via WPPConnect
-        const result = await this.client!.sendText(formattedNumber, message);
-
-        logger.info(`✅ Mensagem enviada com sucesso`, {
-          to: toMasked,
-          messageId: result.id?._serialized || result.id,
-          timestamp: new Date().toISOString(),
-        });
-
-        // ✅ CRÍTICO: Extrair número limpo do ID retornado pelo WhatsApp para garantir consistência
-        // O WhatsApp retorna IDs no formato: true_5511999999999@c.us_MESSAGEID ou 5511999999999@c.us
-        let phoneFromResult = formattedNumber.replace('@c.us', '');
-        if (result.id?._serialized) {
-          const parts = result.id._serialized.split('@')[0].split('_');
-          // Pegar a última parte que contém o número (ignora 'true' e outros prefixos)
-          phoneFromResult = parts[parts.length - 1];
-        }
-
-        // Salvar mensagem enviada no banco (estratégia híbrida)
-        await whatsappChatService.saveOutgoingMessage({
-          to: phoneFromResult, // ✅ Usar número do WhatsApp, não o número original
-          content: message,
-          whatsappMessageId: result.id || `${Date.now()}_${to}`,
-          timestamp: new Date(),
-        });
-
-      } catch (error: any) {
-        logger.error('❌ Erro ao enviar mensagem', {
-          error: error.message,
-          stack: error.stack,
-          to: toMasked,
-          attemptedAt: new Date().toISOString(),
-          wasConnected: this.isConnected,
-        });
-        throw error;
-      }
-    });
+    return result;
   }
 
   /**
-   * ⭐ FASE 1: Enviar imagem com validações e retry
+   * ⭐ FASE 2: Enviar imagem (SIMPLIFICADO)
    * @param to Número de destino
-   * @param imageUrl URL da imagem
+   * @param pathOrBase64 Caminho ou base64 da imagem
+   * @param filename Nome do arquivo
    * @param caption Legenda opcional
-   * @returns ID da mensagem no WhatsApp
+   * @returns Resultado do envio
    */
-  async sendImage(to: string, imageUrl: string, caption?: string): Promise<string | undefined> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (!imageUrl || typeof imageUrl !== 'string' || imageUrl.trim() === '') {
-      throw new Error('URL da imagem inválida');
-    }
-
-    const toMasked = to.substring(0, 8) + '***';
-
-    logger.info('🖼️ Enviando imagem', {
-      to: toMasked,
-      imageUrl: imageUrl.substring(0, 50) + '...',
-      hasCaption: !!caption,
-      timestamp: new Date().toISOString(),
-    });
-
-    return await this.sendWithRetry(async () => {
-      try {
-        const formattedNumber = this.formatPhoneNumber(to);
-
-        // Enviar imagem via WPPConnect
-        const result = await this.client!.sendImage(
-          formattedNumber,
-          imageUrl,
-          'image',
-          caption || ''
-        );
-
-        logger.info(`✅ Imagem enviada com sucesso`, {
-          to: toMasked,
-          messageId: result.id,
-        });
-
-        return result.id;
-
-      } catch (error: any) {
-        logger.error('❌ Erro ao enviar imagem', {
-          error: error.message,
-          to: toMasked,
-          imageUrl: imageUrl.substring(0, 50) + '...',
-        });
-        throw error;
-      }
-    });
+  async sendImage(
+    to: string,
+    pathOrBase64: string,
+    filename?: string,
+    caption?: string
+  ): Promise<any> {
+    this.validateConnection();
+    const formatted = this.formatPhoneNumber(to);
+    return await this.client!.sendImage(formatted, pathOrBase64, filename, caption);
   }
 
   /**
@@ -824,147 +641,29 @@ class WhatsAppService {
    * @param caption Legenda opcional
    * @returns ID da mensagem no WhatsApp
    */
-  async sendAudio(to: string, audioPath: string, caption?: string): Promise<string | undefined> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (!audioPath || typeof audioPath !== 'string' || audioPath.trim() === '') {
-      throw new Error('Caminho do áudio inválido');
-    }
-
-    const toMasked = to.substring(0, 8) + '***';
-
-    logger.info('🎤 Enviando áudio (PTT)', {
-      to: toMasked,
-      audioPath: audioPath.substring(0, 50) + '...',
-      hasCaption: !!caption,
-      timestamp: new Date().toISOString(),
-    });
-
-    return await this.sendWithRetry(async () => {
-      try {
-        const formattedNumber = this.formatPhoneNumber(to);
-
-        // Enviar áudio como PTT (Push-to-Talk) via WPPConnect
-        const result = await this.client!.sendPtt(formattedNumber, audioPath);
-
-        logger.info(`✅ Áudio enviado com sucesso`, {
-          to: toMasked,
-          messageId: result.id,
-        });
-
-        return result.id;
-
-      } catch (error: any) {
-        logger.error('❌ Erro ao enviar áudio', {
-          error: error.message,
-          to: toMasked,
-          audioPath: audioPath.substring(0, 50) + '...',
-        });
-        throw error;
-      }
-    });
-  }
-
   /**
-   * ⭐ FASE 2: Enviar reação a uma mensagem
-   * @param messageId ID da mensagem (serialized)
-   * @param emoji Emoji da reação (ou false para remover)
-   * @returns Resultado da operação
+   * ⭐ FASE 2: Enviar áudio PTT (SIMPLIFICADO)
    */
-  async sendReaction(messageId: string, emoji: string | false): Promise<{ sendMsgResult: string }> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (!messageId || typeof messageId !== 'string' || messageId.trim() === '') {
-      throw new Error('ID da mensagem inválido');
-    }
-
-    const action = emoji === false ? 'remover' : 'enviar';
-    const emojiDisplay = emoji === false ? '(removendo)' : emoji;
-
-    logger.info(`${emoji === false ? '🚫' : '👍'} ${action === 'remover' ? 'Removendo' : 'Enviando'} reação`, {
-      messageId: messageId.substring(0, 20) + '...',
-      emoji: emojiDisplay,
-      timestamp: new Date().toISOString(),
-    });
-
-    return await this.sendWithRetry(async () => {
-      try {
-        // Enviar reação via WPPConnect
-        const result = await this.client!.sendReactionToMessage(messageId, emoji);
-
-        logger.info(`✅ Reação ${action === 'remover' ? 'removida' : 'enviada'} com sucesso`, {
-          messageId: messageId.substring(0, 20) + '...',
-          emoji: emojiDisplay,
-        });
-
-        return result;
-
-      } catch (error: any) {
-        logger.error(`❌ Erro ao ${action} reação`, {
-          error: error.message,
-          messageId: messageId.substring(0, 20) + '...',
-          emoji: emojiDisplay,
-        });
-        throw error;
-      }
-    });
+  async sendAudio(to: string, audioPath: string): Promise<any> {
+    this.validateConnection();
+    const formatted = this.formatPhoneNumber(to);
+    return await this.client!.sendPtt(formatted, audioPath);
   }
 
   /**
-   * ⭐ FASE 2: Marcar mensagem como lida
-   * @param chatId ID do chat (ex: 5511999999999@c.us)
-   * @returns void
+   * ⭐ FASE 2: Enviar reação a mensagem (SIMPLIFICADO)
+   */
+  async sendReaction(messageId: string, emoji: string | false): Promise<any> {
+    this.validateConnection();
+    return await this.client!.sendReactionToMessage(messageId, emoji);
+  }
+
+  /**
+   * ⭐ FASE 2: Marcar mensagem como lida (SIMPLIFICADO)
    */
   async markAsRead(chatId: string): Promise<void> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
-      throw new Error('ID do chat inválido');
-    }
-
-    logger.info('👁️ Marcando chat como lido', {
-      chatId: chatId.substring(0, 20) + '...',
-      timestamp: new Date().toISOString(),
-    });
-
-    await this.sendWithRetry(async () => {
-      try {
-        // Marcar como lido via WPPConnect
-        await this.client!.sendSeen(chatId);
-
-        logger.info(`✅ Chat marcado como lido`, {
-          chatId: chatId.substring(0, 20) + '...',
-        });
-
-      } catch (error: any) {
-        logger.error('❌ Erro ao marcar como lido', {
-          error: error.message,
-          chatId: chatId.substring(0, 20) + '...',
-        });
-        throw error;
-      }
-    });
+    this.validateConnection();
+    await this.client!.sendSeen(chatId);
   }
 
   /**
@@ -1078,210 +777,45 @@ class WhatsAppService {
    * @param caption Legenda opcional
    * @returns ID da mensagem no WhatsApp
    */
+  /**
+   * ⭐ FASE 2: Enviar arquivo (SIMPLIFICADO)
+   */
   async sendFile(
     to: string,
     filePath: string,
     filename?: string,
     caption?: string
-  ): Promise<string | undefined> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
-      throw new Error('Caminho do arquivo inválido');
-    }
-
-    const toMasked = to.substring(0, 8) + '***';
-    const displayFilename = filename || 'documento';
-
-    logger.info('📎 Enviando arquivo', {
-      to: toMasked,
-      filePath: filePath.substring(0, 50) + '...',
-      filename: displayFilename,
-      hasCaption: !!caption,
-      timestamp: new Date().toISOString(),
-    });
-
-    return await this.sendWithRetry(async () => {
-      try {
-        const formattedNumber = this.formatPhoneNumber(to);
-
-        // Enviar arquivo via WPPConnect
-        const result = await this.client!.sendFile(
-          formattedNumber,
-          filePath,
-          displayFilename,
-          caption || ''
-        );
-
-        logger.info(`✅ Arquivo enviado com sucesso`, {
-          to: toMasked,
-          filename: displayFilename,
-          messageId: result.id,
-        });
-
-        return result.id;
-
-      } catch (error: any) {
-        logger.error('❌ Erro ao enviar arquivo', {
-          error: error.message,
-          to: toMasked,
-          filePath: filePath.substring(0, 50) + '...',
-          filename: displayFilename,
-        });
-        throw error;
-      }
-    });
+  ): Promise<any> {
+    this.validateConnection();
+    const formatted = this.formatPhoneNumber(to);
+    return await this.client!.sendFile(formatted, filePath, filename, caption);
   }
 
   /**
-   * ⭐ FASE 3: Enviar localização
-   * @param to Número de destino
-   * @param latitude Latitude
-   * @param longitude Longitude
-   * @param name Nome do local (opcional)
-   * @returns ID da mensagem no WhatsApp
+   * ⭐ FASE 2: Enviar localização (SIMPLIFICADO)
    */
   async sendLocation(
     to: string,
     latitude: number,
     longitude: number,
     name?: string
-  ): Promise<string | undefined> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-      throw new Error('Latitude e longitude devem ser números');
-    }
-
-    if (latitude < -90 || latitude > 90) {
-      throw new Error('Latitude inválida. Deve estar entre -90 e 90');
-    }
-
-    if (longitude < -180 || longitude > 180) {
-      throw new Error('Longitude inválida. Deve estar entre -180 e 180');
-    }
-
-    const toMasked = to.substring(0, 8) + '***';
-    const locationName = name || 'Localização';
-
-    logger.info('📍 Enviando localização', {
-      to: toMasked,
-      latitude,
-      longitude,
-      name: locationName,
-      timestamp: new Date().toISOString(),
-    });
-
-    return await this.sendWithRetry(async () => {
-      try {
-        const formattedNumber = this.formatPhoneNumber(to);
-
-        // Enviar localização via WPPConnect
-        const result = await this.client!.sendLocation(
-          formattedNumber,
-          latitude,
-          longitude,
-          locationName
-        );
-
-        logger.info(`✅ Localização enviada com sucesso`, {
-          to: toMasked,
-          latitude,
-          longitude,
-          messageId: result.id,
-        });
-
-        return result.id;
-
-      } catch (error: any) {
-        logger.error('❌ Erro ao enviar localização', {
-          error: error.message,
-          to: toMasked,
-          latitude,
-          longitude,
-        });
-        throw error;
-      }
-    });
+  ): Promise<any> {
+    this.validateConnection();
+    const formatted = this.formatPhoneNumber(to);
+    return await this.client!.sendLocation(formatted, latitude, longitude, name);
   }
 
   /**
-   * ⭐ FASE 3: Enviar contato vCard
-   * @param to Número de destino
-   * @param contactId ID do contato no formato WhatsApp (ex: 5511999999999@c.us)
-   * @param name Nome do contato
-   * @returns ID da mensagem no WhatsApp
+   * ⭐ FASE 2: Enviar contato vCard (SIMPLIFICADO)
    */
   async sendContactVcard(
     to: string,
     contactId: string,
     name?: string
-  ): Promise<string | undefined> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (!contactId || typeof contactId !== 'string' || contactId.trim() === '') {
-      throw new Error('ID do contato inválido');
-    }
-
-    const toMasked = to.substring(0, 8) + '***';
-    const contactName = name || 'Contato';
-
-    logger.info('👤 Enviando contato vCard', {
-      to: toMasked,
-      contactId: contactId.substring(0, 15) + '...',
-      name: contactName,
-      timestamp: new Date().toISOString(),
-    });
-
-    return await this.sendWithRetry(async () => {
-      try {
-        const formattedNumber = this.formatPhoneNumber(to);
-
-        // Enviar vCard via WPPConnect
-        const result = await this.client!.sendContactVcard(
-          formattedNumber,
-          contactId,
-          contactName
-        );
-
-        logger.info(`✅ Contato vCard enviado com sucesso`, {
-          to: toMasked,
-          contactName,
-          messageId: result.id,
-        });
-
-        return result.id;
-
-      } catch (error: any) {
-        logger.error('❌ Erro ao enviar contato vCard', {
-          error: error.message,
-          to: toMasked,
-          contactId: contactId.substring(0, 15) + '...',
-        });
-        throw error;
-      }
-    });
+  ): Promise<any> {
+    this.validateConnection();
+    const formatted = this.formatPhoneNumber(to);
+    return await this.client!.sendContactVcard(formatted, contactId, name);
   }
 
   /**
@@ -1336,7 +870,7 @@ class WhatsAppService {
    * ⭐ FASE 3: Obter mensagens estreladas
    * @returns Array de mensagens estreladas
    */
-  async getStarredMessages(): Promise<any[]> {
+  async getStarredMessages(): Promise<Message[]> {
     // Validações iniciais
     if (!this.client) {
       throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
@@ -1352,8 +886,19 @@ class WhatsAppService {
 
     return await this.sendWithRetry(async () => {
       try {
-        // Obter mensagens estreladas via WPPConnect
-        const starredMessages = await this.client!.getStarredMessages();
+        // Obter todas as conversas e filtrar mensagens estreladas manualmente
+        const allChats = await this.client!.getAllChats();
+        const starredMessages: any[] = [];
+
+        for (const chat of allChats) {
+          const messages = await this.client!.getMessages(chat.id._serialized, {
+            count: -1 // todas as mensagens
+          });
+
+          // Filtrar mensagens com isStarred
+          const starred = messages.filter((msg: any) => msg.isStarred === true);
+          starredMessages.push(...starred);
+        }
 
         logger.info(`✅ ${starredMessages.length} mensagens estreladas encontradas`);
 
@@ -1369,51 +914,11 @@ class WhatsAppService {
   }
 
   /**
-   * ⭐ FASE 3: Arquivar conversa
-   * @param chatId ID do chat
-   * @param archive Se true, arquiva; se false, desarquiva
-   * @returns void
+   * ⭐ FASE 2: Arquivar conversa (SIMPLIFICADO)
    */
   async archiveChat(chatId: string, archive: boolean = true): Promise<void> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
-
-    if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
-      throw new Error('ID do chat inválido');
-    }
-
-    const action = archive ? 'arquivando' : 'desarquivando';
-
-    logger.info(`📦 ${archive ? 'Arquivando' : 'Desarquivando'} conversa`, {
-      chatId: chatId.substring(0, 20) + '...',
-      archive,
-      timestamp: new Date().toISOString(),
-    });
-
-    await this.sendWithRetry(async () => {
-      try {
-        // Arquivar/desarquivar chat via WPPConnect
-        await this.client!.archiveChat(chatId, archive);
-
-        logger.info(`✅ Conversa ${archive ? 'arquivada' : 'desarquivada'} com sucesso`, {
-          chatId: chatId.substring(0, 20) + '...',
-          archive,
-        });
-
-      } catch (error: any) {
-        logger.error(`❌ Erro ao ${action} conversa`, {
-          error: error.message,
-          chatId: chatId.substring(0, 20) + '...',
-        });
-        throw error;
-      }
-    });
+    this.validateConnection();
+    await this.client!.archiveChat(chatId, archive);
   }
 
   /**
@@ -1484,7 +989,7 @@ class WhatsAppService {
 
     try {
       // Baixar mídia usando WPPConnect
-      const mediaData = await this.client.decryptFile(messageId);
+      const mediaData = await this.client!.downloadMedia(messageId);
       logger.info(`✅ Mídia baixada com sucesso: ${messageId}`);
       return Buffer.from(mediaData);
     } catch (error: any) {
@@ -1514,7 +1019,7 @@ class WhatsAppService {
 
       for (const recipient of recipients) {
         const formattedNumber = this.formatPhoneNumber(recipient);
-        await this.client.forwardMessages(formattedNumber, [messageId], false);
+        await this.client!.forwardMessages(formattedNumber, [messageId], false);
         logger.info(`✅ Mensagem encaminhada para: ${formattedNumber}`);
       }
     } catch (error: any) {
@@ -1524,35 +1029,18 @@ class WhatsAppService {
   }
 
   /**
-   * ⭐ FASE C: Fixar/Desafixar chat
-   * @param chatId ID do chat
-   * @param pin true para fixar, false para desafixar
+   * ⭐ FASE 2: Fixar/Desafixar chat (SIMPLIFICADO)
    */
   async pinChat(chatId: string, pin: boolean = true): Promise<void> {
-    logger.info(`📌 ${pin ? 'Fixando' : 'Desfixando'} chat: ${chatId}`);
-
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não está conectado');
-    }
-
-    try {
-      await this.client.pinChat(chatId, pin);
-      logger.info(`✅ Chat ${pin ? 'fixado' : 'desfixado'}: ${chatId}`);
-    } catch (error: any) {
-      logger.error(`❌ Erro ao ${pin ? 'fixar' : 'desfixar'} chat: ${chatId}`, error);
-      throw new Error(`Erro ao ${pin ? 'fixar' : 'desfixar'} chat: ${error.message}`);
-    }
+    this.validateConnection();
+    await this.client!.pinChat(chatId, pin);
   }
 
   /**
-   * ⭐ FASE C: Listar todos os contatos
+   * ⭐ FASE 3: Listar todos os contatos (TIPADO)
    * @returns Lista de contatos
    */
-  async getContacts(): Promise<any[]> {
+  async getContacts(): Promise<Contact[]> {
     logger.info('📇 Listando contatos do WhatsApp');
 
     if (!this.client) {
@@ -1564,7 +1052,7 @@ class WhatsAppService {
     }
 
     try {
-      const contacts = await this.client.getAllContacts();
+      const contacts = await this.client!.getAllContacts();
       logger.info(`✅ ${contacts.length} contatos recuperados`);
       return contacts;
     } catch (error: any) {
@@ -1574,11 +1062,11 @@ class WhatsAppService {
   }
 
   /**
-   * ⭐ FASE C: Verificar se número(s) está(ão) no WhatsApp
+   * ⭐ FASE 3: Verificar se número(s) está(ão) no WhatsApp (TIPADO)
    * @param phoneNumbers Número ou array de números
    * @returns Array com status de cada número
    */
-  async checkNumbersOnWhatsApp(phoneNumbers: string | string[]): Promise<any[]> {
+  async checkNumbersOnWhatsApp(phoneNumbers: string | string[]): Promise<NumberCheckResult[]> {
     logger.info('🔍 Verificando números no WhatsApp:', phoneNumbers);
 
     if (!this.client) {
@@ -1591,12 +1079,12 @@ class WhatsAppService {
 
     try {
       const numbers = Array.isArray(phoneNumbers) ? phoneNumbers : [phoneNumbers];
-      const results = [];
+      const results: NumberCheckResult[] = [];
 
       for (const phoneNumber of numbers) {
         try {
           const formatted = this.formatPhoneNumber(phoneNumber);
-          const numberExists = await this.client.checkNumberStatus(formatted);
+          const numberExists = await this.client!.checkNumberStatus(formatted);
 
           results.push({
             phoneNumber,
@@ -1653,7 +1141,7 @@ class WhatsAppService {
       const formattedParticipants = participants.map(p => this.formatPhoneNumber(p));
 
       // Criar grupo
-      const group = await this.client.createGroup(name, formattedParticipants);
+      const group = await this.client!.createGroup(name, formattedParticipants);
 
       logger.info(`✅ Grupo criado: ${name} (ID: ${group.gid})`);
       return group;
@@ -1713,7 +1201,8 @@ class WhatsAppService {
   }
 
   /**
-   * ⭐ FASE D: Enviar mensagem com botões de resposta
+   * ⭐ FASE D: Enviar mensagem com botões de resposta (formatada como texto)
+   * NOTA: sendButtons() foi deprecado pelo WhatsApp, usando sendText() com formatação
    * @param to Número do destinatário
    * @param message Texto da mensagem
    * @param buttons Array de botões (máx 3)
@@ -1723,7 +1212,7 @@ class WhatsAppService {
     message: string,
     buttons: Array<{ buttonText: string; buttonId: string }>
   ): Promise<string | undefined> {
-    logger.info(`🔘 Enviando mensagem com botões para: ${to}`);
+    logger.info(`🔘 Enviando mensagem com opções para: ${to}`);
 
     if (!this.client) {
       throw new Error('Cliente WhatsApp não inicializado');
@@ -1741,12 +1230,19 @@ class WhatsAppService {
 
     return this.sendWithRetry(async () => {
       try {
-        const result = await this.client!.sendButtons(formattedNumber, message, buttons);
+        // Formatar mensagem com opções numeradas
+        let formattedMessage = message + '\n\n';
+        buttons.forEach((btn, idx) => {
+          formattedMessage += `${idx + 1}. ${btn.buttonText}\n`;
+        });
+        formattedMessage += '\nResponda com o número da opção desejada.';
 
-        logger.info(`✅ Mensagem com botões enviada para ${formattedNumber}`);
+        const result = await this.client!.sendText(formattedNumber, formattedMessage);
+
+        logger.info(`✅ Mensagem com opções enviada para ${formattedNumber}`);
         return result.id;
       } catch (error: any) {
-        logger.error(`❌ Erro ao enviar botões para ${formattedNumber}:`, error);
+        logger.error(`❌ Erro ao enviar opções para ${formattedNumber}:`, error);
         throw error;
       }
     });
@@ -1810,7 +1306,7 @@ class WhatsAppService {
 
     try {
       const formattedNumber = this.formatPhoneNumber(participantNumber);
-      await this.client.addParticipant(groupId, [formattedNumber]);
+      await this.client!.addParticipant(groupId, [formattedNumber]);
 
       logger.info(`✅ Participante adicionado: ${formattedNumber}`);
     } catch (error: any) {
@@ -1837,7 +1333,7 @@ class WhatsAppService {
 
     try {
       const formattedNumber = this.formatPhoneNumber(participantNumber);
-      await this.client.removeParticipant(groupId, [formattedNumber]);
+      await this.client!.removeParticipant(groupId, [formattedNumber]);
 
       logger.info(`✅ Participante removido: ${formattedNumber}`);
     } catch (error: any) {
@@ -1863,7 +1359,7 @@ class WhatsAppService {
     }
 
     try {
-      await this.client.setGroupDescription(groupId, description);
+      await this.client!.setGroupDescription(groupId, description);
       logger.info(`✅ Descrição do grupo atualizada`);
     } catch (error: any) {
       logger.error(`❌ Erro ao alterar descrição:`, error);
@@ -1888,7 +1384,7 @@ class WhatsAppService {
     }
 
     try {
-      await this.client.setGroupSubject(groupId, subject);
+      await this.client!.setGroupSubject(groupId, subject);
       logger.info(`✅ Nome do grupo atualizado`);
     } catch (error: any) {
       logger.error(`❌ Erro ao alterar nome:`, error);
@@ -1914,7 +1410,7 @@ class WhatsAppService {
 
     try {
       const formattedNumber = this.formatPhoneNumber(participantNumber);
-      await this.client.promoteParticipant(groupId, [formattedNumber]);
+      await this.client!.promoteParticipant(groupId, [formattedNumber]);
 
       logger.info(`✅ Participante promovido a admin`);
     } catch (error: any) {
@@ -1941,7 +1437,7 @@ class WhatsAppService {
 
     try {
       const formattedNumber = this.formatPhoneNumber(participantNumber);
-      await this.client.demoteParticipant(groupId, [formattedNumber]);
+      await this.client!.demoteParticipant(groupId, [formattedNumber]);
 
       logger.info(`✅ Admin removido do participante`);
     } catch (error: any) {
@@ -1952,9 +1448,10 @@ class WhatsAppService {
 
   /**
    * ⭐ FASE D: Listar participantes do grupo
+   * NOTA: Usando getGroupMembers() que é garantido existir no WPPConnect
    * @param groupId ID do grupo
    */
-  async getGroupParticipants(groupId: string): Promise<any[]> {
+  async getGroupParticipants(groupId: string): Promise<GroupMember[]> {
     logger.info(`👥 Listando participantes do grupo ${groupId}`);
 
     if (!this.client) {
@@ -1966,12 +1463,27 @@ class WhatsAppService {
     }
 
     try {
-      const metadata = await this.client.getGroupMetadata(groupId);
-      logger.info(`✅ ${metadata.participants.length} participantes recuperados`);
-      return metadata.participants;
+      // getGroupMembers() é garantido existir no WPPConnect
+      const members = await this.client!.getGroupMembers(groupId);
+      logger.info(`✅ ${members.length} participantes recuperados`);
+      return members as GroupMember[];
     } catch (error: any) {
       logger.error(`❌ Erro ao listar participantes:`, error);
       throw new Error(`Erro ao listar participantes: ${error.message}`);
+    }
+  }
+
+  /**
+   * ⭐ FASE 2: Helper centralizado de validação de conexão
+   * @throws Error se cliente não inicializado ou não conectado
+   */
+  private validateConnection(): void {
+    if (!this.client) {
+      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
+    }
+
+    if (!this.isConnected) {
+      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
     }
   }
 
@@ -2043,7 +1555,7 @@ class WhatsAppService {
     // Desconectar cliente
     if (this.client) {
       try {
-        await this.client.close();
+        await this.client!.close();
         logger.info('👋 WhatsApp desconectado');
         this.isConnected = false;
         this.qrCode = null;
@@ -2067,8 +1579,16 @@ class WhatsAppService {
   // ============================================================================
 
   /**
-   * ✅ REFATORADO: Busca conversas usando listChats() nativo (ao invés de getAllChats deprecated)
-   * Enriquece com metadata do PostgreSQL (tags, leadId, etc)
+   * ⭐ FASE 4: Busca todas as conversas direto do WhatsApp (STATELESS)
+   *
+   * ARQUITETURA STATELESS:
+   * - Busca conversas DIRETO do WhatsApp via client.getAllChats()
+   * - NÃO persiste conversas no PostgreSQL
+   * - Enriquece com metadata (tags, leadId) do PostgreSQL
+   * - Sempre retorna dados atualizados em tempo real
+   *
+   * @param limit Número máximo de conversas a retornar
+   * @returns Array de conversas enriquecidas com metadata
    */
   async getAllConversations(limit: number = 50): Promise<any[]> {
     if (!this.client) {
@@ -2076,20 +1596,20 @@ class WhatsAppService {
     }
 
     try {
-      // ✅ NATIVO: listChats() com opções
-      const chats = await this.client.listChats({
-        onlyUsers: true,      // ✅ Apenas conversas privadas (não grupos)
-        onlyWithUnreadMessage: false,  // Incluir lidas também
-        count: limit,         // Limitar quantidade
-      });
+      // 1. ✅ STATELESS: Buscar TODAS as conversas direto do WhatsApp
+      const allChats = await this.client!.getAllChats();
 
-      logger.info(`📋 ${chats.length} conversas carregadas via listChats()`);
+      // 2. Filtrar apenas conversas privadas (não grupos)
+      const privateChats = allChats
+        .filter((chat: Chat) => !chat.isGroup)
+        .sort((a: Chat, b: Chat) => ((b as any).t || 0) - ((a as any).t || 0))
+        .slice(0, limit);
 
-      // 2. Enriquecer com metadata do PostgreSQL
+      // 3. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
       const { prisma } = await import('../config/database');
 
       const enrichedChats = await Promise.all(
-        chats.map(async (chat: any) => {
+        privateChats.map(async (chat: Chat) => {
           const phone = chat.id._serialized.replace('@c.us', '');
 
           // Buscar metadata do contato no PostgreSQL
@@ -2117,9 +1637,6 @@ class WhatsAppService {
             unreadCount: chat.unreadCount || 0,
             isPinned: chat.pin || false,
             isArchived: chat.archive || false,
-            // ✅ NOVO: Informações adicionais do WPPConnect
-            isMuted: chat.muteExpiration > 0,
-            labels: chat.labels || [],
             // Metadata do CRM
             lead: contactMetadata?.lead || null,
             tags: contactMetadata?.tags || [],
@@ -2141,7 +1658,17 @@ class WhatsAppService {
   }
 
   /**
-   * ✅ STATELESS: Busca mensagens de uma conversa direto do WhatsApp
+   * ⭐ FASE 4: Busca mensagens de uma conversa direto do WhatsApp (STATELESS)
+   *
+   * ARQUITETURA STATELESS:
+   * - Busca mensagens DIRETO do WhatsApp via client.getMessages()
+   * - NÃO persiste mensagens no PostgreSQL
+   * - Sempre retorna dados atualizados em tempo real
+   * - Zero latência de sincronização
+   *
+   * @param phone Número do telefone (com ou sem formatação)
+   * @param count Número de mensagens a buscar (padrão: 100)
+   * @returns Array de mensagens formatadas para o frontend
    */
   async getChatMessages(phone: string, count: number = 100): Promise<any[]> {
     if (!this.client) {
@@ -2154,47 +1681,38 @@ class WhatsAppService {
       const chatId = cleanPhone.includes('@c.us') ? cleanPhone : `${cleanPhone}@c.us`;
 
       // Buscar mensagens DIRETO do WPPConnect
-      const messages = await this.client.getMessages(chatId, {
+      const messages = await this.client!.getMessages(chatId, {
         count,
         direction: 'before',
       });
 
       // Formatar mensagens para o formato esperado pelo frontend
-      return messages.map((msg: any) => {
-        // ✅ CRÍTICO: Usar ACK real do WhatsApp
-        const ack = msg.ack !== undefined ? msg.ack : (msg.fromMe ? 1 : -1);
-        const status = this.mapAckToStatus(ack);
-
-        logger.debug(`📊 Mensagem ${msg.id?.substring(0, 20)}... - ACK: ${ack} -> Status: ${status}`);
-
-        return {
-          id: msg.id,
-          conversationId: chatId,
-          type: msg.type,
-          content: msg.body || '',
-          mediaUrl: msg.mediaUrl || null,
-          mediaType: msg.mimetype || null,
-          fromMe: msg.fromMe || false,
-          status,
-          ack, // ✅ Incluir ACK original para debug
-          timestamp: new Date(msg.timestamp * 1000),
-          quotedMessage: msg.quotedMsg ? {
-            id: msg.quotedMsg.id,
-            content: msg.quotedMsg.body || '',
-            fromMe: msg.quotedMsg.fromMe || false,
-            contact: {
-              id: cleanPhone,
-              phone: cleanPhone,
-              name: cleanPhone,
-            },
-          } : null,
+      return messages.map((msg: any) => ({
+        id: msg.id,
+        conversationId: chatId,
+        type: msg.type,
+        content: msg.body || '',
+        mediaUrl: msg.mediaUrl || null,
+        mediaType: msg.mimetype || null,
+        fromMe: msg.fromMe || false,
+        status: this.mapAckToStatus(msg.ack),
+        timestamp: new Date(msg.timestamp * 1000),
+        quotedMessage: msg.quotedMsg ? {
+          id: msg.quotedMsg.id,
+          content: msg.quotedMsg.body || '',
+          fromMe: msg.quotedMsg.fromMe || false,
           contact: {
             id: cleanPhone,
             phone: cleanPhone,
             name: cleanPhone,
           },
-        };
-      });
+        } : null,
+        contact: {
+          id: cleanPhone,
+          phone: cleanPhone,
+          name: cleanPhone,
+        },
+      }));
     } catch (error: any) {
       logger.error(`Erro ao buscar mensagens de ${phone}:`, error);
       throw error;
@@ -2203,24 +1721,15 @@ class WhatsAppService {
 
   /**
    * Helper: Mapear ACK do WhatsApp para status
-   * ACK codes (padrão WhatsApp Web):
-   * -1 = ERROR (erro no envio)
-   * 0 = CLOCK (pendente, relógio)
-   * 1 = SENT (enviado ao servidor, 1 check cinza)
-   * 2 = SENT (recebido pelo servidor, 1 check cinza)
-   * 3 = DELIVERED (entregue ao destinatário, 2 checks cinza)
-   * 4 = READ (lido pelo destinatário, 2 checks azuis)
-   * 5 = PLAYED (áudio/vídeo reproduzido, 2 checks azuis)
    */
   private mapAckToStatus(ack?: number): string {
     switch (ack) {
-      case -1: return 'ERROR';
-      case 0: return 'PENDING';      // Relógio (aguardando envio)
-      case 1: return 'SENT';          // 1 check cinza
-      case 2: return 'SENT';          // 1 check cinza (servidor recebeu)
-      case 3: return 'DELIVERED';     // 2 checks cinza
-      case 4: return 'READ';          // 2 checks azuis
-      case 5: return 'PLAYED';        // 2 checks azuis + ícone play
+      case 0: return 'ERROR';
+      case 1: return 'PENDING';
+      case 2: return 'SENT';
+      case 3: return 'DELIVERED';
+      case 4: return 'READ';
+      case 5: return 'PLAYED';
       default: return 'SENT';
     }
   }
@@ -2296,6 +1805,164 @@ class WhatsAppService {
         connectedClients,
       },
     };
+  }
+
+  // ============================================================================
+  // ⭐ FASE 5: FUNÇÕES ÚTEIS ADICIONAIS
+  // ============================================================================
+
+  /**
+   * ⭐ FASE 5.1.1: Editar mensagem enviada (recurso novo do WhatsApp)
+   * @param messageId ID da mensagem
+   * @param newText Novo texto
+   * @returns Mensagem editada
+   */
+  async editMessage(messageId: string, newText: string): Promise<any> {
+    this.validateConnection();
+    logger.info(`✏️ Editando mensagem: ${messageId}`);
+    return await this.client!.editMessage(messageId, newText);
+  }
+
+  /**
+   * ⭐ FASE 5.1.2: Limpar todas as mensagens de um chat
+   * @param chatId ID do chat
+   * @param keepStarred Se true, mantém mensagens favoritadas
+   * @returns Sucesso da operação
+   */
+  async clearChat(chatId: string, keepStarred: boolean = true): Promise<boolean> {
+    this.validateConnection();
+    logger.info(`🧹 Limpando chat: ${chatId} (manter favoritadas: ${keepStarred})`);
+    return await this.client!.clearChat(chatId, keepStarred);
+  }
+
+  /**
+   * ⭐ FASE 5.1.3: Deletar um chat completamente
+   * @param chatId ID do chat
+   * @returns Sucesso da operação
+   */
+  async deleteChat(chatId: string): Promise<boolean> {
+    this.validateConnection();
+    logger.info(`🗑️ Deletando chat: ${chatId}`);
+    return await this.client!.deleteChat(chatId);
+  }
+
+  /**
+   * ⭐ FASE 5.1.4: Obter URL da foto de perfil
+   * @param contactId ID do contato
+   * @returns URL da foto de perfil ou undefined
+   */
+  async getProfilePicUrl(contactId: string): Promise<string | undefined> {
+    this.validateConnection();
+    logger.info(`🖼️ Buscando foto de perfil: ${contactId}`);
+    // WPPConnect usa getProfilePicFromServer() que retorna ProfilePicThumbObj
+    const pic = await this.client!.getProfilePicFromServer(contactId);
+    return pic?.eurl || pic?.imgFull || undefined;
+  }
+
+  /**
+   * ⭐ FASE 5.1.5: Obter status/bio de um contato
+   * @param contactId ID do contato
+   * @returns Status do contato
+   */
+  async getContactStatus(contactId: string): Promise<string> {
+    this.validateConnection();
+    logger.info(`📝 Buscando status do contato: ${contactId}`);
+    // WPPConnect retorna ContactStatus com propriedade status
+    const statusObj = await this.client!.getStatus(contactId);
+    return (statusObj as any)?.status || '';
+  }
+
+  /**
+   * ⭐ FASE 5.1.6: Silenciar chat
+   * @param chatId ID do chat
+   * @param duration Duração em ms (null = permanente)
+   * @returns Sucesso da operação
+   */
+  async muteChat(chatId: string, duration: number | null = null): Promise<any> {
+    this.validateConnection();
+    logger.info(`🔇 Silenciando chat: ${chatId}`);
+    // WPPConnect usa sendMute() com 3 parâmetros: chatId, time, type
+    // type: 0 = desmutar, 1 = mutar por período, 2 = mutar permanente
+    const time = duration || -1; // -1 = permanente
+    const type = duration ? 1 : 2; // 1 = temporário, 2 = permanente
+    return await this.client!.sendMute(chatId, time, type);
+  }
+
+  /**
+   * ⭐ FASE 5.1.6: Dessilenciar chat
+   * @param chatId ID do chat
+   * @returns Sucesso da operação
+   */
+  async unmuteChat(chatId: string): Promise<any> {
+    this.validateConnection();
+    logger.info(`🔔 Dessilenciando chat: ${chatId}`);
+    // WPPConnect usa sendMute() com type = 0 para desmutar
+    return await this.client!.sendMute(chatId, 0, 0);
+  }
+
+  /**
+   * ⭐ FASE 5.1.7: Bloquear contato
+   * @param contactId ID do contato
+   * @returns Sucesso da operação
+   */
+  async blockContact(contactId: string): Promise<boolean> {
+    this.validateConnection();
+    logger.info(`🚫 Bloqueando contato: ${contactId}`);
+    return await this.client!.blockContact(contactId);
+  }
+
+  /**
+   * ⭐ FASE 5.1.7: Desbloquear contato
+   * @param contactId ID do contato
+   * @returns Sucesso da operação
+   */
+  async unblockContact(contactId: string): Promise<boolean> {
+    this.validateConnection();
+    logger.info(`✅ Desbloqueando contato: ${contactId}`);
+    return await this.client!.unblockContact(contactId);
+  }
+
+  /**
+   * ⭐ FASE 5.1.7: Listar contatos bloqueados
+   * @returns Array de IDs de contatos bloqueados
+   */
+  async getBlockList(): Promise<string[]> {
+    this.validateConnection();
+    logger.info('📋 Listando contatos bloqueados');
+    return await this.client!.getBlockList();
+  }
+
+  /**
+   * ⭐ FASE 5.1.8: Obter link de convite do grupo
+   * @param groupId ID do grupo
+   * @returns Link de convite
+   */
+  async getGroupInviteLink(groupId: string): Promise<string> {
+    this.validateConnection();
+    logger.info(`🔗 Obtendo link de convite do grupo: ${groupId}`);
+    return await this.client!.getGroupInviteLink(groupId);
+  }
+
+  /**
+   * ⭐ FASE 5.1.8: Revogar link de convite do grupo
+   * @param groupId ID do grupo
+   * @returns Novo link de convite
+   */
+  async revokeGroupInviteLink(groupId: string): Promise<string> {
+    this.validateConnection();
+    logger.info(`🔄 Revogando link de convite do grupo: ${groupId}`);
+    return await this.client!.revokeGroupInviteLink(groupId);
+  }
+
+  /**
+   * ⭐ FASE 5.1.8: Sair de um grupo
+   * @param groupId ID do grupo
+   * @returns Sucesso da operação
+   */
+  async leaveGroup(groupId: string): Promise<boolean> {
+    this.validateConnection();
+    logger.info(`👋 Saindo do grupo: ${groupId}`);
+    return await this.client!.leaveGroup(groupId);
   }
 
   /**
