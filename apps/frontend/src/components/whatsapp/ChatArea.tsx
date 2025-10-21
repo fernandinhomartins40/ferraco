@@ -16,37 +16,12 @@ import ReplyPreview from './ReplyPreview';
 import ForwardDialog from './ForwardDialog';
 import MediaUploader from './MediaUploader';
 import AudioRecorder from './AudioRecorder';
+import InteractiveMessageMenu from './InteractiveMessageMenu';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useWhatsAppWebSocket } from '@/hooks/useWhatsAppWebSocket';
 import { toast } from 'sonner';
-
-interface Contact {
-  id: string;
-  phone: string;
-  name: string | null;
-  profilePicUrl: string | null;
-}
-
-interface Conversation {
-  id: string;
-  contact: Contact;
-}
-
-interface Message {
-  id: string;
-  conversationId: string;
-  type: string;
-  content: string;
-  mediaUrl: string | null;
-  mediaType: string | null;
-  fromMe: boolean;
-  status: string;
-  timestamp: string;
-  contact: Contact;
-  reactions?: Array<{ emoji: string; from: string }>;
-  quotedMessage?: Message;
-}
+import type { Message, Conversation, Contact } from '@/types/whatsapp';
 
 interface ChatAreaProps {
   conversationId: string;
@@ -319,9 +294,13 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
     if (confirm(confirmMsg)) {
       try {
-        // FASE C: Endpoint correto para deletar mensagem (Fase 2)
+        // ✅ CORRIGIDO: Usar phone correto do contato
+        const chatId = conversation?.contact.phone.includes('@c.us')
+          ? conversation.contact.phone
+          : `${conversation?.contact.phone}@c.us`;
+
         await api.post('/whatsapp/delete-message', {
-          chatId: conversation?.id || message.from,
+          chatId,
           messageId: message.id,
           forEveryone,
         });
@@ -337,12 +316,19 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
   const handleStar = async (message: Message) => {
     try {
-      // FASE C: Favoritar/Desfavoritar mensagem (Fase 3)
-      const isStarred = (message as any).isStarred || false;
+      // ✅ CORRIGIDO: Usar isStarred do tipo correto
+      const isStarred = message.isStarred || false;
       await api.post('/whatsapp/star-message', {
         messageId: message.id,
         star: !isStarred,
       });
+
+      // Atualizar estado local
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === message.id ? { ...msg, isStarred: !isStarred } : msg
+        )
+      );
 
       toast.success(isStarred ? 'Mensagem desfavoritada' : 'Mensagem favoritada');
     } catch (error) {
@@ -553,7 +539,7 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                             type={message.mediaType as any || 'document'}
                             url={message.mediaUrl}
                             filename={message.content || 'arquivo'}
-                            onDownload={() => handleDownload(message.mediaUrl!)}
+                            onDownload={() => handleDownload(message)}
                           />
                         </div>
                       )}
@@ -699,6 +685,10 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       {/* Message Input - Fixed at bottom */}
       <div className="flex-shrink-0 border-t bg-white px-4 py-3">
         <div className="flex items-center gap-2">
+          <InteractiveMessageMenu
+            contactPhone={conversation.contact.phone}
+            onSent={fetchMessages}
+          />
           <MediaUploader
             conversationPhone={conversation.contact.phone}
             onMediaSent={fetchMessages}
