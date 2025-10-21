@@ -1087,16 +1087,15 @@ class WhatsAppService {
 
           logger.debug(`🔍 Verificando número formatado: ${formatted}`);
 
+          // ✅ Usar funcionalidade nativa do WPPConnect: checkNumberStatus
+          // Retorna objeto com propriedade 'numberExists' que indica se o número está registrado no WhatsApp
           const statusResult = await this.client!.checkNumberStatus(formatted);
 
-          logger.debug(`📊 Resultado bruto para ${phoneNumber}:`, JSON.stringify(statusResult, null, 2));
+          logger.debug(`📊 Resultado WPPConnect para ${phoneNumber}:`, JSON.stringify(statusResult, null, 2));
 
-          // ✅ CORREÇÃO: Verificar múltiplas propriedades para determinar se número existe
-          // Diferentes versões do WPPConnect podem retornar propriedades diferentes
-          const exists =
-            statusResult.canReceiveMessage === true ||
-            statusResult.numberExists === true ||
-            (statusResult.id && statusResult.id._serialized && statusResult.id._serialized.includes('@'));
+          // ✅ SOLUÇÃO INTELIGENTE: Usar a propriedade nativa 'numberExists' do WPPConnect
+          // Esta é a forma oficial e confiável de verificar se um número está no WhatsApp
+          const exists = statusResult.numberExists === true;
 
           results.push({
             phoneNumber,
@@ -1105,7 +1104,7 @@ class WhatsAppService {
             status: statusResult,
           });
 
-          logger.info(`${exists ? '✅' : '❌'} ${phoneNumber} → ${exists ? 'EXISTE NO WHATSAPP' : 'NÃO ENCONTRADO'}`);
+          logger.info(`${exists ? '✅' : '❌'} ${phoneNumber} → ${exists ? 'REGISTRADO NO WHATSAPP' : 'NÃO REGISTRADO'}`);
         } catch (error: any) {
           logger.warn(`⚠️  Erro ao verificar ${phoneNumber}: ${error.message}`);
 
