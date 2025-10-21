@@ -118,6 +118,25 @@ class AutomationSchedulerService {
     try {
       const { lead, column } = position;
 
+      // ========================================
+      // PROTEÇÃO ANTI-SPAM: Verificar se já enviou recentemente
+      // ========================================
+      if (position.lastSentAt && column.recurrenceType !== 'NONE') {
+        const isWithinRecurrencePeriod = this.isWithinRecurrencePeriod(
+          position.lastSentAt,
+          column.recurrenceType,
+          column
+        );
+
+        if (isWithinRecurrencePeriod) {
+          logger.debug(
+            `⏭️  Lead ${lead.name} já recebeu mensagem recentemente (último envio: ${position.lastSentAt}). ` +
+            `Aguardando próximo período de recorrência.`
+          );
+          return;
+        }
+      }
+
       // Verificar se WhatsApp está conectado
       const isConnected = whatsappService.isWhatsAppConnected();
       if (!isConnected) {
@@ -186,19 +205,37 @@ class AutomationSchedulerService {
         }
       }
 
-      // Atualizar posição como SENT
-      await prisma.automationLeadPosition.update({
-        where: { id: position.id },
-        data: {
-          status: 'SENT',
-          lastSentAt: new Date(),
-          nextScheduledAt: this.calculateNextSchedule(column),
-          messagesSentCount: position.messagesSentCount + 1,
-          lastError: null, // Limpar erro anterior
-        },
-      });
+      // Calcular próximo agendamento
+      const nextSchedule = this.calculateNextSchedule(column);
 
-      logger.info(`✅ Mensagem enviada com sucesso para ${lead.name}`);
+      // Se não houver recorrência (NONE), remover lead da coluna de automação
+      if (column.recurrenceType === 'NONE' && !nextSchedule) {
+        await prisma.automationLeadPosition.delete({
+          where: { id: position.id },
+        });
+
+        logger.info(
+          `✅ Mensagem enviada com sucesso para ${lead.name}. ` +
+          `Lead removido da automação (envio único sem recorrência).`
+        );
+      } else {
+        // Atualizar posição como SENT
+        await prisma.automationLeadPosition.update({
+          where: { id: position.id },
+          data: {
+            status: 'SENT',
+            lastSentAt: new Date(),
+            nextScheduledAt: nextSchedule,
+            messagesSentCount: position.messagesSentCount + 1,
+            lastError: null, // Limpar erro anterior
+          },
+        });
+
+        logger.info(
+          `✅ Mensagem enviada com sucesso para ${lead.name}. ` +
+          `Próximo envio: ${nextSchedule ? nextSchedule.toLocaleString('pt-BR') : 'Não agendado'}`
+        );
+      }
 
       // Aguardar intervalo configurado
       await this.sleep(column.sendIntervalSeconds * 1000);
@@ -345,6 +382,72 @@ class AutomationSchedulerService {
   }
 
   /**
+   * Verifica se o último envio está dentro do período de recorrência atual
+   * Retorna true se já enviou recentemente (bloqueia reenvio)
+   * Retorna false se pode enviar novamente
+   */
+  private isWithinRecurrencePeriod(lastSentAt: Date, recurrenceType: string, column: any): boolean {
+    const now = new Date();
+    const lastSent = new Date(lastSentAt);
+
+    switch (recurrenceType) {
+      case 'NONE':
+        // Envio único: se já enviou uma vez, bloquear
+        return true;
+
+      case 'DAILY':
+        // Verificar se já enviou hoje
+        const isSameDay =
+          lastSent.getDate() === now.getDate() &&
+          lastSent.getMonth() === now.getMonth() &&
+          lastSent.getFullYear() === now.getFullYear();
+        return isSameDay;
+
+      case 'WEEKLY':
+        // Verificar se já enviou nesta semana
+        const weekDays = column.weekDays ? JSON.parse(column.weekDays) : [];
+        const currentDay = now.getDay();
+
+        // Se hoje é um dia de envio configurado
+        if (weekDays.includes(currentDay)) {
+          // Verificar se já enviou hoje
+          const isSameDayWeekly =
+            lastSent.getDate() === now.getDate() &&
+            lastSent.getMonth() === now.getMonth() &&
+            lastSent.getFullYear() === now.getFullYear();
+          return isSameDayWeekly;
+        }
+        return false;
+
+      case 'MONTHLY':
+        // Verificar se já enviou este mês no dia configurado
+        const monthDay = column.monthDay || 1;
+        const isSameMonth =
+          lastSent.getMonth() === now.getMonth() &&
+          lastSent.getFullYear() === now.getFullYear() &&
+          lastSent.getDate() === monthDay;
+        return isSameMonth;
+
+      case 'CUSTOM_DATES':
+        // Para datas customizadas, verificar se já enviou hoje
+        const isSameDayCustom =
+          lastSent.getDate() === now.getDate() &&
+          lastSent.getMonth() === now.getMonth() &&
+          lastSent.getFullYear() === now.getFullYear();
+        return isSameDayCustom;
+
+      case 'DAYS_FROM_NOW':
+        // Verificar se já passaram X dias desde o último envio
+        const daysFromNow = column.daysFromNow || 0;
+        const daysSinceLastSent = Math.floor((now.getTime() - lastSent.getTime()) / (1000 * 60 * 60 * 24));
+        return daysSinceLastSent < daysFromNow;
+
+      default:
+        return false;
+    }
+  }
+
+  /**
    * Sleep helper
    */
   private sleep(ms: number): Promise<void> {
@@ -353,8 +456,30 @@ class AutomationSchedulerService {
 
   /**
    * Reinicia envio de um lead específico (reseta status para PENDING)
+   * IMPORTANTE: Usado APENAS para reenvio em caso de falhas (FAILED, WHATSAPP_DISCONNECTED)
+   * O retry NÃO bypassa a verificação de período de recorrência
    */
   async retryLead(leadId: string): Promise<void> {
+    // Buscar posição atual
+    const position = await prisma.automationLeadPosition.findUnique({
+      where: { leadId },
+      include: { column: true },
+    });
+
+    if (!position) {
+      logger.error(`Lead ${leadId} não encontrado na automação`);
+      return;
+    }
+
+    // Permitir retry apenas para status de falha
+    if (!['FAILED', 'WHATSAPP_DISCONNECTED'].includes(position.status)) {
+      logger.warn(
+        `Retry ignorado para lead ${leadId}: status atual é ${position.status}. ` +
+        `Retry é permitido apenas para leads com status FAILED ou WHATSAPP_DISCONNECTED.`
+      );
+      return;
+    }
+
     await prisma.automationLeadPosition.update({
       where: { leadId },
       data: {
@@ -364,7 +489,7 @@ class AutomationSchedulerService {
       },
     });
 
-    logger.info(`🔄 Retry solicitado para lead ${leadId}`);
+    logger.info(`🔄 Retry solicitado para lead ${leadId} (status anterior: ${position.status})`);
   }
 
   /**
