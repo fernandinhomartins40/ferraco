@@ -132,11 +132,27 @@ const AdminWhatsApp = () => {
     return messages[status] || 'Status desconhecido';
   };
 
-  // Solicitar status inicial ao carregar (Socket.IO)
+  // ✅ AUTO-REQUEST: Solicitar status E QR Code ao carregar
   useEffect(() => {
-    requestStatus();
-    setIsLoading(false);
+    // Pequeno delay para garantir que socket conectou
+    const timer = setTimeout(() => {
+      requestStatus();
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [requestStatus]);
+
+  // ✅ AUTO-GENERATE QR: Solicitar QR Code automaticamente quando desconectado
+  useEffect(() => {
+    if (!isConnected && connectionState.type === 'disconnected' && !qrCode && !isAuthenticating) {
+      console.log('🔄 Não conectado e sem QR Code - solicitando automaticamente...');
+      const timer = setTimeout(() => {
+        handleReinitialize();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, connectionState.type, qrCode, isAuthenticating]);
 
   // ✅ REMOVIDO: checkStatus() - substituído por Socket.IO
   // ✅ REMOVIDO: fetchQRCode() - substituído por Socket.IO

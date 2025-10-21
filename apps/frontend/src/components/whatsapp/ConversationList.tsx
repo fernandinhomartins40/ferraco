@@ -6,8 +6,9 @@
 import { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, RefreshCw } from 'lucide-react';
 import api from '@/lib/apiClient';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -38,23 +39,39 @@ interface ConversationListProps {
 const ConversationList = ({ selectedId, onSelectConversation }: ConversationListProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // ✅ STATELESS: Busca conversas direto do WhatsApp (via API v2)
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (showRefreshIndicator = false) => {
     try {
-      setIsLoading(true);
+      if (showRefreshIndicator) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       const response = await api.get('/whatsapp/conversations/v2');
       setConversations(response.data.conversations);
     } catch (error) {
       console.error('Erro ao buscar conversas:', error);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
     fetchConversations();
+  }, [fetchConversations]);
+
+  // ✅ AUTO-REFRESH: Atualizar conversas automaticamente a cada 30 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refresh de conversas...');
+      fetchConversations(true); // Usar indicador de refresh
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
   }, [fetchConversations]);
 
   // WebSocket for real-time updates
@@ -127,8 +144,21 @@ const ConversationList = ({ selectedId, onSelectConversation }: ConversationList
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search Bar */}
+      {/* Header com Search e Botão Refresh */}
       <div className="p-4 border-b bg-gray-50">
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-sm font-semibold flex-1">Conversas</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fetchConversations(true)}
+            disabled={isRefreshing}
+            className="h-8 w-8 p-0"
+            title="Atualizar conversas"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
