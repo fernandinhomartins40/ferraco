@@ -63,13 +63,21 @@ class AutomationSchedulerService {
 
       // Verificar horário comercial
       if (settings.sendOnlyBusinessHours) {
+        // Converter para horário de São Paulo (UTC-3)
         const now = new Date();
-        const currentHour = now.getHours();
+        const currentHourUTC = now.getUTCHours();
+        const currentHourBrazil = (currentHourUTC - 3 + 24) % 24; // UTC-3 (horário de Brasília)
 
-        if (currentHour < settings.businessHourStart || currentHour >= settings.businessHourEnd) {
-          logger.debug('Fora do horário comercial, pulando processamento');
+        if (currentHourBrazil < settings.businessHourStart || currentHourBrazil >= settings.businessHourEnd) {
+          logger.debug(
+            `Fora do horário comercial (Brasil: ${currentHourBrazil}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
+          );
           return;
         }
+
+        logger.debug(
+          `Dentro do horário comercial (Brasil: ${currentHourBrazil}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
+        );
       }
 
       // Buscar todas as posições de leads que precisam ser processadas
