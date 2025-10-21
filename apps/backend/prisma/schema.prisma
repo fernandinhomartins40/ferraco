@@ -473,6 +473,15 @@ model KanbanColumn {
 // TABELA: AutomationKanbanColumn (Colunas do Kanban de Automação de Mensagens)
 // ============================================================================
 
+enum RecurrenceType {
+  NONE          // Sem recorrência (envio único)
+  DAILY         // Diário
+  WEEKLY        // Semanal (dias específicos da semana)
+  MONTHLY       // Mensal (dia específico do mês)
+  CUSTOM_DATES  // Datas customizadas
+  DAYS_FROM_NOW // X dias a partir de agora
+}
+
 model AutomationKanbanColumn {
   id          String  @id @default(cuid())
   name        String
@@ -483,9 +492,26 @@ model AutomationKanbanColumn {
 
   // Configurações de Envio
   sendIntervalSeconds Int     @default(60) // Intervalo entre envios dentro da coluna (segundos)
-  scheduledDate       DateTime? // Data/hora agendada para envio
-  isRecurring         Boolean @default(false) // Envio mensal recorrente
-  recurringDay        Int? // Dia do mês (1-31) para envio recorrente
+  scheduledDate       DateTime? // Data/hora agendada para envio único
+
+  // Sistema de Recorrência Avançado
+  recurrenceType      RecurrenceType @default(NONE)
+
+  // Para WEEKLY: JSON array [0,1,2,3,4,5,6] (domingo=0, segunda=1, etc)
+  weekDays            String? // Ex: "[1,3,5]" para segunda, quarta, sexta
+
+  // Para MONTHLY: dia do mês (1-31)
+  monthDay            Int?
+
+  // Para CUSTOM_DATES: JSON array de datas ISO
+  customDates         String? // Ex: '["2025-11-15T10:00:00Z", "2025-12-20T14:00:00Z"]'
+
+  // Para DAYS_FROM_NOW: número de dias
+  daysFromNow         Int? // Ex: 180 (enviar daqui 180 dias)
+
+  // DEPRECATED (manter para compatibilidade)
+  isRecurring         Boolean @default(false)
+  recurringDay        Int?
 
   // Template de Mensagem
   messageTemplateId String?
@@ -503,6 +529,7 @@ model AutomationKanbanColumn {
   @@unique([order])
   @@index([isActive])
   @@index([order])
+  @@index([recurrenceType])
   @@map("automation_kanban_columns")
 }
 

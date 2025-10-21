@@ -32,6 +32,14 @@ const createApiClient = (): AxiosInstance => {
 
 const apiClient = createApiClient();
 
+export type RecurrenceType =
+  | 'NONE'
+  | 'DAILY'
+  | 'WEEKLY'
+  | 'MONTHLY'
+  | 'CUSTOM_DATES'
+  | 'DAYS_FROM_NOW';
+
 export interface AutomationKanbanColumn {
   id: string;
   name: string;
@@ -41,8 +49,18 @@ export interface AutomationKanbanColumn {
   description?: string;
   sendIntervalSeconds: number;
   scheduledDate?: string;
+
+  // Sistema de Recorrência Avançado
+  recurrenceType: RecurrenceType;
+  weekDays?: string; // JSON: "[0,1,2,3,4,5,6]"
+  monthDay?: number;
+  customDates?: string; // JSON: ["2025-11-15T10:00:00Z"]
+  daysFromNow?: number;
+
+  // DEPRECATED (backward compatibility)
   isRecurring: boolean;
   recurringDay?: number;
+
   messageTemplateId?: string;
   messageTemplate?: WhatsAppMessageTemplate;
   productIds?: string;

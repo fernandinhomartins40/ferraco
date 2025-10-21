@@ -229,18 +229,82 @@ class AutomationSchedulerService {
   }
 
   /**
-   * Calcula próximo agendamento
+   * Calcula próximo agendamento baseado no tipo de recorrência
    */
   private calculateNextSchedule(column: any): Date | null {
-    if (!column.isRecurring) {
-      return null; // Envio único
+    const recurrenceType = column.recurrenceType || 'NONE';
+
+    // Backward compatibility: checar isRecurring antigo
+    if (column.isRecurring && recurrenceType === 'NONE') {
+      const now = new Date();
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, column.recurringDay || 1);
+      return nextMonth;
     }
 
-    // Calcular próximo mês no dia especificado
     const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, column.recurringDay || 1);
 
-    return nextMonth;
+    switch (recurrenceType) {
+      case 'NONE':
+        return null; // Envio único
+
+      case 'DAILY':
+        // Próximo dia, mesma hora
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+
+      case 'WEEKLY':
+        // Próximo dia da semana configurado
+        if (!column.weekDays) return null;
+
+        const weekDays = JSON.parse(column.weekDays); // [0,1,2,3,4,5,6]
+        const currentDay = now.getDay();
+
+        // Encontrar próximo dia da semana na lista
+        let daysUntilNext = 7; // Default: próxima semana
+        for (const day of weekDays.sort((a: number, b: number) => a - b)) {
+          const diff = day - currentDay;
+          if (diff > 0 && diff < daysUntilNext) {
+            daysUntilNext = diff;
+          }
+        }
+
+        // Se não encontrou na semana atual, pega o primeiro da próxima semana
+        if (daysUntilNext === 7) {
+          daysUntilNext = (7 - currentDay) + weekDays[0];
+        }
+
+        const nextWeekDay = new Date(now);
+        nextWeekDay.setDate(nextWeekDay.getDate() + daysUntilNext);
+        return nextWeekDay;
+
+      case 'MONTHLY':
+        // Próximo mês, dia específico
+        if (!column.monthDay) return null;
+
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, column.monthDay);
+        return nextMonth;
+
+      case 'CUSTOM_DATES':
+        // Próxima data customizada
+        if (!column.customDates) return null;
+
+        const dates = JSON.parse(column.customDates).map((d: string) => new Date(d));
+        const futureDates = dates.filter((d: Date) => d > now).sort((a: Date, b: Date) => a.getTime() - b.getTime());
+
+        return futureDates.length > 0 ? futureDates[0] : null;
+
+      case 'DAYS_FROM_NOW':
+        // X dias a partir de agora
+        if (!column.daysFromNow) return null;
+
+        const futureDate = new Date(now);
+        futureDate.setDate(futureDate.getDate() + column.daysFromNow);
+        return futureDate;
+
+      default:
+        return null;
+    }
   }
 
   /**
