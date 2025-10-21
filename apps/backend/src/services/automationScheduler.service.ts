@@ -111,7 +111,7 @@ class AutomationSchedulerService {
       const { lead, column } = position;
 
       // Verificar se WhatsApp está conectado
-      const isConnected = await whatsappService.isConnected();
+      const isConnected = whatsappService.isWhatsAppConnected();
       if (!isConnected) {
         logger.warn('WhatsApp não conectado, pulando envio');
         return;
