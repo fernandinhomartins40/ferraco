@@ -64,13 +64,24 @@ export interface WhatsAppMessageTemplate {
   updatedAt: string;
 }
 
+export type AutomationSendStatus =
+  | 'PENDING'
+  | 'SENDING'
+  | 'SENT'
+  | 'FAILED'
+  | 'WHATSAPP_DISCONNECTED'
+  | 'SCHEDULED';
+
 export interface AutomationLeadPosition {
   id: string;
   leadId: string;
   columnId: string;
+  status: AutomationSendStatus;
   lastSentAt?: string;
   nextScheduledAt?: string;
   messagesSentCount: number;
+  lastError?: string | null;
+  lastAttemptAt?: string | null;
   createdAt: string;
   updatedAt: string;
   lead?: any;
@@ -152,6 +163,22 @@ export const automationKanbanService = {
 
   async updateSettings(data: Partial<AutomationSettings>): Promise<AutomationSettings> {
     const response = await apiClient.put(`${API_URL}/settings`, data);
+    return response.data;
+  },
+
+  // Retry de envios
+  async retryLead(leadId: string): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.post(`${API_URL}/leads/${leadId}/retry`);
+    return response.data;
+  },
+
+  async retryColumn(columnId: string): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.post(`${API_URL}/columns/${columnId}/retry`);
+    return response.data;
+  },
+
+  async retryAllFailed(): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.post(`${API_URL}/retry-all-failed`);
     return response.data;
   },
 };

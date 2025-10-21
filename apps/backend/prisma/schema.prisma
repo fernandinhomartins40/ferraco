@@ -102,6 +102,15 @@ enum AutomationActionType {
   CREATE_TASK
 }
 
+enum AutomationSendStatus {
+  PENDING      // Aguardando envio
+  SENDING      // Enviando agora
+  SENT         // Enviado com sucesso
+  FAILED       // Falha no envio
+  WHATSAPP_DISCONNECTED // WhatsApp desconectado
+  SCHEDULED    // Agendado para data futura
+}
+
 enum IntegrationType {
   ZAPIER
   MAKE
@@ -510,9 +519,12 @@ model AutomationLeadPosition {
   column AutomationKanbanColumn   @relation(fields: [columnId], references: [id], onDelete: Cascade)
 
   // Status de envio
-  lastSentAt       DateTime?
-  nextScheduledAt  DateTime? // Próximo envio agendado
+  status            AutomationSendStatus @default(PENDING)
+  lastSentAt        DateTime?
+  nextScheduledAt   DateTime? // Próximo envio agendado
   messagesSentCount Int @default(0)
+  lastError         String? // Última mensagem de erro
+  lastAttemptAt     DateTime? // Última tentativa de envio
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -520,6 +532,7 @@ model AutomationLeadPosition {
   @@unique([leadId]) // Um lead pode estar em apenas uma coluna de automação por vez
   @@index([columnId])
   @@index([nextScheduledAt])
+  @@index([status])
   @@map("automation_lead_positions")
 }
 

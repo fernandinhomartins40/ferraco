@@ -114,6 +114,17 @@ class AutomationSchedulerService {
       const isConnected = whatsappService.isWhatsAppConnected();
       if (!isConnected) {
         logger.warn('WhatsApp não conectado, pulando envio');
+
+        // Atualizar status para WHATSAPP_DISCONNECTED
+        await prisma.automationLeadPosition.update({
+          where: { id: position.id },
+          data: {
+            status: 'WHATSAPP_DISCONNECTED',
+            lastAttemptAt: new Date(),
+            lastError: 'WhatsApp não está conectado. Escaneie o QR Code para reconectar.',
+          },
+        });
+
         return;
       }
 
@@ -121,8 +132,28 @@ class AutomationSchedulerService {
       const canSend = await this.checkRateLimits(settings);
       if (!canSend) {
         logger.warn('Limite de envios atingido, aguardando...');
+
+        // Atualizar status para SCHEDULED
+        await prisma.automationLeadPosition.update({
+          where: { id: position.id },
+          data: {
+            status: 'SCHEDULED',
+            lastAttemptAt: new Date(),
+            lastError: 'Limite de envios atingido. Aguardando próximo ciclo.',
+          },
+        });
+
         return;
       }
+
+      // Marcar como SENDING
+      await prisma.automationLeadPosition.update({
+        where: { id: position.id },
+        data: {
+          status: 'SENDING',
+          lastAttemptAt: new Date(),
+        },
+      });
 
       // Preparar mensagem
       let messageContent = column.messageTemplate?.content || 'Olá {{nome}}!';
@@ -147,13 +178,15 @@ class AutomationSchedulerService {
         }
       }
 
-      // Atualizar posição
+      // Atualizar posição como SENT
       await prisma.automationLeadPosition.update({
         where: { id: position.id },
         data: {
+          status: 'SENT',
           lastSentAt: new Date(),
           nextScheduledAt: this.calculateNextSchedule(column),
           messagesSentCount: position.messagesSentCount + 1,
+          lastError: null, // Limpar erro anterior
         },
       });
 
@@ -163,6 +196,16 @@ class AutomationSchedulerService {
       await this.sleep(column.sendIntervalSeconds * 1000);
     } catch (error) {
       logger.error(`Erro ao processar posição ${position.id}:`, error);
+
+      // Atualizar status como FAILED
+      await prisma.automationLeadPosition.update({
+        where: { id: position.id },
+        data: {
+          status: 'FAILED',
+          lastAttemptAt: new Date(),
+          lastError: error instanceof Error ? error.message : 'Erro desconhecido ao enviar mensagem',
+        },
+      });
     }
   }
 
@@ -234,6 +277,59 @@ class AutomationSchedulerService {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Reinicia envio de um lead específico (reseta status para PENDING)
+   */
+  async retryLead(leadId: string): Promise<void> {
+    await prisma.automationLeadPosition.update({
+      where: { leadId },
+      data: {
+        status: 'PENDING',
+        lastError: null,
+        nextScheduledAt: new Date(), // Enviar imediatamente
+      },
+    });
+
+    logger.info(`🔄 Retry solicitado para lead ${leadId}`);
+  }
+
+  /**
+   * Reinicia envio de todos os leads de uma coluna específica
+   */
+  async retryColumn(columnId: string): Promise<void> {
+    const result = await prisma.automationLeadPosition.updateMany({
+      where: {
+        columnId,
+        status: { in: ['FAILED', 'WHATSAPP_DISCONNECTED'] },
+      },
+      data: {
+        status: 'PENDING',
+        lastError: null,
+        nextScheduledAt: new Date(), // Enviar imediatamente
+      },
+    });
+
+    logger.info(`🔄 Retry solicitado para ${result.count} leads da coluna ${columnId}`);
+  }
+
+  /**
+   * Reinicia envio de todos os leads com falha (todas as colunas)
+   */
+  async retryAllFailed(): Promise<void> {
+    const result = await prisma.automationLeadPosition.updateMany({
+      where: {
+        status: { in: ['FAILED', 'WHATSAPP_DISCONNECTED'] },
+      },
+      data: {
+        status: 'PENDING',
+        lastError: null,
+        nextScheduledAt: new Date(), // Enviar imediatamente
+      },
+    });
+
+    logger.info(`🔄 Retry solicitado para ${result.count} leads com falha`);
   }
 }
 

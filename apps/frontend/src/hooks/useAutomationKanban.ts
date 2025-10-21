@@ -107,6 +107,40 @@ export function useAutomationKanban() {
     },
   });
 
+  // Retry de envios
+  const retryLead = useMutation({
+    mutationFn: (leadId: string) => automationKanbanService.retryLead(leadId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automation-kanban-leads'] });
+      toast.success('Envio reagendado com sucesso');
+    },
+    onError: () => {
+      toast.error('Erro ao reagendar envio');
+    },
+  });
+
+  const retryColumn = useMutation({
+    mutationFn: (columnId: string) => automationKanbanService.retryColumn(columnId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automation-kanban-leads'] });
+      toast.success('Envios da coluna reagendados com sucesso');
+    },
+    onError: () => {
+      toast.error('Erro ao reagendar envios da coluna');
+    },
+  });
+
+  const retryAllFailed = useMutation({
+    mutationFn: () => automationKanbanService.retryAllFailed(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automation-kanban-leads'] });
+      toast.success('Todos os envios falhados foram reagendados');
+    },
+    onError: () => {
+      toast.error('Erro ao reagendar envios');
+    },
+  });
+
   return {
     columns,
     isLoadingColumns,
@@ -121,5 +155,8 @@ export function useAutomationKanban() {
     settings,
     isLoadingSettings,
     updateSettings,
+    retryLead,
+    retryColumn,
+    retryAllFailed,
   };
 }

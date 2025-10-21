@@ -18,7 +18,13 @@ import {
   Settings,
   Clock,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  WifiOff,
+  RefreshCw
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -28,7 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { Lead } from '@/services/leads.service';
 import type { KanbanColumn } from '@/services/kanbanColumns.service';
-import type { AutomationKanbanColumn, AutomationLeadPosition } from '@/services/automationKanban.service';
+import type { AutomationKanbanColumn, AutomationLeadPosition, AutomationSendStatus } from '@/services/automationKanban.service';
 
 interface UnifiedKanbanViewProps {
   // Kanban Normal
@@ -47,6 +53,8 @@ interface UnifiedKanbanViewProps {
   onRemoveLeadFromAutomation: (leadId: string) => void;
   onEditAutomationColumn?: (column: AutomationKanbanColumn) => void;
   onDeleteAutomationColumn?: (columnId: string) => void;
+  onRetryLead?: (leadId: string) => void;
+  onRetryColumn?: (columnId: string) => void;
 }
 
 const getPriorityColor = (priority: Lead['priority']) => {
@@ -75,6 +83,48 @@ const formatInterval = (seconds: number) => {
   return `${minutes}min`;
 };
 
+const getStatusConfig = (status: AutomationSendStatus) => {
+  const configs = {
+    PENDING: {
+      label: 'Aguardando',
+      color: 'bg-gray-500',
+      icon: Clock,
+      description: 'Aguardando envio'
+    },
+    SENDING: {
+      label: 'Enviando',
+      color: 'bg-blue-500',
+      icon: Loader2,
+      description: 'Enviando mensagem...'
+    },
+    SENT: {
+      label: 'Enviado',
+      color: 'bg-green-500',
+      icon: CheckCircle2,
+      description: 'Mensagem enviada com sucesso'
+    },
+    FAILED: {
+      label: 'Falha',
+      color: 'bg-red-500',
+      icon: XCircle,
+      description: 'Falha ao enviar mensagem'
+    },
+    WHATSAPP_DISCONNECTED: {
+      label: 'WhatsApp Offline',
+      color: 'bg-orange-500',
+      icon: WifiOff,
+      description: 'WhatsApp não conectado'
+    },
+    SCHEDULED: {
+      label: 'Agendado',
+      color: 'bg-purple-500',
+      icon: Calendar,
+      description: 'Limite de envios atingido'
+    },
+  };
+  return configs[status] || configs.PENDING;
+};
+
 const UnifiedKanbanView = ({
   leads,
   columns,
@@ -89,6 +139,8 @@ const UnifiedKanbanView = ({
   onRemoveLeadFromAutomation,
   onEditAutomationColumn,
   onDeleteAutomationColumn,
+  onRetryLead,
+  onRetryColumn,
 }: UnifiedKanbanViewProps) => {
 
   // Função auxiliar: pegar leads por status (colunas normais)
@@ -214,18 +266,66 @@ const UnifiedKanbanView = ({
 
               {/* Informações de Automação (se aplicável) */}
               {isAutomation && position && (
-                <div className="space-y-1 pt-2 border-t">
+                <div className="space-y-2 pt-2 border-t">
+                  {/* Badge de Status */}
+                  {position.status && (() => {
+                    const statusConfig = getStatusConfig(position.status);
+                    const StatusIcon = statusConfig.icon;
+                    return (
+                      <div className="flex items-center justify-between">
+                        <Badge className={`${statusConfig.color} text-white text-xs flex items-center gap-1`}>
+                          <StatusIcon className={`h-3 w-3 ${position.status === 'SENDING' ? 'animate-spin' : ''}`} />
+                          {statusConfig.label}
+                        </Badge>
+                        {/* Botão de Retry para status com falha */}
+                        {(position.status === 'FAILED' || position.status === 'WHATSAPP_DISCONNECTED') && onRetryLead && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRetryLead(lead.id);
+                            }}
+                            title="Tentar enviar novamente"
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Reenviar
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Mensagem de erro */}
+                  {position.lastError && (
+                    <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                      <div className="flex items-start gap-1">
+                        <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span>{position.lastError}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Contador de mensagens */}
                   {position.messagesSentCount > 0 && (
                     <div className="flex items-center gap-1 text-xs text-green-600">
                       <MessageSquare className="h-3 w-3" />
                       <span>{position.messagesSentCount} enviadas</span>
                     </div>
                   )}
-                  {position.nextScheduledAt && (
+
+                  {/* Próximo agendamento */}
+                  {position.nextScheduledAt && position.status !== 'SENT' && (
                     <div className="flex items-center gap-1 text-xs text-orange-600">
                       <Clock className="h-3 w-3" />
                       <span>
-                        Próximo: {new Date(position.nextScheduledAt).toLocaleString('pt-BR')}
+                        Próximo: {new Date(position.nextScheduledAt).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </span>
                     </div>
                   )}
@@ -366,6 +466,15 @@ const UnifiedKanbanView = ({
                                   <Settings className="mr-2 h-4 w-4" />
                                   Configurar Coluna
                                 </DropdownMenuItem>
+                                {onRetryColumn && (
+                                  <DropdownMenuItem
+                                    onClick={() => onRetryColumn(column.id)}
+                                    className="text-blue-600"
+                                  >
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Reenviar Falhados
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                   onClick={() => onDeleteAutomationColumn(column.id)}
                                   className="text-red-600"

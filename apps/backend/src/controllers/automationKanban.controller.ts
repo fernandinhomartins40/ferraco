@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { automationSchedulerService } from '../services/automationScheduler.service';
 
 const prisma = new PrismaClient();
 
@@ -329,6 +330,46 @@ export class AutomationKanbanController {
     } catch (error) {
       console.error('Erro ao atualizar configurações:', error);
       res.status(500).json({ error: 'Erro ao atualizar configurações de automação' });
+    }
+  }
+
+  // POST /api/automation-kanban/leads/:leadId/retry - Reiniciar envio para um lead específico
+  async retryLead(req: Request, res: Response) {
+    try {
+      const { leadId } = req.params;
+
+      await automationSchedulerService.retryLead(leadId);
+
+      res.json({ success: true, message: 'Retry solicitado com sucesso' });
+    } catch (error) {
+      console.error('Erro ao reiniciar envio do lead:', error);
+      res.status(500).json({ error: 'Erro ao reiniciar envio do lead' });
+    }
+  }
+
+  // POST /api/automation-kanban/columns/:columnId/retry - Reiniciar envio para todos os leads com falha de uma coluna
+  async retryColumn(req: Request, res: Response) {
+    try {
+      const { columnId } = req.params;
+
+      await automationSchedulerService.retryColumn(columnId);
+
+      res.json({ success: true, message: 'Retry solicitado para a coluna com sucesso' });
+    } catch (error) {
+      console.error('Erro ao reiniciar envio da coluna:', error);
+      res.status(500).json({ error: 'Erro ao reiniciar envio da coluna' });
+    }
+  }
+
+  // POST /api/automation-kanban/retry-all-failed - Reiniciar envio para todos os leads com falha (todas as colunas)
+  async retryAllFailed(req: Request, res: Response) {
+    try {
+      await automationSchedulerService.retryAllFailed();
+
+      res.json({ success: true, message: 'Retry solicitado para todos os leads com falha' });
+    } catch (error) {
+      console.error('Erro ao reiniciar envio de todos os leads:', error);
+      res.status(500).json({ error: 'Erro ao reiniciar envio de todos os leads' });
     }
   }
 }

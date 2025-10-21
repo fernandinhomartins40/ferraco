@@ -24,4 +24,9 @@ router.get('/leads', controller.getLeadsInAutomation.bind(controller));
 router.post('/leads/:leadId/move', controller.moveLeadToColumn.bind(controller));
 router.delete('/leads/:leadId', controller.removeLeadFromAutomation.bind(controller));
 
+// Retry de envios
+router.post('/leads/:leadId/retry', controller.retryLead.bind(controller));
+router.post('/columns/:columnId/retry', controller.retryColumn.bind(controller));
+router.post('/retry-all-failed', controller.retryAllFailed.bind(controller));
+
 export default router;

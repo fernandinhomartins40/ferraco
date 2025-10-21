@@ -130,6 +130,9 @@ const AdminLeads = () => {
     createColumn: createAutomationColumn,
     updateColumn: updateAutomationColumn,
     deleteColumn: deleteAutomationColumn,
+    retryLead,
+    retryColumn,
+    retryAllFailed,
   } = useAutomationKanban();
 
   // WhatsApp Templates Hooks
@@ -637,6 +640,8 @@ const AdminLeads = () => {
               onRemoveLeadFromAutomation={removeLeadFromAutomation.mutate}
               onEditAutomationColumn={openEditAutomationColumnDialog}
               onDeleteAutomationColumn={handleDeleteAutomationColumn}
+              onRetryLead={(leadId) => retryLead.mutate(leadId)}
+              onRetryColumn={(columnId) => retryColumn.mutate(columnId)}
             />
           )}
         </div>
