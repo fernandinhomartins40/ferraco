@@ -41,6 +41,7 @@ import {
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
 import UnifiedKanbanView from '@/components/admin/UnifiedKanbanView';
+import { RecurrenceConfig } from '@/components/admin/RecurrenceConfig';
 import { useToast } from '@/hooks/use-toast';
 import { useKanbanColumns } from '@/hooks/useKanbanColumns';
 import { useAutomationKanban } from '@/hooks/useAutomationKanban';
@@ -77,6 +78,13 @@ const AdminLeads = () => {
     description: '',
     sendIntervalSeconds: 60,
     scheduledDate: '',
+    // ✅ NOVO: Sistema de Recorrência Avançado
+    recurrenceType: 'NONE' as import('@/services/automationKanban.service').RecurrenceType,
+    weekDays: undefined as string | undefined,
+    monthDay: undefined as number | undefined,
+    customDates: undefined as string | undefined,
+    daysFromNow: undefined as number | undefined,
+    // Campos antigos (manter para backward compatibility)
     isRecurring: false,
     recurringDay: undefined as number | undefined,
     messageTemplateId: '',
@@ -308,6 +316,13 @@ const AdminLeads = () => {
       description: column.description || '',
       sendIntervalSeconds: column.sendIntervalSeconds,
       scheduledDate: column.scheduledDate || '',
+      // ✅ NOVO: Sistema de Recorrência Avançado
+      recurrenceType: column.recurrenceType || 'NONE',
+      weekDays: column.weekDays,
+      monthDay: column.monthDay,
+      customDates: column.customDates,
+      daysFromNow: column.daysFromNow,
+      // Campos antigos (backward compatibility)
       isRecurring: column.isRecurring,
       recurringDay: column.recurringDay,
       messageTemplateId: column.messageTemplateId || '',
@@ -324,6 +339,13 @@ const AdminLeads = () => {
       description: '',
       sendIntervalSeconds: 60,
       scheduledDate: '',
+      // ✅ NOVO: Sistema de Recorrência Avançado
+      recurrenceType: 'NONE',
+      weekDays: undefined,
+      monthDay: undefined,
+      customDates: undefined,
+      daysFromNow: undefined,
+      // Campos antigos (manter para backward compatibility)
       isRecurring: false,
       recurringDay: undefined,
       messageTemplateId: '',
@@ -913,40 +935,22 @@ const AdminLeads = () => {
                 </Button>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is-recurring"
-                  checked={automationColumnFormData.isRecurring}
-                  onChange={(e) =>
+              {/* ✅ NOVO: Sistema de Recorrência Avançado */}
+              <div className="border-t pt-4">
+                <RecurrenceConfig
+                  recurrenceType={automationColumnFormData.recurrenceType}
+                  weekDays={automationColumnFormData.weekDays}
+                  monthDay={automationColumnFormData.monthDay}
+                  customDates={automationColumnFormData.customDates}
+                  daysFromNow={automationColumnFormData.daysFromNow}
+                  onChange={(config) =>
                     setAutomationColumnFormData({
                       ...automationColumnFormData,
-                      isRecurring: e.target.checked,
+                      ...config,
                     })
                   }
-                  className="rounded"
                 />
-                <Label htmlFor="is-recurring">Envio Recorrente Mensal</Label>
               </div>
-
-              {automationColumnFormData.isRecurring && (
-                <div>
-                  <Label htmlFor="recurring-day">Dia do Mês (1-31)</Label>
-                  <Input
-                    id="recurring-day"
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={automationColumnFormData.recurringDay || ''}
-                    onChange={(e) =>
-                      setAutomationColumnFormData({
-                        ...automationColumnFormData,
-                        recurringDay: parseInt(e.target.value) || undefined,
-                      })
-                    }
-                  />
-                </div>
-              )}
             </div>
             <DialogFooter>
               <Button
