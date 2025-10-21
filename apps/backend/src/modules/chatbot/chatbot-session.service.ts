@@ -229,6 +229,14 @@ export class ChatbotSessionService {
       where: { chatbotSessionId: session.id }
     });
 
+    // ⭐ AUTO-SAVE PARCIAL: A cada 5 mensagens, tentar salvar lead parcial
+    if (messageCount > 0 && messageCount % 5 === 0) {
+      logger.debug(`🔄 Auto-save check na mensagem ${messageCount}`);
+      await this.savePartialLead(sessionId).catch(err =>
+        logger.error('Erro ao fazer auto-save parcial:', err)
+      );
+    }
+
     const newScore = calculateQualificationScoreV2({
       ...updatedSession,
       ...capturedData,
@@ -449,6 +457,39 @@ export class ChatbotSessionService {
   }
 
   /**
+   * Auto-save parcial de sessões: Cria lead se tiver dados mínimos mas ainda não criou
+   * Previne perda de leads em caso de abandono
+   */
+  async savePartialLead(sessionId: string): Promise<boolean> {
+    try {
+      const session = await prisma.chatbotSession.findUnique({
+        where: { sessionId },
+      });
+
+      if (!session) {
+        return false;
+      }
+
+      // Se já tem lead, não precisa criar novamente
+      if (session.leadId) {
+        return false;
+      }
+
+      // Se tem nome + telefone mas ainda não criou lead, criar agora
+      if (session.capturedName && session.capturedPhone) {
+        logger.info(`💾 Auto-save parcial: Criando lead para sessão ${sessionId} (nome: ${session.capturedName}, telefone: ${session.capturedPhone})`);
+        await this.createLeadFromSession(session.id);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      logger.error(`❌ Erro ao fazer auto-save parcial da sessão ${sessionId}:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Cria um lead a partir da sessão qualificada
    */
   private async createLeadFromSession(sessionId: string) {
@@ -647,6 +688,12 @@ export class ChatbotSessionService {
    * Encerra uma sessão
    */
   async endSession(sessionId: string) {
+    // ⭐ AUTO-SAVE: Tentar salvar lead parcial antes de encerrar
+    logger.info(`🔚 Encerrando sessão ${sessionId} - verificando auto-save`);
+    await this.savePartialLead(sessionId).catch(err =>
+      logger.error('Erro ao fazer auto-save no encerramento:', err)
+    );
+
     await prisma.chatbotSession.update({
       where: { sessionId },
       data: {

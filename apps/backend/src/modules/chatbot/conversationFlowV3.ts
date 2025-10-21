@@ -382,6 +382,9 @@ export const conversationFlowV3: ConversationStep[] = [
       { id: 'opt2', label: '👋 Vou ficando por aqui', nextStepId: 'closing_simple', captureAs: 'end_chat' },
       { id: 'opt_human', label: '👤 Falar com a equipe', nextStepId: 'human_handoff', captureAs: 'wants_human' },
     ],
+    actions: [
+      { type: 'create_lead' }, // ⭐ Captura leads com engajamento em FAQ antes de possível saída
+    ],
   },
 
   // ========================================
@@ -422,6 +425,9 @@ export const conversationFlowV3: ConversationStep[] = [
       { id: 'opt1', label: '🔄 Ver mais produtos', nextStepId: 'show_products', captureAs: 'explore_more' },
       { id: 'opt2', label: '👋 Já é o suficiente!', nextStepId: 'closing_final', captureAs: 'end_chat' },
     ],
+    actions: [
+      { type: 'create_lead' }, // ⭐ Garantir captura mesmo em encerramento padrão
+    ],
   },
 
   {
@@ -430,6 +436,9 @@ export const conversationFlowV3: ConversationStep[] = [
     name: 'Encerramento Simples',
     botMessage: 'Valeu, {nome}! 😊\n\nFoi um prazer conversar com você! Qualquer coisa que precisar, é só aparecer por aqui de novo! 👋\n\n📞 {companyPhone}\n🌐 {companyWebsite}',
     options: [],
+    actions: [
+      { type: 'create_lead' }, // ⭐ CRÍTICO: Captura leads que saem após FAQ ou navegação simples
+    ],
   },
 
   {
@@ -438,6 +447,9 @@ export const conversationFlowV3: ConversationStep[] = [
     name: 'Encerramento Final',
     botMessage: 'Foi ótimo te atender, {nome}! 😊\n\nQualquer coisa que precisar, você já sabe onde me encontrar!\n\nAté a próxima! 👋\n\n---\n📞 {companyPhone}\n📍 {companyAddress}\n🌐 {companyWebsite}\n⏰ {workingHours}',
     options: [],
+    actions: [
+      { type: 'create_lead' }, // ⭐ Garantir captura em encerramento final absoluto
+    ],
   },
 ];
 

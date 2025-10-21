@@ -7,6 +7,7 @@ import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
 import { ensureDefaultChatbotConfig } from './scripts/ensure-chatbot-config';
 import { whatsappService } from './services/whatsappService';
 import whatsappChatService from './services/whatsappChatService';
+import { chatbotAutosaveService } from './modules/chatbot/chatbot-autosave.service';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
 
@@ -23,6 +24,10 @@ async function startServer(): Promise<void> {
 
     // Inicializar WhatsApp Service (assíncrono, não bloqueia o servidor)
     await whatsappService.initialize();
+
+    // ⭐ Inicializar Auto-save Service do Chatbot (verifica a cada 2 minutos)
+    chatbotAutosaveService.start(2);
+    logger.info('💾 Chatbot auto-save service iniciado');
 
     // Create Express app
     const app = createApp();
@@ -77,6 +82,9 @@ async function startServer(): Promise<void> {
 
       server.close(async () => {
         logger.info('Server closed');
+
+        // Parar auto-save service
+        chatbotAutosaveService.stop();
 
         // Desconectar WhatsApp
         await whatsappService.disconnect();
