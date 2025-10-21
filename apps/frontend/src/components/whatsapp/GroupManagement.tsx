@@ -96,20 +96,27 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
         participants,
       });
 
-      const newGroupId = response.data.data.gid;
+      const newGroupId = response.data?.data?.gid || response.data?.gid;
 
       // Set description if provided
-      if (groupDescription.trim()) {
-        // TODO: Implementar endpoint de descrição de grupo se necessário
-        logger.warn('Descrição de grupo não implementada ainda');
+      if (groupDescription.trim() && newGroupId) {
+        try {
+          await api.put(`/whatsapp/extended/groups/${newGroupId}/description`, {
+            description: groupDescription,
+          });
+        } catch (descError) {
+          console.warn('Erro ao definir descrição do grupo:', descError);
+          // Não falhar a criação do grupo por causa da descrição
+        }
       }
 
       toast.success('Grupo criado com sucesso!');
       onOpenChange(false);
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao criar grupo');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao criar grupo';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -128,9 +135,10 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
 
       toast.success('Membros adicionados!');
       setSelectedContacts([]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao adicionar membros');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao adicionar membros';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -147,9 +155,10 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
 
       setMembers(members.filter((m) => m.id !== memberId));
       toast.success('Membro removido!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao remover membro');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao remover membro';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -168,9 +177,10 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
         members.map((m) => (m.phone === phone ? { ...m, isAdmin: true } : m))
       );
       toast.success('Membro promovido a admin!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao promover membro');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao promover membro';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -189,9 +199,10 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
         members.map((m) => (m.phone === phone ? { ...m, isAdmin: false } : m))
       );
       toast.success('Admin rebaixado!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao rebaixar admin');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao rebaixar admin';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -203,11 +214,12 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
     try {
       setIsLoading(true);
       const response = await api.get(`/whatsapp/extended/groups/${groupId}/invite-link`);
-      setInviteLink(response.data.link);
+      setInviteLink(response.data.link || response.data.data?.link || '');
       toast.success('Link obtido!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao obter link');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao obter link';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -237,9 +249,10 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
       }
 
       toast.success('Informações atualizadas!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao atualizar informações');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao atualizar informações';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -253,9 +266,10 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
       await api.post(`/whatsapp/extended/groups/${groupId}/leave`);
       toast.success('Você saiu do grupo');
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao sair do grupo');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao sair do grupo';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -351,7 +365,8 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
                 {mode === 'create' ? 'Selecionar Participantes *' : 'Adicionar Participantes'}
               </Label>
               <ScrollArea className="h-48 border rounded-md p-2 mt-2">
-                {contacts.map((contact) => (
+                {Array.isArray(contacts) && contacts.map((contact) =>
+                  contact && contact.id ? (
                   <div
                     key={contact.id}
                     className="flex items-center space-x-2 py-2 hover:bg-gray-50 rounded px-2"
@@ -365,6 +380,7 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
                       <p className="text-sm text-gray-500">{contact.phone}</p>
                     </div>
                   </div>
+                  ) : null
                 ))}
               </ScrollArea>
               <p className="text-sm text-gray-500 mt-2">
@@ -388,7 +404,8 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
           <TabsContent value="members" className="mt-4">
             <ScrollArea className="h-96">
               <div className="space-y-2">
-                {members.map((member) => (
+                {Array.isArray(members) && members.map((member) =>
+                  member && member.id ? (
                   <div
                     key={member.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
@@ -437,6 +454,7 @@ const GroupManagement = ({ open, onOpenChange, groupId, mode }: GroupManagementP
                       </Button>
                     </div>
                   </div>
+                  ) : null
                 ))}
               </div>
             </ScrollArea>

@@ -69,10 +69,13 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
       setIsLoading(true);
       // FASE C: Endpoint correto para listar contatos
       const response = await api.get('/whatsapp/contacts');
-      setContacts(response.data.data || []);
-    } catch (error) {
+      const contactsData = response.data.data || response.data.contacts || [];
+      setContacts(Array.isArray(contactsData) ? contactsData : []);
+    } catch (error: any) {
       console.error('Erro ao carregar contatos:', error);
-      toast.error('Erro ao carregar contatos');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao carregar contatos';
+      toast.error(errorMsg);
+      setContacts([]); // Garantir que sempre há um array válido
     } finally {
       setIsLoading(false);
     }
@@ -92,17 +95,18 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
       });
 
       // Backend retorna array, pegar primeiro resultado
-      const result = response.data.data?.[0];
-      setVerifyResult(result);
+      const result = response.data.data?.[0] || response.data?.[0];
+      setVerifyResult(result || { exists: false });
 
       if (result?.exists) {
         toast.success('✅ Número existe no WhatsApp!');
       } else {
         toast.error('❌ Número não existe no WhatsApp');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao verificar número');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao verificar número';
+      toast.error(errorMsg);
       setVerifyResult(null);
     } finally {
       setIsLoading(false);
@@ -121,9 +125,10 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
       );
 
       toast.success(`${contact.name} bloqueado!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao bloquear contato');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao bloquear contato';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -141,9 +146,10 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
       );
 
       toast.success(`${contact.name} desbloqueado!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao desbloquear contato');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao desbloquear contato';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -164,29 +170,33 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
         const picResponse = await api.get(
           `/whatsapp/extended/contacts/${contact.phone}@c.us/profile-pic`
         );
-        profilePicUrl = picResponse.data.url;
+        profilePicUrl = picResponse.data.url || '';
       } catch {
         // Ignore if no profile pic
+        profilePicUrl = '';
       }
 
       setSelectedContact({
         ...contact,
-        ...detailsResponse.data.contact,
+        ...(detailsResponse.data.contact || {}),
         profilePicUrl,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro:', error);
-      toast.error('Erro ao carregar detalhes');
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao carregar detalhes';
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredContacts = contacts.filter(
-    (contact) =>
-      contact.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.phone.includes(searchTerm)
-  );
+  const filteredContacts = Array.isArray(contacts)
+    ? contacts.filter(
+        (contact) =>
+          contact?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          contact?.phone?.includes(searchTerm)
+      )
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,7 +248,8 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredContacts.map((contact) => (
+                  {filteredContacts.map((contact) =>
+                    contact && contact.id ? (
                     <div
                       key={contact.id}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
@@ -317,7 +328,8 @@ const ContactManagement = ({ open, onOpenChange }: ContactManagementProps) => {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  ))}
+                    ) : null
+                  )}
                 </div>
               )}
             </ScrollArea>

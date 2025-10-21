@@ -156,7 +156,7 @@ const AdminWhatsApp = () => {
     try {
       await api.post('/whatsapp/disconnect');
       setStatus({ connected: false, hasQR: false, message: 'Desconectado' });
-      setQrCode(null);
+      // QR Code será limpo automaticamente pelo hook useWhatsAppSocket
       setAccount(null);
       toast.success('WhatsApp desconectado');
     } catch (error) {
@@ -169,7 +169,7 @@ const AdminWhatsApp = () => {
     try {
       toast.info('Gerando novo QR Code...');
       await api.post('/whatsapp/reinitialize');
-      setQrCode(null);
+      // QR Code será atualizado automaticamente pelo hook useWhatsAppSocket
       setStatus({ connected: false, hasQR: false, message: 'Reinicializando...' });
       toast.success('WhatsApp reinicializado! Aguarde o novo QR Code...');
     } catch (error) {
