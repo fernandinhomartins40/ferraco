@@ -42,13 +42,57 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ✅ Helper: Mapear message.type do WPPConnect para tipo do MediaViewer
+  const getMediaType = (message: Message): 'image' | 'video' | 'audio' | 'ptt' | 'document' | 'sticker' => {
+    // Prioridade: message.type do WPPConnect
+    if (message.type === 'image') return 'image';
+    if (message.type === 'video') return 'video';
+    if (message.type === 'audio') return 'audio';
+    if (message.type === 'ptt') return 'ptt';
+    if (message.type === 'sticker') return 'sticker';
+
+    // Fallback: usar mediaType (mimetype)
+    if (message.mediaType) {
+      if (message.mediaType.startsWith('image/')) return 'image';
+      if (message.mediaType.startsWith('video/')) return 'video';
+      if (message.mediaType.startsWith('audio/')) return 'audio';
+    }
+
+    return 'document';
+  };
+
+  // ✅ Helper: Verificar se mensagem tem mídia
+  const hasMedia = (message: Message): boolean => {
+    return !!(
+      message.mediaUrl ||
+      message.type === 'image' ||
+      message.type === 'video' ||
+      message.type === 'audio' ||
+      message.type === 'ptt' ||
+      message.type === 'sticker' ||
+      message.type === 'document'
+    );
+  };
+
+  // ✅ Helper: Verificar se é mensagem apenas de mídia (sem texto)
+  const isMediaOnlyMessage = (message: Message): boolean => {
+    if (!hasMedia(message)) return false;
+
+    // Stickers nunca têm caption
+    if (message.type === 'sticker') return true;
+
+    // Se não tem content, é só mídia
+    if (!message.content || message.content.trim() === '') return true;
+
+    return false;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
 
-        // Extrair phone do conversationId (conversationId é o phone ou id do WhatsApp)
-        // Exemplo: "553196219989@c.us" ou "553196219989"
+        // Extrair phone do conversationId
         const phone = conversationId.replace('@c.us', '').replace(/\D/g, '');
 
         // Buscar conversas para encontrar a conversa específica
@@ -86,7 +130,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
       setMessages((prev) => {
         return prev.map((msg) => {
-          // ✅ CRÍTICO: Comparar com messageIds (pode ser whatsappMessageId ou id interno)
           const shouldUpdate = data.messageIds.some((msgId: string) =>
             msg.id === msgId || msg.id.includes(msgId) || msgId.includes(msg.id)
           );
@@ -120,7 +163,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       }
     },
     onReaction: (data) => {
-      // Atualizar reação em tempo real
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === data.messageId
@@ -135,7 +177,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
         )
       );
     },
-    // ✅ NOVOS EVENTOS NATIVOS DO WPPCONNECT
     onMessageRevoked: (data) => {
       console.log('🗑️ Mensagem deletada:', data);
       setMessages((prev) => prev.filter((msg) => msg.id !== data.messageId));
@@ -152,7 +193,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       );
     },
     onPresence: (data) => {
-      // Atualizar presença (typing agora vem de onPresence nativo)
       const contactId = conversation?.contact.phone.replace(/\D/g, '');
       const presenceContactId = data.contactId.replace(/\D/g, '').replace(/@c\.us$/, '');
 
@@ -186,10 +226,8 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
     scrollToBottom();
   }, [messages]);
 
-  // ✅ STATELESS: Busca mensagens direto do WhatsApp (via API v2)
   const fetchMessages = async () => {
     try {
-      // Precisa ter conversation.contact.phone para usar v2 API
       if (!conversation?.contact.phone) {
         console.error('Phone não disponível para buscar mensagens');
         return;
@@ -246,7 +284,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
         message: content,
       };
 
-      // Se está respondendo uma mensagem
       if (replyingTo) {
         payload.quotedMessageId = replyingTo.id;
       }
@@ -260,7 +297,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
     }
   };
 
-  // Actions handlers
   const handleReply = (message: Message) => {
     setReplyingTo(message);
   };
@@ -294,7 +330,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
     if (confirm(confirmMsg)) {
       try {
-        // ✅ CORRIGIDO: Usar phone correto do contato
         const chatId = conversation?.contact.phone.includes('@c.us')
           ? conversation.contact.phone
           : `${conversation?.contact.phone}@c.us`;
@@ -316,14 +351,12 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
   const handleStar = async (message: Message) => {
     try {
-      // ✅ CORRIGIDO: Usar isStarred do tipo correto
       const isStarred = message.isStarred || false;
       await api.post('/whatsapp/star-message', {
         messageId: message.id,
         star: !isStarred,
       });
 
-      // Atualizar estado local
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === message.id ? { ...msg, isStarred: !isStarred } : msg
@@ -338,20 +371,17 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
   };
 
   const handleEdit = async (message: Message) => {
-    // WhatsApp não suporta edição de mensagens
     toast.error('WhatsApp não suporta edição de mensagens');
   };
 
   const handleDownload = async (message: Message) => {
     try {
-      // FASE C: Download de mídia usando endpoint correto
       const response = await api.post('/whatsapp/download-media', {
         messageId: message.id,
       }, {
-        responseType: 'blob', // Importante para receber arquivo binário
+        responseType: 'blob',
       });
 
-      // Criar URL temporária para download
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -506,7 +536,7 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                         onCopy={handleCopy}
                         onDelete={handleDelete}
                         onStar={handleStar}
-                        onDownload={message.mediaUrl ? () => handleDownload(message) : undefined}
+                        onDownload={hasMedia(message) ? () => handleDownload(message) : undefined}
                       />
                     )}
 
@@ -532,20 +562,20 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                         </div>
                       )}
 
-                      {/* Media */}
-                      {message.mediaUrl && (
+                      {/* ✅ CORRIGIDO: Media - Verificar tipo da mensagem */}
+                      {hasMedia(message) && (
                         <div className="mb-2">
                           <MediaViewer
-                            type={message.mediaType as any || 'document'}
-                            url={message.mediaUrl}
+                            type={getMediaType(message)}
+                            url={message.mediaUrl || ''}
                             filename={message.content || 'arquivo'}
                             onDownload={() => handleDownload(message)}
                           />
                         </div>
                       )}
 
-                      {/* Message Content */}
-                      {message.content && (
+                      {/* ✅ CORRIGIDO: Message Content - Não mostrar se for apenas mídia sem caption */}
+                      {message.content && !isMediaOnlyMessage(message) && (
                         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                       )}
 
@@ -562,10 +592,8 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                         {message.fromMe && (
                           <span className="text-xs flex items-center ml-1" title={`Status: ${message.status}`}>
                             {(() => {
-                              // ✅ VISUAL IDÊNTICO AO WHATSAPP WEB
                               switch (message.status) {
                                 case 'READ':
-                                  // 2 checks azuis (lido)
                                   return (
                                     <span className="inline-flex gap-[1px]">
                                       <svg width="16" height="11" viewBox="0 0 16 11" className="fill-blue-400">
@@ -577,7 +605,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                                     </span>
                                   );
                                 case 'PLAYED':
-                                  // 2 checks azuis + ícone play (áudio/vídeo reproduzido)
                                   return (
                                     <span className="inline-flex gap-[1px] items-center">
                                       <svg width="16" height="11" viewBox="0 0 16 11" className="fill-blue-400">
@@ -589,7 +616,6 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                                     </span>
                                   );
                                 case 'DELIVERED':
-                                  // 2 checks cinza (entregue)
                                   return (
                                     <span className="inline-flex gap-[1px]">
                                       <svg width="16" height="11" viewBox="0 0 16 11" className="fill-white/70">
@@ -601,14 +627,12 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                                     </span>
                                   );
                                 case 'SENT':
-                                  // 1 check cinza (enviado)
                                   return (
                                     <svg width="16" height="11" viewBox="0 0 16 11" className="fill-white/70">
                                       <path d="M11.071.653a.498.498 0 00-.699-.111L5.023 4.135 2.78 2.07a.5.5 0 00-.695.718l2.652 2.444a.5.5 0 00.677.017l5.85-4a.498.498 0 00.111-.699l-.304.103z"/>
                                     </svg>
                                   );
                                 case 'PENDING':
-                                  // Relógio (pendente)
                                   return (
                                     <svg width="16" height="16" viewBox="0 0 16 16" className="fill-white/60">
                                       <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14.5a6.5 6.5 0 110-13 6.5 6.5 0 010 13z"/>
@@ -617,14 +641,12 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                                   );
                                 case 'ERROR':
                                 case 'FAILED':
-                                  // Erro (triângulo com exclamação)
                                   return (
                                     <svg width="16" height="16" viewBox="0 0 16 16" className="fill-red-400">
                                       <path d="M8 0L0 14h16L8 0zm1 13H7v-2h2v2zm0-3H7V5h2v5z"/>
                                     </svg>
                                   );
                                 default:
-                                  // Status desconhecido
                                   return (
                                     <span className="text-white/50 text-xs" title={`Status desconhecido: ${message.status}`}>
                                       ?
@@ -682,7 +704,7 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
         />
       )}
 
-      {/* Message Input - Fixed at bottom */}
+      {/* ✅ CORRIGIDO: Message Input - Área inferior otimizada */}
       <div className="flex-shrink-0 border-t bg-white px-4 py-3">
         <div className="flex items-center gap-2">
           <InteractiveMessageMenu
