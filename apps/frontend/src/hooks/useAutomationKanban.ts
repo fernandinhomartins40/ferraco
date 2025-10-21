@@ -123,7 +123,7 @@ export function useAutomationKanban() {
     mutationFn: (columnId: string) => automationKanbanService.retryColumn(columnId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['automation-kanban-leads'] });
-      toast.success('Envios da coluna reagendados com sucesso');
+      toast.success('Envios reagendados respeitando intervalo configurado');
     },
     onError: () => {
       toast.error('Erro ao reagendar envios da coluna');
@@ -134,7 +134,7 @@ export function useAutomationKanban() {
     mutationFn: () => automationKanbanService.retryAllFailed(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['automation-kanban-leads'] });
-      toast.success('Todos os envios falhados foram reagendados');
+      toast.success('Envios reagendados respeitando intervalos de cada coluna');
     },
     onError: () => {
       toast.error('Erro ao reagendar envios');

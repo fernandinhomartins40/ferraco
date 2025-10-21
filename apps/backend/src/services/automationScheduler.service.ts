@@ -297,39 +297,120 @@ class AutomationSchedulerService {
 
   /**
    * Reinicia envio de todos os leads de uma coluna específica
+   * IMPORTANTE: Respeita intervalo de envio para evitar banimento WhatsApp
    */
   async retryColumn(columnId: string): Promise<void> {
-    const result = await prisma.automationLeadPosition.updateMany({
+    // Buscar coluna para obter sendIntervalSeconds
+    const column = await prisma.automationKanbanColumn.findUnique({
+      where: { id: columnId },
+    });
+
+    if (!column) {
+      logger.error(`Coluna ${columnId} não encontrada`);
+      return;
+    }
+
+    // Buscar todos os leads com falha nesta coluna
+    const failedLeads = await prisma.automationLeadPosition.findMany({
       where: {
         columnId,
         status: { in: ['FAILED', 'WHATSAPP_DISCONNECTED'] },
       },
-      data: {
-        status: 'PENDING',
-        lastError: null,
-        nextScheduledAt: new Date(), // Enviar imediatamente
+      orderBy: {
+        createdAt: 'asc', // Priorizar leads mais antigos
       },
     });
 
-    logger.info(`🔄 Retry solicitado para ${result.count} leads da coluna ${columnId}`);
+    if (failedLeads.length === 0) {
+      logger.info(`Nenhum lead com falha encontrado na coluna ${columnId}`);
+      return;
+    }
+
+    // Distribuir envios respeitando intervalo configurado
+    const intervalSeconds = column.sendIntervalSeconds || 60;
+    const now = new Date();
+
+    for (let i = 0; i < failedLeads.length; i++) {
+      const scheduledTime = new Date(now.getTime() + (i * intervalSeconds * 1000));
+
+      await prisma.automationLeadPosition.update({
+        where: { id: failedLeads[i].id },
+        data: {
+          status: 'PENDING',
+          lastError: null,
+          nextScheduledAt: scheduledTime,
+        },
+      });
+    }
+
+    logger.info(
+      `🔄 Retry agendado para ${failedLeads.length} leads da coluna ${columnId} ` +
+      `(intervalo: ${intervalSeconds}s entre envios)`
+    );
   }
 
   /**
    * Reinicia envio de todos os leads com falha (todas as colunas)
+   * IMPORTANTE: Respeita intervalo de envio para evitar banimento WhatsApp
    */
   async retryAllFailed(): Promise<void> {
-    const result = await prisma.automationLeadPosition.updateMany({
+    // Buscar todos os leads com falha, agrupados por coluna
+    const failedLeads = await prisma.automationLeadPosition.findMany({
       where: {
         status: { in: ['FAILED', 'WHATSAPP_DISCONNECTED'] },
       },
-      data: {
-        status: 'PENDING',
-        lastError: null,
-        nextScheduledAt: new Date(), // Enviar imediatamente
+      include: {
+        column: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
       },
     });
 
-    logger.info(`🔄 Retry solicitado para ${result.count} leads com falha`);
+    if (failedLeads.length === 0) {
+      logger.info('Nenhum lead com falha encontrado');
+      return;
+    }
+
+    // Agrupar por coluna para respeitar intervalos individuais
+    const leadsByColumn = new Map<string, typeof failedLeads>();
+
+    failedLeads.forEach(lead => {
+      const columnId = lead.columnId;
+      if (!leadsByColumn.has(columnId)) {
+        leadsByColumn.set(columnId, []);
+      }
+      leadsByColumn.get(columnId)!.push(lead);
+    });
+
+    // Processar cada coluna respeitando seu intervalo
+    let totalScheduled = 0;
+    const now = new Date();
+
+    for (const [columnId, leads] of leadsByColumn) {
+      const column = leads[0].column;
+      const intervalSeconds = column.sendIntervalSeconds || 60;
+
+      for (let i = 0; i < leads.length; i++) {
+        const scheduledTime = new Date(now.getTime() + (totalScheduled * intervalSeconds * 1000));
+
+        await prisma.automationLeadPosition.update({
+          where: { id: leads[i].id },
+          data: {
+            status: 'PENDING',
+            lastError: null,
+            nextScheduledAt: scheduledTime,
+          },
+        });
+
+        totalScheduled++;
+      }
+    }
+
+    logger.info(
+      `🔄 Retry agendado para ${totalScheduled} leads de ${leadsByColumn.size} colunas ` +
+      `(respeitando intervalos individuais de cada coluna)`
+    );
   }
 }
 
