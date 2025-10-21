@@ -31,7 +31,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Users,
   Plus,
-  Search,
   Loader2,
   CheckCircle,
   Settings2,
@@ -52,7 +51,6 @@ const AdminLeads = () => {
   const { toast } = useToast();
 
   // State
-  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -112,7 +110,6 @@ const AdminLeads = () => {
 
   // API Hooks
   const { data: leadsData, isLoading } = useLeads({
-    search: searchQuery || undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
   });
   const createLead = useCreateLead();
@@ -439,6 +436,17 @@ const AdminLeads = () => {
               <Settings2 className="mr-2 h-4 w-4" />
               Gerenciar Colunas
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetAutomationColumnForm();
+                setIsEditAutomationColumnMode(false);
+                setIsAutomationColumnDialogOpen(true);
+              }}
+            >
+              <Bot className="mr-2 h-4 w-4" />
+              Nova Coluna de Automação
+            </Button>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={() => resetForm()}>
@@ -556,21 +564,11 @@ const AdminLeads = () => {
           </AlertDescription>
         </Alert>
 
-        {/* Filters */}
+        {/* Filtro de Status */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome, telefone ou email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
+            <div className="flex items-center gap-3">
+              <Label className="text-sm font-medium">Filtrar por status:</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Filtrar por status" />
@@ -589,27 +587,14 @@ const AdminLeads = () => {
         </Card>
 
         {/* Título do Kanban de Automação */}
-        <div className="flex items-center justify-between px-6 mt-8">
-          <div>
-            <div className="flex items-center gap-2">
-              <Bot className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold">Automação de Mensagens WhatsApp</h2>
-            </div>
-            <p className="text-muted-foreground mt-1">
-              Arraste leads entre colunas de status e automação para gerenciar o fluxo de vendas
-            </p>
+        <div className="px-6 mt-8">
+          <div className="flex items-center gap-2">
+            <Bot className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold">Automação de Mensagens WhatsApp</h2>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              resetAutomationColumnForm();
-              setIsEditAutomationColumnMode(false);
-              setIsAutomationColumnDialogOpen(true);
-            }}
-          >
-            <Settings2 className="mr-2 h-4 w-4" />
-            Nova Coluna de Automação
-          </Button>
+          <p className="text-muted-foreground mt-1">
+            Arraste leads entre colunas de status e automação para gerenciar o fluxo de vendas
+          </p>
         </div>
 
         {/* Kanban Unificado - Full width */}
