@@ -12,6 +12,7 @@ import {
 } from './conversationFlowV2';
 import { whatsappAutomationService } from '../../services/whatsappAutomation.service';
 import { logger } from '../../utils/logger';
+import { leadTaggingService } from './lead-tagging.service';
 
 export class ChatbotSessionService {
   /**
@@ -508,6 +509,12 @@ export class ChatbotSessionService {
       else if (userResponses.urgency?.includes('3 meses')) urgency = '3_meses_mais';
       else if (userResponses.urgency?.includes('não tenho prazo')) urgency = 'sem_prazo';
 
+      // Extrair produtos selecionados
+      const selectedProducts = leadTaggingService.extractSelectedProducts(userResponses);
+
+      // Determinar se deve triggerar bot WhatsApp
+      const shouldTriggerWhatsAppBot = isHumanHandoff || Boolean(userResponses.wants_pricing);
+
       logger.info(`💾 Criando lead no banco de dados - Nome: ${session.capturedName}, Telefone: ${session.capturedPhone}, Status: ${status}, Prioridade: ${priority}`);
 
       const lead = await prisma.lead.create({
@@ -539,6 +546,13 @@ export class ChatbotSessionService {
             handoffReason: isHumanHandoff ? 'usuario_pediu_equipe' : '',
             capturedAt: new Date().toISOString(),
             conversationStage: session.currentStage,
+            // 🆕 NOVOS CAMPOS PARA INTEGRAÇÃO COM BOTS
+            selectedProducts: selectedProducts,
+            productsCount: selectedProducts.length,
+            shouldTriggerWhatsAppBot: shouldTriggerWhatsAppBot,
+            shouldAddToKanbanAutomation: true,
+            wantsHumanContact: isHumanHandoff,
+            wantsPricing: Boolean(userResponses.wants_pricing),
           }),
           createdById: systemUser.id,
         },
@@ -557,14 +571,25 @@ export class ChatbotSessionService {
 
       logger.info(`✅ Sessão ${sessionId} atualizada com leadId: ${lead.id}`);
 
+      // 🏷️ NOVO: Adicionar tags automáticas
+      logger.info(`🏷️ Adicionando tags automáticas ao lead ${lead.id}`);
+      leadTaggingService.addAutomaticTags(lead.id, {
+        userResponses: session.userResponses,
+        interest: session.interest,
+        segment: session.segment,
+        qualificationScore: session.qualificationScore,
+        currentStepId: session.currentStepId,
+      }).catch(err => logger.error('❌ Erro ao adicionar tags:', err));
+
       // ✅ NOVO: Criar automação WhatsApp em background
       logger.info(`🤖 Criando automação WhatsApp para lead ${lead.id} (${lead.name})`);
       whatsappAutomationService.createAutomationFromLead(lead.id)
         .catch(err => logger.error('❌ Erro ao criar automação WhatsApp:', err));
 
-      // ⭐ NOVO: Se for handoff humano, iniciar bot do WhatsApp
-      if (isHumanHandoff) {
-        logger.info(`👨‍💼 Iniciando bot do WhatsApp para handoff humano - Lead ${lead.id}`);
+      // ⭐ NOVO: Trigger condicional do bot WhatsApp
+      // Só inicia bot se usuário pediu handoff humano OU orçamento
+      if (shouldTriggerWhatsAppBot) {
+        logger.info(`🤖 Iniciando bot do WhatsApp - Lead ${lead.id} (Motivo: ${isHumanHandoff ? 'handoff humano' : 'quer orçamento'})`);
 
         // Importação dinâmica para evitar circular dependency
         import('../whatsapp-bot/whatsapp-bot.service').then(module => {
@@ -572,6 +597,8 @@ export class ChatbotSessionService {
           whatsappBotService.startBotConversation(lead.id)
             .catch(err => logger.error('❌ Erro ao iniciar bot do WhatsApp:', err));
         }).catch(err => logger.error('❌ Erro ao importar whatsapp-bot.service:', err));
+      } else {
+        logger.info(`ℹ️ Bot WhatsApp não iniciado para lead ${lead.id} - Usuário não solicitou handoff ou orçamento`);
       }
     }
   }
