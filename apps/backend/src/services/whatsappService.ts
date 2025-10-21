@@ -1652,13 +1652,27 @@ class WhatsAppService {
             },
           });
 
+          // Extrair preview da última mensagem (tenta diferentes propriedades)
+          let lastMessagePreview = null;
+          if (chat.lastMessage) {
+            lastMessagePreview =
+              chat.lastMessage.body ||
+              chat.lastMessage.content ||
+              (chat.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
+              (chat.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
+              (chat.lastMessage.type === 'audio' || chat.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
+              (chat.lastMessage.type === 'document' ? '📄 Documento' : null) ||
+              (chat.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
+              'Nova mensagem';
+          }
+
           return {
             id: chat.id._serialized,
             phone,
             name: chat.name || contactMetadata?.name || phone,
             profilePicUrl: chat.profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
             lastMessageAt: chat.t ? new Date(chat.t * 1000) : null,
-            lastMessagePreview: chat.lastMessage?.body || null,
+            lastMessagePreview,
             unreadCount: chat.unreadCount || 0,
             isPinned: chat.pin || false,
             isArchived: chat.archive || false,
