@@ -30,6 +30,9 @@ COPY apps ./apps
 # Instalar todas as dependências (workspaces)
 RUN npm ci
 
+# Build do backend (deve ser executado da raiz do monorepo)
+RUN npm run build:backend
+
 # Build do frontend (deve ser executado da raiz do monorepo)
 RUN npm run build:frontend
 
