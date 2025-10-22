@@ -166,13 +166,29 @@ export const conversationFlowV3: ConversationStep[] = [
   },
 
   // ========================================
-  // ETAPA 5.5: INTERESSE NO PRODUTO (NOVO - Intermediário Inteligente)
+  // ETAPA 5.5: DETALHES DO PRODUTO (NOVO - Mostra informações do produto)
+  // ========================================
+  {
+    id: 'product_details',
+    stage: 5,
+    name: 'Detalhes do Produto',
+    botMessage: '📦 *{productName}*\n\n{productDescription}\n\n💰 *Valor:* {productPrice}\n\n📋 *Especificações:*\n{productSpecifications}\n\n✅ Ótima escolha! Esse produto é perfeito para você.',
+    options: [
+      { id: 'opt1', label: '👍 Legal! Quero saber mais', nextStepId: 'product_interest', captureAs: 'product_approved' },
+      { id: 'opt2', label: '🔄 Ver outro produto', nextStepId: 'show_products', captureAs: 'explore_more' },
+      { id: 'opt_human', label: '👤 Falar com a equipe', nextStepId: 'human_handoff', captureAs: 'wants_human' },
+    ],
+    actions: [{ type: 'increment_score', value: 10 }],
+  },
+
+  // ========================================
+  // ETAPA 5.6: INTERESSE NO PRODUTO (Intermediário Inteligente)
   // ========================================
   {
     id: 'product_interest',
     stage: 5,
     name: 'Interesse no Produto',
-    botMessage: 'Ótima escolha, {nome}! 😊\n\nVou solicitar à nossa equipe que entre em contato com você para enviar mais informações sobre:\n\n{selectedProductsList}\n\nEles vão te mandar todos os detalhes, especificações técnicas e valores diretamente no WhatsApp {capturedPhone}. 📱\n\nQuer adicionar mais algum produto de interesse?',
+    botMessage: 'Perfeito, {nome}! 😊\n\nVou solicitar à nossa equipe que entre em contato com você para enviar mais informações sobre:\n\n{selectedProductsList}\n\nEles vão te mandar todos os detalhes, especificações técnicas e valores diretamente no WhatsApp {capturedPhone}. 📱\n\nQuer adicionar mais algum produto de interesse?',
     options: [
       { id: 'opt1', label: '✅ Sim, quero ver mais produtos', nextStepId: 'show_products', captureAs: 'explore_more' },
       { id: 'opt2', label: '💬 Não, pode prosseguir', nextStepId: 'product_interest_confirm', captureAs: 'single_product' },

@@ -304,7 +304,7 @@ export class ChatbotSessionService {
       const productOptions = products.map((p: any) => ({
         id: p.id || p._id || `prod_${p.name.toLowerCase().replace(/\s+/g, '_')}`, // Usar ID real do produto
         label: `📦 ${p.name}`,
-        nextStepId: 'product_interest', // Step intermediário para capturar interesse
+        nextStepId: 'product_details', // ⭐ NOVO: Mostrar detalhes antes de capturar interesse
         captureAs: 'selected_product_id', // Capturar ID ao invés do nome
         productName: p.name, // Guardar nome para referência
       }));
@@ -348,28 +348,43 @@ export class ChatbotSessionService {
       }
     }
 
-    // Preparar detalhes do produto selecionado
+    // ⭐ NOVO: Preparar variáveis individuais do produto selecionado (para o step product_details)
+    let productName = '';
+    let productDescription = '';
+    let productPrice = '';
+    let productSpecifications = '';
     let productDetails = '';
     let productBenefits = '';
     let relatedProducts = '';
 
-    if (nextStepId === 'product_details' && userResponses.selected_product) {
-      const products = JSON.parse(config.products || '[]');
-      const selectedProduct = products.find((p: any) =>
-        userResponses.selected_product.includes(p.name)
-      );
+    if (nextStepId === 'product_details') {
+      // Buscar o último produto selecionado pelo ID
+      const lastProductId = userResponses.selected_product_ids?.slice(-1)[0];
 
-      if (selectedProduct) {
-        productDetails = `**${selectedProduct.name}**\n\n${selectedProduct.description}\n\n💰 **Preço:** ${selectedProduct.price || 'Sob consulta'}`;
+      if (lastProductId) {
+        const selectedProduct = products.find((p: any) => {
+          const productId = p.id || p._id || `prod_${p.name.toLowerCase().replace(/\s+/g, '_')}`;
+          return productId === lastProductId;
+        });
 
-        productBenefits = selectedProduct.features && selectedProduct.features.length > 0
-          ? selectedProduct.features.map((f: string) => `✅ ${f}`).join('\n')
-          : 'Entre em contato para mais informações técnicas.';
+        if (selectedProduct) {
+          productName = selectedProduct.name;
+          productDescription = selectedProduct.description || 'Descrição não disponível';
+          productPrice = selectedProduct.price || selectedProduct.valor || 'Consulte-nos';
+          productSpecifications = selectedProduct.specifications || selectedProduct.especificacoes || 'Especificações técnicas disponíveis mediante contato';
 
-        const related = recommendRelatedProducts(selectedProduct.name, products, 2);
-        relatedProducts = related.length > 0
-          ? related.map((p: any) => `• ${p.name}`).join('\n')
-          : 'Veja todos os nossos produtos!';
+          // Manter formato antigo para compatibilidade
+          productDetails = `**${selectedProduct.name}**\n\n${selectedProduct.description}\n\n💰 **Preço:** ${selectedProduct.price || 'Sob consulta'}`;
+
+          productBenefits = selectedProduct.features && selectedProduct.features.length > 0
+            ? selectedProduct.features.map((f: string) => `✅ ${f}`).join('\n')
+            : 'Entre em contato para mais informações técnicas.';
+
+          const related = recommendRelatedProducts(selectedProduct.name, products, 2);
+          relatedProducts = related.length > 0
+            ? related.map((p: any) => `• ${p.name}`).join('\n')
+            : 'Veja todos os nossos produtos!';
+        }
       }
     }
 
@@ -385,11 +400,15 @@ export class ChatbotSessionService {
       workingHours: config.workingHours,
       capturedPhone: capturedData.capturedPhone || updatedSession?.capturedPhone || '',
       productList,
+      productName, // ⭐ NOVO: Nome do produto selecionado
+      productDescription, // ⭐ NOVO: Descrição do produto
+      productPrice, // ⭐ NOVO: Preço do produto
+      productSpecifications, // ⭐ NOVO: Especificações do produto
       productDetails,
       productBenefits,
       relatedProducts,
       selectedProduct: userResponses.selected_product || '',
-      selectedProductsList, // ⭐ NOVA variável para lista de produtos já selecionados
+      selectedProductsList,
       faqAnswer,
     });
 
