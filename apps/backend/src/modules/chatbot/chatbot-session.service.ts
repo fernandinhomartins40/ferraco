@@ -131,35 +131,64 @@ export class ChatbotSessionService {
 
     // Se foi clicado um botão de opção
     if (optionId && currentStep.options) {
+      // 🔍 DIAGNÓSTICO: Log de captura de opção
+      logger.debug(`🔍 [DIAGNÓSTICO] Processando opção selecionada:`);
+      logger.debug(`   Option ID recebido: ${optionId}`);
+      logger.debug(`   Current Step ID: ${session.currentStepId}`);
+      logger.debug(`   Opções disponíveis no step: ${currentStep.options.map(o => o.id).join(', ')}`);
+
       const selectedOption = currentStep.options.find(opt => opt.id === optionId);
+
       if (selectedOption) {
+        logger.debug(`   ✅ Opção encontrada: ${selectedOption.label}`);
+        logger.debug(`   captureAs: ${selectedOption.captureAs || 'N/A'}`);
+        logger.debug(`   nextStepId: ${selectedOption.nextStepId}`);
+
         nextStepId = selectedOption.nextStepId;
 
         // Capturar dado se especificado
         if (selectedOption.captureAs) {
+          logger.debug(`   🎯 Capturando dado: ${selectedOption.captureAs} = ${selectedOption.label}`);
           capturedData[selectedOption.captureAs] = selectedOption.label;
           userResponses[selectedOption.captureAs] = selectedOption.label;
 
           // ⭐ NOVO: Capturar IDs dos produtos selecionados
           if (selectedOption.captureAs === 'selected_product_id') {
+            logger.info(`🛒 [DIAGNÓSTICO] CAPTURANDO PRODUTO!`);
+            logger.info(`   Produto ID: ${selectedOption.id}`);
+            logger.info(`   Produto Label: ${selectedOption.label}`);
+            logger.info(`   Produto Name: ${(selectedOption as any).productName}`);
+
             // Inicializar arrays se não existirem
             if (!userResponses.selected_product_ids) {
               userResponses.selected_product_ids = [];
+              logger.debug(`   Criou array selected_product_ids`);
             }
             if (!userResponses.selected_products) {
               userResponses.selected_products = [];
+              logger.debug(`   Criou array selected_products`);
             }
 
             // Adicionar ID do produto
             if (!userResponses.selected_product_ids.includes(selectedOption.id)) {
               userResponses.selected_product_ids.push(selectedOption.id);
+              logger.info(`   ✅ ID adicionado a selected_product_ids: ${selectedOption.id}`);
+            } else {
+              logger.debug(`   ℹ️  ID já existe em selected_product_ids`);
             }
 
             // Adicionar nome do produto (sem emoji para compatibilidade)
             const productName = (selectedOption as any).productName || selectedOption.label.replace(/📦\s*/g, '');
             if (!userResponses.selected_products.includes(productName)) {
               userResponses.selected_products.push(productName);
+              logger.info(`   ✅ Nome adicionado a selected_products: ${productName}`);
+            } else {
+              logger.debug(`   ℹ️  Nome já existe em selected_products`);
             }
+
+            logger.info(`   📊 Estado atual:`);
+            logger.info(`      selected_product_ids: ${JSON.stringify(userResponses.selected_product_ids)}`);
+            logger.info(`      selected_products: ${JSON.stringify(userResponses.selected_products)}`);
           }
 
           // Manter compatibilidade com selected_product antigo
