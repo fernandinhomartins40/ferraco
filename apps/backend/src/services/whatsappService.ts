@@ -37,6 +37,7 @@ import * as fs from 'fs';
 import whatsappChatService from './whatsappChatService';
 import { WhatsAppListeners } from './whatsappListeners';
 import { Server as SocketIOServer } from 'socket.io';
+import { brazilianPhoneNormalizer } from './brazilianPhoneNormalizer.service';
 
 interface NumberCheckResult {
   phoneNumber: string;
@@ -547,7 +548,7 @@ class WhatsAppService {
       throw new Error('Mensagem vazia não pode ser enviada');
     }
 
-    const formatted = this.formatPhoneNumber(to);
+    const formatted = await this.formatPhoneNumber(to);
     const result = await this.client!.sendText(formatted, message, options);
 
     logger.info(`📨 Mensagem enviada: ${to}`, { messageId: result.id });
@@ -570,7 +571,7 @@ class WhatsAppService {
     caption?: string
   ): Promise<any> {
     this.validateConnection();
-    const formatted = this.formatPhoneNumber(to);
+    const formatted = await this.formatPhoneNumber(to);
     return await this.client!.sendImage(formatted, pathOrBase64, filename, caption);
   }
 
@@ -606,7 +607,7 @@ class WhatsAppService {
 
     return await this.sendWithRetry(async () => {
       try {
-        const formattedNumber = this.formatPhoneNumber(to);
+        const formattedNumber = await this.formatPhoneNumber(to);
 
         // Enviar vídeo via WPPConnect
         const result = await this.client!.sendVideoAsGif(
@@ -646,7 +647,7 @@ class WhatsAppService {
    */
   async sendAudio(to: string, audioPath: string): Promise<any> {
     this.validateConnection();
-    const formatted = this.formatPhoneNumber(to);
+    const formatted = await this.formatPhoneNumber(to);
     return await this.client!.sendPtt(formatted, audioPath);
   }
 
@@ -787,7 +788,7 @@ class WhatsAppService {
     caption?: string
   ): Promise<any> {
     this.validateConnection();
-    const formatted = this.formatPhoneNumber(to);
+    const formatted = await this.formatPhoneNumber(to);
     return await this.client!.sendFile(formatted, filePath, filename, caption);
   }
 
@@ -801,7 +802,7 @@ class WhatsAppService {
     name?: string
   ): Promise<any> {
     this.validateConnection();
-    const formatted = this.formatPhoneNumber(to);
+    const formatted = await this.formatPhoneNumber(to);
     return await this.client!.sendLocation(formatted, latitude, longitude, name);
   }
 
@@ -814,7 +815,7 @@ class WhatsAppService {
     name?: string
   ): Promise<any> {
     this.validateConnection();
-    const formatted = this.formatPhoneNumber(to);
+    const formatted = await this.formatPhoneNumber(to);
     return await this.client!.sendContactVcard(formatted, contactId, name);
   }
 
@@ -1018,7 +1019,7 @@ class WhatsAppService {
       const recipients = Array.isArray(to) ? to : [to];
 
       for (const recipient of recipients) {
-        const formattedNumber = this.formatPhoneNumber(recipient);
+        const formattedNumber = await this.formatPhoneNumber(recipient);
         await this.client!.forwardMessages(formattedNumber, [messageId], false);
         logger.info(`✅ Mensagem encaminhada para: ${formattedNumber}`);
       }
@@ -1083,7 +1084,7 @@ class WhatsAppService {
 
       for (const phoneNumber of numbers) {
         try {
-          const formatted = this.formatPhoneNumber(phoneNumber);
+          const formatted = await this.formatPhoneNumber(phoneNumber);
 
           logger.debug(`🔍 Verificando número formatado: ${formatted}`);
 
@@ -1150,7 +1151,9 @@ class WhatsAppService {
 
     try {
       // Formatar números dos participantes
-      const formattedParticipants = participants.map(p => this.formatPhoneNumber(p));
+      const formattedParticipants = await Promise.all(
+        participants.map(p => this.formatPhoneNumber(p))
+      );
 
       // Criar grupo
       const group = await this.client!.createGroup(name, formattedParticipants);
@@ -1192,7 +1195,7 @@ class WhatsAppService {
       throw new Error('WhatsApp não está conectado');
     }
 
-    const formattedNumber = this.formatPhoneNumber(to);
+    const formattedNumber = await this.formatPhoneNumber(to);
 
     return this.sendWithRetry(async () => {
       try {
@@ -1238,7 +1241,7 @@ class WhatsAppService {
       throw new Error('WhatsApp permite no máximo 3 botões');
     }
 
-    const formattedNumber = this.formatPhoneNumber(to);
+    const formattedNumber = await this.formatPhoneNumber(to);
 
     return this.sendWithRetry(async () => {
       try {
@@ -1285,7 +1288,7 @@ class WhatsAppService {
       throw new Error('Enquetes devem ter entre 2 e 12 opções');
     }
 
-    const formattedNumber = this.formatPhoneNumber(to);
+    const formattedNumber = await this.formatPhoneNumber(to);
 
     return this.sendWithRetry(async () => {
       try {
@@ -1317,7 +1320,7 @@ class WhatsAppService {
     }
 
     try {
-      const formattedNumber = this.formatPhoneNumber(participantNumber);
+      const formattedNumber = await this.formatPhoneNumber(participantNumber);
       await this.client!.addParticipant(groupId, [formattedNumber]);
 
       logger.info(`✅ Participante adicionado: ${formattedNumber}`);
@@ -1344,7 +1347,7 @@ class WhatsAppService {
     }
 
     try {
-      const formattedNumber = this.formatPhoneNumber(participantNumber);
+      const formattedNumber = await this.formatPhoneNumber(participantNumber);
       await this.client!.removeParticipant(groupId, [formattedNumber]);
 
       logger.info(`✅ Participante removido: ${formattedNumber}`);
@@ -1421,7 +1424,7 @@ class WhatsAppService {
     }
 
     try {
-      const formattedNumber = this.formatPhoneNumber(participantNumber);
+      const formattedNumber = await this.formatPhoneNumber(participantNumber);
       await this.client!.promoteParticipant(groupId, [formattedNumber]);
 
       logger.info(`✅ Participante promovido a admin`);
@@ -1448,7 +1451,7 @@ class WhatsAppService {
     }
 
     try {
-      const formattedNumber = this.formatPhoneNumber(participantNumber);
+      const formattedNumber = await this.formatPhoneNumber(participantNumber);
       await this.client!.demoteParticipant(groupId, [formattedNumber]);
 
       logger.info(`✅ Admin removido do participante`);
@@ -1501,51 +1504,65 @@ class WhatsAppService {
 
   /**
    * ⭐ FASE 1: Formatar e validar número de telefone
+   * 🇧🇷 ATUALIZADO 2025: Inclui normalização inteligente do nono dígito brasileiro
+   *
    * @param phoneNumber Número de telefone
-   * @returns Número formatado (ex: 5511999999999@c.us)
+   * @param skipVerification Se true, pula verificação no WhatsApp (apenas normalização básica)
+   * @returns Número formatado (ex: 5511999999999@c.us ou 551187654321@c.us)
    * @throws Error se número inválido
    */
-  private formatPhoneNumber(phoneNumber: string): string {
+  private async formatPhoneNumber(phoneNumber: string, skipVerification: boolean = false): Promise<string> {
     // Validar entrada não vazia
     if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim() === '') {
       throw new Error('Número de telefone vazio ou inválido');
     }
 
-    // Remover todos os caracteres não numéricos
-    let cleaned = phoneNumber.replace(/\D/g, '');
-
-    // Validações de comprimento
-    if (cleaned.length < 10) {
-      throw new Error(`Número muito curto: ${phoneNumber}. Mínimo 10 dígitos.`);
+    // Se verificação está desabilitada OU não está conectado, usar normalização básica
+    if (skipVerification || !this.client || !this.isConnected) {
+      const result = brazilianPhoneNormalizer.normalize(phoneNumber);
+      logger.debug(`📞 Número formatado (básico): ${phoneNumber} -> ${result.normalized}`);
+      return result.normalized;
     }
 
-    if (cleaned.length > 15) {
-      throw new Error(`Número muito longo: ${phoneNumber}. Máximo 15 dígitos.`);
-    }
+    // 🇧🇷 NORMALIZAÇÃO INTELIGENTE: Verifica ambos os formatos no WhatsApp
+    logger.debug(`🔍 Iniciando normalização inteligente para: ${phoneNumber}`);
 
-    // ✅ MELHORIA: Adicionar código do país de forma mais robusta
-    if (!cleaned.startsWith('55')) {
-      // Se não começa com código do país, verificar se é número brasileiro
-      if (cleaned.length === 10 || cleaned.length === 11) {
-        // Número brasileiro sem código do país
-        cleaned = '55' + cleaned;
+    try {
+      const result = await brazilianPhoneNormalizer.normalizeAndVerify(
+        phoneNumber,
+        async (formatted: string) => {
+          try {
+            const statusResult = await this.client!.checkNumberStatus(formatted);
+            const exists = statusResult.numberExists === true;
+            logger.debug(`   → Verificado ${formatted}: ${exists ? 'EXISTE' : 'NÃO EXISTE'}`);
+            return exists;
+          } catch (error) {
+            logger.warn(`   ⚠️ Erro ao verificar ${formatted}:`, error);
+            return false;
+          }
+        }
+      );
+
+      logger.info(`✅ Número normalizado: ${phoneNumber} -> ${result.normalized} (${result.reason})`);
+
+      // Log de aviso se número foi modificado
+      if (result.wasModified && result.hasNinthDigit !== undefined) {
+        const modification = result.hasNinthDigit
+          ? 'MANTÉM 9º dígito (formato moderno)'
+          : 'REMOVIDO 9º dígito (registro antigo do WhatsApp)';
+
+        logger.warn(`🔄 ${modification}: ${phoneNumber} -> ${result.normalized}`);
       }
+
+      return result.normalized;
+    } catch (error: any) {
+      logger.error(`❌ Erro na normalização inteligente de ${phoneNumber}:`, error);
+
+      // Fallback: usar normalização básica
+      const result = brazilianPhoneNormalizer.normalize(phoneNumber);
+      logger.debug(`📞 Usando normalização básica (fallback): ${result.normalized}`);
+      return result.normalized;
     }
-
-    // ✅ VALIDAÇÃO: Verificar formato brasileiro após adicionar código
-    if (cleaned.startsWith('55')) {
-      // Formato brasileiro: 55 + DDD(2) + Número(8 ou 9)
-      // Total: 12 ou 13 dígitos
-      if (cleaned.length < 12 || cleaned.length > 13) {
-        logger.warn(`⚠️  Número brasileiro com formato suspeito: ${phoneNumber} (${cleaned.length} dígitos)`);
-      }
-    }
-
-    // Formato WhatsApp: número@c.us
-    const formatted = `${cleaned}@c.us`;
-
-    logger.debug(`📞 Número formatado: ${phoneNumber} -> ${formatted}`);
-    return formatted;
   }
 
   /**
