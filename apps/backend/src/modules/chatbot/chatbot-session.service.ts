@@ -124,6 +124,13 @@ export class ChatbotSessionService {
       throw new Error('Current step not found');
     }
 
+    // 🔍 DIAGNÓSTICO CRÍTICO: Log do step atual
+    logger.info(`🔍 [DIAGNÓSTICO-CRITICO] Step atual: ${session.currentStepId}`);
+    logger.info(`   Opções estáticas no step: ${currentStep.options?.length || 0}`);
+    if (currentStep.options && currentStep.options.length > 0) {
+      logger.info(`   IDs das opções: ${currentStep.options.map(o => o.id).join(', ')}`);
+    }
+
     // Processar resposta baseado no tipo de step
     let nextStepId: string | null = null;
     let capturedData: any = {};
@@ -138,6 +145,13 @@ export class ChatbotSessionService {
       logger.debug(`   Opções disponíveis no step: ${currentStep.options.map(o => o.id).join(', ')}`);
 
       const selectedOption = currentStep.options.find(opt => opt.id === optionId);
+
+      if (!selectedOption) {
+        logger.warn(`❌ [DIAGNÓSTICO-CRITICO] Opção ${optionId} NÃO ENCONTRADA em currentStep.options!`);
+        logger.warn(`   Step atual: ${session.currentStepId}`);
+        logger.warn(`   Opções disponíveis: ${currentStep.options.map(o => `${o.id} (${o.label})`).join(', ')}`);
+        logger.warn(`   ⚠️  Isto significa que a opção dinâmica foi perdida!`);
+      }
 
       if (selectedOption) {
         logger.debug(`   ✅ Opção encontrada: ${selectedOption.label}`);
