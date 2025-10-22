@@ -167,10 +167,13 @@ export class LeadTaggingService {
   private extractProductName(productString: string): string | null {
     if (!productString) return null;
 
-    // Remover emojis e caracteres especiais
+    // Remover todos os emojis e caracteres especiais (range completo Unicode)
     const cleaned = productString
-      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emojis
-      .replace(/[📦🎯✅❌]/g, '') // Remove emojis específicos
+      .replace(/[\u{1F000}-\u{1F9FF}]/gu, '') // Emojis completos
+      .replace(/[\u{2600}-\u{26FF}]/gu, '') // Símbolos diversos
+      .replace(/[\u{2700}-\u{27BF}]/gu, '') // Dingbats
+      .replace(/[\u{FE00}-\u{FE0F}]/gu, '') // Variações de emoji
+      .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '') // Bandeiras
       .trim();
 
     return cleaned || null;
