@@ -252,16 +252,20 @@ export class LeadTaggingService {
   /**
    * Extrai lista de produtos selecionados da sessão
    */
+  /**
+   * Extrai produtos selecionados dos userResponses
+   * Prioriza IDs de produtos quando disponíveis (novo formato)
+   * Fallback para nomes (formato antigo com emoji)
+   */
   extractSelectedProducts(userResponses: any): string[] {
     const products: string[] = [];
 
-    // Produto único
-    if (userResponses.selected_product) {
-      const product = this.extractProductName(userResponses.selected_product);
-      if (product) products.push(product);
+    // NOVO: Usar IDs de produtos (mais confiável)
+    if (userResponses.selected_product_ids && Array.isArray(userResponses.selected_product_ids)) {
+      return userResponses.selected_product_ids;
     }
 
-    // Múltiplos produtos
+    // FALLBACK 1: Usar nomes de produtos já salvos (sem emoji)
     if (userResponses.selected_products && Array.isArray(userResponses.selected_products)) {
       userResponses.selected_products.forEach((product: string) => {
         const cleaned = this.extractProductName(product);
@@ -269,6 +273,12 @@ export class LeadTaggingService {
           products.push(cleaned);
         }
       });
+    }
+
+    // FALLBACK 2: Produto único (formato antigo)
+    if (userResponses.selected_product && products.length === 0) {
+      const product = this.extractProductName(userResponses.selected_product);
+      if (product) products.push(product);
     }
 
     return products;

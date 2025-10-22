@@ -140,7 +140,29 @@ export class ChatbotSessionService {
           capturedData[selectedOption.captureAs] = selectedOption.label;
           userResponses[selectedOption.captureAs] = selectedOption.label;
 
-          // ⭐ NOVO: Acumular produtos selecionados em um array
+          // ⭐ NOVO: Capturar IDs dos produtos selecionados
+          if (selectedOption.captureAs === 'selected_product_id') {
+            // Inicializar arrays se não existirem
+            if (!userResponses.selected_product_ids) {
+              userResponses.selected_product_ids = [];
+            }
+            if (!userResponses.selected_products) {
+              userResponses.selected_products = [];
+            }
+
+            // Adicionar ID do produto
+            if (!userResponses.selected_product_ids.includes(selectedOption.id)) {
+              userResponses.selected_product_ids.push(selectedOption.id);
+            }
+
+            // Adicionar nome do produto (sem emoji para compatibilidade)
+            const productName = (selectedOption as any).productName || selectedOption.label.replace(/📦\s*/g, '');
+            if (!userResponses.selected_products.includes(productName)) {
+              userResponses.selected_products.push(productName);
+            }
+          }
+
+          // Manter compatibilidade com selected_product antigo
           if (selectedOption.captureAs === 'selected_product') {
             if (!userResponses.selected_products) {
               userResponses.selected_products = [];
@@ -279,11 +301,12 @@ export class ChatbotSessionService {
 
     // Atualizar opções dinâmicas de produtos se for o step show_products
     if (nextStepId === 'show_products' && nextStep.options && products.length > 0) {
-      const productOptions = products.map((p: any, idx: number) => ({
-        id: `prod${idx + 1}`,
+      const productOptions = products.map((p: any) => ({
+        id: p.id || p._id || `prod_${p.name.toLowerCase().replace(/\s+/g, '_')}`, // Usar ID real do produto
         label: `📦 ${p.name}`,
         nextStepId: 'product_interest', // Step intermediário para capturar interesse
-        captureAs: 'selected_product',
+        captureAs: 'selected_product_id', // Capturar ID ao invés do nome
+        productName: p.name, // Guardar nome para referência
       }));
 
       // Substituir as primeiras opções por produtos reais
