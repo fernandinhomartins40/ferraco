@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot, KeyRound, Palette } from 'lucide-react';
+import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot, KeyRound, Palette, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -84,6 +84,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       href: '/admin/whatsapp',
       label: 'WhatsApp',
       icon: MessageCircle,
+      show: true
+    },
+    {
+      href: '/admin/whatsapp-automations',
+      label: 'Automações WA',
+      icon: Send,
       show: true
     },
     {

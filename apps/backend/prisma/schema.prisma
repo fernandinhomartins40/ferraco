@@ -103,12 +103,12 @@ enum AutomationActionType {
 }
 
 enum AutomationSendStatus {
-  PENDING      // Aguardando envio
-  SENDING      // Enviando agora
-  SENT         // Enviado com sucesso
-  FAILED       // Falha no envio
+  PENDING // Aguardando envio
+  SENDING // Enviando agora
+  SENT // Enviado com sucesso
+  FAILED // Falha no envio
   WHATSAPP_DISCONNECTED // WhatsApp desconectado
-  SCHEDULED    // Agendado para data futura
+  SCHEDULED // Agendado para data futura
 }
 
 enum IntegrationType {
@@ -231,16 +231,16 @@ model User {
   teamMemberships       TeamMember[]
   preferences           UserPreferences?
   refreshTokens         RefreshToken[]
-  assignedLeads         Lead[]                 @relation("AssignedTo")
-  createdLeads          Lead[]                 @relation("CreatedBy")
+  assignedLeads         Lead[]             @relation("AssignedTo")
+  createdLeads          Lead[]             @relation("CreatedBy")
   notes                 Note[]
   interactions          Interaction[]
-  opportunitiesCreated  Opportunity[]          @relation("OpportunityCreatedBy")
-  opportunitiesAssigned Opportunity[]          @relation("OpportunityAssignedTo")
-  automationsCreated    Automation[]           @relation("AutomationCreatedBy")
-  pipelinesCreated      Pipeline[]             @relation("PipelineCreatedBy")
-  integrationsCreated   Integration[]          @relation("IntegrationCreatedBy")
-  reportsCreated        Report[]               @relation("ReportCreatedBy")
+  opportunitiesCreated  Opportunity[]      @relation("OpportunityCreatedBy")
+  opportunitiesAssigned Opportunity[]      @relation("OpportunityAssignedTo")
+  automationsCreated    Automation[]       @relation("AutomationCreatedBy")
+  pipelinesCreated      Pipeline[]         @relation("PipelineCreatedBy")
+  integrationsCreated   Integration[]      @relation("IntegrationCreatedBy")
+  reportsCreated        Report[]           @relation("ReportCreatedBy")
   auditLogs             AuditLog[]
   signatures            DigitalSignature[]
   dashboardConfigs      DashboardConfig[]
@@ -426,7 +426,7 @@ model Lead {
   aiAnalysis           AIAnalysis?
   conversionPrediction ConversionPrediction?
   leadScoring          LeadScoring?
-  duplicateDetections  DuplicateDetection[]  @relation("DetectedLead")
+  duplicateDetections  DuplicateDetection[]    @relation("DetectedLead")
   potentialDuplicates  DuplicateMatch[]
   signatures           DigitalSignature[]
   partialLeads         PartialLead[]
@@ -474,11 +474,11 @@ model KanbanColumn {
 // ============================================================================
 
 enum RecurrenceType {
-  NONE          // Sem recorrência (envio único)
-  DAILY         // Diário
-  WEEKLY        // Semanal (dias específicos da semana)
-  MONTHLY       // Mensal (dia específico do mês)
-  CUSTOM_DATES  // Datas customizadas
+  NONE // Sem recorrência (envio único)
+  DAILY // Diário
+  WEEKLY // Semanal (dias específicos da semana)
+  MONTHLY // Mensal (dia específico do mês)
+  CUSTOM_DATES // Datas customizadas
   DAYS_FROM_NOW // X dias a partir de agora
 }
 
@@ -491,27 +491,27 @@ model AutomationKanbanColumn {
   description String? // Descrição da coluna
 
   // Configurações de Envio
-  sendIntervalSeconds Int     @default(60) // Intervalo entre envios dentro da coluna (segundos)
+  sendIntervalSeconds Int       @default(60) // Intervalo entre envios dentro da coluna (segundos)
   scheduledDate       DateTime? // Data/hora agendada para envio único
 
   // Sistema de Recorrência Avançado
-  recurrenceType      RecurrenceType @default(NONE)
+  recurrenceType RecurrenceType @default(NONE)
 
   // Para WEEKLY: JSON array [0,1,2,3,4,5,6] (domingo=0, segunda=1, etc)
-  weekDays            String? // Ex: "[1,3,5]" para segunda, quarta, sexta
+  weekDays String? // Ex: "[1,3,5]" para segunda, quarta, sexta
 
   // Para MONTHLY: dia do mês (1-31)
-  monthDay            Int?
+  monthDay Int?
 
   // Para CUSTOM_DATES: JSON array de datas ISO
-  customDates         String? // Ex: '["2025-11-15T10:00:00Z", "2025-12-20T14:00:00Z"]'
+  customDates String? // Ex: '["2025-11-15T10:00:00Z", "2025-12-20T14:00:00Z"]'
 
   // Para DAYS_FROM_NOW: número de dias
-  daysFromNow         Int? // Ex: 180 (enviar daqui 180 dias)
+  daysFromNow Int? // Ex: 180 (enviar daqui 180 dias)
 
   // DEPRECATED (manter para compatibilidade)
-  isRecurring         Boolean @default(false)
-  recurringDay        Int?
+  isRecurring  Boolean @default(false)
+  recurringDay Int?
 
   // Template de Mensagem
   messageTemplateId String?
@@ -542,14 +542,14 @@ model AutomationLeadPosition {
   leadId   String
   columnId String
 
-  lead   Lead                     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  column AutomationKanbanColumn   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  lead   Lead                   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  column AutomationKanbanColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
 
   // Status de envio
   status            AutomationSendStatus @default(PENDING)
   lastSentAt        DateTime?
   nextScheduledAt   DateTime? // Próximo envio agendado
-  messagesSentCount Int @default(0)
+  messagesSentCount Int                  @default(0)
   lastError         String? // Última mensagem de erro
   lastAttemptAt     DateTime? // Última tentativa de envio
 
@@ -568,9 +568,9 @@ model AutomationLeadPosition {
 // ============================================================================
 
 model WhatsAppMessageTemplate {
-  id      String  @id @default(cuid())
+  id      String @id @default(cuid())
   name    String
-  content String  @db.Text // Conteúdo da mensagem com variáveis {{nome}}, {{produto}}, etc.
+  content String @db.Text // Conteúdo da mensagem com variáveis {{nome}}, {{produto}}, etc.
 
   // Mídia
   mediaUrls String? // JSON array de URLs de imagens/vídeos
@@ -1607,9 +1607,9 @@ enum WhatsAppAutomationStatus {
 
 // Automação de envio WhatsApp após captação de lead
 model WhatsAppAutomation {
-  id           String                     @id @default(cuid())
+  id           String                   @id @default(cuid())
   leadId       String
-  status       WhatsAppAutomationStatus   @default(PENDING)
+  status       WhatsAppAutomationStatus @default(PENDING)
   scheduledFor DateTime? // null = envio imediato
 
   // Produtos a enviar (JSON array de nomes)
@@ -1675,19 +1675,19 @@ model WhatsAppAutomationMessage {
 
 // Sessões do bot do WhatsApp (separado do chatbot web)
 model WhatsAppBotSession {
-  id              String   @id @default(cuid())
-  leadId          String
-  phone           String
-  currentStepId   String
-  contextData     String   @db.Text // JSON: leadName, interesse, companyName, etc.
-  isActive        Boolean  @default(true)
-  handedOffToHuman Boolean @default(false)
-  handoffAt       DateTime?
+  id               String    @id @default(cuid())
+  leadId           String
+  phone            String
+  currentStepId    String
+  contextData      String    @db.Text // JSON: leadName, interesse, companyName, etc.
+  isActive         Boolean   @default(true)
+  handedOffToHuman Boolean   @default(false)
+  handoffAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lead     Lead                   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead     Lead                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
   messages WhatsAppBotMessage[]
 
   @@index([leadId])
@@ -1701,7 +1701,7 @@ model WhatsAppBotSession {
 model WhatsAppBotMessage {
   id           String   @id @default(cuid())
   botSessionId String
-  sender       String   // 'bot' | 'user'
+  sender       String // 'bot' | 'user'
   content      String   @db.Text
   timestamp    DateTime @default(now())
 

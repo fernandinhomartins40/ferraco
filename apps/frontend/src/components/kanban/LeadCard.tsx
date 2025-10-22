@@ -2,10 +2,23 @@ import { useDrag } from 'react-dnd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, Calendar, GripVertical, Tag } from 'lucide-react';
+import { Phone, Mail, Calendar, GripVertical, Tag, RotateCcw, Loader2, Package } from 'lucide-react';
 import { ApiLead } from '@/types/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  useLeadLastAutomation,
+  useRetryAutomation,
+  getAutomationStatusColor,
+  getAutomationStatusLabel
+} from '@/hooks/useWhatsAppAutomation';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 
 interface LeadCardProps {
   lead: ApiLead;
@@ -17,6 +30,7 @@ interface LeadCardProps {
 }
 
 const LeadCard = ({ lead, columnId, index, onMoveLead, onClick, onAddTag }: LeadCardProps) => {
+  const { toast } = useToast();
   const [{ isDragging }, drag] = useDrag({
     type: 'LEAD_CARD',
     item: { leadId: lead.id, sourceColumnId: columnId },
@@ -24,6 +38,13 @@ const LeadCard = ({ lead, columnId, index, onMoveLead, onClick, onAddTag }: Lead
       isDragging: monitor.isDragging()
     })
   });
+
+  // 🆕 Hook para buscar automação de produtos do lead
+  const { automation, hasAutomation, isPending, isProcessing, isSent, isFailed, isLoading } =
+    useLeadLastAutomation(lead.id);
+
+  // 🆕 Mutation para retry
+  const retryMutation = useRetryAutomation();
 
   const getSourceBadgeColor = (source: string) => {
     const colors: Record<string, string> = {
@@ -34,6 +55,31 @@ const LeadCard = ({ lead, columnId, index, onMoveLead, onClick, onAddTag }: Lead
       email: 'bg-purple-100 text-purple-800'
     };
     return colors[source] || 'bg-gray-100 text-gray-800';
+  };
+
+  // 🆕 Handler para retry
+  const handleRetryAutomation = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!automation) return;
+
+    try {
+      await retryMutation.mutateAsync({
+        id: automation.id,
+        resetMessages: isFailed
+      });
+
+      toast({
+        title: 'Sucesso',
+        description: 'Automação reenviada para a fila de processamento',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível reenviar a automação',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
@@ -111,6 +157,71 @@ const LeadCard = ({ lead, columnId, index, onMoveLead, onClick, onAddTag }: Lead
             <Tag className="h-3 w-3" />
           </Button>
         </div>
+
+        {/* 🆕 BADGE DE AUTOMAÇÃO DE PRODUTOS (Independente do Kanban) */}
+        {hasAutomation && automation && (
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-2 py-0.5 flex items-center gap-1 ${getAutomationStatusColor(automation.status)}`}
+                    >
+                      <Package className="h-3 w-3" />
+                      {getAutomationStatusLabel(automation.status)}
+                    </Badge>
+
+                    {/* Botão de Retry (apenas para FAILED ou PENDING) */}
+                    {(isFailed || isPending) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 flex-shrink-0"
+                        onClick={handleRetryAutomation}
+                        disabled={retryMutation.isPending}
+                        title="Reenviar materiais"
+                      >
+                        {retryMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+
+                    {/* Indicador de Progresso (PROCESSING) */}
+                    {isProcessing && (
+                      <span className="text-[10px] text-blue-600">
+                        {automation.messagesSent}/{automation.messagesTotal}
+                      </span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-1 text-xs">
+                    <p className="font-semibold">Envio de Materiais</p>
+                    <p>
+                      Produtos: {JSON.parse(automation.productsToSend || '[]').join(', ')}
+                    </p>
+                    <p>
+                      Progresso: {automation.messagesSent}/{automation.messagesTotal} mensagens
+                    </p>
+                    {automation.error && (
+                      <p className="text-red-600">Erro: {automation.error}</p>
+                    )}
+                    {automation.completedAt && (
+                      <p className="text-green-600">
+                        Concluído em {new Date(automation.completedAt).toLocaleString('pt-BR')}
+                      </p>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

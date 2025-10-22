@@ -38,6 +38,7 @@ const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminLandingPageEditor = lazy(() => import("./pages/admin/AdminLandingPageEditor"));
 const AdminChatbotConfig = lazy(() => import("./pages/admin/AdminChatbotConfig"));
 const WhatsAppContacts = lazy(() => import("./pages/WhatsAppContacts"));
+const WhatsAppAutomations = lazy(() => import("./pages/admin/WhatsAppAutomations"));
 
 // Import ProtectedRoute
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -167,6 +168,16 @@ const App = () => {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <WhatsAppContacts />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/whatsapp-automations"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <WhatsAppAutomations />
                 </Suspense>
               </ProtectedRoute>
             }
