@@ -6,15 +6,23 @@ import { z } from 'zod';
 
 /**
  * Login Schema
+ * Aceita email OU username para login
  */
 export const LoginSchema = z.object({
   email: z
     .string()
-    .email('Invalid email format')
-    .min(1, 'Email is required'),
+    .min(1, 'Email or username is required')
+    .optional(),
+  username: z
+    .string()
+    .min(1, 'Email or username is required')
+    .optional(),
   password: z
     .string()
     .min(1, 'Password is required'),
+}).refine((data) => data.email || data.username, {
+  message: 'Either email or username must be provided',
+  path: ['email'],
 });
 
 export type LoginInput = z.infer<typeof LoginSchema>;

@@ -19,11 +19,17 @@ import {
 export class AuthService implements IAuthService {
   /**
    * User login
+   * Aceita email OU username
    */
-  async login(email: string, password: string): Promise<LoginResponse | null> {
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
+  async login(emailOrUsername: string, password: string): Promise<LoginResponse | null> {
+    // Find user by email or username
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: emailOrUsername },
+          { username: emailOrUsername },
+        ],
+      },
     });
 
     if (!user) {

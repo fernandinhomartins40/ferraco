@@ -17,13 +17,14 @@ import {
 export class AuthController {
   /**
    * POST /api/auth/login
-   * User login
+   * User login (aceita email ou username)
    */
   async login(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
+      const { email, username, password } = req.body;
+      const emailOrUsername = email || username;
 
-      const result = await authService.login(email, password);
+      const result = await authService.login(emailOrUsername, password);
 
       if (!result) {
         unauthorizedResponse(res, 'Invalid credentials');
