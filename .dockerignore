@@ -51,7 +51,7 @@ docker-compose*.yml
 !docker-compose.vps.yml
 
 # Backend specific
-apps/backend/prisma/migrations
+# NOTE: migrations are needed in production to run prisma migrate deploy
 
 # Frontend specific
 apps/frontend/dist
