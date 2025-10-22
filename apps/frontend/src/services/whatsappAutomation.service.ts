@@ -1,14 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
-
-const API_URL = '/api/whatsapp-automations';
-
-const createApiClient = (): AxiosInstance => {
-  const token = localStorage.getItem('token');
-  return axios.create({
-    baseURL: API_URL,
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-};
+import { apiClient } from '../lib/apiClient';
 
 // ============================================================================
 // Types
@@ -85,8 +75,7 @@ export const whatsappAutomationService = {
    * Buscar estatísticas gerais
    */
   async getStats(): Promise<WhatsAppAutomationStats> {
-    const api = createApiClient();
-    const response = await api.get('/stats');
+    const response = await apiClient.get('/whatsapp-automations/stats');
     return response.data.data;
   },
 
@@ -99,8 +88,7 @@ export const whatsappAutomationService = {
     page: number;
     limit: number;
   }> {
-    const api = createApiClient();
-    const response = await api.get('', { params: filters });
+    const response = await apiClient.get('/whatsapp-automations', { params: filters });
     return response.data;
   },
 
@@ -108,8 +96,7 @@ export const whatsappAutomationService = {
    * Buscar detalhes de uma automação
    */
   async getById(id: string): Promise<WhatsAppAutomationDetail> {
-    const api = createApiClient();
-    const response = await api.get(`/${id}`);
+    const response = await apiClient.get(`/whatsapp-automations/${id}`);
     return response.data.data;
   },
 
@@ -117,8 +104,7 @@ export const whatsappAutomationService = {
    * Buscar automações de um lead
    */
   async getByLeadId(leadId: string): Promise<WhatsAppAutomation[]> {
-    const api = createApiClient();
-    const response = await api.get(`/lead/${leadId}`);
+    const response = await apiClient.get(`/whatsapp-automations/lead/${leadId}`);
     return response.data.data;
   },
 
@@ -126,8 +112,7 @@ export const whatsappAutomationService = {
    * Criar nova automação
    */
   async create(leadId: string, productsToSend: string[]): Promise<WhatsAppAutomation> {
-    const api = createApiClient();
-    const response = await api.post('', {
+    const response = await apiClient.post('/whatsapp-automations', {
       leadId,
       productsToSend
     });
@@ -138,8 +123,7 @@ export const whatsappAutomationService = {
    * Retry de automação específica
    */
   async retry(id: string, resetMessages: boolean = false): Promise<void> {
-    const api = createApiClient();
-    await api.post(`/${id}/retry`, {
+    await apiClient.post(`/whatsapp-automations/${id}/retry`, {
       resetMessages
     });
   },
@@ -148,8 +132,7 @@ export const whatsappAutomationService = {
    * Retry em lote de automações falhadas
    */
   async retryAllFailed(leadId?: string): Promise<number> {
-    const api = createApiClient();
-    const response = await api.post('/retry-all-failed', {
+    const response = await apiClient.post('/whatsapp-automations/retry-all-failed', {
       leadId
     });
     return response.data.data.count;
@@ -159,8 +142,7 @@ export const whatsappAutomationService = {
    * Listar apenas automações falhadas
    */
   async listFailed(): Promise<WhatsAppAutomation[]> {
-    const api = createApiClient();
-    const response = await api.get('/failed');
+    const response = await apiClient.get('/whatsapp-automations/failed');
     return response.data.data;
   }
 };
