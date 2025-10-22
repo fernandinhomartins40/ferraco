@@ -12,7 +12,7 @@
  * Para executar: npm run test:integration
  */
 
-import { WhatsAppService } from '../whatsappService';
+import { whatsappService } from '../whatsappService';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -22,7 +22,6 @@ const TEST_NUMBER = process.env.TEST_WHATSAPP_NUMBER || '5511999999999';
 const TEST_GROUP_ID = process.env.TEST_GROUP_ID || '';
 
 describe('WhatsAppService - FASE 6 Integration Tests', () => {
-  let whatsappService: WhatsAppService;
   let isSessionActive = false;
 
   // Timeout maior para testes de integração (30 segundos)
@@ -30,12 +29,11 @@ describe('WhatsAppService - FASE 6 Integration Tests', () => {
 
   beforeAll(async () => {
     console.log('🔄 Inicializando WhatsAppService para testes de integração...');
-    whatsappService = new WhatsAppService();
 
     // Tentar conectar (se já houver sessão salva)
     try {
       await whatsappService.initialize();
-      isSessionActive = whatsappService.getConnectionStatus() === 'connected';
+      isSessionActive = (whatsappService as any).getConnectionStatus() === 'connected';
 
       if (!isSessionActive) {
         console.log('⚠️  WhatsApp não conectado. Os testes de integração serão pulados.');
@@ -55,7 +53,7 @@ describe('WhatsAppService - FASE 6 Integration Tests', () => {
   afterAll(async () => {
     if (isSessionActive) {
       console.log('🔄 Fechando conexão WhatsApp...');
-      await whatsappService.logout();
+      await (whatsappService as any).logout();
     }
   });
 
@@ -74,7 +72,7 @@ describe('WhatsAppService - FASE 6 Integration Tests', () => {
     });
 
     it('deve retornar status de conexão', () => {
-      const status = whatsappService.getConnectionStatus();
+      const status = (whatsappService as any).getConnectionStatus();
       expect(['connected', 'disconnected', 'qrReadSuccess', 'deviceNotConnected']).toContain(status);
     });
   });
@@ -234,7 +232,7 @@ describe('WhatsAppService - FASE 6 Integration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Desafixar
-      const unpinResult = await whatsappService.unpinChat(chatId);
+      const unpinResult = await (whatsappService as any).unpinChat(chatId);
       expect(unpinResult).toBe(true);
       console.log(`✅ Chat ${chatId} desafixado`);
     });
@@ -268,7 +266,7 @@ describe('WhatsAppService - FASE 6 Integration Tests', () => {
         return;
       }
 
-      const contactId = contacts[0].id._serialized || contacts[0].id;
+      const contactId = (contacts[0].id as any)._serialized || contacts[0].id;
       const profilePicUrl = await whatsappService.getProfilePicUrl(contactId);
 
       // Foto de perfil pode não existir (undefined é válido)

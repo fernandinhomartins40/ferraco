@@ -8,7 +8,7 @@
  * - Stateless architecture
  */
 
-import { WhatsAppService } from '../whatsappService';
+import { whatsappService } from '../whatsappService';
 import type { Whatsapp } from '@wppconnect-team/wppconnect';
 
 // Mock do WPPConnect
@@ -62,11 +62,8 @@ jest.mock('../../server', () => ({
 }));
 
 describe('WhatsAppService - FASE 6 Unit Tests', () => {
-  let whatsappService: WhatsAppService;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    whatsappService = new WhatsAppService();
     // Simular cliente conectado
     (whatsappService as any).client = mockClient;
     (whatsappService as any).isConnected = true;
@@ -219,14 +216,14 @@ describe('WhatsAppService - FASE 6 Unit Tests', () => {
 
   describe('6. Envio de Áudio (sendAudio)', () => {
     it('deve enviar áudio corretamente', async () => {
-      (mockClient.sendVoice as jest.Mock).mockResolvedValue({ id: 'audio123' });
+      ((mockClient as any).sendVoice as jest.Mock).mockResolvedValue({ id: 'audio123' });
 
       const result = await whatsappService.sendAudio(
         '5511999999999',
         'path/to/audio.mp3'
       );
 
-      expect(mockClient.sendVoice).toHaveBeenCalledWith(
+      expect((mockClient as any).sendVoice).toHaveBeenCalledWith(
         '5511999999999@c.us',
         'path/to/audio.mp3'
       );
@@ -316,11 +313,11 @@ describe('WhatsAppService - FASE 6 Unit Tests', () => {
     });
 
     it('deve desafixar chat corretamente', async () => {
-      (mockClient.unpinChat as jest.Mock).mockResolvedValue(true);
+      ((mockClient as any).unpinChat as jest.Mock).mockResolvedValue(true);
 
-      const result = await whatsappService.unpinChat('5511999999999@c.us');
+      const result = await (whatsappService as any).unpinChat('5511999999999@c.us');
 
-      expect(mockClient.unpinChat).toHaveBeenCalledWith('5511999999999@c.us');
+      expect((mockClient as any).unpinChat).toHaveBeenCalledWith('5511999999999@c.us');
       expect(result).toBe(true);
     });
   });
