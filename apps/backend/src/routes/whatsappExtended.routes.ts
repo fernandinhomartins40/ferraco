@@ -143,7 +143,7 @@ router.post('/messages/link-preview', async (req, res) => {
  */
 router.post('/messages/list', async (req, res) => {
   try {
-    const { to, title, description, buttonText, sections } = req.body;
+    const { to, title, description, buttonText, sections } = req.body as { to: string; title: string; description: string; buttonText: string; sections: any[] };
     const result = await req.wppExtended.sendListMessage(to, title, description, buttonText, sections);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
@@ -158,7 +158,7 @@ router.post('/messages/list', async (req, res) => {
  */
 router.post('/messages/buttons', async (req, res) => {
   try {
-    const { to, message, buttons } = req.body;
+    const { to, message, buttons } = req.body as { to: string; message: string; buttons: Array<{ buttonText: string }> };
     const result = await req.wppExtended.sendButtons(to, message, buttons);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
@@ -173,7 +173,7 @@ router.post('/messages/buttons', async (req, res) => {
  */
 router.post('/messages/poll', async (req, res) => {
   try {
-    const { to, name, options } = req.body;
+    const { to, name, options } = req.body as { to: string; name: string; options: string[] };
     const result = await req.wppExtended.sendPoll(to, name, options);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
@@ -192,7 +192,7 @@ router.post('/messages/poll', async (req, res) => {
  */
 router.post('/chat/archive', async (req, res) => {
   try {
-    const { chatId, archive = true } = req.body;
+    const { chatId, archive = true } = req.body as { chatId: string; archive?: boolean };
     await req.wppExtended.archiveChat(chatId, archive);
     res.json({ success: true });
   } catch (error: any) {
@@ -207,7 +207,7 @@ router.post('/chat/archive', async (req, res) => {
  */
 router.post('/chat/pin', async (req, res) => {
   try {
-    const { chatId, pin = true } = req.body;
+    const { chatId, pin = true } = req.body as { chatId: string; pin?: boolean };
     await req.wppExtended.pinChat(chatId, pin);
     res.json({ success: true });
   } catch (error: any) {
@@ -222,7 +222,7 @@ router.post('/chat/pin', async (req, res) => {
  */
 router.delete('/chat/:chatId/clear', async (req, res) => {
   try {
-    const { chatId } = req.params;
+    const { chatId } = req.params as { chatId: string };
     await req.wppExtended.clearChat(chatId);
     res.json({ success: true });
   } catch (error: any) {
@@ -237,8 +237,8 @@ router.delete('/chat/:chatId/clear', async (req, res) => {
  */
 router.delete('/messages/:messageId', async (req, res) => {
   try {
-    const { messageId } = req.params;
-    const { chatId, onlyLocal = false } = req.body;
+    const { messageId } = req.params as { messageId: string };
+    const { chatId, onlyLocal = false } = req.body as { chatId: string; onlyLocal?: boolean };
     await req.wppExtended.deleteMessage(chatId, messageId, onlyLocal);
     res.json({ success: true });
   } catch (error: any) {
@@ -253,8 +253,8 @@ router.delete('/messages/:messageId', async (req, res) => {
  */
 router.put('/messages/:messageId', async (req, res) => {
   try {
-    const { messageId } = req.params;
-    const { newContent } = req.body;
+    const { messageId } = req.params as { messageId: string };
+    const { newContent } = req.body as { newContent: string };
     await req.wppExtended.editMessage(messageId, newContent);
     res.json({ success: true });
   } catch (error: any) {
@@ -269,7 +269,7 @@ router.put('/messages/:messageId', async (req, res) => {
  */
 router.post('/messages/forward', async (req, res) => {
   try {
-    const { to, messageId } = req.body;
+    const { to, messageId } = req.body as { to: string; messageId: string };
     await req.wppExtended.forwardMessage(to, messageId);
     res.json({ success: true });
   } catch (error: any) {
@@ -284,7 +284,7 @@ router.post('/messages/forward', async (req, res) => {
  */
 router.post('/chat/mark-read', async (req, res) => {
   try {
-    const { chatId } = req.body;
+    const { chatId } = req.body as { chatId: string };
     await req.wppExtended.markAsRead(chatId);
     res.json({ success: true });
   } catch (error: any) {
@@ -299,7 +299,7 @@ router.post('/chat/mark-read', async (req, res) => {
  */
 router.post('/messages/react', async (req, res) => {
   try {
-    const { messageId, emoji } = req.body;
+    const { messageId, emoji } = req.body as { messageId: string; emoji: string };
     await req.wppExtended.reactToMessage(messageId, emoji);
     res.json({ success: true });
   } catch (error: any) {
@@ -314,7 +314,7 @@ router.post('/messages/react', async (req, res) => {
  */
 router.post('/chat/typing', async (req, res) => {
   try {
-    const { chatId, start = true } = req.body;
+    const { chatId, start = true } = req.body as { chatId: string; start?: boolean };
     if (start) {
       await req.wppExtended.startTyping(chatId);
     } else {
@@ -333,7 +333,7 @@ router.post('/chat/typing', async (req, res) => {
  */
 router.post('/chat/recording', async (req, res) => {
   try {
-    const { chatId, start = true } = req.body;
+    const { chatId, start = true } = req.body as { chatId: string; start?: boolean };
     if (start) {
       await req.wppExtended.startRecording(chatId);
     } else {
@@ -356,7 +356,7 @@ router.post('/chat/recording', async (req, res) => {
  */
 router.post('/groups', async (req, res) => {
   try {
-    const { groupName, contacts } = req.body;
+    const { groupName, contacts } = req.body as { groupName: string; contacts: string[] };
     const result = await req.wppExtended.createGroup(groupName, contacts);
     res.json({ success: true, group: result });
   } catch (error: any) {
@@ -371,8 +371,8 @@ router.post('/groups', async (req, res) => {
  */
 router.post('/groups/:groupId/participants', async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const { participants } = req.body;
+    const { groupId } = req.params as { groupId: string };
+    const { participants } = req.body as { participants: string[] };
     const result = await req.wppExtended.addParticipants(groupId, participants);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -387,8 +387,8 @@ router.post('/groups/:groupId/participants', async (req, res) => {
  */
 router.delete('/groups/:groupId/participants', async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const { participants } = req.body;
+    const { groupId } = req.params as { groupId: string };
+    const { participants } = req.body as { participants: string[] };
     const result = await req.wppExtended.removeParticipants(groupId, participants);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -403,8 +403,8 @@ router.delete('/groups/:groupId/participants', async (req, res) => {
  */
 router.post('/groups/:groupId/admins/promote', async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const { participants } = req.body;
+    const { groupId } = req.params as { groupId: string };
+    const { participants } = req.body as { participants: string[] };
     const result = await req.wppExtended.promoteParticipant(groupId, participants);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -419,8 +419,8 @@ router.post('/groups/:groupId/admins/promote', async (req, res) => {
  */
 router.post('/groups/:groupId/admins/demote', async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const { participants } = req.body;
+    const { groupId } = req.params as { groupId: string };
+    const { participants } = req.body as { participants: string[] };
     const result = await req.wppExtended.demoteParticipant(groupId, participants);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -435,7 +435,7 @@ router.post('/groups/:groupId/admins/demote', async (req, res) => {
  */
 router.get('/groups/:groupId/invite-link', async (req, res) => {
   try {
-    const { groupId } = req.params;
+    const { groupId } = req.params as { groupId: string };
     const link = await req.wppExtended.getGroupInviteLink(groupId);
     res.json({ success: true, link });
   } catch (error: any) {
@@ -450,7 +450,7 @@ router.get('/groups/:groupId/invite-link', async (req, res) => {
  */
 router.post('/groups/join', async (req, res) => {
   try {
-    const { inviteCode } = req.body;
+    const { inviteCode } = req.body as { inviteCode: string };
     const result = await req.wppExtended.joinGroupViaLink(inviteCode);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -465,7 +465,7 @@ router.post('/groups/join', async (req, res) => {
  */
 router.post('/groups/:groupId/leave', async (req, res) => {
   try {
-    const { groupId } = req.params;
+    const { groupId } = req.params as { groupId: string };
     await req.wppExtended.leaveGroup(groupId);
     res.json({ success: true });
   } catch (error: any) {
@@ -480,8 +480,8 @@ router.post('/groups/:groupId/leave', async (req, res) => {
  */
 router.put('/groups/:groupId/subject', async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const { subject } = req.body;
+    const { groupId } = req.params as { groupId: string };
+    const { subject } = req.body as { subject: string };
     await req.wppExtended.setGroupSubject(groupId, subject);
     res.json({ success: true });
   } catch (error: any) {
@@ -496,8 +496,8 @@ router.put('/groups/:groupId/subject', async (req, res) => {
  */
 router.put('/groups/:groupId/description', async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const { description } = req.body;
+    const { groupId } = req.params as { groupId: string };
+    const { description } = req.body as { description: string };
     await req.wppExtended.setGroupDescription(groupId, description);
     res.json({ success: true });
   } catch (error: any) {
@@ -512,8 +512,8 @@ router.put('/groups/:groupId/description', async (req, res) => {
  */
 router.put('/groups/:groupId/icon', async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const { imagePath } = req.body;
+    const { groupId } = req.params as { groupId: string };
+    const { imagePath } = req.body as { imagePath: string };
     await req.wppExtended.setGroupIcon(groupId, imagePath);
     res.json({ success: true });
   } catch (error: any) {
@@ -528,7 +528,7 @@ router.put('/groups/:groupId/icon', async (req, res) => {
  */
 router.get('/groups/:groupId/members', async (req, res) => {
   try {
-    const { groupId } = req.params;
+    const { groupId } = req.params as { groupId: string };
     const members = await req.wppExtended.getGroupMembers(groupId);
     res.json({ success: true, members });
   } catch (error: any) {
@@ -547,7 +547,7 @@ router.get('/groups/:groupId/members', async (req, res) => {
  */
 router.post('/contacts/check', async (req, res) => {
   try {
-    const { number } = req.body;
+    const { number } = req.body as { number: string };
     const result = await req.wppExtended.checkNumberExists(number);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -562,7 +562,7 @@ router.post('/contacts/check', async (req, res) => {
  */
 router.get('/contacts/:contactId', async (req, res) => {
   try {
-    const { contactId } = req.params;
+    const { contactId } = req.params as { contactId: string };
     const contact = await req.wppExtended.getContact(contactId);
     res.json({ success: true, contact });
   } catch (error: any) {
@@ -591,7 +591,7 @@ router.get('/contacts', async (req, res) => {
  */
 router.post('/contacts/:contactId/block', async (req, res) => {
   try {
-    const { contactId } = req.params;
+    const { contactId } = req.params as { contactId: string };
     await req.wppExtended.blockContact(contactId);
     res.json({ success: true });
   } catch (error: any) {
@@ -606,7 +606,7 @@ router.post('/contacts/:contactId/block', async (req, res) => {
  */
 router.post('/contacts/:contactId/unblock', async (req, res) => {
   try {
-    const { contactId } = req.params;
+    const { contactId } = req.params as { contactId: string };
     await req.wppExtended.unblockContact(contactId);
     res.json({ success: true });
   } catch (error: any) {

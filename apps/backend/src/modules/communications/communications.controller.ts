@@ -15,6 +15,7 @@ import {
 } from './communications.validators';
 import { z } from 'zod';
 import { CommunicationType } from '@prisma/client';
+import { formatZodErrors } from '../../utils/zodHelpers';
 
 // ============================================================================
 // Communications Controller
@@ -40,7 +41,7 @@ export class CommunicationsController {
       successResponse(res, communication, 'WhatsApp message sent successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to send WhatsApp');
       }
@@ -56,7 +57,7 @@ export class CommunicationsController {
       successResponse(res, communication, 'Email sent successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to send email');
       }
@@ -72,7 +73,7 @@ export class CommunicationsController {
       successResponse(res, communication, 'SMS sent successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to send SMS');
       }
@@ -88,7 +89,7 @@ export class CommunicationsController {
       successResponse(res, communication, 'Call registered successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to register call');
       }
@@ -117,7 +118,7 @@ export class CommunicationsController {
       successResponse(res, template, 'Template created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to create template');
       }
@@ -133,7 +134,7 @@ export class CommunicationsController {
       successResponse(res, template, 'Template updated successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to update template');
       }
@@ -171,7 +172,7 @@ export class CommunicationsController {
       successResponse(res, history, 'Communication history retrieved successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to retrieve history');
       }
@@ -206,7 +207,7 @@ export class CommunicationsController {
       successResponse(res, null, 'Webhook processed successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to process webhook');
       }
@@ -221,7 +222,7 @@ export class CommunicationsController {
       successResponse(res, null, 'Webhook processed successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to process webhook');
       }

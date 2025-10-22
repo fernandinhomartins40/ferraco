@@ -26,8 +26,8 @@ router.use(authenticate);
 
 router.get('/', reportsController.findAll.bind(reportsController));
 router.get('/:id', reportsController.findById.bind(reportsController));
-router.post('/', validate(CreateReportSchema), reportsController.create.bind(reportsController));
-router.put('/:id', validate(UpdateReportSchema), reportsController.update.bind(reportsController));
+router.post('/', validate({ body: CreateReportSchema }), reportsController.create.bind(reportsController));
+router.put('/:id', validate({ body: UpdateReportSchema }), reportsController.update.bind(reportsController));
 router.delete('/:id', reportsController.delete.bind(reportsController));
 
 // ============================================================================
@@ -41,7 +41,7 @@ router.get('/:id/download', reportsController.download.bind(reportsController));
 // Scheduling Routes
 // ============================================================================
 
-router.post('/:id/schedule', validate(ScheduleReportSchema), reportsController.schedule.bind(reportsController));
+router.post('/:id/schedule', validate({ body: ScheduleReportSchema }), reportsController.schedule.bind(reportsController));
 router.get('/scheduled/list', reportsController.getScheduled.bind(reportsController));
 
 // ============================================================================
@@ -50,17 +50,17 @@ router.get('/scheduled/list', reportsController.getScheduled.bind(reportsControl
 
 router.get(
   '/analytics/funnel',
-  validate(FunnelAnalyticsSchema),
+  validate({ query: FunnelAnalyticsSchema }),
   reportsController.getFunnelAnalytics.bind(reportsController)
 );
 router.get(
   '/analytics/cohort',
-  validate(CohortAnalysisSchema),
+  validate({ query: CohortAnalysisSchema }),
   reportsController.getCohortAnalysis.bind(reportsController)
 );
 router.get(
   '/analytics/performance',
-  validate(PerformanceMetricsSchema),
+  validate({ query: PerformanceMetricsSchema }),
   reportsController.getPerformanceMetrics.bind(reportsController)
 );
 

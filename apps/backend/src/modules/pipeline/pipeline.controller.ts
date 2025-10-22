@@ -12,6 +12,7 @@ import {
   ReorderStageSchema,
 } from './pipeline.validators';
 import { z } from 'zod';
+import { formatZodErrors } from '../../utils/zodHelpers';
 
 // ============================================================================
 // Pipeline Controller
@@ -62,7 +63,7 @@ export class PipelineController {
       successResponse(res, pipeline, 'Pipeline created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to create pipeline');
       }
@@ -78,7 +79,7 @@ export class PipelineController {
       successResponse(res, pipeline, 'Pipeline updated successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to update pipeline');
       }
@@ -118,7 +119,7 @@ export class PipelineController {
       successResponse(res, stage, 'Stage created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to create stage');
       }
@@ -134,7 +135,7 @@ export class PipelineController {
       successResponse(res, stage, 'Stage updated successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to update stage');
       }
@@ -160,7 +161,7 @@ export class PipelineController {
       successResponse(res, stages, 'Stages reordered successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to reorder stages');
       }
@@ -180,7 +181,7 @@ export class PipelineController {
       successResponse(res, opportunity, 'Opportunity created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to create opportunity');
       }
@@ -200,7 +201,7 @@ export class PipelineController {
       successResponse(res, opportunity, 'Opportunity moved successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, formatZodErrors(error.errors));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to move opportunity');
       }
