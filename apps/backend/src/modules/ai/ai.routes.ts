@@ -24,37 +24,37 @@ router.use(authenticate);
 // Sentiment Analysis Routes
 // ============================================================================
 
-router.post('/sentiment', validate(AnalyzeSentimentSchema), aiController.analyzeSentiment.bind(aiController));
+router.post('/sentiment', validate({ body: AnalyzeSentimentSchema }), aiController.analyzeSentiment.bind(aiController));
 
 // ============================================================================
 // Conversion Prediction Routes
 // ============================================================================
 
-router.post('/predict', validate(PredictConversionSchema), aiController.predictConversion.bind(aiController));
+router.post('/predict', validate({ body: PredictConversionSchema }), aiController.predictConversion.bind(aiController));
 
 // ============================================================================
 // Lead Scoring Routes
 // ============================================================================
 
-router.post('/score', validate(ScoreLeadSchema), aiController.scoreLeadAutomatically.bind(aiController));
+router.post('/score', validate({ body: ScoreLeadSchema }), aiController.scoreLeadAutomatically.bind(aiController));
 
 // ============================================================================
 // Chatbot Routes
 // ============================================================================
 
-router.post('/chatbot', validate(ChatbotMessageSchema), aiController.processChatbotMessage.bind(aiController));
+router.post('/chatbot', validate({ body: ChatbotMessageSchema }), aiController.processChatbotMessage.bind(aiController));
 
 // ============================================================================
 // Duplicate Detection Routes
 // ============================================================================
 
-router.post('/duplicates', validate(DetectDuplicatesSchema), aiController.detectDuplicates.bind(aiController));
+router.post('/duplicates', validate({ body: DetectDuplicatesSchema }), aiController.detectDuplicates.bind(aiController));
 
 // ============================================================================
 // Insights Routes
 // ============================================================================
 
-router.get('/insights', validate(GenerateInsightsSchema), aiController.generateInsights.bind(aiController));
+router.get('/insights', validate({ query: GenerateInsightsSchema }), aiController.generateInsights.bind(aiController));
 
 // ============================================================================
 // Analysis & Prediction Routes

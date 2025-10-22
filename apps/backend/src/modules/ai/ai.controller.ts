@@ -115,7 +115,7 @@ export class AIController {
     try {
       const data = {
         period: req.query.period as 'day' | 'week' | 'month' | undefined,
-        userId: req.query.onlyMine === 'true' ? req.user!.id : undefined,
+        userId: req.query.onlyMine === 'true' ? req.user!.userId : undefined,
       };
 
       const result = await aiService.generateInsights(data);

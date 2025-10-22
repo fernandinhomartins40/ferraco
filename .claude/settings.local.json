@@ -109,7 +109,9 @@
       "Bash(npm test)",
       "Bash(git reset:*)",
       "Bash(git pull:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(tar:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

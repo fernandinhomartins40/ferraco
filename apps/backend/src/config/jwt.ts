@@ -61,6 +61,7 @@ const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '7d';
 
 export interface JWTPayload {
   userId: string;
+  id: string; // Alias for userId for backward compatibility
   email: string;
   role: string;
   permissions: string[];
@@ -81,6 +82,7 @@ export function createJWTPayload(
 ): JWTPayload {
   return {
     userId: user.id,
+    id: user.id, // Include id as alias
     email: user.email,
     role: user.role,
     permissions,
@@ -90,12 +92,12 @@ export function createJWTPayload(
 
 export function generateAccessToken(payload: Omit<JWTPayload, 'type'>): string {
   const tokenPayload: JWTPayload = { ...payload, type: 'access' };
-  return jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRATION });
+  return jwt.sign(tokenPayload as object, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRATION as string });
 }
 
 export function generateRefreshToken(payload: Omit<JWTPayload, 'type'>): string {
   const tokenPayload: JWTPayload = { ...payload, type: 'refresh' };
-  return jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRATION });
+  return jwt.sign(tokenPayload as object, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRATION as string });
 }
 
 export function generateTokenPair(

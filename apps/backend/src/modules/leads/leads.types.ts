@@ -1,4 +1,4 @@
-import { Lead, LeadPriority } from '@prisma/client';
+import { Lead, LeadPriority, LeadStatus } from '@prisma/client';
 
 // ============================================================================
 // DTOs (Data Transfer Objects)

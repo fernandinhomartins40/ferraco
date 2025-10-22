@@ -20,8 +20,8 @@ const router = Router();
 
 router.get('/', authenticate, integrationsController.findAll.bind(integrationsController));
 router.get('/:id', authenticate, integrationsController.findById.bind(integrationsController));
-router.post('/', authenticate, validate(CreateIntegrationSchema), integrationsController.create.bind(integrationsController));
-router.put('/:id', authenticate, validate(UpdateIntegrationSchema), integrationsController.update.bind(integrationsController));
+router.post('/', authenticate, validate({ body: CreateIntegrationSchema }), integrationsController.create.bind(integrationsController));
+router.put('/:id', authenticate, validate({ body: UpdateIntegrationSchema }), integrationsController.update.bind(integrationsController));
 router.delete('/:id', authenticate, integrationsController.delete.bind(integrationsController));
 
 // ============================================================================
@@ -41,7 +41,7 @@ router.get('/:id/logs', authenticate, integrationsController.getLogs.bind(integr
 // Webhook Routes (public - no authentication)
 // ============================================================================
 
-router.post('/webhooks/zapier', validate(WebhookPayloadSchema), integrationsController.handleZapierWebhook.bind(integrationsController));
-router.post('/webhooks/make', validate(WebhookPayloadSchema), integrationsController.handleMakeWebhook.bind(integrationsController));
+router.post('/webhooks/zapier', validate({ body: WebhookPayloadSchema }), integrationsController.handleZapierWebhook.bind(integrationsController));
+router.post('/webhooks/make', validate({ body: WebhookPayloadSchema }), integrationsController.handleMakeWebhook.bind(integrationsController));
 
 export default router;

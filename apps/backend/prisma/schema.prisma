@@ -212,14 +212,16 @@ enum NotificationChannel {
 // ============================================================================
 
 model User {
-  id       String   @id @default(cuid())
-  username String   @unique
-  email    String   @unique
-  password String // Hash bcrypt
-  name     String
-  role     UserRole @default(CONSULTANT)
-  avatar   String?
-  isActive Boolean  @default(true)
+  id          String   @id @default(cuid())
+  username    String   @unique
+  email       String   @unique
+  password    String // Hash bcrypt
+  name        String
+  role        UserRole @default(CONSULTANT)
+  avatar      String?
+  phone       String?
+  isActive    Boolean  @default(true)
+  isFirstLogin Boolean @default(true)
 
   // Timestamps
   createdAt DateTime  @default(now())
@@ -323,6 +325,7 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime  @default(now())
   revokedAt DateTime?
+  lastUsedAt DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -8,8 +8,15 @@ declare global {
     interface Request {
       user?: JWTPayload;
       permissions?: string[];
+      wppExtended?: any;
     }
   }
+}
+
+export interface AuthRequest extends Request {
+  user?: JWTPayload;
+  permissions?: string[];
+  wppExtended?: any;
 }
 
 export async function authenticate(

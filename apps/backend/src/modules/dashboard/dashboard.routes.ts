@@ -24,17 +24,17 @@ router.use(authenticate);
 // Metrics Routes
 // ============================================================================
 
-router.get('/metrics', validate(GetMetricsSchema), dashboardController.getMetrics.bind(dashboardController));
+router.get('/metrics', validate({ query: GetMetricsSchema }), dashboardController.getMetrics.bind(dashboardController));
 router.get('/leads-by-status', dashboardController.getLeadsByStatus.bind(dashboardController));
 router.get('/leads-by-source', dashboardController.getLeadsBySource.bind(dashboardController));
 router.get(
   '/recent-activity',
-  validate(GetRecentActivitySchema),
+  validate({ query: GetRecentActivitySchema }),
   dashboardController.getRecentActivity.bind(dashboardController)
 );
 router.get(
   '/leads-over-time',
-  validate(GetLeadsOverTimeSchema),
+  validate({ query: GetLeadsOverTimeSchema }),
   dashboardController.getLeadsOverTime.bind(dashboardController)
 );
 
@@ -42,14 +42,14 @@ router.get(
 // Widgets Routes
 // ============================================================================
 
-router.post('/widgets', validate(CreateWidgetSchema), dashboardController.createWidget.bind(dashboardController));
-router.put('/widgets', validate(UpdateWidgetSchema), dashboardController.updateWidget.bind(dashboardController));
+router.post('/widgets', validate({ body: CreateWidgetSchema }), dashboardController.createWidget.bind(dashboardController));
+router.put('/widgets', validate({ body: UpdateWidgetSchema }), dashboardController.updateWidget.bind(dashboardController));
 router.delete('/widgets/:widgetId', dashboardController.deleteWidget.bind(dashboardController));
 
 // ============================================================================
 // Layout Routes
 // ============================================================================
 
-router.post('/layout', validate(SaveLayoutSchema), dashboardController.saveLayout.bind(dashboardController));
+router.post('/layout', validate({ body: SaveLayoutSchema }), dashboardController.saveLayout.bind(dashboardController));
 
 export default router;

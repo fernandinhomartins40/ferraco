@@ -1,0 +1,258 @@
+src/config/jwt.ts(93,14): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: SignOptions & { algorithm: "none"; }): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | PrivateKeyInput | JsonWebKeyInput, options?: SignOptions): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | PrivateKeyInput | JsonWebKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+src/config/jwt.ts(98,14): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: SignOptions & { algorithm: "none"; }): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | PrivateKeyInput | JsonWebKeyInput, options?: SignOptions): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | PrivateKeyInput | JsonWebKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+src/modules/ai/ai.controller.ts(118,59): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/ai/ai.routes.ts(27,36): error TS2559: Type 'ZodObject<{ leadId: ZodString; content: ZodOptional<ZodString>; }, "strip", ZodTypeAny, { leadId?: string; content?: string; }, { leadId?: string; content?: string; }>' has no properties in common with type 'ValidationSource'.
+src/modules/ai/ai.routes.ts(33,34): error TS2559: Type 'ZodObject<{ leadId: ZodString; }, "strip", ZodTypeAny, { leadId?: string; }, { leadId?: string; }>' has no properties in common with type 'ValidationSource'.
+src/modules/ai/ai.routes.ts(39,32): error TS2559: Type 'ZodObject<{ leadId: ZodString; }, "strip", ZodTypeAny, { leadId?: string; }, { leadId?: string; }>' has no properties in common with type 'ValidationSource'.
+src/modules/ai/ai.routes.ts(45,34): error TS2559: Type 'ZodObject<{ sessionId: ZodString; message: ZodString; context: ZodOptional<ZodRecord<ZodString, ZodUnknown>>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/ai/ai.routes.ts(51,37): error TS2559: Type 'ZodObject<{ leadId: ZodOptional<ZodString>; threshold: ZodDefault<ZodOptional<ZodNumber>>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/ai/ai.routes.ts(57,34): error TS2559: Type 'ZodObject<{ period: ZodDefault<ZodOptional<ZodEnum<["day", "week", "month"]>>>; userId: ZodOptional<ZodString>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/auth/auth.service.ts(197,9): error TS2353: Object literal may only specify known properties, and 'phone' does not exist in type 'UserSelect<DefaultArgs>'.
+src/modules/auth/auth.service.ts(269,9): error TS2353: Object literal may only specify known properties, and 'phone' does not exist in type 'UserSelect<DefaultArgs>'.
+src/modules/auth/auth.service.ts(292,15): error TS2353: Object literal may only specify known properties, and 'isFirstLogin' does not exist in type '(Without<UserUpdateInput, UserUncheckedUpdateInput> & UserUncheckedUpdateInput) | (Without<...> & UserUpdateInput)'.
+src/modules/auth/refresh-token.service.ts(104,9): error TS2353: Object literal may only specify known properties, and 'phone' does not exist in type 'UserSelect<DefaultArgs>'.
+src/modules/auth/refresh-token.service.ts(193,9): error TS2353: Object literal may only specify known properties, and 'lastUsedAt' does not exist in type 'RefreshTokenSelect<DefaultArgs>'.
+src/modules/auth/refresh-token.service.ts(211,11): error TS2353: Object literal may only specify known properties, and 'lastUsedAt' does not exist in type '(Without<RefreshTokenUpdateInput, RefreshTokenUncheckedUpdateInput> & RefreshTokenUncheckedUpdateInput) | (Without<...> & RefreshTokenUpdateInput)'.
+src/modules/automations/automations.controller.ts(59,52): error TS2345: Argument of type '{ name?: string; isActive?: boolean; actions?: { type?: "SEND_EMAIL" | "SEND_WHATSAPP" | "ADD_TAG" | "ASSIGN_TO" | "CREATE_TASK" | "UPDATE_FIELD" | "SEND_WEBHOOK" | "MOVE_TO_STAGE"; config?: Record<...>; }[]; conditions?: { ...; }[]; description?: string; trigger?: { ...; }; }' is not assignable to parameter of type 'CreateAutomationDTO'.
+  Property 'name' is optional in type '{ name?: string; isActive?: boolean; actions?: { type?: "SEND_EMAIL" | "SEND_WHATSAPP" | "ADD_TAG" | "ASSIGN_TO" | "CREATE_TASK" | "UPDATE_FIELD" | "SEND_WEBHOOK" | "MOVE_TO_STAGE"; config?: Record<...>; }[]; conditions?: { ...; }[]; description?: string; trigger?: { ...; }; }' but required in type 'CreateAutomationDTO'.
+src/modules/automations/automations.controller.ts(63,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/automations/automations.controller.ts(75,56): error TS2345: Argument of type '{ id?: string; name?: string; isActive?: boolean; actions?: { type?: "SEND_EMAIL" | "SEND_WHATSAPP" | "ADD_TAG" | "ASSIGN_TO" | "CREATE_TASK" | "UPDATE_FIELD" | "SEND_WEBHOOK" | "MOVE_TO_STAGE"; config?: Record<...>; }[]; conditions?: { ...; }[]; description?: string; trigger?: { ...; }; }' is not assignable to parameter of type 'Partial<UpdateAutomationDTO>'.
+  Types of property 'trigger' are incompatible.
+    Type '{ type?: "LEAD_CREATED" | "LEAD_UPDATED" | "STAGE_CHANGED" | "TAG_ADDED" | "SCHEDULED"; config?: Record<string, unknown>; }' is not assignable to type 'AutomationTrigger'.
+      Property 'type' is optional in type '{ type?: "LEAD_CREATED" | "LEAD_UPDATED" | "STAGE_CHANGED" | "TAG_ADDED" | "SCHEDULED"; config?: Record<string, unknown>; }' but required in type 'AutomationTrigger'.
+src/modules/automations/automations.controller.ts(79,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/automations/automations.controller.ts(114,46): error TS2345: Argument of type '{ actions?: { type?: "SEND_EMAIL" | "SEND_WHATSAPP" | "ADD_TAG" | "ASSIGN_TO" | "CREATE_TASK" | "UPDATE_FIELD" | "SEND_WEBHOOK" | "MOVE_TO_STAGE"; config?: Record<string, unknown>; }[]; conditions?: { ...; }[]; trigger?: { ...; }; context?: Record<...>; }' is not assignable to parameter of type 'TestAutomationDTO'.
+  Types of property 'trigger' are incompatible.
+    Type '{ type?: "LEAD_CREATED" | "LEAD_UPDATED" | "STAGE_CHANGED" | "TAG_ADDED" | "SCHEDULED"; config?: Record<string, unknown>; }' is not assignable to type 'AutomationTrigger'.
+      Property 'type' is optional in type '{ type?: "LEAD_CREATED" | "LEAD_UPDATED" | "STAGE_CHANGED" | "TAG_ADDED" | "SCHEDULED"; config?: Record<string, unknown>; }' but required in type 'AutomationTrigger'.
+src/modules/automations/automations.controller.ts(118,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/automations/automations.controller.ts(129,52): error TS2345: Argument of type '{ automationId?: string; context?: Record<string, unknown>; }' is not assignable to parameter of type 'ExecuteAutomationDTO'.
+  Property 'automationId' is optional in type '{ automationId?: string; context?: Record<string, unknown>; }' but required in type 'ExecuteAutomationDTO'.
+src/modules/automations/automations.controller.ts(133,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/automations/automations.controller.ts(163,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/chatbot/chatbot-session.controller.ts(55,18): error TS2339: Property 'isError' does not exist on type '{ message: any; options: any[]; } | { message: string; options: { id: string; label: string; nextStepId: string; captureAs?: string; }[]; step: ConversationStep; session: { id: string; ... 18 more ...; endedAt: Date; }; }'.
+  Property 'isError' does not exist on type '{ message: any; options: any[]; }'.
+src/modules/communications/communications.controller.ts(39,61): error TS2345: Argument of type '{ message?: string; phone?: string; leadId?: string; variables?: Record<string, string>; templateId?: string; }' is not assignable to parameter of type 'SendWhatsAppDTO'.
+  Property 'leadId' is optional in type '{ message?: string; phone?: string; leadId?: string; variables?: Record<string, string>; templateId?: string; }' but required in type 'SendWhatsAppDTO'.
+src/modules/communications/communications.controller.ts(43,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/communications/communications.controller.ts(55,58): error TS2345: Argument of type '{ leadId?: string; attachments?: { content?: string; filename?: string; }[]; subject?: string; templateId?: string; body?: string; to?: string; }' is not assignable to parameter of type 'SendEmailDTO'.
+  Property 'leadId' is optional in type '{ leadId?: string; attachments?: { content?: string; filename?: string; }[]; subject?: string; templateId?: string; body?: string; to?: string; }' but required in type 'SendEmailDTO'.
+src/modules/communications/communications.controller.ts(59,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/communications/communications.controller.ts(71,56): error TS2345: Argument of type '{ message?: string; phone?: string; leadId?: string; }' is not assignable to parameter of type 'SendSMSDTO'.
+  Property 'leadId' is optional in type '{ message?: string; phone?: string; leadId?: string; }' but required in type 'SendSMSDTO'.
+src/modules/communications/communications.controller.ts(75,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/communications/communications.controller.ts(87,61): error TS2345: Argument of type '{ notes?: string; leadId?: string; duration?: number; outcome?: string; }' is not assignable to parameter of type 'RegisterCallDTO'.
+  Property 'leadId' is optional in type '{ notes?: string; leadId?: string; duration?: number; outcome?: string; }' but required in type 'RegisterCallDTO'.
+src/modules/communications/communications.controller.ts(91,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/communications/communications.controller.ts(116,58): error TS2345: Argument of type '{ name?: string; type?: "WHATSAPP" | "EMAIL" | "SMS" | "CALL"; content?: string; category?: string; subject?: string; variables?: string[]; }' is not assignable to parameter of type 'CreateTemplateDTO'.
+  Property 'name' is optional in type '{ name?: string; type?: "WHATSAPP" | "EMAIL" | "SMS" | "CALL"; content?: string; category?: string; subject?: string; variables?: string[]; }' but required in type 'CreateTemplateDTO'.
+src/modules/communications/communications.controller.ts(120,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/communications/communications.controller.ts(136,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/communications/communications.controller.ts(165,53): error TS2345: Argument of type '{ dateFrom: Date; dateTo: Date; type?: "WHATSAPP" | "EMAIL" | "SMS" | "CALL"; status?: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED"; leadId?: string; }' is not assignable to parameter of type 'CommunicationHistoryFilter'.
+  Property 'leadId' is optional in type '{ dateFrom: Date; dateTo: Date; type?: "WHATSAPP" | "EMAIL" | "SMS" | "CALL"; status?: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED"; leadId?: string; }' but required in type 'CommunicationHistoryFilter'.
+src/modules/communications/communications.controller.ts(174,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/communications/communications.controller.ts(205,48): error TS2345: Argument of type '{ timestamp?: string; error?: string; status?: "read" | "failed" | "sent" | "delivered"; messageId?: string; }' is not assignable to parameter of type '{ messageId: string; status: string; timestamp: string; error?: string; }'.
+  Property 'messageId' is optional in type '{ timestamp?: string; error?: string; status?: "read" | "failed" | "sent" | "delivered"; messageId?: string; }' but required in type '{ messageId: string; status: string; timestamp: string; error?: string; }'.
+src/modules/communications/communications.controller.ts(209,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/communications/communications.controller.ts(220,48): error TS2345: Argument of type '{ timestamp?: number; event?: "delivered" | "open" | "click" | "bounce" | "dropped"; email?: string; messageId?: string; }' is not assignable to parameter of type '{ email: string; event: string; timestamp: number; messageId: string; }'.
+  Property 'email' is optional in type '{ timestamp?: number; event?: "delivered" | "open" | "click" | "bounce" | "dropped"; email?: string; messageId?: string; }' but required in type '{ email: string; event: string; timestamp: number; messageId: string; }'.
+src/modules/communications/communications.controller.ts(224,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/dashboard/dashboard.controller.ts(16,64): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.controller.ts(33,64): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.controller.ts(50,64): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.controller.ts(67,64): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.controller.ts(85,64): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.controller.ts(107,32): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.controller.ts(124,32): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.controller.ts(141,32): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.controller.ts(159,32): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/dashboard/dashboard.routes.ts(27,33): error TS2559: Type 'ZodObject<{ userId: ZodOptional<ZodString>; }, "strip", ZodTypeAny, { userId?: string; }, { userId?: string; }>' has no properties in common with type 'ValidationSource'.
+src/modules/dashboard/dashboard.routes.ts(32,12): error TS2559: Type 'ZodObject<{ userId: ZodOptional<ZodString>; limit: ZodOptional<ZodPipeline<ZodEffects<ZodString, number, string>, ZodNumber>>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/dashboard/dashboard.routes.ts(37,12): error TS2559: Type 'ZodObject<{ userId: ZodOptional<ZodString>; period: ZodDefault<ZodOptional<ZodEnum<["daily", "weekly", "monthly"]>>>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/dashboard/dashboard.routes.ts(45,34): error TS2559: Type 'ZodObject<{ type: ZodString; title: ZodString; position: ZodObject<{ x: ZodNumber; y: ZodNumber; w: ZodNumber; h: ZodNumber; }, "strip", ZodTypeAny, { ...; }, { ...; }>; config: ZodOptional<...>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/dashboard/dashboard.routes.ts(46,33): error TS2559: Type 'ZodObject<{ type: ZodOptional<ZodString>; title: ZodOptional<ZodString>; position: ZodOptional<ZodObject<{ x: ZodNumber; y: ZodNumber; w: ZodNumber; h: ZodNumber; }, "strip", ZodTypeAny, { ...; }, { ...; }>>; config: ZodOptional<...>; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/dashboard/dashboard.routes.ts(53,33): error TS2559: Type 'ZodObject<{ widgets: ZodArray<ZodObject<{ id: ZodString; type: ZodString; title: ZodString; position: ZodObject<{ x: ZodNumber; y: ZodNumber; w: ZodNumber; h: ZodNumber; }, "strip", ZodTypeAny, { ...; }, { ...; }>; config: ZodRecord<...>; }, "strip", ZodTypeAny, { ...; }, { ...; }>, "many">; }, "strip", ZodTypeAny, ...' has no properties in common with type 'ValidationSource'.
+src/modules/integrations/integrations.controller.ts(16,32): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/integrations/integrations.routes.ts(23,41): error TS2559: Type 'ZodObject<{ name: ZodString; type: ZodEnum<["ZAPIER", "MAKE", "GOOGLE_ANALYTICS", "FACEBOOK_ADS", "INSTAGRAM_ADS", "HUBSPOT", "PIPEDRIVE", "MAILCHIMP", "WEBHOOK", "CUSTOM"]>; config: ZodRecord<...>; credentials: ZodOptional<...>; syncFrequency: ZodDefault<...>; isEnabled: ZodDefault<...>; }, "strip", ZodTypeAny, { ....' has no properties in common with type 'ValidationSource'.
+src/modules/integrations/integrations.routes.ts(24,43): error TS2559: Type 'ZodObject<{ name: ZodOptional<ZodString>; type: ZodOptional<ZodEnum<["ZAPIER", "MAKE", "GOOGLE_ANALYTICS", "FACEBOOK_ADS", "INSTAGRAM_ADS", "HUBSPOT", "PIPEDRIVE", "MAILCHIMP", "WEBHOOK", "CUSTOM"]>>; config: ZodOptional<...>; credentials: ZodOptional<...>; syncFrequency: ZodOptional<...>; isEnabled: ZodOptional<......' has no properties in common with type 'ValidationSource'.
+src/modules/integrations/integrations.routes.ts(44,42): error TS2559: Type 'ZodObject<{ event: ZodString; data: ZodRecord<ZodString, ZodUnknown>; timestamp: ZodOptional<ZodUnion<[ZodString, ZodDate]>>; source: ZodOptional<...>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/integrations/integrations.routes.ts(45,40): error TS2559: Type 'ZodObject<{ event: ZodString; data: ZodRecord<ZodString, ZodUnknown>; timestamp: ZodOptional<ZodUnion<[ZodString, ZodDate]>>; source: ZodOptional<...>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/integrations/integrations.service.ts(96,14): error TS2678: Type '"WEBHOOK"' is not comparable to type 'IntegrationType'.
+src/modules/leads/leads.controller.ts(40,46): error TS2345: Argument of type '{ name?: string; email?: string; tags?: string[]; phone?: string; company?: string; position?: string; status?: string; priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; source?: string; assignedToId?: string; customFields?: Record<...>; }' is not assignable to parameter of type 'CreateLeadDTO'.
+  Property 'name' is optional in type '{ name?: string; email?: string; tags?: string[]; phone?: string; company?: string; position?: string; status?: string; priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; source?: string; assignedToId?: string; customFields?: Record<...>; }' but required in type 'CreateLeadDTO'.
+src/modules/leads/leads.controller.ts(119,50): error TS2345: Argument of type '{ id?: string; name?: string; email?: string; tags?: string[]; phone?: string; company?: string; position?: string; status?: string; priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; source?: string; assignedToId?: string; customFields?: Record<...>; }' is not assignable to parameter of type 'UpdateLeadDTO'.
+  Property 'id' is optional in type '{ id?: string; name?: string; email?: string; tags?: string[]; phone?: string; company?: string; position?: string; status?: string; priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; source?: string; assignedToId?: string; customFields?: Record<...>; }' but required in type 'UpdateLeadDTO'.
+src/modules/leads/leads.controller.ts(253,19): error TS2304: Cannot find name 'ValidationError'.
+src/modules/leads/leads.controller.ts(347,45): error TS2345: Argument of type '{ primaryLeadId?: string; duplicateLeadIds?: string[]; fieldsToKeep?: { name?: "primary" | "duplicate"; email?: "primary" | "duplicate"; phone?: "primary" | "duplicate"; company?: "primary" | "duplicate"; position?: "primary" | "duplicate"; }; }' is not assignable to parameter of type 'MergeLeadsDTO'.
+  Property 'primaryLeadId' is optional in type '{ primaryLeadId?: string; duplicateLeadIds?: string[]; fieldsToKeep?: { name?: "primary" | "duplicate"; email?: "primary" | "duplicate"; phone?: "primary" | "duplicate"; company?: "primary" | "duplicate"; position?: "primary" | "duplicate"; }; }' but required in type 'MergeLeadsDTO'.
+src/modules/leads/leads.controller.ts(413,96): error TS2304: Cannot find name 'UpdateLeadDTO'.
+src/modules/leads/leads.types.ts(71,11): error TS2304: Cannot find name 'LeadStatus'.
+src/modules/leads/leads.types.ts(120,11): error TS2304: Cannot find name 'LeadStatus'.
+src/modules/partial-leads/partial-leads.controller.ts(82,53): error TS2345: Argument of type '{ ipAddress?: string; userAgent?: string; name?: string; email?: string; phone?: string; source?: string; sessionId?: string; url?: string; }' is not assignable to parameter of type 'CreatePartialLeadDTO'.
+  Property 'sessionId' is optional in type '{ ipAddress?: string; userAgent?: string; name?: string; email?: string; phone?: string; source?: string; sessionId?: string; url?: string; }' but required in type 'CreatePartialLeadDTO'.
+src/modules/pipeline/pipeline.controller.ts(61,58): error TS2345: Argument of type '{ name?: string; description?: string; isDefault?: boolean; stages?: { name?: string; color?: string; order?: number; rottenDays?: number; }[]; }' is not assignable to parameter of type 'CreatePipelineDTO'.
+  Property 'name' is optional in type '{ name?: string; description?: string; isDefault?: boolean; stages?: { name?: string; color?: string; order?: number; rottenDays?: number; }[]; }' but required in type 'CreatePipelineDTO'.
+src/modules/pipeline/pipeline.controller.ts(65,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/pipeline/pipeline.controller.ts(77,62): error TS2345: Argument of type '{ id?: string; name?: string; description?: string; isDefault?: boolean; stages?: { name?: string; color?: string; order?: number; rottenDays?: number; }[]; }' is not assignable to parameter of type 'Partial<UpdatePipelineDTO>'.
+  Types of property 'stages' are incompatible.
+    Type '{ name?: string; color?: string; order?: number; rottenDays?: number; }[]' is not assignable to type 'CreateStageDTO[]'.
+      Type '{ name?: string; color?: string; order?: number; rottenDays?: number; }' is not assignable to type 'CreateStageDTO'.
+        Property 'name' is optional in type '{ name?: string; color?: string; order?: number; rottenDays?: number; }' but required in type 'CreateStageDTO'.
+src/modules/pipeline/pipeline.controller.ts(81,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/pipeline/pipeline.controller.ts(117,56): error TS2345: Argument of type '{ name?: string; color?: string; order?: number; rottenDays?: number; }' is not assignable to parameter of type 'CreateStageDTO'.
+  Property 'name' is optional in type '{ name?: string; color?: string; order?: number; rottenDays?: number; }' but required in type 'CreateStageDTO'.
+src/modules/pipeline/pipeline.controller.ts(121,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/pipeline/pipeline.controller.ts(137,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/pipeline/pipeline.controller.ts(159,59): error TS2345: Argument of type '{ stageId?: string; newOrder?: number; }[]' is not assignable to parameter of type 'ReorderStageDTO[]'.
+  Type '{ stageId?: string; newOrder?: number; }' is not assignable to type 'ReorderStageDTO'.
+    Property 'stageId' is optional in type '{ stageId?: string; newOrder?: number; }' but required in type 'ReorderStageDTO'.
+src/modules/pipeline/pipeline.controller.ts(163,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/pipeline/pipeline.controller.ts(179,64): error TS2345: Argument of type '{ assignedToId?: string; value?: number; leadId?: string; pipelineId?: string; probability?: number; stageId?: string; expectedCloseDate?: string; }' is not assignable to parameter of type 'CreateOpportunityDTO'.
+  Property 'leadId' is optional in type '{ assignedToId?: string; value?: number; leadId?: string; pipelineId?: string; probability?: number; stageId?: string; expectedCloseDate?: string; }' but required in type 'CreateOpportunityDTO'.
+src/modules/pipeline/pipeline.controller.ts(183,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/pipeline/pipeline.controller.ts(203,53): error TS2345: Argument of type 'ZodIssue[]' is not assignable to parameter of type '{ field: string; message: string; code?: string; }[]'.
+  Type 'ZodIssue' is not assignable to type '{ field: string; message: string; code?: string; }'.
+    Property 'field' is missing in type 'ZodInvalidTypeIssue & { fatal?: boolean; message: string; }' but required in type '{ field: string; message: string; code?: string; }'.
+src/modules/pipeline/pipeline.types.ts(1,48): error TS2305: Module '"@prisma/client"' has no exported member 'OpportunityStatus'.
+src/modules/reports/reports.controller.ts(16,32): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/reports/reports.controller.ts(33,64): error TS2339: Property 'id' does not exist on type 'JWTPayload'.
+src/modules/reports/reports.routes.ts(29,27): error TS2559: Type 'ZodObject<{ name: ZodString; type: ZodEnum<["LEADS", "OPPORTUNITIES", "COMMUNICATIONS", "CUSTOM"]>; filters: ZodDefault<ZodRecord<ZodString, ZodUnknown>>; columns: ZodArray<...>; groupBy: ZodOptional<...>; sortBy: ZodOptional<...>; format: ZodEnum<...>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/reports/reports.routes.ts(30,29): error TS2559: Type 'ZodObject<{ name: ZodOptional<ZodString>; type: ZodOptional<ZodEnum<["LEADS", "OPPORTUNITIES", "COMMUNICATIONS", "CUSTOM"]>>; filters: ZodOptional<...>; columns: ZodOptional<...>; groupBy: ZodOptional<...>; sortBy: ZodOptional<...>; format: ZodOptional<...>; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/reports/reports.routes.ts(44,39): error TS2559: Type 'ZodObject<{ reportId: ZodString; frequency: ZodEnum<["DAILY", "WEEKLY", "MONTHLY"]>; time: ZodString; recipients: ZodArray<ZodString, "many">; format: ZodEnum<...>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/reports/reports.routes.ts(53,12): error TS2559: Type 'ZodObject<{ dateFrom: ZodOptional<ZodString>; dateTo: ZodOptional<ZodString>; pipelineId: ZodOptional<ZodString>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/reports/reports.routes.ts(58,12): error TS2559: Type 'ZodObject<{ metric: ZodEnum<["retention", "conversion"]>; period: ZodDefault<ZodOptional<ZodEnum<["month", "quarter", "year"]>>>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/reports/reports.routes.ts(63,12): error TS2559: Type 'ZodObject<{ userId: ZodOptional<ZodString>; teamId: ZodOptional<ZodString>; dateFrom: ZodOptional<ZodString>; dateTo: ZodOptional<...>; }, "strip", ZodTypeAny, { ...; }, { ...; }>' has no properties in common with type 'ValidationSource'.
+src/modules/reports/reports.service.ts(230,14): error TS2352: Conversion of type 'Buffer' to type 'Buffer<ArrayBufferLike>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'Buffer' is missing the following properties from type 'Buffer<ArrayBufferLike>': subarray, write, toJSON, equals, and 94 more.
+src/modules/reports/reports.service.ts(257,12): error TS2352: Conversion of type 'Buffer' to type 'Buffer<ArrayBufferLike>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'Buffer' is missing the following properties from type 'Buffer<ArrayBufferLike>': subarray, write, toJSON, equals, and 94 more.
+src/modules/tags/tags.controller.ts(64,45): error TS2345: Argument of type '{ name?: string; color?: string; description?: string; isSystem?: boolean; }' is not assignable to parameter of type 'CreateTagDTO'.
+  Property 'name' is optional in type '{ name?: string; color?: string; description?: string; isSystem?: boolean; }' but required in type 'CreateTagDTO'.
+src/modules/tags/tags.controller.ts(170,50): error TS2345: Argument of type '{ isActive?: boolean; tagId?: string; condition?: { field?: string; value?: string; operator?: "endsWith" | "startsWith" | "contains" | "equals"; }; }' is not assignable to parameter of type 'CreateTagRuleDTO'.
+  Property 'tagId' is optional in type '{ isActive?: boolean; tagId?: string; condition?: { field?: string; value?: string; operator?: "endsWith" | "startsWith" | "contains" | "equals"; }; }' but required in type 'CreateTagRuleDTO'.
+src/modules/users/users.controller.ts(92,46): error TS2345: Argument of type '{ password?: string; name?: string; username?: string; email?: string; role?: "ADMIN" | "SALES" | "CONSULTANT" | "MANAGER" | "SUPPORT"; avatar?: string; }' is not assignable to parameter of type 'CreateUserDTO'.
+  Property 'username' is optional in type '{ password?: string; name?: string; username?: string; email?: string; role?: "ADMIN" | "SALES" | "CONSULTANT" | "MANAGER" | "SUPPORT"; avatar?: string; }' but required in type 'CreateUserDTO'.
+src/modules/users/users.controller.ts(192,45): error TS2345: Argument of type '{ currentPassword?: string; newPassword?: string; }' is not assignable to parameter of type 'UpdatePasswordDTO'.
+  Property 'currentPassword' is optional in type '{ currentPassword?: string; newPassword?: string; }' but required in type 'UpdatePasswordDTO'.
+src/modules/whatsapp-bot/whatsapp-bot.service.ts(17,8): error TS2613: Module '"c:/Projetos Cursor/ferraco/apps/backend/src/services/whatsappService"' has no default export. Did you mean to use 'import { whatsappService } from "c:/Projetos Cursor/ferraco/apps/backend/src/services/whatsappService"' instead?
+src/services/__tests__/whatsappService.integration.test.ts(15,10): error TS2724: '"../whatsappService"' has no exported member named 'WhatsAppService'. Did you mean 'whatsappService'?
+src/services/__tests__/whatsappService.test.ts(11,10): error TS2724: '"../whatsappService"' has no exported member named 'WhatsAppService'. Did you mean 'whatsappService'?
+src/services/__tests__/whatsappService.test.ts(222,19): error TS2339: Property 'sendVoice' does not exist on type 'Whatsapp'.
+src/services/__tests__/whatsappService.test.ts(229,25): error TS2339: Property 'sendVoice' does not exist on type 'Whatsapp'.
+src/services/__tests__/whatsappService.test.ts(319,19): error TS2551: Property 'unpinChat' does not exist on type 'Whatsapp'. Did you mean 'pinChat'?
+src/services/__tests__/whatsappService.test.ts(323,25): error TS2551: Property 'unpinChat' does not exist on type 'Whatsapp'. Did you mean 'pinChat'?
+src/services/whatsappChatService.ts(21,24): error TS2305: Module '"@prisma/client"' has no exported member 'MessageType'.
+src/services/whatsappChatService.ts(95,45): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(176,24): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(229,41): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(240,48): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(251,24): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(290,41): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(315,48): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(326,24): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(375,44): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(385,41): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(399,20): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(430,41): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(460,50): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(466,26): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(498,20): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(540,44): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(579,41): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(599,20): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(680,37): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(685,35): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(713,48): error TS2339: Property 'lat' does not exist on type 'Message'.
+src/services/whatsappChatService.ts(755,19): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(777,19): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(790,19): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(851,36): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(864,38): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(896,34): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(919,38): error TS2551: Property 'whatsAppMessage' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'whatsAppBotMessage'?
+src/services/whatsappChatService.ts(927,18): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappChatService.ts(939,19): error TS2339: Property 'whatsAppConversation' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/services/whatsappService.ts(806,55): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/whatsappService.ts(1023,28): error TS2551: Property 'forwardMessages' does not exist on type 'Whatsapp'. Did you mean 'forwardMessage'?
+src/services/whatsappService.ts(1206,11): error TS2322: Type '{ title: string; rows: { title: string; description?: string; rowId: string; }[]; }[]' is not assignable to type '{ title: string; rows: { rowId: string; title: string; description: string; }[]; }[]'.
+  Type '{ title: string; rows: { title: string; description?: string; rowId: string; }[]; }' is not assignable to type '{ title: string; rows: { rowId: string; title: string; description: string; }[]; }'.
+    Types of property 'rows' are incompatible.
+      Type '{ title: string; description?: string; rowId: string; }[]' is not assignable to type '{ rowId: string; title: string; description: string; }[]'.
+        Type '{ title: string; description?: string; rowId: string; }' is not assignable to type '{ rowId: string; title: string; description: string; }'.
+          Property 'description' is optional in type '{ title: string; description?: string; rowId: string; }' but required in type '{ rowId: string; title: string; description: string; }'.
+src/services/whatsappService.ts(1484,14): error TS2352: Conversion of type 'Contact[]' to type 'GroupMember[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'Contact' is missing the following properties from type 'GroupMember': isAdmin, isSuperAdmin
+src/services/whatsappService.ts(1590,21): error TS2554: Expected 1 arguments, but got 0.
+src/services/whatsappService.ts(1674,20): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1676,20): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1677,20): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1678,21): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1679,21): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1680,21): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1680,58): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1681,21): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1682,21): error TS2339: Property 'lastMessage' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1690,33): error TS2339: Property 'profilePicThumb' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1703,35): error TS2339: Property 'profilePicThumb' does not exist on type 'Chat'.
+src/services/whatsappService.ts(1966,54): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+  Type 'number' is not assignable to type 'string'.
+src/services/whatsappService.ts(1978,51): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/whatsappService.ts(2043,5): error TS2322: Type 'void' is not assignable to type 'boolean'.
+src/services/whatsappServiceExtended.ts(123,40): error TS2339: Property 'sendListMenu' does not exist on type 'Whatsapp'.
+src/services/whatsappServiceExtended.ts(159,40): error TS2551: Property 'sendPollCreation' does not exist on type 'Whatsapp'. Did you mean 'sendLocation'?
+src/services/whatsappServiceExtended.ts(258,25): error TS2551: Property 'forwardMessages' does not exist on type 'Whatsapp'. Did you mean 'forwardMessage'?
+src/services/whatsappServiceExtended.ts(532,51): error TS2345: Argument of type '"announcement"' is not assignable to parameter of type 'GroupProperty'.
+src/services/whatsappServiceExtended.ts(664,7): error TS2322: Type 'ProfilePicThumbObj' is not assignable to type 'string'.
+src/services/whatsappServiceExtended.ts(1099,14): error TS2352: Conversion of type 'string' to type 'Buffer<ArrayBufferLike>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.

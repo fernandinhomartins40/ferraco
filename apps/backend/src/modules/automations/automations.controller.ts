@@ -9,6 +9,12 @@ import {
   TestAutomationSchema,
   AutomationExecutionFilterSchema,
 } from './automations.validators';
+import {
+  CreateAutomationDTO,
+  UpdateAutomationDTO,
+  ExecuteAutomationDTO,
+  TestAutomationDTO,
+} from './automations.types';
 import { z } from 'zod';
 
 // ============================================================================
@@ -53,14 +59,14 @@ export class AutomationsController {
 
   createAutomation = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = CreateAutomationSchema.parse(req.body);
+      const data = CreateAutomationSchema.parse(req.body) as CreateAutomationDTO;
       const userId = req.user!.userId;
 
       const automation = await this.service.create(data, userId);
       successResponse(res, automation, 'Automation created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, error.errors.map(err => ({ field: err.path.join('.'), message: err.message, code: err.code })));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to create automation');
       }
@@ -70,13 +76,13 @@ export class AutomationsController {
   updateAutomation = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const data = UpdateAutomationSchema.partial().parse(req.body);
+      const data = UpdateAutomationSchema.partial().parse(req.body) as Partial<UpdateAutomationDTO>;
 
       const automation = await this.service.update(id, data);
       successResponse(res, automation, 'Automation updated successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, error.errors.map(err => ({ field: err.path.join('.'), message: err.message, code: err.code })));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to update automation');
       }
@@ -109,13 +115,13 @@ export class AutomationsController {
 
   testAutomation = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = TestAutomationSchema.parse(req.body);
+      const data = TestAutomationSchema.parse(req.body) as TestAutomationDTO;
 
       const result = await this.service.test(data);
       successResponse(res, result, 'Automation test completed');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, error.errors.map(err => ({ field: err.path.join('.'), message: err.message, code: err.code })));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to test automation');
       }
@@ -124,13 +130,13 @@ export class AutomationsController {
 
   executeAutomation = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = ExecuteAutomationSchema.parse(req.body);
+      const data = ExecuteAutomationSchema.parse(req.body) as ExecuteAutomationDTO;
 
       const execution = await this.service.execute(data);
       successResponse(res, execution, 'Automation executed successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, error.errors.map(err => ({ field: err.path.join('.'), message: err.message, code: err.code })));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to execute automation');
       }
@@ -160,7 +166,7 @@ export class AutomationsController {
       successResponse(res, executions, 'Executions retrieved successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        errorResponse(res, 'Validation error', 400, error.errors);
+        errorResponse(res, 'Validation error', 400, error.errors.map(err => ({ field: err.path.join('.'), message: err.message, code: err.code })));
       } else {
         errorResponse(res, error instanceof Error ? error.message : 'Failed to retrieve executions');
       }

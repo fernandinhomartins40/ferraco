@@ -53,7 +53,7 @@ router.use(requireWhatsAppConnection);
  */
 router.post('/messages/audio', sendMessageRateLimit, async (req, res) => {
   try {
-    const { to, audioPath, ptt = true } = req.body;
+    const { to, audioPath, ptt = true } = req.body as { to: string; audioPath: string; ptt?: boolean };
     const result = await req.wppExtended.sendAudio(to, audioPath, ptt);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
@@ -68,7 +68,7 @@ router.post('/messages/audio', sendMessageRateLimit, async (req, res) => {
  */
 router.post('/messages/location', sendMessageRateLimit, async (req, res) => {
   try {
-    const { to, latitude, longitude, description } = req.body;
+    const { to, latitude, longitude, description } = req.body as { to: string; latitude: number; longitude: number; description?: string };
     const result = await req.wppExtended.sendLocation(to, latitude, longitude, description);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
@@ -83,7 +83,7 @@ router.post('/messages/location', sendMessageRateLimit, async (req, res) => {
  */
 router.post('/messages/contact', async (req, res) => {
   try {
-    const { to, contactId, name } = req.body;
+    const { to, contactId, name } = req.body as { to: string; contactId: string; name?: string };
     const result = await req.wppExtended.sendContactVcard(to, contactId, name);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
@@ -98,7 +98,7 @@ router.post('/messages/contact', async (req, res) => {
  */
 router.post('/messages/sticker', async (req, res) => {
   try {
-    const { to, imagePath } = req.body;
+    const { to, imagePath } = req.body as { to: string; imagePath: string };
     const result = await req.wppExtended.sendSticker(to, imagePath);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
@@ -113,7 +113,7 @@ router.post('/messages/sticker', async (req, res) => {
  */
 router.post('/messages/file', async (req, res) => {
   try {
-    const { to, filePath, filename, caption } = req.body;
+    const { to, filePath, filename, caption } = req.body as { to: string; filePath: string; filename: string; caption?: string };
     const result = await req.wppExtended.sendFile(to, filePath, filename, caption);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
@@ -128,7 +128,7 @@ router.post('/messages/file', async (req, res) => {
  */
 router.post('/messages/link-preview', async (req, res) => {
   try {
-    const { to, url, title } = req.body;
+    const { to, url, title } = req.body as { to: string; url: string; title: string };
     const result = await req.wppExtended.sendLinkPreview(to, url, title);
     res.json({ success: true, messageId: result.id });
   } catch (error: any) {
