@@ -124,13 +124,6 @@ export class ChatbotSessionService {
       throw new Error('Current step not found');
     }
 
-    // 🔍 DIAGNÓSTICO CRÍTICO: Log do step atual
-    logger.info(`🔍 [DIAGNÓSTICO-CRITICO] Step atual: ${session.currentStepId}`);
-    logger.info(`   Opções estáticas no step: ${currentStep.options?.length || 0}`);
-    if (currentStep.options && currentStep.options.length > 0) {
-      logger.info(`   IDs das opções: ${currentStep.options.map(o => o.id).join(', ')}`);
-    }
-
     // Processar resposta baseado no tipo de step
     let nextStepId: string | null = null;
     let capturedData: any = {};
@@ -138,71 +131,44 @@ export class ChatbotSessionService {
 
     // Se foi clicado um botão de opção
     if (optionId && currentStep.options) {
-      // 🔍 DIAGNÓSTICO: Log de captura de opção
-      logger.debug(`🔍 [DIAGNÓSTICO] Processando opção selecionada:`);
-      logger.debug(`   Option ID recebido: ${optionId}`);
-      logger.debug(`   Current Step ID: ${session.currentStepId}`);
-      logger.debug(`   Opções disponíveis no step: ${currentStep.options.map(o => o.id).join(', ')}`);
-
       const selectedOption = currentStep.options.find(opt => opt.id === optionId);
 
       if (!selectedOption) {
-        logger.warn(`❌ [DIAGNÓSTICO-CRITICO] Opção ${optionId} NÃO ENCONTRADA em currentStep.options!`);
-        logger.warn(`   Step atual: ${session.currentStepId}`);
-        logger.warn(`   Opções disponíveis: ${currentStep.options.map(o => `${o.id} (${o.label})`).join(', ')}`);
-        logger.warn(`   ⚠️  Isto significa que a opção dinâmica foi perdida!`);
+        logger.warn(`❌ Opção ${optionId} não encontrada no step '${session.currentStepId}'`);
+        return this.createFallbackResponse(session, config);
       }
 
       if (selectedOption) {
-        logger.debug(`   ✅ Opção encontrada: ${selectedOption.label}`);
-        logger.debug(`   captureAs: ${selectedOption.captureAs || 'N/A'}`);
-        logger.debug(`   nextStepId: ${selectedOption.nextStepId}`);
 
         nextStepId = selectedOption.nextStepId;
 
         // Capturar dado se especificado
         if (selectedOption.captureAs) {
-          logger.debug(`   🎯 Capturando dado: ${selectedOption.captureAs} = ${selectedOption.label}`);
           capturedData[selectedOption.captureAs] = selectedOption.label;
           userResponses[selectedOption.captureAs] = selectedOption.label;
 
-          // ⭐ NOVO: Capturar IDs dos produtos selecionados
+          // Capturar IDs dos produtos selecionados
           if (selectedOption.captureAs === 'selected_product_id') {
-            logger.info(`🛒 [DIAGNÓSTICO] CAPTURANDO PRODUTO!`);
-            logger.info(`   Produto ID: ${selectedOption.id}`);
-            logger.info(`   Produto Label: ${selectedOption.label}`);
-            logger.info(`   Produto Name: ${(selectedOption as any).productName}`);
-
             // Inicializar arrays se não existirem
             if (!userResponses.selected_product_ids) {
               userResponses.selected_product_ids = [];
-              logger.debug(`   Criou array selected_product_ids`);
             }
             if (!userResponses.selected_products) {
               userResponses.selected_products = [];
-              logger.debug(`   Criou array selected_products`);
             }
 
             // Adicionar ID do produto
             if (!userResponses.selected_product_ids.includes(selectedOption.id)) {
               userResponses.selected_product_ids.push(selectedOption.id);
-              logger.info(`   ✅ ID adicionado a selected_product_ids: ${selectedOption.id}`);
-            } else {
-              logger.debug(`   ℹ️  ID já existe em selected_product_ids`);
             }
 
             // Adicionar nome do produto (sem emoji para compatibilidade)
             const productName = (selectedOption as any).productName || selectedOption.label.replace(/📦\s*/g, '');
             if (!userResponses.selected_products.includes(productName)) {
               userResponses.selected_products.push(productName);
-              logger.info(`   ✅ Nome adicionado a selected_products: ${productName}`);
-            } else {
-              logger.debug(`   ℹ️  Nome já existe em selected_products`);
             }
 
-            logger.info(`   📊 Estado atual:`);
-            logger.info(`      selected_product_ids: ${JSON.stringify(userResponses.selected_product_ids)}`);
-            logger.info(`      selected_products: ${JSON.stringify(userResponses.selected_products)}`);
+            logger.info(`🛒 Produto capturado: ${productName} (ID: ${selectedOption.id})`);
           }
 
           // Manter compatibilidade com selected_product antigo
@@ -295,11 +261,20 @@ export class ChatbotSessionService {
     });
 
     // ⭐ AUTO-SAVE PARCIAL: A cada 5 mensagens, tentar salvar lead parcial
+    // EXCETO quando usuário está ativamente selecionando produtos
     if (messageCount > 0 && messageCount % 5 === 0) {
-      logger.debug(`🔄 Auto-save check na mensagem ${messageCount}`);
-      await this.savePartialLead(sessionId).catch(err =>
-        logger.error('Erro ao fazer auto-save parcial:', err)
-      );
+      // Steps críticos onde usuário está selecionando produtos - não criar lead ainda
+      const criticalProductSteps = ['show_products', 'product_details', 'product_interest'];
+      const isSelectingProducts = criticalProductSteps.includes(session.currentStepId || '');
+
+      if (isSelectingProducts) {
+        logger.info(`⏸️ Auto-save adiado: usuário selecionando produtos no step '${session.currentStepId}'`);
+      } else {
+        logger.debug(`🔄 Auto-save check na mensagem ${messageCount}`);
+        await this.savePartialLead(sessionId).catch(err =>
+          logger.error('Erro ao fazer auto-save parcial:', err)
+        );
+      }
     }
 
     const newScore = calculateQualificationScoreV2({
@@ -592,6 +567,10 @@ export class ChatbotSessionService {
     // Verificar se já existe lead
     if (session.leadId) {
       logger.info(`ℹ️ Lead já existe para sessão ${sessionId}: ${session.leadId}`);
+
+      // Ao invés de simplesmente retornar, verificar se há dados novos importantes (ex: produtos)
+      // que foram capturados APÓS a criação inicial do lead
+      await this.updateExistingLeadIfNeeded(session);
       return;
     }
 
@@ -627,24 +606,8 @@ export class ChatbotSessionService {
       const leadSource = conversationData.source || 'Chatbot';
       const campaign = conversationData.campaign;
 
-      // 🔍 DIAGNÓSTICO: Log do estado da sessão ANTES do parse
-      logger.info(`🔍 [DIAGNÓSTICO] Estado da sessão ANTES de extrair produtos:`);
-      logger.info(`   📋 Session ID: ${session.id}`);
-      logger.info(`   📋 sessionId (UUID): ${session.sessionId}`);
-      logger.info(`   📋 currentStepId: ${session.currentStepId}`);
-      logger.info(`   📋 userResponses (RAW do banco): ${session.userResponses}`);
-      logger.info(`   📋 Tipo de userResponses: ${typeof session.userResponses}`);
-      logger.info(`   📋 Length do JSON string: ${session.userResponses?.length || 0} caracteres`);
-
       // Parse user responses para verificar handoff humano
       const userResponses = JSON.parse(session.userResponses || '{}');
-
-      // 🔍 DIAGNÓSTICO: Log DEPOIS do parse
-      logger.info(`🔍 [DIAGNÓSTICO] userResponses APÓS JSON.parse():`);
-      logger.info(`   📊 Tipo: ${typeof userResponses}`);
-      logger.info(`   📊 Keys disponíveis: ${Object.keys(userResponses).join(', ')}`);
-      logger.info(`   📊 Conteúdo completo: ${JSON.stringify(userResponses, null, 2)}`);
-
       const isHumanHandoff = session.currentStepId === 'human_handoff';
 
       // Determinar prioridade baseado no contexto
@@ -676,15 +639,10 @@ export class ChatbotSessionService {
       else if (userResponses.urgency?.includes('não tenho prazo')) urgency = 'sem_prazo';
 
       // Extrair produtos selecionados
-      logger.info(`🔍 Extraindo produtos selecionados para lead`);
-      logger.info(`   userResponses.selected_product_ids: ${JSON.stringify(userResponses.selected_product_ids || [])}`);
-      logger.info(`   userResponses.selected_products: ${JSON.stringify(userResponses.selected_products || [])}`);
-      logger.info(`   userResponses.selected_product: ${userResponses.selected_product || 'N/A'}`);
-
       const selectedProducts = leadTaggingService.extractSelectedProducts(userResponses);
-
-      logger.info(`✅ Produtos extraídos: ${JSON.stringify(selectedProducts)}`);
-      logger.info(`   Total de produtos: ${selectedProducts.length}`);
+      if (selectedProducts.length > 0) {
+        logger.info(`✅ Produtos extraídos: ${selectedProducts.length} produto(s)`);
+      }
 
       // Determinar se deve triggerar bot WhatsApp
       const shouldTriggerWhatsAppBot = isHumanHandoff || Boolean(userResponses.wants_pricing);
@@ -755,10 +713,8 @@ export class ChatbotSessionService {
         currentStepId: session.currentStepId,
       }).catch(err => logger.error('❌ Erro ao adicionar tags:', err));
 
-      // ✅ NOVO: Criar automação WhatsApp em background
-      logger.info(`🤖 Criando automação WhatsApp para lead ${lead.id} (${lead.name})`);
-      whatsappAutomationService.createAutomationFromLead(lead.id)
-        .catch(err => logger.error('❌ Erro ao criar automação WhatsApp:', err));
+      // ✅ Criar automação WhatsApp (se houver produtos selecionados)
+      await this.tryCreateWhatsAppAutomation(lead.id, selectedProducts);
 
       // ⭐ NOVO: Trigger condicional do bot WhatsApp
       // Só inicia bot se usuário pediu handoff humano OU orçamento
@@ -774,6 +730,114 @@ export class ChatbotSessionService {
       } else {
         logger.info(`ℹ️ Bot WhatsApp não iniciado para lead ${lead.id} - Usuário não solicitou handoff ou orçamento`);
       }
+    }
+  }
+
+  /**
+   * Tenta criar automação WhatsApp para um lead
+   * Inclui validação para evitar duplicações e verifica se há produtos
+   */
+  private async tryCreateWhatsAppAutomation(leadId: string, selectedProducts: string[]): Promise<void> {
+    try {
+      if (selectedProducts.length === 0) {
+        logger.debug(`ℹ️ Automação não criada: lead ${leadId} sem produtos selecionados`);
+        return;
+      }
+
+      // Verificar se já existe automação para este lead (prevenção de duplicação)
+      const existingAutomation = await prisma.whatsAppAutomation.findFirst({
+        where: { leadId }
+      });
+
+      if (existingAutomation) {
+        logger.info(`ℹ️ Automação já existe para lead ${leadId} (ID: ${existingAutomation.id})`);
+        return;
+      }
+
+      // Criar automação
+      logger.info(`🤖 Criando automação WhatsApp para lead ${leadId}`);
+      await whatsappAutomationService.createAutomationFromLead(leadId);
+      logger.info(`✅ Automação criada com sucesso para lead ${leadId}`);
+
+    } catch (error) {
+      logger.error(`❌ Erro ao criar automação WhatsApp para lead ${leadId}:`, error);
+      // Não lançar erro - apenas logar (não queremos quebrar o fluxo)
+    }
+  }
+
+  /**
+   * Atualiza lead existente com dados novos capturados após criação inicial
+   * Caso de uso principal: produtos selecionados APÓS auto-save criar lead
+   */
+  private async updateExistingLeadIfNeeded(session: any): Promise<void> {
+    try {
+      if (!session.leadId) {
+        return; // Não há lead para atualizar
+      }
+
+      // Buscar lead existente
+      const existingLead = await prisma.lead.findUnique({
+        where: { id: session.leadId }
+      });
+
+      if (!existingLead) {
+        logger.warn(`⚠️ Lead ${session.leadId} não encontrado para atualização`);
+        return;
+      }
+
+      // Parse userResponses para extrair dados atuais
+      const userResponses = JSON.parse(session.userResponses || '{}');
+
+      // Extrair produtos selecionados
+      const selectedProducts = leadTaggingService.extractSelectedProducts(userResponses);
+
+      if (selectedProducts.length === 0) {
+        logger.debug(`ℹ️ Nenhum produto novo para atualizar no lead ${session.leadId}`);
+        return; // Nada novo para adicionar
+      }
+
+      // Parse metadata existente
+      let existingMetadata: any = {};
+      try {
+        existingMetadata = JSON.parse(existingLead.metadata || '{}');
+      } catch (error) {
+        logger.error('Erro ao parsear metadata existente:', error);
+      }
+
+      // Verificar se produtos já existem no metadata
+      const existingProducts = existingMetadata.selectedProducts || [];
+      if (existingProducts.length > 0 && JSON.stringify(existingProducts) === JSON.stringify(selectedProducts)) {
+        logger.debug(`ℹ️ Produtos já estão atualizados no lead ${session.leadId}`);
+        return; // Produtos já estão salvos, nada a fazer
+      }
+
+      logger.info(`♻️ Atualizando lead ${session.leadId} com ${selectedProducts.length} produto(s) selecionado(s)`);
+
+      // Atualizar metadata preservando campos existentes
+      const updatedMetadata = {
+        ...existingMetadata,
+        selectedProducts: selectedProducts,
+        productsCount: selectedProducts.length,
+        updatedAt: new Date().toISOString(),
+        shouldTriggerWhatsAppBot: true, // Agora que tem produtos, pode criar automação
+      };
+
+      // Atualizar lead no banco
+      await prisma.lead.update({
+        where: { id: session.leadId },
+        data: {
+          metadata: JSON.stringify(updatedMetadata)
+        }
+      });
+
+      logger.info(`✅ Lead ${session.leadId} atualizado com produtos: ${selectedProducts.join(', ')}`);
+
+      // Tentar criar automação WhatsApp agora que lead tem produtos
+      await this.tryCreateWhatsAppAutomation(session.leadId, selectedProducts);
+
+    } catch (error) {
+      logger.error(`❌ Erro ao atualizar lead existente ${session.leadId}:`, error);
+      // Não lançar erro - apenas logar e continuar (não queremos quebrar o fluxo do chat)
     }
   }
 
