@@ -42,9 +42,11 @@ export class WhatsAppAutomationService {
 
       // Extrair interesse do metadata
       const metadata = JSON.parse(lead.metadata || '{}');
-      const interest = metadata.interest || metadata.selectedProducts;
 
-      if (!interest) {
+      // ⭐ PRIORIZAR selectedProducts (IDs) sobre interest (nomes com emoji)
+      let interest = metadata.selectedProducts || metadata.interest;
+
+      if (!interest || (Array.isArray(interest) && interest.length === 0)) {
         logger.info(`ℹ️  Lead ${leadId} (${lead.name}) não manifestou interesse em produtos`);
         // Criar automação genérica se tiver wantsHumanContact
         if (metadata.wantsHumanContact || metadata.requiresHumanAttendance) {
@@ -62,22 +64,46 @@ export class WhatsAppAutomationService {
 
       const allProducts = JSON.parse(config.products || '[]');
 
-      // Interest pode ser string ou array
-      let productNames: string[] = [];
+      // Interest pode ser string ou array (IDs ou nomes)
+      let productIdentifiers: string[] = [];
       if (Array.isArray(interest)) {
-        productNames = interest.map((p: string) => p.trim());
+        productIdentifiers = interest.map((p: string) => p.trim());
       } else if (typeof interest === 'string') {
-        productNames = interest.split(',').map((p: string) => p.trim());
+        productIdentifiers = interest.split(',').map((p: string) => p.trim());
       }
 
-      // ✅ VALIDAÇÃO ROBUSTA COM FUZZY MATCHING
-      const validation = this.validateProducts(productNames, allProducts);
+      // 🔍 DETECÇÃO INTELIGENTE: ID vs Nome
+      const isUsingIds = productIdentifiers.length > 0 &&
+                         (productIdentifiers[0].startsWith('prod_') ||
+                          productIdentifiers[0].includes('_'));
+
+      logger.info(`🔍 Validando ${productIdentifiers.length} produtos para lead ${leadId}`);
+      logger.info(`   Formato detectado: ${isUsingIds ? '🆔 IDs' : '📝 Nomes'}`);
+      logger.info(`   Identificadores: ${JSON.stringify(productIdentifiers)}`);
+      logger.info(`📦 Catálogo possui ${allProducts.length} produtos disponíveis`);
+
+      if (allProducts.length > 0) {
+        logger.info(`   Detalhes: ${allProducts.map((p: any) => {
+          const id = p.id || p._id || `prod_${p.name.toLowerCase().replace(/\s+/g, '_')}`;
+          return `${p.name} (ID: ${id})`;
+        }).join(', ')}`);
+      }
+
+      // ✅ VALIDAÇÃO COM DETECÇÃO AUTOMÁTICA
+      const validation = isUsingIds
+        ? this.validateProductsByIds(productIdentifiers, allProducts)
+        : this.validateProducts(productIdentifiers, allProducts);
 
       if (validation.matches.length === 0) {
-        logger.warn(`⚠️  Lead ${leadId}: nenhum produto válido encontrado em "${interest}"`);
-        logger.warn(`   Erros: ${validation.errors.join(', ')}`);
+        logger.error(`❌ Lead ${leadId}: nenhum produto válido encontrado`);
+        logger.error(`   Identificadores recebidos: ${JSON.stringify(productIdentifiers)}`);
+        logger.error(`   Erros: ${validation.errors.join(', ')}`);
         return null;
       }
+
+      // ✅ Produtos encontrados
+      logger.info(`✅ ${validation.matches.length} produto(s) válido(s) encontrado(s)`);
+      logger.info(`   Produtos: ${validation.matches.map(m => `${m.original} → ${m.matched}`).join(', ')}`);
 
       if (validation.warnings.length > 0) {
         logger.warn(`⚠️  Avisos na validação: ${validation.warnings.join(', ')}`);
@@ -155,7 +181,47 @@ export class WhatsAppAutomationService {
   }
 
   /**
-   * Valida produtos com fuzzy matching
+   * Valida produtos usando IDs (método principal para novos leads)
+   * @param productIds - Array de IDs de produtos
+   * @param availableProducts - Produtos disponíveis no config
+   */
+  private validateProductsByIds(productIds: string[], availableProducts: any[]): ValidationResult {
+    const errors: string[] = [];
+    const matches: ProductMatch[] = [];
+
+    for (const productId of productIds) {
+      if (!productId || productId.trim() === '') continue;
+
+      // Busca direta por ID (prioridade máxima)
+      const match = availableProducts.find(p => {
+        const configId = p.id || p._id || `prod_${p.name.toLowerCase().replace(/\s+/g, '_')}`;
+        return configId === productId || configId === productId.toLowerCase();
+      });
+
+      if (match) {
+        matches.push({
+          original: productId,
+          matched: match.name, // Retorna NOME para uso posterior no envio
+          confidence: 100,
+          productData: match
+        });
+        logger.debug(`✅ Produto encontrado por ID: ${productId} → ${match.name}`);
+      } else {
+        errors.push(`Produto com ID "${productId}" não encontrado no catálogo`);
+        logger.warn(`⚠️  ID "${productId}" não corresponde a nenhum produto`);
+      }
+    }
+
+    return {
+      valid: matches.length > 0,
+      errors,
+      warnings: [],
+      matches
+    };
+  }
+
+  /**
+   * Valida produtos com fuzzy matching (fallback para leads antigos com nomes)
    */
   private validateProducts(requestedProducts: string[], availableProducts: any[]): ValidationResult {
     const errors: string[] = [];
