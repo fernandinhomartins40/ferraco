@@ -56,8 +56,8 @@ function validateJWTConfig(): string {
 }
 
 const JWT_SECRET = validateJWTConfig();
-const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_EXPIRATION || '15m';
-const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '7d';
+const JWT_ACCESS_EXPIRATION: string = process.env.JWT_ACCESS_EXPIRATION || '15m';
+const JWT_REFRESH_EXPIRATION: string = process.env.JWT_REFRESH_EXPIRATION || '7d';
 
 export interface JWTPayload {
   userId: string;
@@ -91,20 +91,28 @@ export function createJWTPayload(
 }
 
 export function generateAccessToken(payload: Omit<JWTPayload, 'type'>): string {
-  const tokenPayload: JWTPayload = { ...payload, type: 'access' };
-  return jwt.sign(tokenPayload as object, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRATION as string });
+  const tokenPayload: Record<string, any> = { ...payload, type: 'access' };
+  const options: jwt.SignOptions = { expiresIn: JWT_ACCESS_EXPIRATION as any };
+  return jwt.sign(tokenPayload, JWT_SECRET, options);
 }
 
 export function generateRefreshToken(payload: Omit<JWTPayload, 'type'>): string {
-  const tokenPayload: JWTPayload = { ...payload, type: 'refresh' };
-  return jwt.sign(tokenPayload as object, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRATION as string });
+  const tokenPayload: Record<string, any> = { ...payload, type: 'refresh' };
+  const options: jwt.SignOptions = { expiresIn: JWT_REFRESH_EXPIRATION as any };
+  return jwt.sign(tokenPayload, JWT_SECRET, options);
 }
 
 export function generateTokenPair(
   user: Pick<User, 'id' | 'email' | 'role'>,
   permissions: string[]
 ): TokenPair {
-  const payload = { userId: user.id, email: user.email, role: user.role, permissions };
+  const payload = {
+    userId: user.id,
+    id: user.id, // Alias for backward compatibility
+    email: user.email,
+    role: user.role,
+    permissions,
+  };
 
   return {
     accessToken: generateAccessToken(payload),

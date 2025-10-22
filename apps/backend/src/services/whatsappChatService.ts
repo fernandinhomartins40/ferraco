@@ -92,22 +92,29 @@ export class WhatsAppChatService {
           });
 
           // Criar/atualizar conversa
-          const conversation = await prisma.whatsAppConversation.upsert({
+          const existingConversation = await prisma.whatsAppConversation.findFirst({
             where: { contactId: contact.id },
-            create: {
-              contactId: contact.id,
-              lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
-              lastMessagePreview: chat.lastMessage?.body || null,
-              unreadCount: chat.unreadCount || 0,
-              isPinned: chat.pin || false,
-            },
-            update: {
-              lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
-              lastMessagePreview: chat.lastMessage?.body || null,
-              unreadCount: chat.unreadCount || 0,
-              isPinned: chat.pin || false,
-            },
           });
+
+          const conversation = existingConversation
+            ? await prisma.whatsAppConversation.update({
+                where: { id: existingConversation.id },
+                data: {
+                  lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
+                  lastMessagePreview: chat.lastMessage?.body || null,
+                  unreadCount: chat.unreadCount || 0,
+                  isPinned: chat.pin || false,
+                },
+              })
+            : await prisma.whatsAppConversation.create({
+                data: {
+                  contactId: contact.id,
+                  lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
+                  lastMessagePreview: chat.lastMessage?.body || null,
+                  unreadCount: chat.unreadCount || 0,
+                  isPinned: chat.pin || false,
+                },
+              });
 
           logger.info(`✅ Chat sincronizado: ${contactName} (${phone})`);
 
@@ -173,22 +180,29 @@ export class WhatsAppChatService {
           });
 
           // Criar/atualizar conversa
-          await prisma.whatsAppConversation.upsert({
+          const existingConv = await prisma.whatsAppConversation.findFirst({
             where: { contactId: contact.id },
-            create: {
-              contactId: contact.id,
-              lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
-              lastMessagePreview: chat.lastMessage?.body || null,
-              unreadCount: chat.unreadCount || 0,
-              isPinned: chat.pin || false,
-            },
-            update: {
-              lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
-              lastMessagePreview: chat.lastMessage?.body || null,
-              unreadCount: chat.unreadCount || 0,
-              isPinned: chat.pin || false,
-            },
           });
+
+          await (existingConv
+            ? prisma.whatsAppConversation.update({
+                where: { id: existingConv.id },
+                data: {
+                  lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
+                  lastMessagePreview: chat.lastMessage?.body || null,
+                  unreadCount: chat.unreadCount || 0,
+                  isPinned: chat.pin || false,
+                },
+              })
+            : prisma.whatsAppConversation.create({
+                data: {
+                  contactId: contact.id,
+                  lastMessageAt: chat.t ? new Date(chat.t * 1000) : new Date(),
+                  lastMessagePreview: chat.lastMessage?.body || null,
+                  unreadCount: chat.unreadCount || 0,
+                  isPinned: chat.pin || false,
+                },
+              }));
 
           synced++;
           logger.info(`✅ [${synced}/${sortedChats.length}] ${contactName}`);
@@ -710,7 +724,7 @@ export class WhatsAppChatService {
       return MessageType.DOCUMENT;
     }
 
-    if (message.type === 'location' || message.lat) return MessageType.LOCATION;
+    if (message.type === 'location' || (message as any).lat) return MessageType.LOCATION;
     if (message.type === 'vcard') return MessageType.CONTACT;
 
     return MessageType.TEXT;

@@ -7,6 +7,7 @@ import {
   TagFiltersSchema,
   ApplyRulesSchema,
 } from './tags.validators';
+import { CreateTagDTO, CreateTagRuleDTO } from './tags.types';
 
 export class TagsController {
   constructor(private service: TagsService) {}
@@ -60,7 +61,7 @@ export class TagsController {
    */
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = CreateTagSchema.parse(req.body);
+      const data = CreateTagSchema.parse(req.body) as CreateTagDTO;
       const tag = await this.service.create(data);
 
       res.status(201).json({
@@ -166,7 +167,7 @@ export class TagsController {
    */
   createRule = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = CreateTagRuleSchema.parse(req.body);
+      const data = CreateTagRuleSchema.parse(req.body) as CreateTagRuleDTO;
       const rule = await this.service.createRule(data);
 
       res.status(201).json({

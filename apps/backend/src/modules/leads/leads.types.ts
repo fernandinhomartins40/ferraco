@@ -1,4 +1,4 @@
-import { Lead, LeadPriority, LeadStatus } from '@prisma/client';
+import { Lead, LeadPriority } from '@prisma/client';
 
 // ============================================================================
 // DTOs (Data Transfer Objects)
@@ -68,7 +68,7 @@ export interface LeadResponse {
   company?: string | null;
   position?: string | null;
   source?: string | null;
-  status: LeadStatus;
+  status: string;
   priority: LeadPriority;
   score: number;
   assignedTo?: {
@@ -117,7 +117,7 @@ export interface LeadWithRelations {
   name: string;
   email: string | null;
   phone: string;
-  status: LeadStatus;
+  status: string;
   priority: LeadPriority;
   source: string | null;
   leadScore: number;

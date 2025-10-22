@@ -120,7 +120,7 @@ export class WhatsAppServiceExtended {
    */
   async sendListMessage(to: string, title: string, description: string, buttonText: string, sections: any[]): Promise<any> {
     try {
-      const result = await this.client.sendListMenu(to, title, description, buttonText, sections);
+      const result = await this.client.sendListMessage(to, { buttonText, description, title, sections });
       logger.info(`✅ Lista enviada para ${to}`);
       return result;
     } catch (error) {
@@ -156,7 +156,7 @@ export class WhatsAppServiceExtended {
    */
   async sendPoll(to: string, name: string, options: string[]): Promise<any> {
     try {
-      const result = await this.client.sendPollCreation(to, name, options);
+      const result = await this.client.sendPollMessage(to, name, options);
       logger.info(`✅ Enquete enviada para ${to}`);
       return result;
     } catch (error) {
@@ -255,7 +255,7 @@ export class WhatsAppServiceExtended {
    */
   async forwardMessage(to: string, messageId: string): Promise<void> {
     try {
-      await this.client.forwardMessages(to, [messageId]);
+      await this.client.forwardMessage(to, messageId);
       logger.info(`✅ Mensagem encaminhada para ${to}`);
     } catch (error) {
       logger.error('❌ Erro ao encaminhar mensagem:', error);
@@ -529,7 +529,7 @@ export class WhatsAppServiceExtended {
    */
   async setGroupSettings(groupId: string, onlyAdmins: boolean): Promise<void> {
     try {
-      await this.client.setGroupProperty(groupId, 'announcement', onlyAdmins);
+      await this.client.setGroupProperty(groupId, 'announcement' as any, onlyAdmins);
       logger.info(`✅ Configurações do grupo alteradas: ${groupId}`);
     } catch (error) {
       logger.error('❌ Erro ao configurar grupo:', error);
@@ -661,7 +661,7 @@ export class WhatsAppServiceExtended {
     try {
       const url = await this.client.getProfilePicFromServer(contactId);
       logger.info(`✅ Foto obtida: ${contactId}`);
-      return url;
+      return typeof url === 'string' ? url : (url as any).eurl || '';
     } catch (error) {
       logger.error('❌ Erro ao obter foto:', error);
       throw error;
@@ -1096,7 +1096,7 @@ export class WhatsAppServiceExtended {
     try {
       const buffer = await this.client.downloadMedia(messageId);
       logger.info(`✅ Mídia baixada: ${messageId}`);
-      return buffer as Buffer;
+      return buffer as unknown as Buffer;
     } catch (error) {
       logger.error('❌ Erro ao baixar mídia:', error);
       throw error;

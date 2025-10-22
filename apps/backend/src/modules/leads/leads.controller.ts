@@ -9,6 +9,7 @@ import {
   LeadIdParamSchema,
   DuplicateSearchSchema,
 } from './leads.validators';
+import { UpdateLeadDTO, CreateLeadDTO, MergeLeadsDTO } from './leads.types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import {
@@ -37,7 +38,7 @@ export class LeadsController {
    */
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const validatedData = CreateLeadSchema.parse(req.body);
+      const validatedData = CreateLeadSchema.parse(req.body) as CreateLeadDTO;
       const lead = await this.service.create(validatedData, req.user!.userId);
 
       createdResponse(res, lead, 'Lead criado com sucesso');
@@ -115,7 +116,7 @@ export class LeadsController {
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = LeadIdParamSchema.parse(req.params);
-      const validatedData = UpdateLeadSchema.parse({ ...req.body, id });
+      const validatedData = UpdateLeadSchema.parse({ ...req.body, id }) as UpdateLeadDTO;
 
       const lead = await this.service.update(id, validatedData);
 
@@ -344,7 +345,7 @@ export class LeadsController {
    */
   merge = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const validatedData = MergeLeadsSchema.parse(req.body);
+      const validatedData = MergeLeadsSchema.parse(req.body) as MergeLeadsDTO;
       const lead = await this.service.merge(validatedData);
 
       successResponse(res, lead, 'Leads mesclados com sucesso');

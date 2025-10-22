@@ -49,7 +49,7 @@ export interface ListMessageOptions {
     rows: Array<{
       id: string;
       title: string;
-      description?: string;
+      description: string;
     }>;
   }>;
 }

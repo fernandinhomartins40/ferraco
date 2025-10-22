@@ -1,4 +1,4 @@
-import { Pipeline, PipelineStage, Opportunity, OpportunityStatus } from '@prisma/client';
+import { Pipeline, PipelineStage, Opportunity } from '@prisma/client';
 
 // ============================================================================
 // DTOs (Data Transfer Objects)

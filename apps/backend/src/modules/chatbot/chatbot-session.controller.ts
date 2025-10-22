@@ -52,7 +52,7 @@ export class ChatbotSessionController {
         optionId
       );
 
-      if (result.isError) {
+      if ('isError' in result && result.isError) {
         successResponse(res, result, 'Erro de validação', 400);
         return;
       }

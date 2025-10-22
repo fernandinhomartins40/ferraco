@@ -13,6 +13,15 @@ import {
   WebhookSendGridSchema,
   CommunicationHistoryFilterSchema,
 } from './communications.validators';
+import {
+  SendWhatsAppDTO,
+  SendEmailDTO,
+  SendSMSDTO,
+  RegisterCallDTO,
+  CreateTemplateDTO,
+  UpdateTemplateDTO,
+  CommunicationHistoryFilter,
+} from './communications.types';
 import { z } from 'zod';
 import { CommunicationType } from '@prisma/client';
 import { formatZodErrors } from '../../utils/zodHelpers';
@@ -34,7 +43,7 @@ export class CommunicationsController {
 
   sendWhatsApp = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = SendWhatsAppSchema.parse(req.body);
+      const data = SendWhatsAppSchema.parse(req.body) as unknown as SendWhatsAppDTO;
       const userId = req.user!.userId;
 
       const communication = await this.service.sendWhatsApp(data, userId);
@@ -50,7 +59,7 @@ export class CommunicationsController {
 
   sendEmail = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = SendEmailSchema.parse(req.body);
+      const data = SendEmailSchema.parse(req.body) as unknown as SendEmailDTO;
       const userId = req.user!.userId;
 
       const communication = await this.service.sendEmail(data, userId);
@@ -66,7 +75,7 @@ export class CommunicationsController {
 
   sendSMS = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = SendSMSSchema.parse(req.body);
+      const data = SendSMSSchema.parse(req.body) as unknown as SendSMSDTO;
       const userId = req.user!.userId;
 
       const communication = await this.service.sendSMS(data, userId);
@@ -82,7 +91,7 @@ export class CommunicationsController {
 
   registerCall = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = RegisterCallSchema.parse(req.body);
+      const data = RegisterCallSchema.parse(req.body) as unknown as RegisterCallDTO;
       const userId = req.user!.userId;
 
       const communication = await this.service.registerCall(data, userId);
@@ -112,7 +121,7 @@ export class CommunicationsController {
 
   createTemplate = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = CreateTemplateSchema.parse(req.body);
+      const data = CreateTemplateSchema.parse(req.body) as unknown as CreateTemplateDTO;
 
       const template = await this.service.createTemplate(data);
       successResponse(res, template, 'Template created successfully', 201);
@@ -128,7 +137,7 @@ export class CommunicationsController {
   updateTemplate = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const data = UpdateTemplateSchema.partial().parse(req.body);
+      const data = UpdateTemplateSchema.partial().parse(req.body) as unknown as Partial<UpdateTemplateDTO>;
 
       const template = await this.service.updateTemplate(id, data);
       successResponse(res, template, 'Template updated successfully');
@@ -161,13 +170,13 @@ export class CommunicationsController {
       const filter = CommunicationHistoryFilterSchema.parse({
         leadId,
         ...req.query,
-      });
+      }) as unknown as CommunicationHistoryFilter;
 
       const history = await this.service.getHistory({
         ...filter,
         dateFrom: filter.dateFrom ? new Date(filter.dateFrom) : undefined,
         dateTo: filter.dateTo ? new Date(filter.dateTo) : undefined,
-      });
+      } as CommunicationHistoryFilter);
 
       successResponse(res, history, 'Communication history retrieved successfully');
     } catch (error) {
@@ -201,7 +210,7 @@ export class CommunicationsController {
 
   handleWhatsAppWebhook = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = WebhookWhatsAppSchema.parse(req.body);
+      const data = WebhookWhatsAppSchema.parse(req.body) as unknown as { messageId: string; status: string; timestamp: string; error?: string };
 
       await this.service.handleWhatsAppWebhook(data);
       successResponse(res, null, 'Webhook processed successfully');
@@ -216,7 +225,7 @@ export class CommunicationsController {
 
   handleSendGridWebhook = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = WebhookSendGridSchema.parse(req.body);
+      const data = WebhookSendGridSchema.parse(req.body) as unknown as { email: string; event: string; timestamp: number; messageId: string };
 
       await this.service.handleSendGridWebhook(data);
       successResponse(res, null, 'Webhook processed successfully');

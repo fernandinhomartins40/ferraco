@@ -1572,6 +1572,10 @@ model WhatsAppContact {
   // ✅ NOVO: Notas internas
   notes WhatsAppNote[]
 
+  // ✅ Deprecated: Conversas e mensagens (Stateless Architecture)
+  conversations WhatsAppConversation[]
+  messages      WhatsAppMessage[]
+
   @@index([phone])
   @@index([leadId])
   @@map("whatsapp_contacts")
@@ -1594,6 +1598,58 @@ model WhatsAppNote {
   @@index([userId])
   @@index([createdAt])
   @@map("whatsapp_notes")
+}
+
+// ✅ Conversas do WhatsApp (Deprecated - Stateless Architecture)
+model WhatsAppConversation {
+  id                  String   @id @default(cuid())
+  contactId           String
+  lastMessageAt       DateTime @default(now())
+  lastMessagePreview  String?
+  unreadCount         Int      @default(0)
+  isPinned            Boolean  @default(false)
+  fullySynced         Boolean  @default(false)
+  lastSyncedAt        DateTime?
+  syncedMessageCount  Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contact WhatsAppContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  messages WhatsAppMessage[]
+
+  @@index([contactId])
+  @@index([lastMessageAt])
+  @@map("whatsapp_conversations")
+}
+
+// ✅ Mensagens do WhatsApp (Deprecated - Stateless Architecture)
+model WhatsAppMessage {
+  id                String   @id @default(cuid())
+  conversationId    String
+  contactId         String
+  type              MessageType
+  content           String
+  mediaUrl          String?
+  mediaType         String?
+  fromMe            Boolean  @default(false)
+  status            MessageStatus @default(PENDING)
+  whatsappMessageId String   @unique
+  timestamp         DateTime @default(now())
+  readAt            DateTime?
+  deliveredAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  contact      WhatsAppContact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([contactId])
+  @@index([whatsappMessageId])
+  @@index([timestamp])
+  @@map("whatsapp_messages")
 }
 
 // ============================================================================

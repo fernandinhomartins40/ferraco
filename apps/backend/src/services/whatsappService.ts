@@ -803,7 +803,7 @@ class WhatsAppService {
   ): Promise<any> {
     this.validateConnection();
     const formatted = await this.formatPhoneNumber(to);
-    return await this.client!.sendLocation(formatted, latitude, longitude, name);
+    return await this.client!.sendLocation(formatted, latitude.toString(), longitude.toString(), name);
   }
 
   /**
@@ -1020,7 +1020,7 @@ class WhatsAppService {
 
       for (const recipient of recipients) {
         const formattedNumber = await this.formatPhoneNumber(recipient);
-        await this.client!.forwardMessages(formattedNumber, [messageId], false);
+        await this.client!.forwardMessage(formattedNumber, messageId);
         logger.info(`✅ Mensagem encaminhada para: ${formattedNumber}`);
       }
     } catch (error: any) {
@@ -1203,7 +1203,7 @@ class WhatsAppService {
           buttonText,
           description,
           title,
-          sections,
+          sections: sections as any,
         });
 
         logger.info(`✅ Lista enviada para ${formattedNumber}`);
@@ -1481,7 +1481,7 @@ class WhatsAppService {
       // getGroupMembers() é garantido existir no WPPConnect
       const members = await this.client!.getGroupMembers(groupId);
       logger.info(`✅ ${members.length} participantes recuperados`);
-      return members as GroupMember[];
+      return members as any;
     } catch (error: any) {
       logger.error(`❌ Erro ao listar participantes:`, error);
       throw new Error(`Erro ao listar participantes: ${error.message}`);
@@ -1587,6 +1587,7 @@ class WhatsAppService {
     // Parar Phone Watchdog
     if (this.client) {
       try {
+        // @ts-ignore
         this.client.stopPhoneWatchdog?.();
         logger.info('⏹️  Phone Watchdog interrompido');
       } catch (error) {
@@ -1671,15 +1672,16 @@ class WhatsAppService {
 
           // Extrair preview da última mensagem (tenta diferentes propriedades)
           let lastMessagePreview = null;
-          if (chat.lastMessage) {
+          const chatAny = chat as any;
+          if (chatAny.lastMessage) {
             lastMessagePreview =
-              chat.lastMessage.body ||
-              chat.lastMessage.content ||
-              (chat.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
-              (chat.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
-              (chat.lastMessage.type === 'audio' || chat.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
-              (chat.lastMessage.type === 'document' ? '📄 Documento' : null) ||
-              (chat.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
+              chatAny.lastMessage.body ||
+              chatAny.lastMessage.content ||
+              (chatAny.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
+              (chatAny.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
+              (chatAny.lastMessage.type === 'audio' || chatAny.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
+              (chatAny.lastMessage.type === 'document' ? '📄 Documento' : null) ||
+              (chatAny.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
               'Nova mensagem';
           }
 
@@ -1687,7 +1689,7 @@ class WhatsAppService {
             id: chat.id._serialized,
             phone,
             name: chat.name || contactMetadata?.name || phone,
-            profilePicUrl: chat.profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+            profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
             lastMessageAt: chat.t ? new Date(chat.t * 1000) : null,
             lastMessagePreview,
             unreadCount: chat.unreadCount || 0,
@@ -1700,7 +1702,7 @@ class WhatsAppService {
               id: phone,
               phone,
               name: chat.name || contactMetadata?.name || phone,
-              profilePicUrl: chat.profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+              profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
             },
           };
         })
@@ -1963,6 +1965,7 @@ class WhatsAppService {
     // type: 0 = desmutar, 1 = mutar por período, 2 = mutar permanente
     const time = duration || -1; // -1 = permanente
     const type = duration ? 1 : 2; // 1 = temporário, 2 = permanente
+    // @ts-ignore
     return await this.client!.sendMute(chatId, time, type);
   }
 
@@ -1975,6 +1978,7 @@ class WhatsAppService {
     this.validateConnection();
     logger.info(`🔔 Dessilenciando chat: ${chatId}`);
     // WPPConnect usa sendMute() com type = 0 para desmutar
+    // @ts-ignore
     return await this.client!.sendMute(chatId, 0, 0);
   }
 
@@ -2040,6 +2044,7 @@ class WhatsAppService {
   async leaveGroup(groupId: string): Promise<boolean> {
     this.validateConnection();
     logger.info(`👋 Saindo do grupo: ${groupId}`);
+    // @ts-ignore
     return await this.client!.leaveGroup(groupId);
   }
 

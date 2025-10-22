@@ -7,6 +7,7 @@ import {
   UserFiltersSchema,
   UserIdParamSchema,
 } from './users.validators';
+import { CreateUserDTO, UpdatePasswordDTO } from './users.types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import {
@@ -88,7 +89,7 @@ export class UsersController {
    */
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const validatedData = CreateUserSchema.parse(req.body);
+      const validatedData = CreateUserSchema.parse(req.body) as CreateUserDTO;
       const user = await this.service.create(validatedData);
 
       createdResponse(res, user, 'Usuário criado com sucesso');
@@ -187,7 +188,7 @@ export class UsersController {
   updatePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = UserIdParamSchema.parse(req.params);
-      const validatedData = UpdatePasswordSchema.parse(req.body);
+      const validatedData = UpdatePasswordSchema.parse(req.body) as UpdatePasswordDTO;
 
       await this.service.updatePassword(id, validatedData);
 

@@ -14,7 +14,7 @@
 
 import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
-import whatsappService from '../../services/whatsappService';
+import { whatsappService } from '../../services/whatsappService';
 import {
   getWhatsAppBotStepById,
   getNextWhatsAppBotStep,

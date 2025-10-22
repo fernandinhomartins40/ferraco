@@ -227,7 +227,7 @@ export class ReportsService implements IReportsService {
 
     if (data.length === 0) {
       worksheet.addRow(['No data']);
-      return (await workbook.xlsx.writeBuffer()) as Buffer;
+      return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
     }
 
     const actualColumns = columns.length > 0 ? columns : Object.keys(data[0]);
@@ -254,7 +254,7 @@ export class ReportsService implements IReportsService {
       column.width = 15;
     });
 
-    return (await workbook.xlsx.writeBuffer()) as Buffer;
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
   }
 
   private async generatePDF(

@@ -93,7 +93,7 @@ export class IntegrationsService implements IIntegrationsService {
       let result: TestIntegrationResponse;
 
       switch (integration.type) {
-        case 'WEBHOOK':
+        case 'CUSTOM':
           result = await this.testWebhook(config);
           break;
         case 'HUBSPOT':

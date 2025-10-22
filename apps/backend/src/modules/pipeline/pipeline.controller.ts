@@ -11,6 +11,15 @@ import {
   MoveOpportunitySchema,
   ReorderStageSchema,
 } from './pipeline.validators';
+import {
+  CreatePipelineDTO,
+  UpdatePipelineDTO,
+  CreateStageDTO,
+  UpdateStageDTO,
+  ReorderStageDTO,
+  CreateOpportunityDTO,
+  MoveOpportunityDTO,
+} from './pipeline.types';
 import { z } from 'zod';
 import { formatZodErrors } from '../../utils/zodHelpers';
 
@@ -56,7 +65,7 @@ export class PipelineController {
 
   createPipeline = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = CreatePipelineSchema.parse(req.body);
+      const data = CreatePipelineSchema.parse(req.body) as unknown as CreatePipelineDTO;
       const userId = req.user!.userId;
 
       const pipeline = await this.service.createPipeline(data, userId);
@@ -73,7 +82,7 @@ export class PipelineController {
   updatePipeline = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const data = UpdatePipelineSchema.partial().parse(req.body);
+      const data = UpdatePipelineSchema.partial().parse(req.body) as unknown as Partial<UpdatePipelineDTO>;
 
       const pipeline = await this.service.updatePipeline(id, data);
       successResponse(res, pipeline, 'Pipeline updated successfully');
@@ -113,7 +122,7 @@ export class PipelineController {
   createStage = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const data = CreateStageSchema.parse(req.body);
+      const data = CreateStageSchema.parse(req.body) as unknown as CreateStageDTO;
 
       const stage = await this.service.createStage(id, data);
       successResponse(res, stage, 'Stage created successfully', 201);
@@ -129,7 +138,7 @@ export class PipelineController {
   updateStage = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const data = UpdateStageSchema.parse(req.body);
+      const data = UpdateStageSchema.parse(req.body) as unknown as UpdateStageDTO;
 
       const stage = await this.service.updateStage(id, data);
       successResponse(res, stage, 'Stage updated successfully');
@@ -155,7 +164,7 @@ export class PipelineController {
   reorderStages = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const reorders = z.array(ReorderStageSchema).parse(req.body);
+      const reorders = z.array(ReorderStageSchema).parse(req.body) as unknown as ReorderStageDTO[];
 
       const stages = await this.service.reorderStages(id, reorders);
       successResponse(res, stages, 'Stages reordered successfully');
@@ -174,7 +183,7 @@ export class PipelineController {
 
   createOpportunity = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = CreateOpportunitySchema.parse(req.body);
+      const data = CreateOpportunitySchema.parse(req.body) as unknown as CreateOpportunityDTO;
       const userId = req.user!.userId;
 
       const opportunity = await this.service.createOpportunity(data, userId);
@@ -191,7 +200,7 @@ export class PipelineController {
   moveOpportunity = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const data = MoveOpportunitySchema.parse(req.body);
+      const data = MoveOpportunitySchema.parse(req.body) as unknown as MoveOpportunityDTO;
 
       const opportunity = await this.service.moveOpportunity({
         opportunityId: id,

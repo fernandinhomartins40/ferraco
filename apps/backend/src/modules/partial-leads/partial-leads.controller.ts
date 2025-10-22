@@ -8,6 +8,7 @@ import {
   SessionIdParamSchema,
   CleanupQuerySchema,
 } from './partial-leads.validators';
+import { CreatePartialLeadDTO } from './partial-leads.types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import {
@@ -78,7 +79,7 @@ export class PartialLeadsController {
    */
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const validatedData = CreatePartialLeadSchema.parse(req.body);
+      const validatedData = CreatePartialLeadSchema.parse(req.body) as CreatePartialLeadDTO;
       const partialLead = await this.service.create(validatedData);
 
       createdResponse(res, partialLead, 'Partial lead criado com sucesso');

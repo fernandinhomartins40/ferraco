@@ -621,7 +621,7 @@ router.post('/contacts/:contactId/unblock', async (req, res) => {
  */
 router.get('/contacts/:contactId/profile-pic', async (req, res) => {
   try {
-    const { contactId } = req.params;
+    const { contactId } = req.params as { contactId: string };
     const url = await req.wppExtended.getProfilePicUrl(contactId);
     res.json({ success: true, url });
   } catch (error: any) {
@@ -654,7 +654,7 @@ router.get('/chats', async (req, res) => {
  */
 router.post('/status/text', async (req, res) => {
   try {
-    const { text, options } = req.body;
+    const { text, options } = req.body as { text: string; options?: any };
     const result = await req.wppExtended.postTextStatus(text, options);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -669,7 +669,7 @@ router.post('/status/text', async (req, res) => {
  */
 router.post('/status/image', async (req, res) => {
   try {
-    const { imagePath, caption } = req.body;
+    const { imagePath, caption } = req.body as { imagePath: string; caption?: string };
     const result = await req.wppExtended.postImageStatus(imagePath, caption);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -702,7 +702,7 @@ router.get('/status', async (req, res) => {
  */
 router.put('/profile/name', async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name } = req.body as { name: string };
     await req.wppExtended.setProfileName(name);
     res.json({ success: true });
   } catch (error: any) {
@@ -717,7 +717,7 @@ router.put('/profile/name', async (req, res) => {
  */
 router.put('/profile/picture', async (req, res) => {
   try {
-    const { imagePath } = req.body;
+    const { imagePath } = req.body as { imagePath: string };
     await req.wppExtended.setProfilePicture(imagePath);
     res.json({ success: true });
   } catch (error: any) {
@@ -732,7 +732,7 @@ router.put('/profile/picture', async (req, res) => {
  */
 router.put('/profile/status', async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status } = req.body as { status: string };
     await req.wppExtended.setProfileStatus(status);
     res.json({ success: true });
   } catch (error: any) {
@@ -765,7 +765,7 @@ router.get('/profile/battery', async (req, res) => {
  */
 router.post('/business/products', async (req, res) => {
   try {
-    const { product } = req.body;
+    const { product } = req.body as { product: any };
     const result = await req.wppExtended.createProduct(product);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -794,7 +794,7 @@ router.get('/business/products', async (req, res) => {
  */
 router.post('/business/labels', async (req, res) => {
   try {
-    const { name, color } = req.body;
+    const { name, color } = req.body as { name: string; color: string };
     const result = await req.wppExtended.createLabel(name, color);
     res.json({ success: true, result });
   } catch (error: any) {
@@ -827,7 +827,7 @@ router.get('/business/labels', async (req, res) => {
  */
 router.post('/utils/download-media', async (req, res) => {
   try {
-    const { messageId } = req.body;
+    const { messageId } = req.body as { messageId: string };
     const buffer = await req.wppExtended.downloadMedia(messageId);
     res.json({ success: true, size: buffer.length });
   } catch (error: any) {
