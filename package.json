@@ -12,6 +12,7 @@
     "dev": "npm run dev --workspace=@ferraco/frontend",
     "dev:frontend": "npm run dev --workspace=@ferraco/frontend",
     "build": "npm run build --workspaces --if-present",
+    "build:backend": "npm run build --workspace=@ferraco/backend",
     "build:frontend": "npm run build --workspace=@ferraco/frontend",
     "prisma:generate": "npm run prisma:generate --workspace=@ferraco/backend",
     "lint": "npm run lint --workspaces --if-present",
