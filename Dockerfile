@@ -30,14 +30,14 @@ COPY apps ./apps
 # Instalar todas as dependências (workspaces)
 RUN npm ci
 
+# Gerar Prisma Client ANTES do build (tipos necessários para TypeScript)
+RUN npm run prisma:generate
+
 # Build do backend (deve ser executado da raiz do monorepo)
 RUN npm run build:backend
 
 # Build do frontend (deve ser executado da raiz do monorepo)
 RUN npm run build:frontend
-
-# Gerar Prisma Client do backend (executar da raiz do monorepo)
-RUN npm run prisma:generate
 
 # Stage 2: Runtime - Container Único
 FROM node:20-alpine
