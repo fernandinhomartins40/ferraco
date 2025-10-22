@@ -617,7 +617,15 @@ export class ChatbotSessionService {
       else if (userResponses.urgency?.includes('não tenho prazo')) urgency = 'sem_prazo';
 
       // Extrair produtos selecionados
+      logger.info(`🔍 Extraindo produtos selecionados para lead`);
+      logger.info(`   userResponses.selected_product_ids: ${JSON.stringify(userResponses.selected_product_ids || [])}`);
+      logger.info(`   userResponses.selected_products: ${JSON.stringify(userResponses.selected_products || [])}`);
+      logger.info(`   userResponses.selected_product: ${userResponses.selected_product || 'N/A'}`);
+
       const selectedProducts = leadTaggingService.extractSelectedProducts(userResponses);
+
+      logger.info(`✅ Produtos extraídos: ${JSON.stringify(selectedProducts)}`);
+      logger.info(`   Total de produtos: ${selectedProducts.length}`);
 
       // Determinar se deve triggerar bot WhatsApp
       const shouldTriggerWhatsAppBot = isHumanHandoff || Boolean(userResponses.wants_pricing);
