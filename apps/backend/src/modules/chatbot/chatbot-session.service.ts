@@ -584,8 +584,24 @@ export class ChatbotSessionService {
       const leadSource = conversationData.source || 'Chatbot';
       const campaign = conversationData.campaign;
 
+      // 🔍 DIAGNÓSTICO: Log do estado da sessão ANTES do parse
+      logger.info(`🔍 [DIAGNÓSTICO] Estado da sessão ANTES de extrair produtos:`);
+      logger.info(`   📋 Session ID: ${session.id}`);
+      logger.info(`   📋 sessionId (UUID): ${session.sessionId}`);
+      logger.info(`   📋 currentStepId: ${session.currentStepId}`);
+      logger.info(`   📋 userResponses (RAW do banco): ${session.userResponses}`);
+      logger.info(`   📋 Tipo de userResponses: ${typeof session.userResponses}`);
+      logger.info(`   📋 Length do JSON string: ${session.userResponses?.length || 0} caracteres`);
+
       // Parse user responses para verificar handoff humano
       const userResponses = JSON.parse(session.userResponses || '{}');
+
+      // 🔍 DIAGNÓSTICO: Log DEPOIS do parse
+      logger.info(`🔍 [DIAGNÓSTICO] userResponses APÓS JSON.parse():`);
+      logger.info(`   📊 Tipo: ${typeof userResponses}`);
+      logger.info(`   📊 Keys disponíveis: ${Object.keys(userResponses).join(', ')}`);
+      logger.info(`   📊 Conteúdo completo: ${JSON.stringify(userResponses, null, 2)}`);
+
       const isHumanHandoff = session.currentStepId === 'human_handoff';
 
       // Determinar prioridade baseado no contexto

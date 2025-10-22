@@ -258,27 +258,88 @@ export class LeadTaggingService {
    * Fallback para nomes (formato antigo com emoji)
    */
   extractSelectedProducts(userResponses: any): string[] {
+    // 🔍 DIAGNÓSTICO: Log detalhado do objeto recebido
+    logger.debug('🔍 [DIAGNÓSTICO] extractSelectedProducts() chamado');
+    logger.debug(`   📦 userResponses completo: ${JSON.stringify(userResponses, null, 2)}`);
+    logger.debug(`   📊 Tipo de userResponses: ${typeof userResponses}`);
+    logger.debug(`   📊 É null/undefined? ${userResponses == null ? 'SIM' : 'NÃO'}`);
+
     const products: string[] = [];
 
-    // NOVO: Usar IDs de produtos (mais confiável)
-    if (userResponses.selected_product_ids && Array.isArray(userResponses.selected_product_ids)) {
-      return userResponses.selected_product_ids;
-    }
+    // VERIFICAÇÃO 1: IDs de produtos (mais confiável - novo formato)
+    logger.debug('   🔍 Verificando selected_product_ids...');
+    if (userResponses.selected_product_ids) {
+      logger.debug(`      ✓ Campo existe: ${typeof userResponses.selected_product_ids}`);
+      logger.debug(`      ✓ É array? ${Array.isArray(userResponses.selected_product_ids) ? 'SIM' : 'NÃO'}`);
+      logger.debug(`      ✓ Valor: ${JSON.stringify(userResponses.selected_product_ids)}`);
 
-    // FALLBACK 1: Usar nomes de produtos já salvos (sem emoji)
-    if (userResponses.selected_products && Array.isArray(userResponses.selected_products)) {
-      userResponses.selected_products.forEach((product: string) => {
-        const cleaned = this.extractProductName(product);
-        if (cleaned && !products.includes(cleaned)) {
-          products.push(cleaned);
+      if (Array.isArray(userResponses.selected_product_ids)) {
+        logger.debug(`      ✓ Length: ${userResponses.selected_product_ids.length}`);
+        if (userResponses.selected_product_ids.length > 0) {
+          logger.info(`   ✅ [DIAGNÓSTICO] Usando selected_product_ids: ${userResponses.selected_product_ids.length} produtos`);
+          logger.info(`      Produtos (IDs): ${JSON.stringify(userResponses.selected_product_ids)}`);
+          return userResponses.selected_product_ids;
+        } else {
+          logger.warn('      ⚠️  Array vazio');
         }
-      });
+      }
+    } else {
+      logger.debug('      ✗ Campo selected_product_ids não existe ou é null/undefined');
     }
 
-    // FALLBACK 2: Produto único (formato antigo)
-    if (userResponses.selected_product && products.length === 0) {
-      const product = this.extractProductName(userResponses.selected_product);
-      if (product) products.push(product);
+    // VERIFICAÇÃO 2: Nomes de produtos (array - formato intermediário)
+    logger.debug('   🔍 Verificando selected_products (array de nomes)...');
+    if (userResponses.selected_products) {
+      logger.debug(`      ✓ Campo existe: ${typeof userResponses.selected_products}`);
+      logger.debug(`      ✓ É array? ${Array.isArray(userResponses.selected_products) ? 'SIM' : 'NÃO'}`);
+      logger.debug(`      ✓ Valor: ${JSON.stringify(userResponses.selected_products)}`);
+
+      if (Array.isArray(userResponses.selected_products)) {
+        logger.debug(`      ✓ Length: ${userResponses.selected_products.length}`);
+        userResponses.selected_products.forEach((product: string, idx: number) => {
+          logger.debug(`      🔸 Produto ${idx + 1}: "${product}"`);
+          const cleaned = this.extractProductName(product);
+          logger.debug(`         Após limpeza: "${cleaned}"`);
+          if (cleaned && !products.includes(cleaned)) {
+            products.push(cleaned);
+          }
+        });
+        if (products.length > 0) {
+          logger.info(`   ✅ [DIAGNÓSTICO] Usando selected_products: ${products.length} produtos`);
+          logger.info(`      Produtos (nomes limpos): ${JSON.stringify(products)}`);
+        }
+      }
+    } else {
+      logger.debug('      ✗ Campo selected_products não existe ou é null/undefined');
+    }
+
+    // VERIFICAÇÃO 3: Produto único (string - formato legado)
+    logger.debug('   🔍 Verificando selected_product (string única)...');
+    if (userResponses.selected_product) {
+      logger.debug(`      ✓ Campo existe: ${typeof userResponses.selected_product}`);
+      logger.debug(`      ✓ Valor: "${userResponses.selected_product}"`);
+
+      if (products.length === 0) {
+        const product = this.extractProductName(userResponses.selected_product);
+        logger.debug(`      ✓ Após limpeza: "${product}"`);
+        if (product) {
+          products.push(product);
+          logger.info(`   ✅ [DIAGNÓSTICO] Usando selected_product: "${product}"`);
+        }
+      } else {
+        logger.debug('      ℹ️  Ignorado (já encontrou produtos nos campos anteriores)');
+      }
+    } else {
+      logger.debug('      ✗ Campo selected_product não existe ou é null/undefined');
+    }
+
+    // RESULTADO FINAL
+    if (products.length === 0) {
+      logger.warn('   ⚠️  [DIAGNÓSTICO] NENHUM PRODUTO ENCONTRADO em nenhum dos campos!');
+      logger.warn('      Campos verificados: selected_product_ids, selected_products, selected_product');
+      logger.warn(`      userResponses keys disponíveis: ${Object.keys(userResponses).join(', ')}`);
+    } else {
+      logger.info(`   ✅ [DIAGNÓSTICO] Retornando ${products.length} produto(s): ${JSON.stringify(products)}`);
     }
 
     return products;
