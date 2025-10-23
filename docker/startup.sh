@@ -47,10 +47,19 @@ fi
 echo "🌐 Iniciando Nginx..."
 nginx
 
-# Iniciar Backend (TypeScript via tsx) como usuário node (segurança)
+# Iniciar Backend (código compilado) como usuário node (segurança)
 echo "⚙️  Iniciando Backend API..."
 cd /app/backend
-su node -s /bin/sh -c "npx tsx src/server.ts" &
+
+# Verificar se existe build compilado (dist/)
+if [ -d "dist" ] && [ -f "dist/server.js" ]; then
+  echo "✅ Usando código compilado (dist/server.js)"
+  su node -s /bin/sh -c "node dist/server.js" &
+else
+  echo "⚠️  Build não encontrado, usando tsx (modo desenvolvimento)"
+  su node -s /bin/sh -c "npx tsx src/server.ts" &
+fi
+
 BACKEND_PID=$!
 
 echo ""
