@@ -48,11 +48,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Instalar Nginx, OpenSSL, bash e dependências do Chromium/Puppeteer
+# Instalar Nginx, OpenSSL, bash, PostgreSQL client e dependências do Chromium/Puppeteer
 RUN apk add --no-cache \
     bash \
     nginx \
     openssl \
+    postgresql-client \
     chromium \
     nss \
     freetype \

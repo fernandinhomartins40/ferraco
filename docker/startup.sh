@@ -31,9 +31,18 @@ if [ -n "$DATABASE_URL" ]; then
 
   # Seed do banco (apenas se estiver vazio)
   echo "🌱 Verificando se precisa popular banco de dados..."
+  # Extrai host, porta, user, password e database do DATABASE_URL
+  DB_USER=$(echo "$DATABASE_URL" | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
+  DB_PASS=$(echo "$DATABASE_URL" | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
+  DB_HOST=$(echo "$DATABASE_URL" | sed -n 's/.*@\([^:]*\):.*/\1/p')
+  DB_PORT=$(echo "$DATABASE_URL" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+  DB_NAME=$(echo "$DATABASE_URL" | sed -n 's/.*\/\([^?]*\).*/\1/p')
+
   # Verifica se já existe algum usuário antes de fazer seed
-  USER_COUNT=$(echo "SELECT COUNT(*) as count FROM users;" | npx prisma db execute --stdin 2>/dev/null | grep -oE '[0-9]+' | tail -1 || echo "0")
-  if [ "$USER_COUNT" = "0" ]; then
+  USER_COUNT=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM users;" 2>/dev/null | tr -d ' ' || echo "0")
+  echo "ℹ️  Usuários encontrados no banco: $USER_COUNT"
+
+  if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
     echo "📝 Banco vazio - executando seed..."
     if npx prisma db seed 2>&1; then
       echo "✅ Seed executado com sucesso!"
