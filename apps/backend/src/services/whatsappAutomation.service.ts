@@ -463,13 +463,30 @@ export class WhatsAppAutomationService {
       const allProducts = JSON.parse(config.products || '[]');
       const productNames = JSON.parse(automation.productsToSend);
 
+      // Buscar templates (ou usar padrão)
+      const templates = JSON.parse(config.whatsappTemplates || '{}');
+      const defaultTemplates = {
+        initial: 'Olá {{lead.name}}! 👋\n\nConforme nossa conversa no site, seguem mais informações sobre o(s) produto(s) de seu interesse.',
+        product: '📦 *{{product.name}}*\n\n{{product.description}}',
+        final: '✅ Essas são as informações sobre {{products.count}} produto(s) de seu interesse!\n\n👨‍💼 Um vendedor da {{company.name}} entrará em contato em breve para esclarecer dúvidas e auxiliar na sua compra.\n\n{{company.phone}}'
+      };
+
+      const initialTemplate = templates.initial || defaultTemplates.initial;
+      const productTemplate = templates.product || defaultTemplates.product;
+      const finalTemplate = templates.final || defaultTemplates.final;
+
       let order = 1;
 
-      // 1. MENSAGEM INICIAL
+      // 1. MENSAGEM INICIAL (usando template)
+      const initialMessage = this.processTemplate(initialTemplate, {
+        lead: { name: lead.name, phone: lead.phone, email: lead.email || '' },
+        company: { name: config.companyName, phone: config.companyPhone || '' }
+      });
+
       await this.sendText(
         automationId,
         phone,
-        `Olá ${lead.name}! 👋\n\nConforme nossa conversa no site, seguem mais informações sobre o(s) produto(s) de seu interesse.`,
+        initialMessage,
         order++
       );
 
@@ -488,12 +505,20 @@ export class WhatsAppAutomationService {
 
         logger.info(`   📦 Enviando produto: ${product.name}`);
 
-        // 2.1 Descrição do produto
+        // 2.1 Descrição do produto (usando template)
         const description = product.detailedDescription || product.description;
+        const productMessage = this.processTemplate(productTemplate, {
+          product: {
+            name: product.name,
+            description: description,
+            price: product.price || 'Sob consulta'
+          }
+        });
+
         await this.sendText(
           automationId,
           phone,
-          `📦 *${product.name}*\n\n${description}`,
+          productMessage,
           order++
         );
         await this.delay(whatsappAntiSpamService.getHumanizedDelay());
@@ -532,16 +557,19 @@ export class WhatsAppAutomationService {
         }
       }
 
-      // 3. MENSAGEM FINAL
-      const companyPhone = config.companyPhone || '';
-      const finalMessage = productNames.length > 1
-        ? 'os produtos'
-        : 'o produto';
+      // 3. MENSAGEM FINAL (usando template)
+      const finalMessageText = this.processTemplate(finalTemplate, {
+        products: { count: productNames.length.toString() },
+        company: {
+          name: config.companyName,
+          phone: config.companyPhone ? `📞 Caso prefira, você pode nos ligar: ${config.companyPhone}` : ''
+        }
+      });
 
       await this.sendText(
         automationId,
         phone,
-        `✅ Essas são as informações sobre ${finalMessage} de seu interesse!\n\n👨‍💼 Um vendedor da Ferraco entrará em contato em breve para esclarecer dúvidas e auxiliar na sua compra.\n\n${companyPhone ? `📞 Caso prefira, você pode nos ligar: ${companyPhone}` : ''}`,
+        finalMessageText,
         order++
       );
 
@@ -699,6 +727,29 @@ export class WhatsAppAutomationService {
    */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Processa template substituindo variáveis
+   * Exemplo: "Olá {{lead.name}}!" -> "Olá Fernando!"
+   */
+  private processTemplate(template: string, data: any): string {
+    let processed = template;
+
+    // Substituir todas as variáveis {{key.subkey}}
+    const regex = /\{\{([^}]+)\}\}/g;
+    processed = processed.replace(regex, (match, path) => {
+      const keys = path.trim().split('.');
+      let value: any = data;
+
+      for (const key of keys) {
+        value = value?.[key];
+      }
+
+      return value !== undefined && value !== null ? String(value) : match;
+    });
+
+    return processed;
   }
 
   /**

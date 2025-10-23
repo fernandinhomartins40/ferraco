@@ -26,6 +26,13 @@ export interface ChatbotConfigData {
   products?: any[];
   faqs?: any[];
   shareLinks?: any[];
+
+  // WhatsApp Templates
+  whatsappTemplates?: {
+    initial?: string;
+    product?: string;
+    final?: string;
+  };
 }
 
 export class ChatbotService {
@@ -76,6 +83,7 @@ export class ChatbotService {
         products: JSON.parse(config.products),
         faqs: JSON.parse(config.faqs),
         shareLinks: JSON.parse(config.shareLinks),
+        whatsappTemplates: JSON.parse(config.whatsappTemplates || '{}'),
         updatedAt: config.updatedAt,
       };
     } catch (error) {
@@ -110,6 +118,7 @@ export class ChatbotService {
         products: JSON.stringify(data.products || []),
         faqs: JSON.stringify(data.faqs || []),
         shareLinks: JSON.stringify(data.shareLinks || []),
+        whatsappTemplates: JSON.stringify(data.whatsappTemplates || {}),
       };
 
       let config;
@@ -158,6 +167,7 @@ export class ChatbotService {
         products: JSON.parse(config.products),
         faqs: JSON.parse(config.faqs),
         shareLinks: JSON.parse(config.shareLinks),
+        whatsappTemplates: JSON.parse(config.whatsappTemplates || '{}'),
         updatedAt: config.updatedAt,
       };
     } catch (error) {

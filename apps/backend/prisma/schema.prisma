@@ -212,16 +212,16 @@ enum NotificationChannel {
 // ============================================================================
 
 model User {
-  id          String   @id @default(cuid())
-  username    String   @unique
-  email       String   @unique
-  password    String // Hash bcrypt
-  name        String
-  role        UserRole @default(CONSULTANT)
-  avatar      String?
-  phone       String?
-  isActive    Boolean  @default(true)
-  isFirstLogin Boolean @default(true)
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  password     String // Hash bcrypt
+  name         String
+  role         UserRole @default(CONSULTANT)
+  avatar       String?
+  phone        String?
+  isActive     Boolean  @default(true)
+  isFirstLogin Boolean  @default(true)
 
   // Timestamps
   createdAt DateTime  @default(now())
@@ -319,12 +319,12 @@ model UserPreferences {
 // ============================================================================
 
 model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  token     String    @unique
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
-  revokedAt DateTime?
+  id         String    @id @default(cuid())
+  userId     String
+  token      String    @unique
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
   lastUsedAt DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1392,6 +1392,9 @@ model ChatbotConfig {
   // Fluxo conversacional (stored as JSON)
   conversationFlow String @default("[]") // JSON array: steps do fluxo
 
+  // WhatsApp Templates (stored as JSON)
+  whatsappTemplates String @default("{}") // JSON: { initial, product, final }
+
   // Legacy fields (manter compatibilidade)
   fallbackMessage        String @default("Desculpe, não entendi. Pode reformular sua pergunta?")
   qualificationQuestions String @default("[]") // JSON array
@@ -1602,20 +1605,20 @@ model WhatsAppNote {
 
 // ✅ Conversas do WhatsApp (Deprecated - Stateless Architecture)
 model WhatsAppConversation {
-  id                  String   @id @default(cuid())
-  contactId           String
-  lastMessageAt       DateTime @default(now())
-  lastMessagePreview  String?
-  unreadCount         Int      @default(0)
-  isPinned            Boolean  @default(false)
-  fullySynced         Boolean  @default(false)
-  lastSyncedAt        DateTime?
-  syncedMessageCount  Int      @default(0)
+  id                 String    @id @default(cuid())
+  contactId          String
+  lastMessageAt      DateTime  @default(now())
+  lastMessagePreview String?
+  unreadCount        Int       @default(0)
+  isPinned           Boolean   @default(false)
+  fullySynced        Boolean   @default(false)
+  lastSyncedAt       DateTime?
+  syncedMessageCount Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  contact WhatsAppContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contact  WhatsAppContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
   messages WhatsAppMessage[]
 
   @@index([contactId])
@@ -1625,17 +1628,17 @@ model WhatsAppConversation {
 
 // ✅ Mensagens do WhatsApp (Deprecated - Stateless Architecture)
 model WhatsAppMessage {
-  id                String   @id @default(cuid())
+  id                String        @id @default(cuid())
   conversationId    String
   contactId         String
   type              MessageType
   content           String
   mediaUrl          String?
   mediaType         String?
-  fromMe            Boolean  @default(false)
+  fromMe            Boolean       @default(false)
   status            MessageStatus @default(PENDING)
-  whatsappMessageId String   @unique
-  timestamp         DateTime @default(now())
+  whatsappMessageId String        @unique
+  timestamp         DateTime      @default(now())
   readAt            DateTime?
   deliveredAt       DateTime?
 

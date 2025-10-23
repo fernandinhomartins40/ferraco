@@ -40,8 +40,10 @@ import {
   MessageCircle,
   Mail,
   Loader2,
+  ChevronDown,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { chatbotService, type Product, type FAQItem, type ShareLink } from '@/services/chatbot.service';
 import { uploadService } from '@/services/upload.service';
 import { ImageCropModal } from '@/components/ImageCropModal';
@@ -76,12 +78,21 @@ export const AdminChatbotConfig = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([]);
+  const [whatsappTemplates, setWhatsappTemplates] = useState({
+    initial: '',
+    product: '',
+    final: ''
+  });
   const [activeTab, setActiveTab] = useState('behavior');
   const [copied, setCopied] = useState('');
   const [uploadingImages, setUploadingImages] = useState<{ [key: string]: boolean }>({});
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [tempImageSrc, setTempImageSrc] = useState('');
   const [currentProductId, setCurrentProductId] = useState<string>('');
+
+  // Estados para controlar expansão de cards
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
+  const [expandedFaqs, setExpandedFaqs] = useState<Record<string, boolean>>({});
 
   // Buscar configuração do backend
   const { data: config, isLoading } = useQuery({
@@ -97,6 +108,15 @@ export const AdminChatbotConfig = () => {
       setProducts(config.products);
       setFaqs(config.faqs);
       setShareLinks(config.shareLinks);
+
+      // Templates WhatsApp com valores padrão
+      const defaultTemplates = {
+        initial: 'Olá {{lead.name}}! 👋\n\nConforme nossa conversa no site, seguem mais informações sobre o(s) produto(s) de seu interesse.',
+        product: '📦 *{{product.name}}*\n\n{{product.description}}',
+        final: '✅ Essas são as informações sobre {{products.count}} produto(s) de seu interesse!\n\n👨‍💼 Um vendedor da {{company.name}} entrará em contato em breve para esclarecer dúvidas e auxiliar na sua compra.\n\n{{company.phone}}'
+      };
+
+      setWhatsappTemplates(config.whatsappTemplates || defaultTemplates);
     }
   }, [config]);
 
@@ -135,15 +155,26 @@ export const AdminChatbotConfig = () => {
 
   // Funções para produtos
   const addProduct = () => {
-    setProducts([...products, { id: Date.now().toString(), name: '', description: '', price: '', features: [] }]);
+    const newId = Date.now().toString();
+    setProducts([...products, { id: newId, name: '', description: '', price: '', features: [] }]);
+    // Auto-expandir novo produto
+    setExpandedProducts({ ...expandedProducts, [newId]: true });
   };
 
   const removeProduct = (id: string) => {
     setProducts(products.filter((p) => p.id !== id));
+    // Remover do estado de expansão
+    const newExpanded = { ...expandedProducts };
+    delete newExpanded[id];
+    setExpandedProducts(newExpanded);
   };
 
   const updateProduct = (id: string, field: string, value: any) => {
     setProducts(products.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+  };
+
+  const toggleProduct = (id: string) => {
+    setExpandedProducts(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   // ===== NOVAS FUNÇÕES PARA AUTOMAÇÃO WHATSAPP =====
@@ -273,15 +304,26 @@ export const AdminChatbotConfig = () => {
 
   // Funções para FAQ
   const addFAQ = () => {
-    setFaqs([...faqs, { id: Date.now().toString(), question: '', answer: '' }]);
+    const newId = Date.now().toString();
+    setFaqs([...faqs, { id: newId, question: '', answer: '' }]);
+    // Auto-expandir nova FAQ
+    setExpandedFaqs({ ...expandedFaqs, [newId]: true });
   };
 
   const removeFAQ = (id: string) => {
     setFaqs(faqs.filter((f) => f.id !== id));
+    // Remover do estado de expansão
+    const newExpanded = { ...expandedFaqs };
+    delete newExpanded[id];
+    setExpandedFaqs(newExpanded);
   };
 
   const updateFAQ = (id: string, field: string, value: string) => {
     setFaqs(faqs.map((f) => (f.id === id ? { ...f, [field]: value } : f)));
+  };
+
+  const toggleFAQ = (id: string) => {
+    setExpandedFaqs(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   // Funções para links
@@ -342,6 +384,7 @@ export const AdminChatbotConfig = () => {
       products,
       faqs,
       shareLinks,
+      whatsappTemplates,
     });
   };
 
@@ -446,9 +489,9 @@ export const AdminChatbotConfig = () => {
           </AlertDescription>
         </Alert>
 
-        {/* Tabs de Configuração - CONTEÚDO MANTIDO IDÊNTICO AO ORIGINAL */}
+        {/* Tabs de Configuração */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="behavior" className="gap-2">
               <Bot className="h-4 w-4" />
               Comportamento
@@ -464,6 +507,10 @@ export const AdminChatbotConfig = () => {
             <TabsTrigger value="faq" className="gap-2">
               <HelpCircle className="h-4 w-4" />
               FAQ
+            </TabsTrigger>
+            <TabsTrigger value="whatsapp-templates" className="gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Templates
             </TabsTrigger>
             <TabsTrigger value="links" className="gap-2">
               <Share2 className="h-4 w-4" />
@@ -696,21 +743,41 @@ export const AdminChatbotConfig = () => {
                   </div>
                 ) : (
                   products.map((product, index) => (
-                    <Card key={product.id} className="border-2">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">Produto {index + 1}</CardTitle>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeProduct(product.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
+                    <Collapsible
+                      key={product.id}
+                      open={expandedProducts[product.id] ?? false}
+                      onOpenChange={() => toggleProduct(product.id)}
+                    >
+                      <Card className="border-2">
+                        <CollapsibleTrigger asChild>
+                          <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <ChevronDown
+                                  className={`h-5 w-5 transition-transform duration-200 ${
+                                    expandedProducts[product.id] ? '' : '-rotate-90'
+                                  }`}
+                                />
+                                <CardTitle className="text-lg">
+                                  {product.name || `Produto ${index + 1}`}
+                                </CardTitle>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeProduct(product.id);
+                                }}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardHeader>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <CardContent className="space-y-4 pt-0">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>Nome do Produto *</Label>
@@ -910,8 +977,10 @@ export const AdminChatbotConfig = () => {
                             </Button>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
                   ))
                 )}
               </CardContent>
@@ -944,21 +1013,41 @@ export const AdminChatbotConfig = () => {
                   </div>
                 ) : (
                   faqs.map((faq, index) => (
-                    <Card key={faq.id} className="border-2">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">Pergunta {index + 1}</CardTitle>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeFAQ(faq.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
+                    <Collapsible
+                      key={faq.id}
+                      open={expandedFaqs[faq.id] ?? false}
+                      onOpenChange={() => toggleFAQ(faq.id)}
+                    >
+                      <Card className="border-2">
+                        <CollapsibleTrigger asChild>
+                          <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <ChevronDown
+                                  className={`h-5 w-5 transition-transform duration-200 ${
+                                    expandedFaqs[faq.id] ? '' : '-rotate-90'
+                                  }`}
+                                />
+                                <CardTitle className="text-lg">
+                                  {faq.question || `Pergunta ${index + 1}`}
+                                </CardTitle>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeFAQ(faq.id);
+                                }}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardHeader>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <CardContent className="space-y-4 pt-0">
                         <div className="space-y-2">
                           <Label>Pergunta *</Label>
                           <Input
@@ -977,15 +1066,195 @@ export const AdminChatbotConfig = () => {
                             rows={4}
                           />
                         </div>
-                      </CardContent>
-                    </Card>
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
                   ))
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* ABA 5: Links de Compartilhamento */}
+          {/* ABA 5: Templates WhatsApp */}
+          <TabsContent value="whatsapp-templates" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Templates de Mensagens WhatsApp</CardTitle>
+                <CardDescription>
+                  Personalize as mensagens enviadas automaticamente quando um lead manifesta interesse em produtos
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Template: Mensagem Inicial */}
+                <Card className="border-2 border-green-200 bg-green-50/50">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5 text-green-600" />
+                      <CardTitle className="text-lg">Mensagem Inicial</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Primeira mensagem enviada ao lead após manifestar interesse
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="template-initial">Conteúdo da Mensagem</Label>
+                      <Textarea
+                        id="template-initial"
+                        value={whatsappTemplates.initial}
+                        onChange={(e) => setWhatsappTemplates({ ...whatsappTemplates, initial: e.target.value })}
+                        placeholder="Digite a mensagem inicial..."
+                        rows={5}
+                        className="bg-white font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Variáveis disponíveis: <code className="bg-muted px-1 py-0.5 rounded">{'{{lead.name}}'}</code>,{' '}
+                        <code className="bg-muted px-1 py-0.5 rounded">{'{{company.name}}'}</code>
+                      </p>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="space-y-2">
+                      <Label>Preview</Label>
+                      <div className="bg-white border-2 border-green-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold">
+                            {companyData.name?.[0] || 'F'}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-green-900">{companyData.name || 'Sua Empresa'}</p>
+                            <div className="mt-2 bg-green-100 rounded-lg p-3 text-sm whitespace-pre-wrap">
+                              {whatsappTemplates.initial
+                                .replace(/\{\{lead\.name\}\}/g, 'Fernando Martins')
+                                .replace(/\{\{company\.name\}\}/g, companyData.name || 'Sua Empresa')}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Template: Descrição do Produto */}
+                <Card className="border-2 border-blue-200 bg-blue-50/50">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-blue-600" />
+                      <CardTitle className="text-lg">Descrição do Produto</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Template usado para cada produto de interesse do lead
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="template-product">Conteúdo da Mensagem</Label>
+                      <Textarea
+                        id="template-product"
+                        value={whatsappTemplates.product}
+                        onChange={(e) => setWhatsappTemplates({ ...whatsappTemplates, product: e.target.value })}
+                        placeholder="Digite o template do produto..."
+                        rows={4}
+                        className="bg-white font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Variáveis disponíveis: <code className="bg-muted px-1 py-0.5 rounded">{'{{product.name}}'}</code>,{' '}
+                        <code className="bg-muted px-1 py-0.5 rounded">{'{{product.description}}'}</code>,{' '}
+                        <code className="bg-muted px-1 py-0.5 rounded">{'{{product.price}}'}</code>
+                      </p>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="space-y-2">
+                      <Label>Preview</Label>
+                      <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                            {companyData.name?.[0] || 'F'}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-blue-900">{companyData.name || 'Sua Empresa'}</p>
+                            <div className="mt-2 bg-blue-100 rounded-lg p-3 text-sm whitespace-pre-wrap">
+                              {whatsappTemplates.product
+                                .replace(/\{\{product\.name\}\}/g, 'Bebedouro Automático')
+                                .replace(/\{\{product\.description\}\}/g, 'Bebedouro automático para bovinos, capacidade de 500 litros.')
+                                .replace(/\{\{product\.price\}\}/g, 'R$ 1.200,00')}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Template: Mensagem Final */}
+                <Card className="border-2 border-purple-200 bg-purple-50/50">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-purple-600" />
+                      <CardTitle className="text-lg">Mensagem Final</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Mensagem de encerramento após enviar todos os produtos
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="template-final">Conteúdo da Mensagem</Label>
+                      <Textarea
+                        id="template-final"
+                        value={whatsappTemplates.final}
+                        onChange={(e) => setWhatsappTemplates({ ...whatsappTemplates, final: e.target.value })}
+                        placeholder="Digite a mensagem final..."
+                        rows={5}
+                        className="bg-white font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Variáveis disponíveis: <code className="bg-muted px-1 py-0.5 rounded">{'{{products.count}}'}</code>,{' '}
+                        <code className="bg-muted px-1 py-0.5 rounded">{'{{company.name}}'}</code>,{' '}
+                        <code className="bg-muted px-1 py-0.5 rounded">{'{{company.phone}}'}</code>
+                      </p>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="space-y-2">
+                      <Label>Preview</Label>
+                      <div className="bg-white border-2 border-purple-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                            {companyData.name?.[0] || 'F'}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-purple-900">{companyData.name || 'Sua Empresa'}</p>
+                            <div className="mt-2 bg-purple-100 rounded-lg p-3 text-sm whitespace-pre-wrap">
+                              {whatsappTemplates.final
+                                .replace(/\{\{products\.count\}\}/g, '2')
+                                .replace(/\{\{company\.name\}\}/g, companyData.name || 'Sua Empresa')
+                                .replace(/\{\{company\.phone\}\}/g, companyData.phone || '(11) 99999-9999')}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Info Box */}
+                <Alert className="border-blue-200 bg-blue-50">
+                  <MessageCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    <strong>Como funciona:</strong> Quando um lead manifesta interesse em produtos via chatbot,
+                    o sistema usa estes templates para enviar automaticamente as informações via WhatsApp.
+                    Use variáveis <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">{'{{exemplo}}'}</code> para
+                    personalizar as mensagens com dados do lead, produto e empresa.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ABA 6: Links de Compartilhamento */}
           <TabsContent value="links" className="space-y-6">
             <Card>
               <CardHeader>

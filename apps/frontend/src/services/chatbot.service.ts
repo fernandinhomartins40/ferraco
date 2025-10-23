@@ -93,7 +93,14 @@ export interface ChatbotConfigResponse {
   products: Product[];
   faqs: FAQItem[];
   shareLinks: ShareLink[];
+  whatsappTemplates?: WhatsAppTemplates;
   updatedAt: string;
+}
+
+export interface WhatsAppTemplates {
+  initial: string;
+  product: string;
+  final: string;
 }
 
 export interface ChatbotConfigUpdate {
@@ -114,6 +121,7 @@ export interface ChatbotConfigUpdate {
   products?: Product[];
   faqs?: FAQItem[];
   shareLinks?: ShareLink[];
+  whatsappTemplates?: WhatsAppTemplates;
 }
 
 export const chatbotService = {

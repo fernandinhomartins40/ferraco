@@ -1,13 +1,22 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
 import {
   whatsappAutomationService,
   type WhatsAppAutomationStats,
   type WhatsAppAutomation,
+  type WhatsAppAutomationDetail,
 } from '../../services/whatsappAutomation.service';
 import {
   CheckCircle2,
@@ -19,13 +28,25 @@ import {
   AlertTriangle,
   RotateCcw,
   Eye,
-  TrendingUp
+  TrendingUp,
+  X,
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  Package,
+  FileText,
+  Image as ImageIcon,
+  Video,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function WhatsAppAutomations() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedAutomation, setSelectedAutomation] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Query: Estatísticas
   const { data: stats, isLoading: statsLoading } = useQuery<WhatsAppAutomationStats>({
@@ -44,20 +65,49 @@ export default function WhatsAppAutomations() {
     refetchInterval: 10000
   });
 
+  // Query: Detalhes da automação selecionada
+  const { data: automationDetails, isLoading: detailsLoading } = useQuery<WhatsAppAutomationDetail>({
+    queryKey: ['whatsapp-automation-details', selectedAutomation],
+    queryFn: () => whatsappAutomationService.getById(selectedAutomation!),
+    enabled: !!selectedAutomation,
+  });
+
   // Mutation: Retry
   const retryMutation = useMutation({
     mutationFn: ({ id, resetMessages }: { id: string; resetMessages: boolean }) =>
       whatsappAutomationService.retry(id, resetMessages),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-automations'] });
+      toast({
+        title: 'Automação retentada',
+        description: 'A automação foi adicionada à fila para reprocessamento.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao retentar',
+        description: error.message || 'Não foi possível retentar a automação.',
+        variant: 'destructive',
+      });
     }
   });
 
   // Mutation: Retry All Failed
   const retryAllFailedMutation = useMutation({
     mutationFn: () => whatsappAutomationService.retryAllFailed(),
-    onSuccess: () => {
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-automations'] });
+      toast({
+        title: 'Automações retentadas',
+        description: `${count} automação(ões) foram adicionadas à fila.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao retentar',
+        description: error.message || 'Não foi possível retentar as automações.',
+        variant: 'destructive',
+      });
     }
   });
 
@@ -299,7 +349,10 @@ export default function WhatsAppAutomations() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setSelectedAutomation(automation.id)}
+                                onClick={() => {
+                                  setSelectedAutomation(automation.id);
+                                  setDetailsOpen(true);
+                                }}
                                 title="Ver detalhes"
                               >
                                 <Eye className="h-4 w-4" />
@@ -317,8 +370,13 @@ export default function WhatsAppAutomations() {
                                   }
                                   disabled={retryMutation.isPending}
                                   title="Retentar"
+                                  className={retryMutation.isPending ? 'opacity-50' : ''}
                                 >
-                                  <RotateCcw className="h-4 w-4" />
+                                  {retryMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RotateCcw className="h-4 w-4" />
+                                  )}
                                 </Button>
                               )}
                             </div>
@@ -355,6 +413,241 @@ export default function WhatsAppAutomations() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Sheet de Detalhes */}
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          {detailsLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : automationDetails ? (
+            <>
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Detalhes da Automação
+                </SheetTitle>
+                <SheetDescription>
+                  Informações completas sobre o envio automático via WhatsApp
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="space-y-6 mt-6">
+                {/* Status */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      {getStatusIcon(automationDetails.automation.status)}
+                      Status da Automação
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Status:</span>
+                      <Badge variant={automationDetails.automation.status === 'SENT' ? 'default' : automationDetails.automation.status === 'FAILED' ? 'destructive' : 'secondary'}>
+                        {getStatusLabel(automationDetails.automation.status)}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Progresso:</span>
+                      <span className="text-sm font-medium">
+                        {automationDetails.automation.messagesSent}/{automationDetails.automation.messagesTotal} mensagens
+                      </span>
+                    </div>
+                    {automationDetails.automation.error && (
+                      <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                        <p className="text-sm text-destructive font-medium">Erro:</p>
+                        <p className="text-sm text-destructive/80 mt-1">{automationDetails.automation.error}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Informações do Lead */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Informações do Lead
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{automationDetails.automation.lead?.name || 'Sem nome'}</span>
+                    </div>
+                    {automationDetails.automation.lead?.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{automationDetails.automation.lead.phone}</span>
+                      </div>
+                    )}
+                    {automationDetails.automation.lead?.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{automationDetails.automation.lead.email}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Produtos */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Produtos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {JSON.parse(automationDetails.automation.productsToSend || '[]').map((product: string, idx: number) => (
+                        <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{product}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Mensagens */}
+                {automationDetails.automation.messages && automationDetails.automation.messages.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Mensagens Enviadas
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {automationDetails.automation.messages.map((msg, idx) => (
+                          <div key={msg.id} className="border rounded-md p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {msg.messageType === 'text' && <FileText className="h-4 w-4 text-muted-foreground" />}
+                                {msg.messageType === 'image' && <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+                                {msg.messageType === 'video' && <Video className="h-4 w-4 text-muted-foreground" />}
+                                <span className="text-xs font-medium">Mensagem {msg.order}</span>
+                              </div>
+                              <Badge variant={msg.status === 'SENT' ? 'default' : 'secondary'} className="text-xs">
+                                {msg.status === 'SENT' ? 'Enviada' : 'Pendente'}
+                              </Badge>
+                            </div>
+                            {msg.content && (
+                              <p className="text-sm text-muted-foreground">{msg.content.substring(0, 100)}{msg.content.length > 100 ? '...' : ''}</p>
+                            )}
+                            {msg.mediaUrl && (
+                              <p className="text-xs text-muted-foreground">Mídia: {msg.mediaUrl}</p>
+                            )}
+                            {msg.sentAt && (
+                              <p className="text-xs text-muted-foreground">
+                                Enviada em: {new Date(msg.sentAt).toLocaleString('pt-BR')}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Timeline */}
+                {automationDetails.timeline && automationDetails.timeline.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Linha do Tempo
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {automationDetails.timeline.map((event, idx) => (
+                          <div key={idx} className="flex gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className="h-2 w-2 rounded-full bg-primary" />
+                              {idx < automationDetails.timeline.length - 1 && (
+                                <div className="w-px h-full bg-border" />
+                              )}
+                            </div>
+                            <div className="flex-1 pb-4">
+                              <p className="text-sm font-medium">{event.event}</p>
+                              <p className="text-xs text-muted-foreground">{event.details}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(event.timestamp).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Datas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Datas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Criada:</span>
+                      <span>{new Date(automationDetails.automation.createdAt).toLocaleString('pt-BR')}</span>
+                    </div>
+                    {automationDetails.automation.startedAt && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Iniciada:</span>
+                        <span>{new Date(automationDetails.automation.startedAt).toLocaleString('pt-BR')}</span>
+                      </div>
+                    )}
+                    {automationDetails.automation.completedAt && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Completada:</span>
+                        <span>{new Date(automationDetails.automation.completedAt).toLocaleString('pt-BR')}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Ações */}
+                {(automationDetails.automation.status === 'FAILED' || automationDetails.automation.status === 'PENDING') && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        retryMutation.mutate({
+                          id: automationDetails.automation.id,
+                          resetMessages: automationDetails.automation.status === 'FAILED'
+                        });
+                        setDetailsOpen(false);
+                      }}
+                      disabled={retryMutation.isPending}
+                      className="flex-1"
+                    >
+                      {retryMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                      )}
+                      Retentar Automação
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <AlertTriangle className="h-12 w-12 mb-4" />
+              <p>Não foi possível carregar os detalhes</p>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </AdminLayout>
   );
 }
