@@ -88,7 +88,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
           {products.map((product, index) => {
             const defaultProduct = defaultProducts[index];
             return (
-              <Card key={product.id || index} className="shadow-elegant hover:shadow-glow transition-smooth group hover:scale-105 overflow-hidden">
+              <Card key={product.id || index} className="shadow-elegant hover:shadow-glow transition-smooth group hover:scale-105 overflow-hidden flex flex-col p-0">
                 {/* Image with Icon Tag */}
                 <div className="relative aspect-square overflow-hidden">
                   <img
@@ -109,8 +109,8 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
                     {product.description}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 mb-6">
+                <CardContent className="flex flex-col flex-1">
+                  <ul className="space-y-2 mb-6 flex-1">
                     {(product.benefits || defaultProduct?.features || []).map((item, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-muted-foreground">
                         <span className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></span>
@@ -120,7 +120,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
                   </ul>
                   <Button
                     onClick={onLeadModalOpen}
-                    className="w-full font-semibold transition-smooth hover:scale-105"
+                    className="w-full font-semibold transition-smooth hover:scale-105 mt-auto"
                     variant="default"
                     style={product.cta?.href ? {} : undefined}
                   >
