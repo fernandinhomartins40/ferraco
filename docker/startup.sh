@@ -35,7 +35,24 @@ if [ -n "$DATABASE_URL" ]; then
   USER_COUNT=$(echo "SELECT COUNT(*) as count FROM users;" | npx prisma db execute --stdin 2>/dev/null | grep -oE '[0-9]+' | tail -1 || echo "0")
   if [ "$USER_COUNT" = "0" ]; then
     echo "📝 Banco vazio - executando seed..."
-    npx prisma db seed 2>&1 || echo "⚠️  Aviso: Falha no seed"
+    if npx prisma db seed 2>&1; then
+      echo "✅ Seed executado com sucesso!"
+      echo ""
+      echo "========================================="
+      echo "🔑 CREDENCIAIS DE ACESSO CRIADAS:"
+      echo "========================================="
+      echo "👨‍💼 Admin:      admin@ferraco.com / Admin@123456"
+      echo "👨‍💼 Manager:    manager@ferraco.com / User@123456"
+      echo "👨‍💼 Vendedor:   vendedor@ferraco.com / User@123456"
+      echo "👨‍💼 Consultor:  consultor@ferraco.com / User@123456"
+      echo "👨‍💼 Suporte:    suporte@ferraco.com / User@123456"
+      echo "========================================="
+      echo ""
+    else
+      echo "❌ ERRO: Falha ao executar seed!"
+      echo "⚠️  O sistema pode não ter usuários criados!"
+      exit 1
+    fi
   else
     echo "✅ Banco já populado ($USER_COUNT usuários) - pulando seed"
   fi

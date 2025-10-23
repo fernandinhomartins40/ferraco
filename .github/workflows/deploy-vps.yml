@@ -203,16 +203,15 @@ jobs:
           # Limpar cache de build (layers intermediárias) - AGRESSIVO
           docker builder prune -a -f 2>/dev/null || true
 
-          # Limpar volumes órfãos
-          docker volume prune -f 2>/dev/null || true
-
           # Limpar networks órfãs
           docker network prune -f 2>/dev/null || true
 
-          # Limpeza geral de sistema - AGRESSIVA (remove tudo não usado)
-          docker system prune -a -f 2>/dev/null || true
+          # IMPORTANTE: NÃO limpar volumes (preserva banco de dados PostgreSQL)
+          echo "⚠️  Preservando volumes do PostgreSQL (banco de dados mantido)"
+          # docker volume prune -f 2>/dev/null || true  # DESABILITADO - remove banco!
+          # docker system prune -a -f 2>/dev/null || true  # DESABILITADO - remove volumes!
 
-          echo "✅ Limpeza completa finalizada - garantindo rebuild 100% zero cache"
+          echo "✅ Limpeza completa finalizada - preservando banco de dados PostgreSQL"
 
           # Backup e preparação
           if [ -d "${{ env.APP_DIR }}" ]; then
