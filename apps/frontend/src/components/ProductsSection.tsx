@@ -90,11 +90,11 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
             return (
               <Card key={product.id || index} className="shadow-elegant hover:shadow-glow transition-smooth group hover:scale-105 overflow-hidden">
                 {/* Image with Icon Tag */}
-                <div className="relative h-48 overflow-hidden">
+                <div className="relative aspect-square overflow-hidden">
                   <img
                     src={product.image?.url || product.image || defaultProduct?.image}
                     alt={product.image?.alt || product.name || defaultProduct?.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-smooth"
+                    className="w-full h-full object-contain group-hover:scale-110 transition-smooth"
                   />
                   <div className="absolute top-4 right-4 w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-lg">
                     {renderIcon(product.icon, defaultProduct?.icon)}
