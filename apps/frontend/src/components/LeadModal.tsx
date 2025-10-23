@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/useDebounce";
 import { partialLeadService } from "@/services/partialLeadService";
+import { publicLeadService } from "@/services/publicLeadService";
 
 interface LeadModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim() || !formData.phone.trim()) {
       toast({
         title: "Campos obrigatórios",
@@ -59,11 +60,18 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
     setIsSubmitting(true);
 
     try {
-      // Save lead to localStorage
-      const { leadStorage } = await import('@/utils/leadStorage');
-      leadStorage.addLead(formData.name, formData.phone);
+      // 1. Criar lead no backend (PostgreSQL)
+      await publicLeadService.create({
+        name: formData.name,
+        phone: formData.phone,
+        source: 'modal-orcamento',
+      });
 
-      // Marcar lead parcial como convertido
+      // 2. Salvar também no localStorage como fallback/cache
+      const { leadStorage } = await import('@/utils/leadStorage');
+      leadStorage.addLead(formData.name, formData.phone, 'modal-orcamento');
+
+      // 3. Marcar lead parcial como convertido
       await partialLeadService.markAsConverted('modal-orcamento');
 
       toast({
@@ -75,12 +83,29 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
       // Reset form and close modal
       setFormData({ name: "", phone: "" });
       onClose();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao enviar seus dados. Tente novamente.",
-        variant: "destructive"
-      });
+    } catch (error: any) {
+      // Se falhar a API, tentar salvar apenas no localStorage
+      try {
+        const { leadStorage } = await import('@/utils/leadStorage');
+        leadStorage.addLead(formData.name, formData.phone, 'modal-orcamento');
+
+        await partialLeadService.markAsConverted('modal-orcamento');
+
+        toast({
+          title: "Dados salvos localmente",
+          description: "Seus dados foram salvos. Enviaremos quando possível.",
+          variant: "default"
+        });
+
+        setFormData({ name: "", phone: "" });
+        onClose();
+      } catch (fallbackError) {
+        toast({
+          title: "Erro",
+          description: error.message || "Ocorreu um erro ao enviar seus dados. Tente novamente.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }

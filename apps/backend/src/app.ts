@@ -12,6 +12,7 @@ import { logger } from './utils/logger';
 import authRoutes from './modules/auth/auth.routes';
 import usersRoutes from './modules/users/users.routes';
 import leadsRoutes from './modules/leads/leads.routes';
+import publicLeadsRoutes from './modules/leads/public-leads.routes';
 import partialLeadsRoutes from './modules/partial-leads/partial-leads.routes';
 import notesRoutes from './modules/notes/notes.routes';
 import tagsRoutes from './modules/tags/tags.routes';
@@ -73,6 +74,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/auth`, authRoutes);
   app.use(`${API_PREFIX}/users`, usersRoutes);
   app.use(`${API_PREFIX}/leads`, leadsRoutes);
+  app.use(`${API_PREFIX}/public/leads`, publicLeadsRoutes); // Public endpoint for landing page
   app.use(`${API_PREFIX}/partial-leads`, partialLeadsRoutes);
   app.use(`${API_PREFIX}/notes`, notesRoutes);
   app.use(`${API_PREFIX}/tags`, tagsRoutes);
