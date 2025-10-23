@@ -182,7 +182,7 @@ export class WhatsAppAutomationController {
   retry = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = AutomationIdParamSchema.parse(req.params);
-      const { resetMessages } = RetryAutomationSchema.parse(req.body);
+      const { resetMessages } = RetryAutomationSchema.parse(req.body || {});
 
       await whatsappAutomationService.retryAutomation(id, resetMessages);
 
