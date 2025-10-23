@@ -14,6 +14,8 @@ import { MessageTemplate, WhatsAppConfig, Communication, Lead } from '@/types/le
 import { communicationStorage } from '@/utils/communicationStorage';
 import { leadStorage } from '@/utils/leadStorage';
 import { useToast } from '@/hooks/use-toast';
+import { VariableInserter, DEFAULT_LEAD_VARIABLES } from '@/components/ui/variable-inserter';
+import { useVariableInsertion } from '@/hooks/useVariableInsertion';
 
 const WhatsAppCommunication = () => {
   const { toast } = useToast();
@@ -34,6 +36,9 @@ const WhatsAppCommunication = () => {
     selectedLeads: [] as string[],
     customVariables: {} as Record<string, string>,
   });
+
+  // Variable Insertion Hook
+  const templateVariableInsertion = useVariableInsertion();
 
   useEffect(() => {
     loadData();
@@ -600,14 +605,26 @@ const WhatsAppCommunication = () => {
             <div>
               <label className="text-sm font-medium">Conteúdo</label>
               <Textarea
+                ref={templateVariableInsertion.textareaRef}
                 value={newTemplate.content}
                 onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
-                placeholder="Use {{nome}} para variáveis. Ex: Olá {{nome}}! Como posso ajudar?"
+                onBlur={templateVariableInsertion.handleBlur}
+                placeholder="Digite sua mensagem ou use os botões abaixo para inserir variáveis"
                 rows={6}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Use {`{{variavel}}`} para criar variáveis dinâmicas
-              </p>
+
+              <VariableInserter
+                variables={DEFAULT_LEAD_VARIABLES}
+                onInsert={(variable) =>
+                  templateVariableInsertion.insertVariable(
+                    variable,
+                    newTemplate.content,
+                    (newValue) => setNewTemplate({ ...newTemplate, content: newValue })
+                  )
+                }
+                variant="badges"
+                className="mt-2"
+              />
             </div>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>

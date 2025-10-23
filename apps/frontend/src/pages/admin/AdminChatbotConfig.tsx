@@ -14,6 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { VariableInserter, DEFAULT_LEAD_VARIABLES, PRODUCT_VARIABLES, type Variable } from '@/components/ui/variable-inserter';
+import { useVariableInsertion } from '@/hooks/useVariableInsertion';
 import {
   Select,
   SelectContent,
@@ -93,6 +95,28 @@ export const AdminChatbotConfig = () => {
   // Estados para controlar expansão de cards
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
   const [expandedFaqs, setExpandedFaqs] = useState<Record<string, boolean>>({});
+
+  // Variable Insertion Hooks - um para cada template WhatsApp
+  const initialTemplateInsertion = useVariableInsertion();
+  const productTemplateInsertion = useVariableInsertion();
+  const finalTemplateInsertion = useVariableInsertion();
+
+  // Variáveis customizadas para templates WhatsApp
+  const WHATSAPP_LEAD_VARIABLES: Variable[] = [
+    { key: 'lead.name', label: 'Nome do Lead', description: 'Nome do lead/cliente' },
+  ];
+
+  const WHATSAPP_PRODUCT_VARIABLES: Variable[] = [
+    { key: 'product.name', label: 'Nome do Produto', description: 'Nome do produto' },
+    { key: 'product.description', label: 'Descrição', description: 'Descrição do produto' },
+    { key: 'product.price', label: 'Preço', description: 'Preço do produto' },
+  ];
+
+  const WHATSAPP_COMPANY_VARIABLES: Variable[] = [
+    { key: 'company.name', label: 'Nome da Empresa', description: 'Nome da empresa' },
+    { key: 'company.phone', label: 'Telefone', description: 'Telefone da empresa' },
+    { key: 'products.count', label: 'Qtd Produtos', description: 'Quantidade de produtos' },
+  ];
 
   // Buscar configuração do backend
   const { data: config, isLoading } = useQuery({
@@ -1101,17 +1125,28 @@ export const AdminChatbotConfig = () => {
                     <div className="space-y-2">
                       <Label htmlFor="template-initial">Conteúdo da Mensagem</Label>
                       <Textarea
+                        ref={initialTemplateInsertion.textareaRef}
                         id="template-initial"
                         value={whatsappTemplates.initial}
                         onChange={(e) => setWhatsappTemplates({ ...whatsappTemplates, initial: e.target.value })}
-                        placeholder="Digite a mensagem inicial..."
+                        onBlur={initialTemplateInsertion.handleBlur}
+                        placeholder="Digite a mensagem ou use os botões abaixo..."
                         rows={5}
                         className="bg-white font-mono text-sm"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Variáveis disponíveis: <code className="bg-muted px-1 py-0.5 rounded">{'{{lead.name}}'}</code>,{' '}
-                        <code className="bg-muted px-1 py-0.5 rounded">{'{{company.name}}'}</code>
-                      </p>
+
+                      <VariableInserter
+                        variables={[...WHATSAPP_LEAD_VARIABLES, ...WHATSAPP_COMPANY_VARIABLES]}
+                        onInsert={(variable) =>
+                          initialTemplateInsertion.insertVariable(
+                            variable,
+                            whatsappTemplates.initial,
+                            (newValue) => setWhatsappTemplates({ ...whatsappTemplates, initial: newValue })
+                          )
+                        }
+                        variant="badges"
+                        className="mt-1"
+                      />
                     </div>
 
                     {/* Preview */}
@@ -1151,18 +1186,28 @@ export const AdminChatbotConfig = () => {
                     <div className="space-y-2">
                       <Label htmlFor="template-product">Conteúdo da Mensagem</Label>
                       <Textarea
+                        ref={productTemplateInsertion.textareaRef}
                         id="template-product"
                         value={whatsappTemplates.product}
                         onChange={(e) => setWhatsappTemplates({ ...whatsappTemplates, product: e.target.value })}
-                        placeholder="Digite o template do produto..."
+                        onBlur={productTemplateInsertion.handleBlur}
+                        placeholder="Digite o template do produto ou use os botões abaixo..."
                         rows={4}
                         className="bg-white font-mono text-sm"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Variáveis disponíveis: <code className="bg-muted px-1 py-0.5 rounded">{'{{product.name}}'}</code>,{' '}
-                        <code className="bg-muted px-1 py-0.5 rounded">{'{{product.description}}'}</code>,{' '}
-                        <code className="bg-muted px-1 py-0.5 rounded">{'{{product.price}}'}</code>
-                      </p>
+
+                      <VariableInserter
+                        variables={WHATSAPP_PRODUCT_VARIABLES}
+                        onInsert={(variable) =>
+                          productTemplateInsertion.insertVariable(
+                            variable,
+                            whatsappTemplates.product,
+                            (newValue) => setWhatsappTemplates({ ...whatsappTemplates, product: newValue })
+                          )
+                        }
+                        variant="badges"
+                        className="mt-1"
+                      />
                     </div>
 
                     {/* Preview */}
@@ -1203,18 +1248,28 @@ export const AdminChatbotConfig = () => {
                     <div className="space-y-2">
                       <Label htmlFor="template-final">Conteúdo da Mensagem</Label>
                       <Textarea
+                        ref={finalTemplateInsertion.textareaRef}
                         id="template-final"
                         value={whatsappTemplates.final}
                         onChange={(e) => setWhatsappTemplates({ ...whatsappTemplates, final: e.target.value })}
-                        placeholder="Digite a mensagem final..."
+                        onBlur={finalTemplateInsertion.handleBlur}
+                        placeholder="Digite a mensagem final ou use os botões abaixo..."
                         rows={5}
                         className="bg-white font-mono text-sm"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Variáveis disponíveis: <code className="bg-muted px-1 py-0.5 rounded">{'{{products.count}}'}</code>,{' '}
-                        <code className="bg-muted px-1 py-0.5 rounded">{'{{company.name}}'}</code>,{' '}
-                        <code className="bg-muted px-1 py-0.5 rounded">{'{{company.phone}}'}</code>
-                      </p>
+
+                      <VariableInserter
+                        variables={WHATSAPP_COMPANY_VARIABLES}
+                        onInsert={(variable) =>
+                          finalTemplateInsertion.insertVariable(
+                            variable,
+                            whatsappTemplates.final,
+                            (newValue) => setWhatsappTemplates({ ...whatsappTemplates, final: newValue })
+                          )
+                        }
+                        variant="badges"
+                        className="mt-1"
+                      />
                     </div>
 
                     {/* Preview */}

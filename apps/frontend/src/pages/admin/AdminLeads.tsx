@@ -46,6 +46,8 @@ import { useKanbanColumns } from '@/hooks/useKanbanColumns';
 import { useAutomationKanban } from '@/hooks/useAutomationKanban';
 import { useWhatsAppTemplates } from '@/hooks/useWhatsAppTemplates';
 import type { KanbanColumn, CreateKanbanColumnDto, UpdateKanbanColumnDto } from '@/services/kanbanColumns.service';
+import { VariableInserter, DEFAULT_LEAD_VARIABLES, PRODUCT_VARIABLES } from '@/components/ui/variable-inserter';
+import { useVariableInsertion } from '@/hooks/useVariableInsertion';
 
 const AdminLeads = () => {
   const { toast } = useToast();
@@ -97,6 +99,9 @@ const AdminLeads = () => {
     mediaUrls: [] as string[],
     mediaType: '',
   });
+
+  // Variable Insertion Hook
+  const templateVariableInsertion = useVariableInsertion();
 
   // Form state
   const [formData, setFormData] = useState<CreateLeadData>({
@@ -988,15 +993,27 @@ const AdminLeads = () => {
               <div>
                 <Label htmlFor="template-content">Conteúdo da Mensagem *</Label>
                 <textarea
+                  ref={templateVariableInsertion.textareaRef}
                   id="template-content"
                   value={templateFormData.content}
                   onChange={(e) => setTemplateFormData({ ...templateFormData, content: e.target.value })}
-                  placeholder="Use {{nome}}, {{produto}}, etc. para variáveis"
+                  onBlur={templateVariableInsertion.handleBlur}
+                  placeholder="Digite sua mensagem ou use os botões abaixo para inserir variáveis"
                   className="w-full min-h-[100px] p-2 border rounded-md"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Variáveis disponíveis: {'{{nome}}'}, {'{{telefone}}'}, {'{{produto}}'}
-                </p>
+
+                <VariableInserter
+                  variables={[...DEFAULT_LEAD_VARIABLES, ...PRODUCT_VARIABLES]}
+                  onInsert={(variable) =>
+                    templateVariableInsertion.insertVariable(
+                      variable,
+                      templateFormData.content,
+                      (newValue) => setTemplateFormData({ ...templateFormData, content: newValue })
+                    )
+                  }
+                  variant="buttons"
+                  className="mt-2"
+                />
               </div>
             </div>
             <DialogFooter>
