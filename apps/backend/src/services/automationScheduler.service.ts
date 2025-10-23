@@ -65,18 +65,28 @@ class AutomationSchedulerService {
       if (settings.sendOnlyBusinessHours) {
         // Converter para horário de São Paulo (UTC-3)
         const now = new Date();
-        const currentHourUTC = now.getUTCHours();
-        const currentHourBrazil = (currentHourUTC - 3 + 24) % 24; // UTC-3 (horário de Brasília)
+
+        // Criar data no timezone de São Paulo
+        const brazilTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        const currentHourBrazil = brazilTime.getHours();
+        const currentMinuteBrazil = brazilTime.getMinutes();
+
+        logger.info(
+          `⏰ Verificação de horário comercial:` +
+          `\n  - Hora UTC: ${now.getUTCHours()}:${now.getUTCMinutes().toString().padStart(2, '0')}` +
+          `\n  - Hora Brasil: ${currentHourBrazil}:${currentMinuteBrazil.toString().padStart(2, '0')}` +
+          `\n  - Horário comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h`
+        );
 
         if (currentHourBrazil < settings.businessHourStart || currentHourBrazil >= settings.businessHourEnd) {
-          logger.debug(
-            `Fora do horário comercial (Brasil: ${currentHourBrazil}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
+          logger.info(
+            `❌ Fora do horário comercial (Brasil: ${currentHourBrazil}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
           );
           return;
         }
 
-        logger.debug(
-          `Dentro do horário comercial (Brasil: ${currentHourBrazil}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
+        logger.info(
+          `✅ Dentro do horário comercial (Brasil: ${currentHourBrazil}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
         );
       }
 
