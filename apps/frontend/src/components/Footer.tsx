@@ -184,7 +184,7 @@ const Footer = ({ config }: FooterProps) => {
             {copyright}
           </p>
           <p className="text-xs text-primary-foreground/60 mt-2">
-            CNPJ: 12.345.678/0001-90 | Desenvolvido com tecnologia Lovable
+            CNPJ: 12.345.678/0001-90
           </p>
         </div>
       </div>
