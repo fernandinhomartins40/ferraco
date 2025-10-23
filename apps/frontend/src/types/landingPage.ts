@@ -372,6 +372,7 @@ export interface ProductItem {
   description: string;
   shortDescription?: string;
   image: ImageConfig;
+  icon?: string; // Ícone no canto superior direito da imagem
   benefits: ProductBenefit[];
   cta?: {
     text: string;
@@ -401,6 +402,16 @@ export interface ProductsConfig {
   cardStyle: {
     variant: 'default' | 'bordered' | 'elevated' | 'flat';
     style: StyleConfig;
+  };
+  ctaSection?: {
+    enabled: boolean;
+    title: string;
+    description: string;
+    button: {
+      text: string;
+      href?: string;
+      style?: HoverableStyleConfig;
+    };
   };
   animation: AnimationConfig;
   style: StyleConfig;

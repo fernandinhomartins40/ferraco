@@ -2,6 +2,7 @@ import { Fence, Home, Grid3x3, Settings, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ProductsConfig } from "@/types/landingPage";
+import * as LucideIcons from 'lucide-react';
 import canzilImage from "@/assets/canzil-product.jpg";
 import bezerreiroImage from "@/assets/bezerreiro-product.jpg";
 import freestallImage from "@/assets/freestall-product.jpg";
@@ -14,11 +15,17 @@ interface ProductsSectionProps {
 }
 
 const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
+  // Renderizar ícone dinamicamente
+  const renderIcon = (iconName?: string, defaultIconName: string = 'Package') => {
+    const IconComponent = (LucideIcons as any)[iconName || defaultIconName] || (LucideIcons as any)[defaultIconName];
+    return <IconComponent className="w-6 h-6 text-white" />;
+  };
+
   // Fallback para valores padrão do conteúdo atual
   const defaultProducts = [
     {
       id: "1",
-      icon: <Fence className="w-6 h-6 text-white" />,
+      icon: "Fence",
       image: canzilImage,
       name: "Canzil",
       description: "Sistema de fechamento para vacas leiteiras, fabricado com tubo galvanizado. Projetado para facilitar o acesso ao alimento e focar no conforto animal.",
@@ -27,7 +34,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
     },
     {
       id: "2",
-      icon: <Home className="w-6 h-6 text-white" />,
+      icon: "Home",
       image: bezerreiroImage,
       name: "Bezerreiro",
       description: "Estrutura projetada para alojar os bezerros, priorizando o bem-estar dos animais. Garante conforto térmico e físico para crescimento saudável.",
@@ -36,7 +43,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
     },
     {
       id: "3",
-      icon: <Grid3x3 className="w-6 h-6 text-white" />,
+      icon: "Grid3x3",
       image: freestallImage,
       name: "Free Stall",
       description: "Sistema de confinamento para gado com divisórias de aço galvanizado. Maximiza o aproveitamento do espaço e minimiza riscos de contaminação.",
@@ -45,7 +52,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
     },
     {
       id: "4",
-      icon: <Settings className="w-6 h-6 text-white" />,
+      icon: "Settings",
       image: contencaoImage,
       name: "Sistema de Contenção",
       description: "Sala de ordenha fabricada em aço galvanizado para facilitar o manejo e conforto dos animais durante a ordenha.",
@@ -54,7 +61,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
     },
     {
       id: "5",
-      icon: <Droplets className="w-6 h-6 text-white" />,
+      icon: "Droplets",
       image: bebedouroImage,
       name: "Bebedouros",
       description: "Bebedouros basculantes limpa fácil em aço inox com alta capacidade e vazão para atender o rebanho com eficiência.",
@@ -90,7 +97,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
                     className="w-full h-full object-cover group-hover:scale-110 transition-smooth"
                   />
                   <div className="absolute top-4 right-4 w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-lg">
-                    {defaultProduct?.icon}
+                    {renderIcon(product.icon, defaultProduct?.icon)}
                   </div>
                 </div>
 
@@ -104,10 +111,10 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 mb-6">
-                    {(product.benefits || product.features || defaultProduct?.features || []).map((item, idx) => (
-                      <li key={idx} className="flex items-center text-muted-foreground">
-                        <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
-                        {typeof item === 'string' ? item : item.text}
+                    {(product.benefits || defaultProduct?.features || []).map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-muted-foreground">
+                        <span className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></span>
+                        <span className="leading-relaxed">{typeof item === 'string' ? item : item.text}</span>
                       </li>
                     ))}
                   </ul>
@@ -115,8 +122,9 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
                     onClick={onLeadModalOpen}
                     className="w-full font-semibold transition-smooth hover:scale-105"
                     variant="default"
+                    style={product.cta?.href ? {} : undefined}
                   >
-                    Quero Saber Mais
+                    {product.cta?.text || "Quero Saber Mais"}
                   </Button>
                 </CardContent>
               </Card>
@@ -125,23 +133,56 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
         </div>
 
         {/* CTA Section */}
-        <div className="text-center mt-16">
-          <div className="bg-primary/5 rounded-2xl p-8 max-w-4xl mx-auto">
-            <h3 className="text-3xl font-bold text-foreground mb-4">
-              Não encontrou o que procura?
-            </h3>
-            <p className="text-xl text-muted-foreground mb-6">
-              Nossa equipe técnica desenvolve soluções personalizadas para atender suas necessidades específicas
-            </p>
-            <Button 
-              onClick={onLeadModalOpen}
-              size="lg"
-              className="font-semibold px-8 py-4 transition-smooth hover:scale-105"
-            >
-              Solicitar Projeto Personalizado
-            </Button>
+        {config?.ctaSection?.enabled !== false && (
+          <div className="text-center mt-16">
+            <div className="bg-primary/5 rounded-2xl p-8 max-w-4xl mx-auto">
+              <h3 className="text-3xl font-bold text-foreground mb-4">
+                {config?.ctaSection?.title || "Não encontrou o que procura?"}
+              </h3>
+              <p className="text-xl text-muted-foreground mb-6">
+                {config?.ctaSection?.description || "Nossa equipe técnica desenvolve soluções personalizadas para atender suas necessidades específicas"}
+              </p>
+              <Button
+                onClick={() => {
+                  const href = config?.ctaSection?.button?.href;
+                  if (href?.startsWith('#')) {
+                    const element = document.querySelector(href);
+                    element?.scrollIntoView({ behavior: 'smooth' });
+                  } else if (href?.startsWith('http')) {
+                    window.open(href, '_blank');
+                  } else {
+                    onLeadModalOpen();
+                  }
+                }}
+                size="lg"
+                className="font-semibold px-8 py-4 transition-smooth hover:scale-105"
+                style={{
+                  backgroundColor: config?.ctaSection?.button?.style?.backgroundColor,
+                  color: config?.ctaSection?.button?.style?.textColor,
+                  ...(config?.ctaSection?.button?.style || {}),
+                }}
+                onMouseEnter={(e) => {
+                  if (config?.ctaSection?.button?.style?.hover) {
+                    const target = e.currentTarget;
+                    const hover = config.ctaSection.button.style.hover;
+                    if (hover.backgroundColor) target.style.backgroundColor = hover.backgroundColor;
+                    if (hover.textColor) target.style.color = hover.textColor;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (config?.ctaSection?.button?.style) {
+                    const target = e.currentTarget;
+                    const style = config.ctaSection.button.style;
+                    if (style.backgroundColor) target.style.backgroundColor = style.backgroundColor;
+                    if (style.textColor) target.style.color = style.textColor;
+                  }
+                }}
+              >
+                {config?.ctaSection?.button?.text || "Solicitar Projeto Personalizado"}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

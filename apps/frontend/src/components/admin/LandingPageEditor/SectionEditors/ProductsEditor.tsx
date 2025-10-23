@@ -148,6 +148,23 @@ export const ProductsEditor = ({ config, onChange }: ProductsEditorProps) => {
                   description="Imagens dos produtos serão recortadas em 800x600px (4:3)"
                 />
 
+                <IconSelector
+                  label="Ícone do Produto (canto superior direito)"
+                  value={item.icon || 'Package'}
+                  onChange={(icon) => updateItem({ icon })}
+                />
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label>Texto do Botão (opcional)</Label>
+                  <Input
+                    value={item.cta?.text || ''}
+                    onChange={(e) => updateItem({ cta: { ...item.cta, text: e.target.value, href: item.cta?.href || '' } })}
+                    placeholder="Quero Saber Mais"
+                  />
+                </div>
+
                 <Separator />
 
                 <ArrayEditor
@@ -180,6 +197,95 @@ export const ProductsEditor = ({ config, onChange }: ProductsEditorProps) => {
               </div>
             )}
           />
+        </CardContent>
+      </Card>
+
+      {/* CTA Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Seção de Call-to-Action</CardTitle>
+          <CardDescription>Chamada para ação no final da seção de produtos</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Exibir CTA</Label>
+            <Switch
+              checked={config.ctaSection?.enabled !== false}
+              onCheckedChange={(enabled) =>
+                onChange({
+                  ctaSection: {
+                    enabled,
+                    title: config.ctaSection?.title || 'Não encontrou o que procura?',
+                    description: config.ctaSection?.description || 'Nossa equipe técnica desenvolve soluções personalizadas',
+                    button: config.ctaSection?.button || { text: 'Solicitar Projeto Personalizado' },
+                  },
+                })
+              }
+            />
+          </div>
+
+          {config.ctaSection?.enabled !== false && (
+            <>
+              <div className="space-y-2">
+                <Label>Título</Label>
+                <Input
+                  value={config.ctaSection?.title || ''}
+                  onChange={(e) =>
+                    onChange({
+                      ctaSection: { ...config.ctaSection!, title: e.target.value },
+                    })
+                  }
+                  placeholder="Não encontrou o que procura?"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  value={config.ctaSection?.description || ''}
+                  onChange={(e) =>
+                    onChange({
+                      ctaSection: { ...config.ctaSection!, description: e.target.value },
+                    })
+                  }
+                  placeholder="Nossa equipe técnica desenvolve soluções personalizadas"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Texto do Botão</Label>
+                <Input
+                  value={config.ctaSection?.button?.text || ''}
+                  onChange={(e) =>
+                    onChange({
+                      ctaSection: {
+                        ...config.ctaSection!,
+                        button: { ...config.ctaSection!.button, text: e.target.value },
+                      },
+                    })
+                  }
+                  placeholder="Solicitar Projeto Personalizado"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Link do Botão (opcional)</Label>
+                <Input
+                  value={config.ctaSection?.button?.href || ''}
+                  onChange={(e) =>
+                    onChange({
+                      ctaSection: {
+                        ...config.ctaSection!,
+                        button: { ...config.ctaSection!.button, href: e.target.value },
+                      },
+                    })
+                  }
+                  placeholder="#contato ou URL externa"
+                />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

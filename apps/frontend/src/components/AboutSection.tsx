@@ -151,9 +151,9 @@ const AboutSection = ({ onLeadModalOpen, config }: AboutSectionProps) => {
           {/* Differentials Card */}
           {config?.differentialsCard?.enabled !== false && (
             <div className="bg-white rounded-2xl p-8 shadow-elegant">
-              <h4 className="text-2xl font-bold text-foreground mb-6 flex items-center">
-                {config?.differentialsCard?.icon && renderIcon(config.differentialsCard.icon)}
-                {!config?.differentialsCard?.icon && <Target className="w-6 h-6 text-primary mr-3" />}
+              <h4 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
+                {config?.differentialsCard?.icon && <span className="[&>svg]:w-6 [&>svg]:h-6">{renderIcon(config.differentialsCard.icon)}</span>}
+                {!config?.differentialsCard?.icon && <Target className="w-6 h-6 text-primary" />}
                 {config?.differentialsCard?.title || "Nossos Diferenciais"}
               </h4>
               <div className="grid grid-cols-1 gap-4">
@@ -161,9 +161,11 @@ const AboutSection = ({ onLeadModalOpen, config }: AboutSectionProps) => {
                   ? config.differentialsCard.differentials
                   : differentials.map((text, i) => ({ id: `default-${i}`, text, icon: 'CheckCircle' }))
                 ).map((differential) => (
-                  <div key={differential.id} className="flex items-center">
-                    {differential.icon ? renderIcon(differential.icon) : <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />}
-                    <span className="text-muted-foreground">{differential.text}</span>
+                  <div key={differential.id} className="flex items-start gap-3">
+                    <span className="[&>svg]:w-5 [&>svg]:h-5 [&>svg]:text-primary [&>svg]:flex-shrink-0 mt-0.5">
+                      {differential.icon ? renderIcon(differential.icon) : <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />}
+                    </span>
+                    <span className="text-muted-foreground leading-relaxed">{differential.text}</span>
                   </div>
                 ))}
               </div>
