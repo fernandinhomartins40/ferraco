@@ -21,14 +21,16 @@ export function useVariableInsertion() {
   const insertVariable = useCallback(
     (variable: string, currentValue: string, onChange: (value: string) => void) => {
       const textarea = textareaRef.current;
+      const safeValue = currentValue || '';
+
       if (!textarea) {
         // Fallback: adicionar no final
-        onChange(currentValue + variable);
+        onChange(safeValue + variable);
         return;
       }
 
       const position = cursorPositionRef.current;
-      const newValue = currentValue.slice(0, position) + variable + currentValue.slice(position);
+      const newValue = safeValue.slice(0, position) + variable + safeValue.slice(position);
 
       onChange(newValue);
 

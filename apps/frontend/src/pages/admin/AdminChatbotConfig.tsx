@@ -140,7 +140,12 @@ export const AdminChatbotConfig = () => {
         final: '✅ Essas são as informações sobre {{products.count}} produto(s) de seu interesse!\n\n👨‍💼 Um vendedor da {{company.name}} entrará em contato em breve para esclarecer dúvidas e auxiliar na sua compra.\n\n{{company.phone}}'
       };
 
-      setWhatsappTemplates(config.whatsappTemplates || defaultTemplates);
+      // Merge templates com fallback para cada propriedade
+      setWhatsappTemplates({
+        initial: config.whatsappTemplates?.initial || defaultTemplates.initial,
+        product: config.whatsappTemplates?.product || defaultTemplates.product,
+        final: config.whatsappTemplates?.final || defaultTemplates.final,
+      });
     }
   }, [config]);
 
