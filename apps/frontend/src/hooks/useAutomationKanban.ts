@@ -110,12 +110,14 @@ export function useAutomationKanban() {
   // Retry de envios
   const retryLead = useMutation({
     mutationFn: (leadId: string) => automationKanbanService.retryLead(leadId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['automation-kanban-leads'] });
-      toast.success('Envio reagendado com sucesso');
+      toast.success(data.message || 'Envio reagendado com sucesso');
     },
-    onError: () => {
-      toast.error('Erro ao reagendar envio');
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Erro ao reagendar envio';
+      toast.error(errorMessage);
+      console.error('Erro no retry:', error);
     },
   });
 

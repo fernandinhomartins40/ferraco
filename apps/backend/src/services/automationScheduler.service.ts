@@ -466,28 +466,28 @@ class AutomationSchedulerService {
 
   /**
    * Reinicia envio de um lead específico (reseta status para PENDING)
-   * IMPORTANTE: Usado APENAS para reenvio em caso de falhas (FAILED, WHATSAPP_DISCONNECTED)
+   * IMPORTANTE: Usado para reenvio em caso de falhas ou reagendamento
    * O retry NÃO bypassa a verificação de período de recorrência
    */
   async retryLead(leadId: string): Promise<void> {
     // Buscar posição atual
     const position = await prisma.automationLeadPosition.findUnique({
       where: { leadId },
-      include: { column: true },
+      include: { column: true, lead: true },
     });
 
     if (!position) {
-      logger.error(`Lead ${leadId} não encontrado na automação`);
-      return;
+      const error = `Lead ${leadId} não encontrado na automação`;
+      logger.error(error);
+      throw new Error(error);
     }
 
-    // Permitir retry apenas para status de falha
-    if (!['FAILED', 'WHATSAPP_DISCONNECTED'].includes(position.status)) {
-      logger.warn(
-        `Retry ignorado para lead ${leadId}: status atual é ${position.status}. ` +
-        `Retry é permitido apenas para leads com status FAILED ou WHATSAPP_DISCONNECTED.`
-      );
-      return;
+    // Permitir retry para status de falha ou agendado
+    const allowedStatuses = ['FAILED', 'WHATSAPP_DISCONNECTED', 'SCHEDULED'];
+    if (!allowedStatuses.includes(position.status)) {
+      const error = `Lead ${position.lead.name} tem status "${position.status}". Retry só é permitido para leads com status: ${allowedStatuses.join(', ')}`;
+      logger.warn(error);
+      throw new Error(error);
     }
 
     await prisma.automationLeadPosition.update({
@@ -499,7 +499,10 @@ class AutomationSchedulerService {
       },
     });
 
-    logger.info(`🔄 Retry solicitado para lead ${leadId} (status anterior: ${position.status})`);
+    logger.info(
+      `🔄 Retry agendado para lead ${position.lead.name} (${position.lead.phone}) - ` +
+      `Status anterior: ${position.status}`
+    );
   }
 
   /**

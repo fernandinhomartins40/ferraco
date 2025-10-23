@@ -54,9 +54,25 @@ export class ChatbotService {
             tone: 'friendly',
             companyName: 'Ferraco Equipamentos',
             companyDescription: 'Empresa especializada em equipamentos para pecuária leiteira',
+            products: JSON.stringify([]),
+            faqs: JSON.stringify([]),
+            shareLinks: JSON.stringify([]),
+            whatsappTemplates: JSON.stringify({}),
           },
         });
+        logger.info('✅ Configuração padrão do chatbot criada');
       }
+
+      // Helper para fazer parse seguro de JSON
+      const safeJsonParse = (jsonString: string | null, defaultValue: any = []) => {
+        if (!jsonString) return defaultValue;
+        try {
+          return JSON.parse(jsonString);
+        } catch (error) {
+          logger.warn(`Failed to parse JSON: ${jsonString}`, error);
+          return defaultValue;
+        }
+      };
 
       // Parse JSON fields
       return {
@@ -80,10 +96,10 @@ export class ChatbotService {
           website: config.companyWebsite || '',
           workingHours: config.workingHours || '',
         },
-        products: JSON.parse(config.products),
-        faqs: JSON.parse(config.faqs),
-        shareLinks: JSON.parse(config.shareLinks),
-        whatsappTemplates: JSON.parse(config.whatsappTemplates || '{}'),
+        products: safeJsonParse(config.products, []),
+        faqs: safeJsonParse(config.faqs, []),
+        shareLinks: safeJsonParse(config.shareLinks, []),
+        whatsappTemplates: safeJsonParse(config.whatsappTemplates, {}),
         updatedAt: config.updatedAt,
       };
     } catch (error) {
@@ -142,6 +158,17 @@ export class ChatbotService {
 
       logger.info('Chatbot config updated successfully', { id: config.id });
 
+      // Helper para fazer parse seguro de JSON
+      const safeJsonParse = (jsonString: string | null, defaultValue: any = []) => {
+        if (!jsonString) return defaultValue;
+        try {
+          return JSON.parse(jsonString);
+        } catch (error) {
+          logger.warn(`Failed to parse JSON: ${jsonString}`, error);
+          return defaultValue;
+        }
+      };
+
       // Retorna no mesmo formato do getConfig
       return {
         id: config.id,
@@ -164,10 +191,10 @@ export class ChatbotService {
           website: config.companyWebsite || '',
           workingHours: config.workingHours || '',
         },
-        products: JSON.parse(config.products),
-        faqs: JSON.parse(config.faqs),
-        shareLinks: JSON.parse(config.shareLinks),
-        whatsappTemplates: JSON.parse(config.whatsappTemplates || '{}'),
+        products: safeJsonParse(config.products, []),
+        faqs: safeJsonParse(config.faqs, []),
+        shareLinks: safeJsonParse(config.shareLinks, []),
+        whatsappTemplates: safeJsonParse(config.whatsappTemplates, {}),
         updatedAt: config.updatedAt,
       };
     } catch (error) {

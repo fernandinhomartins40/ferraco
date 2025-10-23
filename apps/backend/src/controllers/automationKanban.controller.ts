@@ -338,12 +338,41 @@ export class AutomationKanbanController {
     try {
       const { leadId } = req.params;
 
+      console.log(`[AutomationKanban] Retry solicitado para lead: ${leadId}`);
+
+      // Verificar se lead existe na automação
+      const position = await prisma.automationLeadPosition.findUnique({
+        where: { leadId },
+        include: { lead: true },
+      });
+
+      if (!position) {
+        console.error(`[AutomationKanban] Lead ${leadId} não encontrado na automação`);
+        return res.status(404).json({
+          success: false,
+          error: 'Lead não encontrado na automação'
+        });
+      }
+
+      // Verificar se o status permite retry
+      if (!['FAILED', 'WHATSAPP_DISCONNECTED', 'SCHEDULED'].includes(position.status)) {
+        console.warn(`[AutomationKanban] Lead ${leadId} tem status ${position.status}, não é elegível para retry`);
+        return res.status(400).json({
+          success: false,
+          error: `Lead com status "${position.status}" não pode ser reenviado. Apenas leads com falha podem ser reenviados.`
+        });
+      }
+
       await automationSchedulerService.retryLead(leadId);
 
-      res.json({ success: true, message: 'Retry solicitado com sucesso' });
+      console.log(`[AutomationKanban] Retry agendado com sucesso para lead ${position.lead.name}`);
+      res.json({ success: true, message: 'Envio reagendado com sucesso' });
     } catch (error) {
       console.error('Erro ao reiniciar envio do lead:', error);
-      res.status(500).json({ error: 'Erro ao reiniciar envio do lead' });
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro ao reiniciar envio do lead'
+      });
     }
   }
 
