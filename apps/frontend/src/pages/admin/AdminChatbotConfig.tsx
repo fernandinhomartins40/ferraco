@@ -1160,7 +1160,7 @@ export const AdminChatbotConfig = () => {
                           <div className="flex-1">
                             <p className="text-sm font-medium text-green-900">{companyData.name || 'Sua Empresa'}</p>
                             <div className="mt-2 bg-green-100 rounded-lg p-3 text-sm whitespace-pre-wrap">
-                              {whatsappTemplates.initial
+                              {(whatsappTemplates.initial || '')
                                 .replace(/\{\{lead\.name\}\}/g, 'Fernando Martins')
                                 .replace(/\{\{company\.name\}\}/g, companyData.name || 'Sua Empresa')}
                             </div>
@@ -1221,7 +1221,7 @@ export const AdminChatbotConfig = () => {
                           <div className="flex-1">
                             <p className="text-sm font-medium text-blue-900">{companyData.name || 'Sua Empresa'}</p>
                             <div className="mt-2 bg-blue-100 rounded-lg p-3 text-sm whitespace-pre-wrap">
-                              {whatsappTemplates.product
+                              {(whatsappTemplates.product || '')
                                 .replace(/\{\{product\.name\}\}/g, 'Bebedouro Automático')
                                 .replace(/\{\{product\.description\}\}/g, 'Bebedouro automático para bovinos, capacidade de 500 litros.')
                                 .replace(/\{\{product\.price\}\}/g, 'R$ 1.200,00')}
@@ -1283,7 +1283,7 @@ export const AdminChatbotConfig = () => {
                           <div className="flex-1">
                             <p className="text-sm font-medium text-purple-900">{companyData.name || 'Sua Empresa'}</p>
                             <div className="mt-2 bg-purple-100 rounded-lg p-3 text-sm whitespace-pre-wrap">
-                              {whatsappTemplates.final
+                              {(whatsappTemplates.final || '')
                                 .replace(/\{\{products\.count\}\}/g, '2')
                                 .replace(/\{\{company\.name\}\}/g, companyData.name || 'Sua Empresa')
                                 .replace(/\{\{company\.phone\}\}/g, companyData.phone || '(11) 99999-9999')}
