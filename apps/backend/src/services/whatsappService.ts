@@ -1749,60 +1749,24 @@ class WhatsAppService {
         const hasMediaType = ['image', 'video', 'audio', 'ptt', 'sticker', 'document'].includes(msg.type);
 
         if (hasMediaType) {
-          // ⭐ DEBUG: Log completo da estrutura da mensagem
-          logger.debug(`📦 Estrutura da mensagem ${msg.id.substring(0, 15)}:`, {
-            type: msg.type,
-            hasBody: !!msg.body,
-            bodyLength: msg.body?.length || 0,
-            bodyStart: msg.body?.substring(0, 50),
-            isMedia: msg.isMedia,
-            mimetype: msg.mimetype,
-            filename: msg.filename,
-            size: msg.size,
-            hasDeprecatedMms3Url: !!msg.deprecatedMms3Url,
-            hasClientUrl: !!msg.clientUrl,
-            hasDirectPath: !!msg.directPath,
-            hasMediaKey: !!msg.mediaKey,
-            hasEncFilehash: !!msg.encFilehash,
-          });
-
           try {
-            // ⭐ SOLUÇÃO 1: Verificar se msg.body já contém base64 inline
-            if (msg.body && typeof msg.body === 'string' && msg.body.startsWith('data:')) {
-              mediaUrl = msg.body;
-              logger.debug(`✅ Base64 inline encontrado no body: ${msg.body.length} chars`);
-            }
-            // ⭐ SOLUÇÃO 2: Tentar downloadMedia com o messageId
-            else {
-              try {
-                const downloaded = await this.client!.downloadMedia(msg.id);
+            // ✅ SOLUÇÃO DEFINITIVA: downloadMedia retorna Promise<string> com base64 puro
+            // Ref: @wppconnect-team/wppconnect/dist/api/whatsapp.d.ts
+            const base64Data = await this.client!.downloadMedia(msg.id);
 
-                if (downloaded && typeof downloaded === 'string' && downloaded.length > 0) {
-                  // downloadMedia retorna base64 puro (sem data: prefix)
-                  const mimeType = msg.mimetype || this.getMimeTypeFromMessageType(msg.type);
-                  mediaUrl = `data:${mimeType};base64,${downloaded}`;
-                  logger.debug(`✅ downloadMedia OK: ${downloaded.length} chars base64`);
-                } else {
-                  logger.debug(`⚠️  downloadMedia retornou vazio`);
-                }
-              } catch (downloadError: any) {
-                logger.debug(`❌ downloadMedia erro: ${downloadError.message}`);
-              }
-            }
+            if (base64Data && typeof base64Data === 'string' && base64Data.length > 0) {
+              // Determinar mimetype correto
+              const mimeType = msg.mimetype || this.getMimeTypeFromMessageType(msg.type);
 
-            // Se ainda não tem mediaUrl, mensagem de aviso
-            if (!mediaUrl) {
-              logger.warn(`⚠️  Falha ao obter mídia para ${msg.id.substring(0, 15)}... (tipo: ${msg.type})`);
+              // downloadMedia retorna base64 puro, adicionar prefix data URI
+              mediaUrl = `data:${mimeType};base64,${base64Data}`;
+
+              logger.info(`✅ Mídia baixada: ${msg.type} (${Math.round(base64Data.length / 1024)}KB)`);
+            } else {
+              logger.warn(`⚠️  downloadMedia retornou vazio para ${msg.id.substring(0, 15)}...`);
             }
           } catch (mediaError: any) {
-            // ⭐ CRÍTICO: Não bloquear mensagens se download de mídia falhar
-            logger.error(`❌ Erro ao baixar mídia:`, {
-              messageId: msg.id.substring(0, 20),
-              type: msg.type,
-              error: mediaError.message,
-            });
-            // ✅ SOLUÇÃO 3: Retornar null em vez de fallback (frontend tratará o erro)
-            mediaUrl = null;
+            logger.error(`❌ Erro ao baixar mídia ${msg.id.substring(0, 15)}...: ${mediaError.message}`);
           }
         }
 
