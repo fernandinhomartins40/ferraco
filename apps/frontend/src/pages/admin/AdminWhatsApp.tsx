@@ -318,7 +318,10 @@ const AdminWhatsApp = () => {
               <Card className="h-[calc(100vh-16rem)] min-h-[500px]">
                 <div className="flex h-full overflow-hidden">
                   {/* Sidebar - Lista de Conversas */}
-                  <div className={`w-full md:w-96 border-r flex-shrink-0 bg-white ${selectedConversationId ? 'hidden md:block' : 'block'}`}>
+                  <div className={`
+                    w-full md:w-96 border-r flex-shrink-0 bg-white
+                    ${selectedConversationId ? 'hidden md:block' : 'block'}
+                  `}>
                     {/* ✅ FASE 4: Suspense para lazy loading */}
                     <Suspense fallback={
                       <div className="flex items-center justify-center h-full">
@@ -333,7 +336,10 @@ const AdminWhatsApp = () => {
                   </div>
 
                   {/* Área Principal - Chat */}
-                  <div className={`flex-1 flex flex-col bg-gray-50 ${selectedConversationId ? 'block' : 'hidden md:flex'}`}>
+                  <div className={`
+                    flex-1 flex flex-col bg-gray-50
+                    ${selectedConversationId ? 'block w-full' : 'hidden md:flex'}
+                  `}>
                     {selectedConversationId ? (
                       <Suspense fallback={
                         <div className="flex items-center justify-center h-full">
