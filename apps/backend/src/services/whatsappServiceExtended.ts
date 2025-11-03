@@ -362,7 +362,7 @@ export class WhatsAppServiceExtended {
    */
   async stopRecording(chatId: string): Promise<void> {
     try {
-      await this.client.stopRecoring(chatId);
+      await this.client.stopRecording(chatId);
       logger.debug(`✅ Gravação parada: ${chatId}`);
     } catch (error) {
       logger.error('❌ Erro ao parar gravação:', error);

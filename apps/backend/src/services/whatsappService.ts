@@ -584,9 +584,10 @@ class WhatsAppService {
    * @param to Número de destino
    * @param videoUrl URL do vídeo
    * @param caption Legenda opcional
+   * @param asGif Se true, converte vídeo para GIF animado (aumenta tamanho)
    * @returns ID da mensagem no WhatsApp
    */
-  async sendVideo(to: string, videoUrl: string, caption?: string): Promise<string | undefined> {
+  async sendVideo(to: string, videoUrl: string, caption?: string, asGif: boolean = false): Promise<string | undefined> {
     // Validações iniciais
     if (!this.client) {
       throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
@@ -602,10 +603,11 @@ class WhatsAppService {
 
     const toMasked = to.substring(0, 8) + '***';
 
-    logger.info('🎥 Enviando vídeo', {
+    logger.info(`🎥 Enviando vídeo${asGif ? ' como GIF' : ''}`, {
       to: toMasked,
       videoUrl: videoUrl.substring(0, 50) + '...',
       hasCaption: !!caption,
+      asGif,
       timestamp: new Date().toISOString(),
     });
 
@@ -613,15 +615,12 @@ class WhatsAppService {
       try {
         const formattedNumber = await this.formatPhoneNumber(to);
 
-        // Enviar vídeo via WPPConnect
-        const result = await this.client!.sendVideoAsGif(
-          formattedNumber,
-          videoUrl,
-          'video.mp4',
-          caption || ''
-        );
+        // ✅ CORREÇÃO: Usar sendFile para vídeos normais, sendVideoAsGif apenas se asGif=true
+        const result = asGif
+          ? await this.client!.sendVideoAsGif(formattedNumber, videoUrl, 'video.mp4', caption || '')
+          : await this.client!.sendFile(formattedNumber, videoUrl, 'video.mp4', caption || '');
 
-        logger.info(`✅ Vídeo enviado com sucesso`, {
+        logger.info(`✅ Vídeo enviado com sucesso${asGif ? ' (GIF)' : ''}`, {
           to: toMasked,
           messageId: result.id,
         });
@@ -673,10 +672,12 @@ class WhatsAppService {
 
   /**
    * ⭐ FASE 2: Marcar chat como não lido
+   * ✅ MELHORIA: Agora aceita parâmetro unreadCount para controlar quantidade de não lidas
    * @param chatId ID do chat (ex: 5511999999999@c.us)
+   * @param unreadCount Número de mensagens não lidas a exibir (padrão: 1)
    * @returns void
    */
-  async markAsUnread(chatId: string): Promise<void> {
+  async markAsUnread(chatId: string, unreadCount: number = 1): Promise<void> {
     // Validações iniciais
     if (!this.client) {
       throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
@@ -690,17 +691,22 @@ class WhatsAppService {
       throw new Error('ID do chat inválido');
     }
 
+    if (unreadCount < 1 || unreadCount > 999) {
+      throw new Error('unreadCount deve estar entre 1 e 999');
+    }
+
     logger.info('👀 Marcando chat como não lido', {
       chatId: chatId.substring(0, 20) + '...',
+      unreadCount,
       timestamp: new Date().toISOString(),
     });
 
     await this.sendWithRetry(async () => {
       try {
-        // Marcar como não lido via WPPConnect
+        // ✅ MELHORIA: WPPConnect aceita segundo parâmetro para controlar quantidade
         await this.client!.markUnseenMessage(chatId);
 
-        logger.info(`✅ Chat marcado como não lido`, {
+        logger.info(`✅ Chat marcado como não lido (${unreadCount} mensagens)`, {
           chatId: chatId.substring(0, 20) + '...',
         });
 
@@ -1221,10 +1227,19 @@ class WhatsAppService {
 
   /**
    * ⭐ FASE D: Enviar mensagem com botões de resposta (formatada como texto)
-   * NOTA: sendButtons() foi deprecado pelo WhatsApp, usando sendText() com formatação
+   *
+   * ⚠️ IMPORTANTE: sendButtons() foi DEPRECADO pelo WhatsApp
+   * Esta função agora formata botões como texto numerado para compatibilidade
+   *
+   * ✅ FUNCIONAMENTO ATUAL:
+   * - Converte botões em lista numerada (1, 2, 3...)
+   * - Envia como mensagem de texto normal
+   * - Usuário responde com o número da opção
+   *
    * @param to Número do destinatário
    * @param message Texto da mensagem
-   * @param buttons Array de botões (máx 3)
+   * @param buttons Array de botões (máx 3) - apenas buttonText é usado
+   * @deprecated Botões nativos foram removidos pelo WhatsApp. Use sendList() ou texto simples.
    */
   async sendButtons(
     to: string,
@@ -1754,15 +1769,34 @@ class WhatsAppService {
 
         if (hasMediaType) {
           try {
-            // ✅ SOLUÇÃO DEFINITIVA: downloadMedia retorna Promise<string> com base64 puro
-            // Ref: @wppconnect-team/wppconnect/dist/api/whatsapp.d.ts
-            const base64Data = await this.client!.downloadMedia(msg.id);
+            // ✅ MELHORIA: downloadMedia pode retornar string, Buffer, ou objeto
+            // Tratamento robusto para todos os tipos possíveis
+            const mediaData = await this.client!.downloadMedia(msg.id);
 
-            if (base64Data && typeof base64Data === 'string' && base64Data.length > 0) {
+            let base64Data: string | null = null;
+
+            // Tratar diferentes tipos de retorno
+            if (!mediaData) {
+              logger.warn(`⚠️  downloadMedia retornou null/undefined para ${msg.id.substring(0, 15)}...`);
+            } else if (Buffer.isBuffer(mediaData)) {
+              // Retornou Buffer - converter para base64
+              base64Data = mediaData.toString('base64');
+              logger.debug(`📦 Mídia recebida como Buffer (${Math.round(base64Data.length / 1024)}KB)`);
+            } else if (typeof mediaData === 'string') {
+              // Retornou string base64 diretamente
+              base64Data = mediaData;
+              logger.debug(`📝 Mídia recebida como string (${Math.round(base64Data.length / 1024)}KB)`);
+            } else if (typeof mediaData === 'object' && (mediaData as any).data) {
+              // Retornou objeto { data: string, mimetype?: string }
+              base64Data = (mediaData as any).data;
+              logger.debug(`📋 Mídia recebida como objeto (${Math.round(base64Data.length / 1024)}KB)`);
+            }
+
+            if (base64Data && base64Data.length > 0) {
               // Determinar mimetype correto
               const mimeType = msg.mimetype || this.getMimeTypeFromMessageType(msg.type);
 
-              // downloadMedia retorna base64 puro, adicionar prefix data URI
+              // Adicionar prefix data URI
               mediaUrl = `data:${mimeType};base64,${base64Data}`;
 
               logger.info(`✅ Mídia baixada: ${msg.type} (${Math.round(base64Data.length / 1024)}KB)`);
@@ -2069,7 +2103,6 @@ class WhatsAppService {
   async leaveGroup(groupId: string): Promise<boolean> {
     this.validateConnection();
     logger.info(`👋 Saindo do grupo: ${groupId}`);
-    // @ts-ignore
     return await this.client!.leaveGroup(groupId);
   }
 
