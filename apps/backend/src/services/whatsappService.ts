@@ -1749,61 +1749,50 @@ class WhatsAppService {
         const hasMediaType = ['image', 'video', 'audio', 'ptt', 'sticker', 'document'].includes(msg.type);
 
         if (hasMediaType) {
+          // ⭐ DEBUG: Log completo da estrutura da mensagem
+          logger.debug(`📦 Estrutura da mensagem ${msg.id.substring(0, 15)}:`, {
+            type: msg.type,
+            hasBody: !!msg.body,
+            bodyLength: msg.body?.length || 0,
+            bodyStart: msg.body?.substring(0, 50),
+            isMedia: msg.isMedia,
+            mimetype: msg.mimetype,
+            filename: msg.filename,
+            size: msg.size,
+            hasDeprecatedMms3Url: !!msg.deprecatedMms3Url,
+            hasClientUrl: !!msg.clientUrl,
+            hasDirectPath: !!msg.directPath,
+            hasMediaKey: !!msg.mediaKey,
+            hasEncFilehash: !!msg.encFilehash,
+          });
+
           try {
-            // ⭐ SOLUÇÃO: Baixar mídia diretamente do WPPConnect e converter para base64
-            logger.debug(`📥 Baixando mídia da mensagem ${msg.id.substring(0, 20)}... (tipo: ${msg.type})`);
-
-            // ✅ CRÍTICO: WPPConnect downloadMedia retorna base64, mas pode retornar vazio
-            // Solução: usar decryptFile() que descriptografa a mídia completa
-            let mediaData: string | null = null;
-
-            // Tentar downloadMedia primeiro (mais rápido)
-            try {
-              mediaData = await this.client!.downloadMedia(msg.id);
-            } catch (downloadError) {
-              logger.debug(`⚠️  downloadMedia falhou, tentando decryptFile...`);
+            // ⭐ SOLUÇÃO 1: Verificar se msg.body já contém base64 inline
+            if (msg.body && typeof msg.body === 'string' && msg.body.startsWith('data:')) {
+              mediaUrl = msg.body;
+              logger.debug(`✅ Base64 inline encontrado no body: ${msg.body.length} chars`);
             }
-
-            // Se downloadMedia falhou ou retornou vazio, tentar decryptFile
-            if (!mediaData || mediaData.length === 0) {
+            // ⭐ SOLUÇÃO 2: Tentar downloadMedia com o messageId
+            else {
               try {
-                // decryptFile usa o próprio objeto da mensagem para descriptografar
-                const decrypted = await (this.client as any).decryptFile(msg);
-                if (decrypted) {
-                  // decryptFile retorna Buffer ou string base64
-                  mediaData = Buffer.isBuffer(decrypted)
-                    ? decrypted.toString('base64')
-                    : decrypted;
+                const downloaded = await this.client!.downloadMedia(msg.id);
+
+                if (downloaded && typeof downloaded === 'string' && downloaded.length > 0) {
+                  // downloadMedia retorna base64 puro (sem data: prefix)
+                  const mimeType = msg.mimetype || this.getMimeTypeFromMessageType(msg.type);
+                  mediaUrl = `data:${mimeType};base64,${downloaded}`;
+                  logger.debug(`✅ downloadMedia OK: ${downloaded.length} chars base64`);
+                } else {
+                  logger.debug(`⚠️  downloadMedia retornou vazio`);
                 }
-              } catch (decryptError) {
-                logger.debug(`⚠️  decryptFile também falhou`);
+              } catch (downloadError: any) {
+                logger.debug(`❌ downloadMedia erro: ${downloadError.message}`);
               }
             }
 
-            // ✅ SOLUÇÃO 1: Validar que mediaData é string válida e não vazia
-            if (mediaData && typeof mediaData === 'string' && mediaData.length > 0) {
-              // ✅ SOLUÇÃO 2: Determinar mimetype correto para áudio/PTT
-              let mimeType = msg.mimetype;
-
-              if (!mimeType) {
-                if (msg.type === 'ptt') {
-                  // ✅ Usar audio/ogg sem codecs para melhor compatibilidade
-                  mimeType = 'audio/ogg';
-                } else if (msg.type === 'audio') {
-                  mimeType = 'audio/mpeg';
-                } else {
-                  mimeType = this.getMimeTypeFromMessageType(msg.type);
-                }
-              }
-
-              // Converter para data URL (base64)
-              mediaUrl = `data:${mimeType};base64,${mediaData}`;
-
-              logger.debug(`✅ Mídia baixada com sucesso: ${mimeType} (${mediaData.length} bytes base64)`);
-            } else {
-              logger.warn(`⚠️  Download retornou vazio para mensagem ${msg.id.substring(0, 20)}...`);
-              // ✅ SOLUÇÃO 3: Retornar null em vez de fallback (frontend tratará o erro)
-              mediaUrl = null;
+            // Se ainda não tem mediaUrl, mensagem de aviso
+            if (!mediaUrl) {
+              logger.warn(`⚠️  Falha ao obter mídia para ${msg.id.substring(0, 15)}... (tipo: ${msg.type})`);
             }
           } catch (mediaError: any) {
             // ⭐ CRÍTICO: Não bloquear mensagens se download de mídia falhar
