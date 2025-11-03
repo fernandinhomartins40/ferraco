@@ -1573,8 +1573,8 @@ class WhatsAppService {
   }
 
   /**
-   * ⭐ FASE 1: Desconectar WhatsApp com cleanup completo
-   * Após desconectar, reinicializa automaticamente para gerar novo QR code
+   * ⭐ Desconectar WhatsApp com cleanup completo
+   * Remove a sessão e limpa o estado do cliente
    */
   async disconnect(): Promise<void> {
     // Parar polling
@@ -1608,13 +1608,9 @@ class WhatsAppService {
       }
     }
 
-    // Aguardar 2 segundos antes de reinicializar
-    logger.info('🔄 Gerando novo QR Code em 2 segundos...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Reinicializar para gerar novo QR code
-    this.isInitializing = false;
-    await this.initialize();
+    // Emitir evento de desconexão via Socket.IO
+    this.emitDisconnected('manual_disconnect');
+    logger.info('✅ WhatsApp desconectado completamente');
   }
 
   // ============================================================================
@@ -1745,23 +1741,38 @@ class WhatsAppService {
       });
 
       // Formatar mensagens para o formato esperado pelo frontend
-      return messages.map((msg: any) => {
+      const formattedMessages = await Promise.all(messages.map(async (msg: any) => {
         // ✅ CRÍTICO: Gerar mediaUrl para tipos de mídia
-        let mediaUrl = msg.mediaUrl || null;
+        let mediaUrl = null;
 
-        // Se a mensagem tem mídia mas não tem URL, tentar obter do WPPConnect
+        // Verificar se mensagem tem mídia
         const hasMediaType = ['image', 'video', 'audio', 'ptt', 'sticker', 'document'].includes(msg.type);
 
-        if (hasMediaType && !mediaUrl) {
-          // WPPConnect: verificar se há media data disponível
-          if (msg.media || msg.body?.startsWith('data:')) {
-            mediaUrl = msg.body; // Base64 inline
-          } else if (msg.deprecatedMms3Url) {
-            mediaUrl = msg.deprecatedMms3Url;
-          } else if (msg.clientUrl) {
-            mediaUrl = msg.clientUrl;
-          } else {
-            // Criar URL de download via backend
+        if (hasMediaType) {
+          try {
+            // ⭐ SOLUÇÃO: Baixar mídia diretamente do WPPConnect e converter para base64
+            logger.debug(`📥 Baixando mídia da mensagem ${msg.id.substring(0, 20)}... (tipo: ${msg.type})`);
+
+            const mediaData = await this.client!.downloadMedia(msg.id);
+
+            if (mediaData) {
+              // Determinar o mimetype correto
+              const mimeType = msg.mimetype || this.getMimeTypeFromMessageType(msg.type);
+
+              // Converter para data URL (base64)
+              mediaUrl = `data:${mimeType};base64,${mediaData}`;
+
+              logger.debug(`✅ Mídia baixada com sucesso: ${msg.id.substring(0, 20)}...`);
+            } else {
+              logger.warn(`⚠️  Mídia não disponível para mensagem ${msg.id.substring(0, 20)}...`);
+            }
+          } catch (mediaError: any) {
+            // ⭐ CRÍTICO: Não bloquear mensagens se download de mídia falhar
+            logger.warn(`⚠️  Erro ao baixar mídia (mensagem será exibida sem mídia):`, {
+              messageId: msg.id.substring(0, 20),
+              error: mediaError.message,
+            });
+            // Fallback: usar endpoint de download
             mediaUrl = `/api/whatsapp/media/${msg.id}`;
           }
         }
@@ -1792,10 +1803,27 @@ class WhatsAppService {
             name: cleanPhone,
           },
         };
-      });
+      }));
+
+      return formattedMessages;
     } catch (error: any) {
       logger.error(`Erro ao buscar mensagens de ${phone}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Helper: Determinar mimetype baseado no tipo de mensagem
+   */
+  private getMimeTypeFromMessageType(type: string): string {
+    switch (type) {
+      case 'image': return 'image/jpeg';
+      case 'video': return 'video/mp4';
+      case 'audio': return 'audio/ogg';
+      case 'ptt': return 'audio/ogg; codecs=opus';
+      case 'sticker': return 'image/webp';
+      case 'document': return 'application/octet-stream';
+      default: return 'application/octet-stream';
     }
   }
 
