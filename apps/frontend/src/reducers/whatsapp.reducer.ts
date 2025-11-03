@@ -33,8 +33,8 @@ export function whatsappReducer(
       return state;
 
     case 'QR_RECEIVED':
-      // Permitido de: initializing, qr-available (atualização)
-      if (state.type === 'initializing' || state.type === 'qr-available') {
+      // Permitido de: initializing, qr-available (atualização), disconnected (reconexão)
+      if (state.type === 'initializing' || state.type === 'qr-available' || state.type === 'disconnected') {
         return {
           type: 'qr-available',
           qrCode: action.qrCode,
