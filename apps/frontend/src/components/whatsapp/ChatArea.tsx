@@ -575,15 +575,32 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
                         </div>
                       )}
 
-                      {/* ✅ CORRIGIDO: Media - Verificar tipo da mensagem */}
-                      {hasMedia(message) && (
+                      {/* ✅ CORRIGIDO: Media - Verificar tipo da mensagem E mediaUrl válida */}
+                      {hasMedia(message) && message.mediaUrl && (
                         <div className="mb-2">
                           <MediaViewer
                             type={getMediaType(message)}
-                            url={message.mediaUrl || ''}
+                            url={message.mediaUrl}
                             filename={message.content || 'arquivo'}
                             onDownload={() => handleDownload(message)}
                           />
+                        </div>
+                      )}
+
+                      {/* ✅ NOVO: Mensagem de erro se mídia não carregou */}
+                      {hasMedia(message) && !message.mediaUrl && (
+                        <div className={`mb-2 p-3 rounded-lg text-sm ${
+                          message.fromMe ? 'bg-green-600/20 text-white' : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          <p className="font-medium">⚠️ Mídia não disponível</p>
+                          <button
+                            onClick={() => handleDownload(message)}
+                            className={`mt-1 underline hover:no-underline text-xs ${
+                              message.fromMe ? 'text-white/90' : 'text-amber-800'
+                            }`}
+                          >
+                            Tentar baixar novamente
+                          </button>
                         </div>
                       )}
 

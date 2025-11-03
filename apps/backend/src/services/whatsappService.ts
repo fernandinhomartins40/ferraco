@@ -1755,25 +1755,40 @@ class WhatsAppService {
 
             const mediaData = await this.client!.downloadMedia(msg.id);
 
-            if (mediaData) {
-              // Determinar o mimetype correto
-              const mimeType = msg.mimetype || this.getMimeTypeFromMessageType(msg.type);
+            // ✅ SOLUÇÃO 1: Validar que mediaData é string válida e não vazia
+            if (mediaData && typeof mediaData === 'string' && mediaData.length > 0) {
+              // ✅ SOLUÇÃO 2: Determinar mimetype correto para áudio/PTT
+              let mimeType = msg.mimetype;
+
+              if (!mimeType) {
+                if (msg.type === 'ptt') {
+                  // ✅ Usar audio/ogg sem codecs para melhor compatibilidade
+                  mimeType = 'audio/ogg';
+                } else if (msg.type === 'audio') {
+                  mimeType = 'audio/mpeg';
+                } else {
+                  mimeType = this.getMimeTypeFromMessageType(msg.type);
+                }
+              }
 
               // Converter para data URL (base64)
               mediaUrl = `data:${mimeType};base64,${mediaData}`;
 
-              logger.debug(`✅ Mídia baixada com sucesso: ${msg.id.substring(0, 20)}...`);
+              logger.debug(`✅ Mídia baixada com sucesso: ${mimeType} (${mediaData.length} bytes base64)`);
             } else {
-              logger.warn(`⚠️  Mídia não disponível para mensagem ${msg.id.substring(0, 20)}...`);
+              logger.warn(`⚠️  Download retornou vazio para mensagem ${msg.id.substring(0, 20)}...`);
+              // ✅ SOLUÇÃO 3: Retornar null em vez de fallback (frontend tratará o erro)
+              mediaUrl = null;
             }
           } catch (mediaError: any) {
             // ⭐ CRÍTICO: Não bloquear mensagens se download de mídia falhar
-            logger.warn(`⚠️  Erro ao baixar mídia (mensagem será exibida sem mídia):`, {
+            logger.error(`❌ Erro ao baixar mídia:`, {
               messageId: msg.id.substring(0, 20),
+              type: msg.type,
               error: mediaError.message,
             });
-            // Fallback: usar endpoint de download
-            mediaUrl = `/api/whatsapp/media/${msg.id}`;
+            // ✅ SOLUÇÃO 3: Retornar null em vez de fallback (frontend tratará o erro)
+            mediaUrl = null;
           }
         }
 

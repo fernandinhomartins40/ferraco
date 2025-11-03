@@ -24,22 +24,61 @@ const MediaViewer = ({ type, url, filename, onDownload }: MediaViewerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    // ✅ SOLUÇÃO 4: Debug logging para rastrear problemas de mídia
+    console.log('🎵 MediaViewer montado:', {
+      type,
+      url: url?.substring(0, 50) + (url?.length > 50 ? '...' : ''),
+      hasUrl: !!url,
+      urlLength: url?.length || 0,
+    });
+
     const audio = audioRef.current;
     if (audio) {
+      console.log('🎵 Elemento <audio> encontrado, configurando listeners');
+
       const updateTime = () => setCurrentTime(audio.currentTime);
       const updateDuration = () => setDuration(audio.duration);
+
+      // ✅ SOLUÇÃO 5: Adicionar listeners de erro para debug
+      const handleError = (e: Event) => {
+        console.error('❌ Erro ao carregar áudio:', e);
+        console.error('URL problemática:', url?.substring(0, 100));
+        console.error('Audio error code:', (e.target as HTMLAudioElement)?.error?.code);
+        console.error('Audio error message:', (e.target as HTMLAudioElement)?.error?.message);
+      };
+
+      const handleCanPlay = () => {
+        console.log('✅ Áudio pronto para reproduzir');
+        console.log('Duração:', audio.duration);
+      };
+
+      const handleLoadStart = () => {
+        console.log('📥 Iniciando carregamento do áudio...');
+      };
+
+      const handleLoadedData = () => {
+        console.log('✅ Dados do áudio carregados');
+      };
 
       audio.addEventListener('timeupdate', updateTime);
       audio.addEventListener('loadedmetadata', updateDuration);
       audio.addEventListener('ended', () => setIsPlaying(false));
+      audio.addEventListener('error', handleError);
+      audio.addEventListener('canplay', handleCanPlay);
+      audio.addEventListener('loadstart', handleLoadStart);
+      audio.addEventListener('loadeddata', handleLoadedData);
 
       return () => {
         audio.removeEventListener('timeupdate', updateTime);
         audio.removeEventListener('loadedmetadata', updateDuration);
         audio.removeEventListener('ended', () => setIsPlaying(false));
+        audio.removeEventListener('error', handleError);
+        audio.removeEventListener('canplay', handleCanPlay);
+        audio.removeEventListener('loadstart', handleLoadStart);
+        audio.removeEventListener('loadeddata', handleLoadedData);
       };
     }
-  }, []);
+  }, [url, type]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
