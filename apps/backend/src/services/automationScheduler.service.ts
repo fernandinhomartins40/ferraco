@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 import { whatsappService } from './whatsappService';
+import { Server as SocketIOServer } from 'socket.io';
 
 const prisma = new PrismaClient();
 
@@ -11,6 +12,15 @@ const prisma = new PrismaClient();
 class AutomationSchedulerService {
   private isRunning = false;
   private intervalId: NodeJS.Timeout | null = null;
+  private io: SocketIOServer | null = null;
+
+  /**
+   * Configura Socket.IO para emitir eventos em tempo real
+   */
+  setSocketIO(io: SocketIOServer): void {
+    this.io = io;
+    logger.info('✅ Socket.IO configurado no AutomationSchedulerService');
+  }
 
   /**
    * Inicia o scheduler
@@ -200,17 +210,49 @@ class AutomationSchedulerService {
 
       // Enviar mensagem
       logger.info(`📤 Enviando mensagem para ${lead.name} (${lead.phone})`);
+      logger.debug(`📝 Conteúdo: ${messageContent.substring(0, 50)}...`);
 
-      await whatsappService.sendTextMessage(lead.phone, messageContent);
+      // ⭐ CRÍTICO: Validar se WhatsApp está conectado ANTES de tentar enviar
+      if (!whatsappService.isWhatsAppConnected()) {
+        throw new Error('WhatsApp não está conectado. Impossível enviar mensagem.');
+      }
+
+      const result = await whatsappService.sendTextMessage(lead.phone, messageContent);
+
+      // ⭐ CRÍTICO: Validar se mensagem foi realmente enviada
+      if (!result || !result.id) {
+        throw new Error('Falha ao enviar mensagem: sem confirmação do WPPConnect');
+      }
+
+      logger.info(`✅ Mensagem enviada com sucesso! MessageID: ${result.id}`);
+
+      // ✅ Emitir evento Socket.IO para atualizar frontend
+      if (this.io) {
+        this.io.emit('conversation:update', lead.phone);
+        logger.debug(`📡 Socket.IO: conversation:update emitido para ${lead.phone}`);
+      }
 
       // Enviar mídias se houver
       if (column.messageTemplate?.mediaUrls) {
         const mediaUrls = JSON.parse(column.messageTemplate.mediaUrls);
         for (const mediaUrl of mediaUrls) {
+          let mediaResult;
+
           if (column.messageTemplate.mediaType === 'IMAGE') {
-            await whatsappService.sendImage(lead.phone, mediaUrl);
+            mediaResult = await whatsappService.sendImage(lead.phone, mediaUrl);
           } else if (column.messageTemplate.mediaType === 'VIDEO') {
-            await whatsappService.sendVideo(lead.phone, mediaUrl);
+            mediaResult = await whatsappService.sendVideo(lead.phone, mediaUrl);
+          }
+
+          // ⭐ Validar envio de mídia
+          if (!mediaResult) {
+            logger.warn(`⚠️ Mídia pode não ter sido enviada: ${mediaUrl}`);
+          }
+
+          // ✅ Emitir evento Socket.IO após cada mídia
+          if (this.io) {
+            this.io.emit('conversation:update', lead.phone);
+            logger.debug(`📡 Socket.IO: conversation:update emitido para mídia (${lead.phone})`);
           }
         }
       }

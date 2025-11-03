@@ -32,7 +32,6 @@ import whatsappExtendedRoutes from './routes/whatsappExtended.routes';
 import automationKanbanRoutes from './routes/automationKanban.routes';
 import whatsappMessageTemplateRoutes from './routes/whatsappMessageTemplate.routes';
 import whatsappAutomationRoutes from './modules/whatsapp-automation/whatsapp-automation.routes';
-import { automationSchedulerService } from './services/automationScheduler.service';
 import { tokenCleanupService } from './services/token-cleanup.service';
 
 export function createApp(): Application {
@@ -96,10 +95,6 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/whatsapp-automations`, whatsappAutomationRoutes);
 
   logger.info('✅ All routes registered successfully');
-
-  // Iniciar Automation Scheduler
-  automationSchedulerService.start();
-  logger.info('✅ Automation Scheduler started');
 
   // Iniciar limpeza automática de tokens
   tokenCleanupService.start();
