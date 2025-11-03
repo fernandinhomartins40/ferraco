@@ -163,6 +163,37 @@ const AdminWhatsApp = () => {
       setAccount(response.data.account);
     } catch (error) {
       console.error('Erro ao obter informações da conta:', error);
+      setAccount(null);
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    try {
+      // 1. Solicitar status via Socket.IO
+      requestStatus();
+
+      // 2. Verificar status via API REST (fallback)
+      const statusResponse = await api.get('/whatsapp/status');
+      const apiStatus = statusResponse.data;
+
+      // Atualizar estado local com resposta da API
+      setStatus({
+        connected: apiStatus.connected,
+        hasQR: apiStatus.hasQR || false,
+        message: apiStatus.message,
+      });
+
+      // Se conectado, buscar info da conta
+      if (apiStatus.connected) {
+        await fetchAccountInfo();
+      } else {
+        setAccount(null);
+      }
+
+      toast.success('Status atualizado');
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast.error('Erro ao atualizar status');
     }
   };
 
@@ -392,7 +423,7 @@ const AdminWhatsApp = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={requestStatus}
+                      onClick={handleRefreshStatus}
                       title="Atualizar status"
                     >
                       <RefreshCw className="h-4 w-4" />
