@@ -2103,7 +2103,8 @@ class WhatsAppService {
   async leaveGroup(groupId: string): Promise<boolean> {
     this.validateConnection();
     logger.info(`👋 Saindo do grupo: ${groupId}`);
-    return await this.client!.leaveGroup(groupId);
+    await this.client!.leaveGroup(groupId);
+    return true;
   }
 
   /**
