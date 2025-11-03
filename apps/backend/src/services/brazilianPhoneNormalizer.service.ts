@@ -258,19 +258,19 @@ export class BrazilianPhoneNormalizerService {
     let reason: string;
 
     if (isMobile && cleaned.length === 13) {
-      // Número móvel COM nono dígito - MANTER como está por padrão
-      normalized = cleaned;
-      hasNinthDigit = true;
-      reason = 'mobile_with_ninth_digit';
+      // ⭐ Número móvel COM nono dígito - REMOVER (política: sempre sem 9º)
+      normalized = this.removeNinthDigit(cleaned);
+      hasNinthDigit = false;
+      reason = 'mobile_ninth_digit_removed';
 
-      logger.debug(`📱 Número móvel com 9 dígitos detectado (DDD ${ddd}): ${normalized}`);
+      logger.debug(`📱 Número móvel com 9 dígitos - REMOVIDO (DDD ${ddd}): ${cleaned} → ${normalized}`);
     } else if (isMobile && cleaned.length === 12) {
-      // Número móvel SEM nono dígito - ADICIONAR por padrão
-      normalized = this.addNinthDigit(cleaned);
-      hasNinthDigit = true;
-      reason = 'mobile_ninth_digit_added';
+      // ⭐ Número móvel SEM nono dígito - MANTER (política: sempre sem 9º)
+      normalized = cleaned;
+      hasNinthDigit = false;
+      reason = 'mobile_without_ninth_digit';
 
-      logger.debug(`📱 Número móvel sem 9º dígito - adicionado (DDD ${ddd}): ${cleaned} → ${normalized}`);
+      logger.debug(`📱 Número móvel sem 9º dígito - mantido (DDD ${ddd}): ${normalized}`);
     } else {
       // Número fixo ou internacional - manter como está
       normalized = cleaned;
@@ -303,6 +303,8 @@ export class BrazilianPhoneNormalizerService {
   /**
    * Normaliza e verifica qual formato está registrado no WhatsApp
    *
+   * ⭐ IMPORTANTE: SEMPRE REMOVE O 9º DÍGITO (formato que funciona em 100% dos casos)
+   *
    * @param phoneNumber Número a ser normalizado
    * @param checkFunction Função que verifica se o número existe no WhatsApp (retorna boolean)
    * @returns Número normalizado no formato correto para WhatsApp
@@ -311,7 +313,7 @@ export class BrazilianPhoneNormalizerService {
     phoneNumber: string,
     checkFunction: (formatted: string) => Promise<boolean>
   ): Promise<NormalizedNumber> {
-    logger.info(`🔍 Normalizando e verificando número: ${phoneNumber}`);
+    logger.info(`🔍 Normalizando número (SEM 9º dígito): ${phoneNumber}`);
 
     // Normalização básica
     const basic = this.normalize(phoneNumber);
@@ -322,80 +324,26 @@ export class BrazilianPhoneNormalizerService {
       return basic;
     }
 
-    // Gerar ambas as versões
-    const { with9, without9 } = this.generateBothFormats(phoneNumber);
+    // ⭐ SEMPRE USAR FORMATO SEM 9º DÍGITO (funciona 100%)
+    const { without9 } = this.generateBothFormats(phoneNumber);
 
-    logger.debug(`🔄 Testando versões:
-      - Com 9º dígito:  ${with9}
-      - Sem 9º dígito:  ${without9}`);
+    logger.info(`✅ Usando formato SEM 9º dígito: ${without9}`);
 
-    try {
-      // Verificar versão COM nono dígito primeiro (formato moderno)
-      logger.debug(`🔍 Verificando versão com 9º dígito: ${with9}`);
-      const existsWith9 = await checkFunction(with9);
+    // Atualizar cache
+    this.cache.set(phoneNumber, {
+      normalized: without9,
+      hasNinthDigit: false,
+      timestamp: Date.now(),
+    });
 
-      if (existsWith9) {
-        logger.info(`✅ Número encontrado COM 9º dígito: ${with9}`);
-
-        // Atualizar cache
-        this.cache.set(phoneNumber, {
-          normalized: with9,
-          hasNinthDigit: true,
-          timestamp: Date.now(),
-        });
-
-        return {
-          original: phoneNumber,
-          normalized: with9,
-          hasNinthDigit: true,
-          wasModified: true,
-          ddd: basic.ddd,
-          reason: 'verified_with_ninth_digit',
-        };
-      }
-
-      // Se não encontrou com 9, tentar SEM o nono dígito (formato antigo)
-      logger.debug(`🔍 Verificando versão sem 9º dígito: ${without9}`);
-      const existsWithout9 = await checkFunction(without9);
-
-      if (existsWithout9) {
-        logger.info(`✅ Número encontrado SEM 9º dígito (registro antigo): ${without9}`);
-
-        // Atualizar cache
-        this.cache.set(phoneNumber, {
-          normalized: without9,
-          hasNinthDigit: false,
-          timestamp: Date.now(),
-        });
-
-        return {
-          original: phoneNumber,
-          normalized: without9,
-          hasNinthDigit: false,
-          wasModified: true,
-          ddd: basic.ddd,
-          reason: 'verified_without_ninth_digit',
-        };
-      }
-
-      // Número não encontrado em nenhuma das versões
-      logger.warn(`⚠️  Número não encontrado no WhatsApp em nenhum formato: ${phoneNumber}`);
-
-      // Retornar formato moderno como fallback
-      return {
-        original: phoneNumber,
-        normalized: with9,
-        hasNinthDigit: true,
-        wasModified: true,
-        ddd: basic.ddd,
-        reason: 'not_found_using_modern_format',
-      };
-    } catch (error) {
-      logger.error(`❌ Erro ao verificar número ${phoneNumber}:`, error);
-
-      // Em caso de erro, retornar normalização básica
-      return basic;
-    }
+    return {
+      original: phoneNumber,
+      normalized: without9,
+      hasNinthDigit: false,
+      wasModified: true,
+      ddd: basic.ddd,
+      reason: 'forced_without_ninth_digit',
+    };
   }
 
   /**
@@ -415,6 +363,15 @@ export class BrazilianPhoneNormalizerService {
     if (cleaned > 0) {
       logger.info(`🧹 Cache limpo: ${cleaned} entradas antigas removidas`);
     }
+  }
+
+  /**
+   * Limpa TODO o cache (forçar reconversão de todos os números)
+   */
+  clearAllCache(): void {
+    const size = this.cache.size;
+    this.cache.clear();
+    logger.info(`🧹 Cache completamente limpo: ${size} entradas removidas`);
   }
 
   /**

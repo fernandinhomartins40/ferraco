@@ -152,6 +152,10 @@ class WhatsAppService {
     logger.info('🚀 Inicializando WhatsApp com WPPConnect em background...');
     this.isInitializing = true;
 
+    // ⭐ Limpar cache de números para forçar reconversão sem 9º dígito
+    brazilianPhoneNormalizer.clearAllCache();
+    logger.info('🧹 Cache de números limpo - todos números serão reformatados SEM 9º dígito');
+
     // Inicializar em background sem bloquear o servidor
     this.startWhatsAppClient().catch((error) => {
       logger.error('❌ Erro fatal ao inicializar WhatsApp:', error);
