@@ -1753,7 +1753,32 @@ class WhatsAppService {
             // ⭐ SOLUÇÃO: Baixar mídia diretamente do WPPConnect e converter para base64
             logger.debug(`📥 Baixando mídia da mensagem ${msg.id.substring(0, 20)}... (tipo: ${msg.type})`);
 
-            const mediaData = await this.client!.downloadMedia(msg.id);
+            // ✅ CRÍTICO: WPPConnect downloadMedia retorna base64, mas pode retornar vazio
+            // Solução: usar decryptFile() que descriptografa a mídia completa
+            let mediaData: string | null = null;
+
+            // Tentar downloadMedia primeiro (mais rápido)
+            try {
+              mediaData = await this.client!.downloadMedia(msg.id);
+            } catch (downloadError) {
+              logger.debug(`⚠️  downloadMedia falhou, tentando decryptFile...`);
+            }
+
+            // Se downloadMedia falhou ou retornou vazio, tentar decryptFile
+            if (!mediaData || mediaData.length === 0) {
+              try {
+                // decryptFile usa o próprio objeto da mensagem para descriptografar
+                const decrypted = await (this.client as any).decryptFile(msg);
+                if (decrypted) {
+                  // decryptFile retorna Buffer ou string base64
+                  mediaData = Buffer.isBuffer(decrypted)
+                    ? decrypted.toString('base64')
+                    : decrypted;
+                }
+              } catch (decryptError) {
+                logger.debug(`⚠️  decryptFile também falhou`);
+              }
+            }
 
             // ✅ SOLUÇÃO 1: Validar que mediaData é string válida e não vazia
             if (mediaData && typeof mediaData === 'string' && mediaData.length > 0) {
