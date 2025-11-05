@@ -110,6 +110,10 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    scroll-padding-top: 96px; /* Altura do header fixo (lg:h-24) */
+  }
+
   body {
     @apply bg-background text-foreground;
   }
