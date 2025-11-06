@@ -348,11 +348,8 @@ const AdminWhatsApp = () => {
             ) : (
               <div className="h-[calc(100vh-16rem)] min-h-[500px] border rounded-lg overflow-hidden bg-white">
                 <div className="flex h-full">
-                  {/* Sidebar - Lista de Conversas */}
-                  <section className={`
-                    w-full md:w-96 border-r flex-shrink-0 bg-white h-full
-                    ${selectedConversationId ? 'hidden md:block' : 'block'}
-                  `}>
+                  {/* Sidebar - Lista de Conversas (sempre visível) */}
+                  <section className="w-96 border-r flex-shrink-0 bg-white h-full">
                     {/* ✅ FASE 4: Suspense para lazy loading */}
                     <Suspense fallback={
                       <div className="flex items-center justify-center h-full">
@@ -366,18 +363,15 @@ const AdminWhatsApp = () => {
                     </Suspense>
                   </section>
 
-                  {/* Área Principal - Chat */}
-                  <section className={`
-                    flex-1 bg-gray-50 h-full
-                    ${selectedConversationId ? 'block' : 'hidden md:block'}
-                  `}>
+                  {/* Área Principal - Chat (sempre visível) */}
+                  <section className="flex-1 bg-gray-50 h-full">
                     {selectedConversationId ? (
                       <Suspense fallback={
                         <div className="flex items-center justify-center h-full">
                           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                         </div>
                       }>
-                        <ChatArea conversationId={selectedConversationId} onBack={() => setSelectedConversationId(null)} />
+                        <ChatArea conversationId={selectedConversationId} />
                       </Suspense>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-400">
