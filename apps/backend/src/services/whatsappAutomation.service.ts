@@ -16,6 +16,8 @@ import { whatsappService } from './whatsappService';
 import { logger } from '../utils/logger';
 import { whatsappAntiSpamService } from './whatsappAntiSpam.service';
 import type { ProductMatch, ValidationResult } from '../modules/whatsapp-automation/whatsapp-automation.types';
+import type { RecurrenceResult } from './leadRecurrence.service';
+import { recurrenceMessageTemplateService } from './recurrenceMessageTemplate.service';
 
 export class WhatsAppAutomationService {
   private queue: Map<string, { priority: number; retryCount: number }> = new Map();
@@ -794,6 +796,105 @@ export class WhatsAppAutomationService {
 
     // Adicionar à fila
     this.addToQueue(automationId, 2); // Prioridade alta para retries
+  }
+
+  /**
+   * 🔄 NOVO: Criar automação para lead recorrente
+   * Utiliza template de mensagem específico baseado no histórico
+   */
+  async createRecurrenceAutomation(
+    leadId: string,
+    recurrence: RecurrenceResult
+  ): Promise<string | null> {
+    try {
+      const { lead, captureNumber, daysSinceLastCapture, previousInterests, interestChanged } = recurrence;
+
+      logger.info(
+        `🔄 Criando automação de recorrência para lead ${leadId} ` +
+        `(captura #${captureNumber}, ${daysSinceLastCapture} dias)`
+      );
+
+      // 1. Selecionar melhor template de recorrência
+      const templateMatch = await recurrenceMessageTemplateService.selectBestTemplate(
+        recurrence,
+        lead.leadScore
+      );
+
+      if (!templateMatch) {
+        logger.warn(`⚠️ Nenhum template de recorrência encontrado, usando automação padrão`);
+        return await this.createAutomationFromLead(leadId);
+      }
+
+      const template = templateMatch.template;
+      logger.info(`✅ Template selecionado: "${template.name}" (match: ${templateMatch.matchScore}%)`);
+
+      // 2. Extrair produtos de interesse do metadata
+      const metadata = JSON.parse(lead.metadata || '{}');
+      const currentInterest = metadata.selectedProducts || [];
+
+      // 3. Processar template substituindo variáveis
+      const messageContent = recurrenceMessageTemplateService.processTemplate(
+        template.content,
+        {
+          lead,
+          captureNumber,
+          daysSinceLastCapture,
+          previousInterests,
+          currentInterest,
+        }
+      );
+
+      // 4. Criar automação com mensagem personalizada
+      const automation = await prisma.whatsAppAutomation.create({
+        data: {
+          leadId,
+          status: 'PENDING',
+          productsToSend: JSON.stringify([`RECURRENCE_TEMPLATE_${template.id}`]),
+          messagesTotal: 1 + (template.mediaUrls ? JSON.parse(template.mediaUrls).length : 0),
+          scheduledFor: null, // Envio imediato
+        },
+      });
+
+      logger.info(`✅ Automação de recorrência ${automation.id} criada para lead ${leadId}`);
+
+      // 5. Criar mensagem customizada no banco
+      await prisma.whatsAppAutomationMessage.create({
+        data: {
+          automationId: automation.id,
+          messageType: 'TEXT',
+          content: messageContent,
+          status: 'PENDING',
+          order: 1,
+        },
+      });
+
+      // 6. Se houver mídia, adicionar às mensagens
+      if (template.mediaUrls) {
+        const mediaUrls = JSON.parse(template.mediaUrls);
+        let order = 2;
+
+        for (const mediaUrl of mediaUrls) {
+          await prisma.whatsAppAutomationMessage.create({
+            data: {
+              automationId: automation.id,
+              messageType: template.mediaType || 'IMAGE',
+              mediaUrl: mediaUrl,
+              status: 'PENDING',
+              order: order++,
+            },
+          });
+        }
+      }
+
+      // 7. Adicionar à fila com prioridade alta (leads recorrentes são mais valiosos)
+      const priorityBoost = Math.min(captureNumber * 2, 10); // Captura 2 = prioridade 4, captura 5+ = prioridade 10
+      this.addToQueue(automation.id, 5 + priorityBoost);
+
+      return automation.id;
+    } catch (error) {
+      logger.error(`❌ Erro ao criar automação de recorrência:`, error);
+      return null;
+    }
   }
 
   /**

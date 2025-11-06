@@ -1098,15 +1098,20 @@ class WhatsAppService {
 
           logger.debug(`🔍 Verificando número formatado: ${formatted}`);
 
-          // ✅ Usar funcionalidade nativa do WPPConnect: checkNumberStatus
-          // Retorna objeto com propriedade 'numberExists' que indica se o número está registrado no WhatsApp
-          const statusResult = await this.client!.checkNumberStatus(formatted);
+          // ✅ CORREÇÃO: Usar checkNumberStatus com try-catch para evitar erro createUserWid
+          // Alguns números podem causar erro interno no WPPConnect, então tratamos graciosamente
+          let exists = false;
+          try {
+            const statusResult = await this.client!.checkNumberStatus(formatted);
+            logger.debug(`📊 Resultado WPPConnect para ${phoneNumber}:`, JSON.stringify(statusResult, null, 2));
 
-          logger.debug(`📊 Resultado WPPConnect para ${phoneNumber}:`, JSON.stringify(statusResult, null, 2));
-
-          // ✅ SOLUÇÃO INTELIGENTE: Usar a propriedade nativa 'numberExists' do WPPConnect
-          // Esta é a forma oficial e confiável de verificar se um número está no WhatsApp
-          const exists = statusResult.numberExists === true;
+            // ✅ Verificar propriedade numberExists do WPPConnect
+            exists = statusResult.numberExists === true;
+          } catch (checkError: any) {
+            // Se checkNumberStatus falhar (ex: createUserWid error), assumir que número NÃO existe
+            logger.warn(`⚠️  checkNumberStatus falhou para ${formatted}: ${checkError.message}`);
+            exists = false;
+          }
 
           results.push({
             phoneNumber,
@@ -1555,8 +1560,9 @@ class WhatsAppService {
             const exists = statusResult.numberExists === true;
             logger.debug(`   → Verificado ${formatted}: ${exists ? 'EXISTE' : 'NÃO EXISTE'}`);
             return exists;
-          } catch (error) {
-            logger.warn(`   ⚠️ Erro ao verificar ${formatted}:`, error);
+          } catch (error: any) {
+            // ✅ CORREÇÃO: Tratar erro createUserWid graciosamente
+            logger.warn(`   ⚠️ Erro ao verificar ${formatted}: ${error.message || error}`);
             return false;
           }
         }

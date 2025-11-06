@@ -112,7 +112,10 @@
       "Bash(git stash:*)",
       "Bash(tar:*)",
       "Bash(tee:*)",
-      "Bash(sshpass -p 'Fv1234567890!' ssh -o StrictHostKeyChecking=no root@72.60.10.108 \"docker ps | grep ferraco\")"
+      "Bash(sshpass -p 'Fv1234567890!' ssh -o StrictHostKeyChecking=no root@72.60.10.108 \"docker ps | grep ferraco\")",
+      "Bash(sshpass:*)",
+      "Bash(openssl s_client:*)",
+      "Bash(openssl:*)"
     ],
     "deny": [],
     "ask": []

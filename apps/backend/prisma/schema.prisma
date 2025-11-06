@@ -408,6 +408,11 @@ model Lead {
   // Metadados
   metadata String? // JSON: dados adicionais
 
+  // Recorrência (tracking de capturas múltiplas)
+  captureCount    Int      @default(1) // Contador de vezes que o lead foi capturado
+  firstCapturedAt DateTime @default(now()) // Primeira vez que demonstrou interesse
+  lastCapturedAt  DateTime @default(now()) // Última vez que demonstrou interesse
+
   // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -438,6 +443,7 @@ model Lead {
   whatsappAutomations  WhatsAppAutomation[]
   automationPosition   AutomationLeadPosition?
   whatsappBotSessions  WhatsAppBotSession[]
+  captures             LeadCapture[] // Histórico de capturas
 
   @@index([email])
   @@index([phone])
@@ -447,7 +453,76 @@ model Lead {
   @@index([createdAt])
   @@index([priority])
   @@index([leadScore])
+  @@index([captureCount])
+  @@index([lastCapturedAt])
   @@map("leads")
+}
+
+// ============================================================================
+// TABELA: LeadCapture (Histórico de Capturas Recorrentes)
+// ============================================================================
+
+model LeadCapture {
+  id            String   @id @default(cuid())
+  leadId        String
+  source        String // 'landing-page', 'chatbot-web', 'whatsapp', 'manual'
+  interest      String? // JSON array com produtos de interesse
+  metadata      String? // JSON: dados contextuais (email, company, etc)
+  captureNumber Int // 1ª, 2ª, 3ª captura...
+
+  // Context da captura
+  userAgent String?
+  ipAddress String?
+  campaign  String? // Campanha de origem (UTM)
+
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([createdAt])
+  @@index([captureNumber])
+  @@index([source])
+  @@map("lead_captures")
+}
+
+// ============================================================================
+// TABELA: RecurrenceMessageTemplate (Templates de Mensagens de Recorrência)
+// ============================================================================
+
+model RecurrenceMessageTemplate {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  // Trigger conditions
+  trigger          String // 'second_capture', 'third_capture', 'high_value_return', 'same_interest', 'new_interest'
+  minCaptures      Int // Número mínimo de capturas para disparar
+  maxCaptures      Int? // Número máximo de capturas (null = sem limite)
+  daysSinceLastCapture Int? // Dias desde última captura (null = qualquer)
+
+  // Condições adicionais (JSON)
+  conditions String @default("{}") // Ex: { "sameInterest": true, "minScore": 50 }
+
+  // Template
+  content   String @db.Text // Conteúdo com variáveis {{lead.name}}, {{captureNumber}}, etc
+  mediaUrls String? // JSON array de URLs de mídia
+  mediaType String? // IMAGE, VIDEO, DOCUMENT
+
+  // Prioridade e ativação
+  priority Int     @default(0) // Maior = mais prioritário
+  isActive Boolean @default(true)
+
+  // Metadados
+  usageCount Int @default(0) // Contador de usos
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([trigger])
+  @@index([isActive])
+  @@index([priority])
+  @@map("recurrence_message_templates")
 }
 
 // ============================================================================

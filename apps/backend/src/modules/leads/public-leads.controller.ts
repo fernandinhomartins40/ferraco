@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { createdResponse, badRequestResponse } from '../../utils/response';
 import { prisma } from '../../config/database';
+import { leadRecurrenceService } from '../../services/leadRecurrence.service';
+import { whatsappAutomationService } from '../../services/whatsappAutomation.service';
 
 // ============================================================================
 // Public Lead Schema (simplified for landing page)
@@ -68,67 +70,65 @@ export class PublicLeadsController {
         phoneWithCountryCode = `+55${formattedPhone}`;
       }
 
-      // Check if lead already exists
-      try {
-        const duplicates = await this.service.findDuplicates({
-          phone: phoneWithCountryCode,
-        });
-
-        if (duplicates.length > 0) {
-          logger.info('Duplicate lead detected from public form', {
-            phone: phoneWithCountryCode,
-            existingLeadId: duplicates[0].lead.id,
-          });
-
-          // Return success but don't create duplicate
-          // This prevents exposing whether a phone number exists in the system
-          createdResponse(res, {
-            id: duplicates[0].lead.id,
-            message: 'Seus dados foram recebidos com sucesso!'
-          }, 'Lead recebido com sucesso');
-          return;
-        }
-      } catch (error) {
-        logger.error('Error checking for duplicates', { error });
-        // Continue with creation even if duplicate check fails
-      }
-
-      // Get system user for public leads (first admin user)
-      const systemUser = await prisma.user.findFirst({
-        where: { role: 'ADMIN' },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      if (!systemUser) {
-        logger.error('No system user found for public lead creation');
-        badRequestResponse(res, 'Sistema temporariamente indisponível. Tente novamente mais tarde.');
-        return;
-      }
-
-      // Create lead
-      const lead = await this.service.create(
-        {
-          name: validatedData.name,
-          phone: phoneWithCountryCode,
-          email: validatedData.email || undefined,
-          source: validatedData.source,
-          status: 'NOVO',
-          priority: 'MEDIUM',
+      // ============================================================================
+      // 🔄 DETECÇÃO DE RECORRÊNCIA - Novo sistema
+      // ============================================================================
+      const recurrence = await leadRecurrenceService.handleLeadCapture({
+        phone: phoneWithCountryCode,
+        name: validatedData.name,
+        email: validatedData.email,
+        source: validatedData.source,
+        interest: req.body.interest, // Opcional: produtos de interesse
+        metadata: {
+          userAgent: req.headers['user-agent'],
+          referer: req.headers['referer'],
         },
-        systemUser.id
-      );
-
-      logger.info('Public lead created successfully', {
-        leadId: lead.id,
-        name: lead.name,
-        source: lead.source,
+        userAgent: req.headers['user-agent'],
+        ipAddress: req.ip,
       });
+
+      const { lead, isRecurrent, captureNumber, daysSinceLastCapture } = recurrence;
+
+      // ============================================================================
+      // 🤖 AUTOMAÇÃO WHATSAPP - Criar com template de recorrência
+      // ============================================================================
+      if (isRecurrent) {
+        logger.info(
+          `🔄 Lead recorrente: ${lead.name} - Captura #${captureNumber} ` +
+          `(${daysSinceLastCapture} dias desde última captura)`
+        );
+
+        // Importar dinamicamente para evitar circular dependency
+        import('../../services/whatsappAutomation.service').then(async (module) => {
+          const { whatsappAutomationService } = module;
+
+          try {
+            // Criar automação com suporte a recorrência
+            await whatsappAutomationService.createRecurrenceAutomation(
+              lead.id,
+              recurrence
+            );
+          } catch (error) {
+            logger.error('❌ Erro ao criar automação de recorrência:', error);
+          }
+        });
+      } else {
+        logger.info(`✨ Novo lead criado: ${lead.name}`);
+
+        // Lead novo: criar automação padrão se houver interesse
+        if (req.body.interest) {
+          whatsappAutomationService.createAutomationFromLead(lead.id)
+            .catch(err => logger.error('❌ Erro ao criar automação padrão:', err));
+        }
+      }
 
       // Return minimal data (don't expose internal IDs or sensitive info)
       createdResponse(res, {
         id: lead.id,
-        message: 'Seus dados foram recebidos com sucesso! Nossa equipe entrará em contato em breve.',
-      }, 'Lead criado com sucesso');
+        message: isRecurrent
+          ? 'Que bom te ver de volta! 🎉 Nossa equipe entrará em contato em breve com condições especiais.'
+          : 'Seus dados foram recebidos com sucesso! Nossa equipe entrará em contato em breve.',
+      }, isRecurrent ? 'Lead recorrente registrado' : 'Lead criado com sucesso');
 
     } catch (error) {
       if (error instanceof z.ZodError) {

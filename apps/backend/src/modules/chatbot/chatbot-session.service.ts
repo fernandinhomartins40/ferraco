@@ -14,6 +14,7 @@ import { whatsappAutomationService } from '../../services/whatsappAutomation.ser
 import { logger } from '../../utils/logger';
 import { leadTaggingService } from './lead-tagging.service';
 import { chatbotConfigCache } from './chatbot-config-cache.service';
+import { leadRecurrenceService } from '../../services/leadRecurrence.service';
 
 export class ChatbotSessionService {
   /**
@@ -647,50 +648,56 @@ export class ChatbotSessionService {
       // Determinar se deve triggerar bot WhatsApp
       const shouldTriggerWhatsAppBot = isHumanHandoff || Boolean(userResponses.wants_pricing);
 
-      logger.info(`💾 Criando lead no banco de dados - Nome: ${session.capturedName}, Telefone: ${session.capturedPhone}, Status: ${status}, Prioridade: ${priority}`);
+      logger.info(`💾 Criando/Atualizando lead no banco de dados - Nome: ${session.capturedName}, Telefone: ${session.capturedPhone}`);
 
-      const lead = await prisma.lead.create({
-        data: {
-          name: session.capturedName,
-          phone: session.capturedPhone,
-          email: session.capturedEmail,
-          source: leadSource,
-          status: status,
-          priority: priority,
-          leadScore: session.qualificationScore,
-          metadata: JSON.stringify({
-            sessionId: session.sessionId,
-            interest: session.interest,
-            segment: session.segment,
-            marketingOptIn: session.marketingOptIn,
-            userResponses: session.userResponses,
-            campaign: campaign,
-            // ⭐ NOVOS CAMPOS CONFORME DOCUMENTO
-            userType: userType,
-            activity: userResponses.activity || '',
-            profession: userResponses.profession || '',
-            relation: userResponses.proxy_relation || '',
-            urgency: urgency,
-            wantsPrice: userResponses.wants_pricing === 'wants_pricing',
-            wantsMaterial: userResponses.wants_material === 'wants_material',
-            requiresHumanAttendance: isHumanHandoff,
-            handoffStage: isHumanHandoff ? session.currentStepId : '',
-            handoffReason: isHumanHandoff ? 'usuario_pediu_equipe' : '',
-            capturedAt: new Date().toISOString(),
-            conversationStage: session.currentStage,
-            // 🆕 NOVOS CAMPOS PARA INTEGRAÇÃO COM BOTS
-            selectedProducts: selectedProducts,
-            productsCount: selectedProducts.length,
-            shouldTriggerWhatsAppBot: shouldTriggerWhatsAppBot,
-            shouldAddToKanbanAutomation: true,
-            wantsHumanContact: isHumanHandoff,
-            wantsPricing: Boolean(userResponses.wants_pricing),
-          }),
-          createdById: systemUser.id,
+      // ============================================================================
+      // 🔄 DETECÇÃO DE RECORRÊNCIA - Usar novo sistema
+      // ============================================================================
+      const recurrence = await leadRecurrenceService.handleLeadCapture({
+        phone: session.capturedPhone,
+        name: session.capturedName,
+        email: session.capturedEmail,
+        source: leadSource,
+        interest: selectedProducts,
+        metadata: {
+          sessionId: session.sessionId,
+          interest: session.interest,
+          segment: session.segment,
+          marketingOptIn: session.marketingOptIn,
+          userResponses: session.userResponses,
+          campaign: campaign,
+          userType: userType,
+          activity: userResponses.activity || '',
+          profession: userResponses.profession || '',
+          relation: userResponses.proxy_relation || '',
+          urgency: urgency,
+          wantsPrice: userResponses.wants_pricing === 'wants_pricing',
+          wantsMaterial: userResponses.wants_material === 'wants_material',
+          requiresHumanAttendance: isHumanHandoff,
+          handoffStage: isHumanHandoff ? session.currentStepId : '',
+          handoffReason: isHumanHandoff ? 'usuario_pediu_equipe' : '',
+          capturedAt: new Date().toISOString(),
+          conversationStage: session.currentStage,
+          selectedProducts: selectedProducts,
+          productsCount: selectedProducts.length,
+          shouldTriggerWhatsAppBot: shouldTriggerWhatsAppBot,
+          shouldAddToKanbanAutomation: true,
+          wantsHumanContact: isHumanHandoff,
+          wantsPricing: Boolean(userResponses.wants_pricing),
         },
       });
 
-      logger.info(`✅ Lead criado com sucesso! ID: ${lead.id}, Nome: ${lead.name}, Status: ${lead.status}`);
+      const lead = recurrence.lead;
+
+      if (recurrence.isRecurrent) {
+        logger.info(
+          `🔄 Lead recorrente: ${lead.name} - Captura #${recurrence.captureNumber} ` +
+          `(${recurrence.daysSinceLastCapture} dias desde última captura, ` +
+          `interesse ${recurrence.interestChanged ? 'MUDOU' : 'mantido'})`
+        );
+      } else {
+        logger.info(`✅ Novo lead criado! ID: ${lead.id}, Nome: ${lead.name}, Status: ${lead.status}`);
+      }
 
       // Atualizar sessão com o leadId
       await prisma.chatbotSession.update({
@@ -713,8 +720,16 @@ export class ChatbotSessionService {
         currentStepId: session.currentStepId,
       }).catch(err => logger.error('❌ Erro ao adicionar tags:', err));
 
-      // ✅ Criar automação WhatsApp (se houver produtos selecionados)
-      await this.tryCreateWhatsAppAutomation(lead.id, selectedProducts);
+      // ✅ Criar automação WhatsApp com suporte a recorrência
+      if (recurrence.isRecurrent && selectedProducts.length > 0) {
+        // Lead recorrente: usar automação de recorrência
+        logger.info(`🤖 Criando automação de recorrência para lead ${lead.id}`);
+        whatsappAutomationService.createRecurrenceAutomation(lead.id, recurrence)
+          .catch(err => logger.error('❌ Erro ao criar automação de recorrência:', err));
+      } else if (selectedProducts.length > 0) {
+        // Lead novo: usar automação padrão
+        await this.tryCreateWhatsAppAutomation(lead.id, selectedProducts);
+      }
 
       // ⭐ NOVO: Trigger condicional do bot WhatsApp
       // Só inicia bot se usuário pediu handoff humano OU orçamento

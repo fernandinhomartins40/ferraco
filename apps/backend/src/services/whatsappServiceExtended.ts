@@ -594,7 +594,12 @@ export class WhatsAppServiceExtended {
       const result = await this.client.checkNumberStatus(number);
       logger.info(`✅ Número verificado: ${number}`);
       return result;
-    } catch (error) {
+    } catch (error: any) {
+      // ✅ CORREÇÃO: Tratar erro createUserWid graciosamente
+      if (error.message && error.message.includes('createUserWid')) {
+        logger.warn(`⚠️  Erro interno do WPPConnect (createUserWid) para ${number}`);
+        return { numberExists: false, error: 'Número inválido ou não registrado no WhatsApp' };
+      }
       logger.error('❌ Erro ao verificar número:', error);
       throw error;
     }

@@ -32,6 +32,7 @@ import whatsappExtendedRoutes from './routes/whatsappExtended.routes';
 import automationKanbanRoutes from './routes/automationKanban.routes';
 import whatsappMessageTemplateRoutes from './routes/whatsappMessageTemplate.routes';
 import whatsappAutomationRoutes from './modules/whatsapp-automation/whatsapp-automation.routes';
+import recurrenceRoutes from './modules/recurrence/recurrence.routes';
 import { tokenCleanupService } from './services/token-cleanup.service';
 
 export function createApp(): Application {
@@ -93,6 +94,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/automation-kanban`, automationKanbanRoutes);
   app.use(`${API_PREFIX}/whatsapp-templates`, whatsappMessageTemplateRoutes);
   app.use(`${API_PREFIX}/whatsapp-automations`, whatsappAutomationRoutes);
+  app.use(`${API_PREFIX}/recurrence`, recurrenceRoutes);
 
   logger.info('✅ All routes registered successfully');
 
