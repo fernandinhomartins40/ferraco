@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -94,18 +94,18 @@ export default function RecurrenceTemplates() {
 
   if (isLoading) {
     return (
-    <AdminLayout>
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
       </AdminLayout>
     );
   }
+
+  return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Templates de Recorrência</h1>
           <p className="text-muted-foreground">
@@ -307,9 +307,9 @@ export default function RecurrenceTemplates() {
               </Button>
             </div>
           )}
-      </div>
-    </AdminLayout>
+        </DialogContent>
+      </Dialog>
     </div>
+    </AdminLayout>
   );
 }
-    </AdminLayout>
