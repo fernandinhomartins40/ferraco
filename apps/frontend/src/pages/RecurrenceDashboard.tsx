@@ -48,9 +48,15 @@ export default function RecurrenceDashboard() {
     );
   }
 
-  const recurrenceRate = leadStats
-    ? ((leadStats.recurrentLeads / leadStats.totalLeads) * 100).toFixed(1)
-    : '0';
+  const recurrenceRate =
+    leadStats && leadStats.totalLeads > 0
+      ? ((leadStats.recurrentLeads / leadStats.totalLeads) * 100).toFixed(1)
+      : '0.0';
+
+  const avgCapturesDisplay =
+    leadStats && typeof leadStats.avgCapturesPerLead === 'number'
+      ? leadStats.avgCapturesPerLead.toFixed(1)
+      : '0.0';
 
   // Dados simulados para gráfico de tendências (idealmente viriam da API)
   const trendData = [
@@ -165,7 +171,7 @@ export default function RecurrenceDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {leadStats?.avgCapturesPerLead.toFixed(1) || '0.0'}x
+              {avgCapturesDisplay}x
             </div>
             <p className="text-xs text-muted-foreground">Por lead</p>
           </CardContent>
@@ -275,37 +281,45 @@ export default function RecurrenceDashboard() {
 
               {/* Lista detalhada */}
               <div className="space-y-4">
-                {templateStats.templates.map((template) => (
-                  <div key={template.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{template.name}</span>
-                        {template.isActive ? (
-                          <Badge variant="default">Ativo</Badge>
-                        ) : (
-                          <Badge variant="secondary">Inativo</Badge>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPreviewTemplate(template)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Preview
-                        </Button>
+                {templateStats.templates.map((template) => {
+                  const usagePercentage =
+                    typeof template.usagePercentage === 'number'
+                      ? template.usagePercentage
+                      : 0;
+                  const usagePercentageDisplay = usagePercentage.toFixed(1);
+
+                  return (
+                    <div key={template.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{template.name}</span>
+                          {template.isActive ? (
+                            <Badge variant="default">Ativo</Badge>
+                          ) : (
+                            <Badge variant="secondary">Inativo</Badge>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPreviewTemplate(template)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Preview
+                          </Button>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {template.usageCount} usos ({usagePercentageDisplay}%)
+                        </span>
                       </div>
-                      <span className="text-sm text-muted-foreground">
-                        {template.usageCount} usos ({template.usagePercentage.toFixed(1)}%)
-                      </span>
+                      <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary transition-all"
+                          style={{ width: `${usagePercentage}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary transition-all"
-                        style={{ width: `${template.usagePercentage}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : (
