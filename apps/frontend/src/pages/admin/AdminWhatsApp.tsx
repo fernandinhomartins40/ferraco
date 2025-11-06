@@ -346,11 +346,11 @@ const AdminWhatsApp = () => {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="h-[calc(100vh-16rem)] min-h-[500px]">
-                <div className="flex h-full overflow-hidden">
+              <div className="h-[calc(100vh-16rem)] min-h-[500px] border rounded-lg overflow-hidden bg-white">
+                <div className="flex h-full">
                   {/* Sidebar - Lista de Conversas */}
-                  <div className={`
-                    w-full md:w-96 border-r flex-shrink-0 bg-white
+                  <section className={`
+                    w-full md:w-96 border-r flex-shrink-0 bg-white h-full
                     ${selectedConversationId ? 'hidden md:block' : 'block'}
                   `}>
                     {/* ✅ FASE 4: Suspense para lazy loading */}
@@ -364,12 +364,12 @@ const AdminWhatsApp = () => {
                         onSelectConversation={setSelectedConversationId}
                       />
                     </Suspense>
-                  </div>
+                  </section>
 
                   {/* Área Principal - Chat */}
-                  <div className={`
-                    flex-1 flex flex-col bg-gray-50
-                    ${selectedConversationId ? 'block w-full' : 'hidden md:flex'}
+                  <section className={`
+                    flex-1 bg-gray-50 h-full
+                    ${selectedConversationId ? 'block' : 'hidden md:block'}
                   `}>
                     {selectedConversationId ? (
                       <Suspense fallback={
@@ -380,7 +380,7 @@ const AdminWhatsApp = () => {
                         <ChatArea conversationId={selectedConversationId} onBack={() => setSelectedConversationId(null)} />
                       </Suspense>
                     ) : (
-                      <div className="flex-1 flex items-center justify-center text-gray-400">
+                      <div className="h-full flex items-center justify-center text-gray-400">
                         <div className="text-center">
                           <MessageCircle className="h-24 w-24 mx-auto mb-4" />
                           <h3 className="text-lg font-medium">Selecione uma conversa</h3>
@@ -390,9 +390,9 @@ const AdminWhatsApp = () => {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </section>
                 </div>
-              </Card>
+              </div>
             )}
           </TabsContent>
 
