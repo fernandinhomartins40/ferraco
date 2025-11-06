@@ -36,13 +36,9 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href);
     if (element) {
-      const headerOffset = 96; // Altura do header h-20 lg:h-24 (80-96px)
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.scrollY - headerOffset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth"
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
       });
     }
     setIsMenuOpen(false);
