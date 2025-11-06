@@ -1,13 +1,44 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRecurrenceLeadStats, useRecurrenceTemplateStats } from '@/hooks/api/useRecurrence';
-import { Repeat, Users, TrendingUp, MessageSquare, AlertCircle } from 'lucide-react';
+import { Repeat, Users, TrendingUp, MessageSquare, AlertCircle, Download, Filter, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function RecurrenceDashboard() {
   const { data: leadStats, isLoading: loadingLeads } = useRecurrenceLeadStats();
   const { data: templateStats, isLoading: loadingTemplates } = useRecurrenceTemplateStats();
+
+  const [timeRange, setTimeRange] = useState('7d');
+  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
 
   if (loadingLeads || loadingTemplates) {
     return (
@@ -21,13 +52,86 @@ export default function RecurrenceDashboard() {
     ? ((leadStats.recurrentLeads / leadStats.totalLeads) * 100).toFixed(1)
     : '0';
 
+  // Dados simulados para gráfico de tendências (idealmente viriam da API)
+  const trendData = [
+    { month: 'Jan', recorrentes: 12, novos: 45 },
+    { month: 'Fev', recorrentes: 18, novos: 52 },
+    { month: 'Mar', recorrentes: 25, novos: 48 },
+    { month: 'Abr', recorrentes: 32, novos: 55 },
+    { month: 'Mai', recorrentes: 28, novos: 50 },
+    { month: 'Jun', recorrentes: 35, novos: 60 },
+  ];
+
+  // Função para exportar CSV
+  const exportToCsv = () => {
+    if (!leadStats?.topRecurrentLeads) return;
+
+    const headers = ['Nome', 'Telefone', 'Capturas', 'Última Captura', 'Score'];
+    const rows = leadStats.topRecurrentLeads.map(lead => [
+      lead.name,
+      lead.phone,
+      lead.captureCount,
+      format(new Date(lead.lastCapturedAt), 'dd/MM/yyyy HH:mm'),
+      lead.leadScore,
+    ]);
+
+    const csv = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `leads-recorrentes-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+  };
+
+  // Preview de template com dados de exemplo
+  const previewTemplateContent = (template: any) => {
+    const exampleData = {
+      'lead.name': 'João Silva',
+      'captureNumber': '3',
+      'daysSinceLastCapture': '7',
+      'previousInterests': 'Bebedouro, Resfriador',
+      'currentInterest': 'Ordenhadeira',
+    };
+
+    let preview = template.content;
+    Object.entries(exampleData).forEach(([key, value]) => {
+      preview = preview.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+    });
+
+    return preview;
+  };
+
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard de Recorrência</h1>
-        <p className="text-muted-foreground">
-          Análise de leads recorrentes e performance de mensagens
-        </p>
+      {/* Header com filtros */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard de Recorrência</h1>
+          <p className="text-muted-foreground">
+            Análise de leads recorrentes e performance de mensagens
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="90d">Últimos 90 dias</SelectItem>
+              <SelectItem value="all">Todo período</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={exportToCsv}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+        </div>
       </div>
 
       {/* Métricas Principais */}
@@ -81,6 +185,27 @@ export default function RecurrenceDashboard() {
         </Card>
       </div>
 
+      {/* Gráfico de Tendências */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tendência de Recorrência</CardTitle>
+          <CardDescription>Comparação entre leads novos e recorrentes ao longo do tempo</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="novos" stroke="#8884d8" name="Leads Novos" />
+              <Line type="monotone" dataKey="recorrentes" stroke="#82ca9d" name="Leads Recorrentes" />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
       {/* Top Leads Recorrentes */}
       <Card>
         <CardHeader>
@@ -93,7 +218,7 @@ export default function RecurrenceDashboard() {
               {leadStats.topRecurrentLeads.map((lead, index) => (
                 <div
                   key={lead.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
@@ -105,7 +230,10 @@ export default function RecurrenceDashboard() {
                     </div>
                   </div>
                   <div className="text-right space-y-1">
-                    <Badge variant="secondary">{lead.captureCount}x capturas</Badge>
+                    <div className="flex gap-2">
+                      <Badge variant="secondary">{lead.captureCount}x capturas</Badge>
+                      <Badge variant="outline">Score: {lead.leadScore}</Badge>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(lead.lastCapturedAt), {
                         addSuffix: true,
@@ -133,30 +261,52 @@ export default function RecurrenceDashboard() {
         </CardHeader>
         <CardContent>
           {templateStats?.templates && templateStats.templates.length > 0 ? (
-            <div className="space-y-4">
-              {templateStats.templates.map((template) => (
-                <div key={template.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{template.name}</span>
-                      {template.isActive ? (
-                        <Badge variant="default">Ativo</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inativo</Badge>
-                      )}
+            <div className="space-y-6">
+              {/* Gráfico de barras */}
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={templateStats.templates.slice(0, 5)}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="usageCount" fill="#8884d8" name="Usos" />
+                </BarChart>
+              </ResponsiveContainer>
+
+              {/* Lista detalhada */}
+              <div className="space-y-4">
+                {templateStats.templates.map((template) => (
+                  <div key={template.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{template.name}</span>
+                        {template.isActive ? (
+                          <Badge variant="default">Ativo</Badge>
+                        ) : (
+                          <Badge variant="secondary">Inativo</Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPreviewTemplate(template)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Preview
+                        </Button>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {template.usageCount} usos ({template.usagePercentage.toFixed(1)}%)
+                      </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {template.usageCount} usos ({template.usagePercentage.toFixed(1)}%)
-                    </span>
+                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${template.usagePercentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary"
-                      style={{ width: `${template.usagePercentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -166,6 +316,35 @@ export default function RecurrenceDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de Preview de Template */}
+      <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Preview do Template</DialogTitle>
+            <DialogDescription>
+              Exemplo de como a mensagem será enviada para o lead
+            </DialogDescription>
+          </DialogHeader>
+          {previewTemplate && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-2">Dados de Exemplo:</p>
+                <ul className="text-xs space-y-1 text-muted-foreground">
+                  <li>• Nome: João Silva</li>
+                  <li>• Captura: 3ª vez</li>
+                  <li>• Dias desde última: 7</li>
+                  <li>• Interesse anterior: Bebedouro, Resfriador</li>
+                  <li>• Interesse atual: Ordenhadeira</li>
+                </ul>
+              </div>
+              <div className="p-4 border rounded-lg bg-background">
+                <p className="text-sm whitespace-pre-wrap">{previewTemplateContent(previewTemplate)}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

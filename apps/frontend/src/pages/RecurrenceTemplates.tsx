@@ -16,7 +16,10 @@ import {
   AlertCircle,
   MessageSquare,
   TrendingUp,
+  Eye,
+  Copy,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -42,10 +45,12 @@ export default function RecurrenceTemplates() {
   const { data: templates, isLoading } = useRecurrenceTemplates();
   const deleteTemplate = useDeleteTemplate();
   const updateTemplate = useUpdateTemplate();
+  const { toast } = useToast();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<RecurrenceTemplate | null>(null);
   const [deletingTemplate, setDeletingTemplate] = useState<RecurrenceTemplate | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<RecurrenceTemplate | null>(null);
 
   const handleToggleActive = async (template: RecurrenceTemplate) => {
     await updateTemplate.mutateAsync({
@@ -59,6 +64,31 @@ export default function RecurrenceTemplates() {
       await deleteTemplate.mutateAsync(deletingTemplate.id);
       setDeletingTemplate(null);
     }
+  };
+
+  const handleCopyContent = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast({
+      title: 'Copiado!',
+      description: 'Conteúdo do template copiado para área de transferência',
+    });
+  };
+
+  const previewTemplateContent = (template: RecurrenceTemplate) => {
+    const exampleData = {
+      'lead.name': 'João Silva',
+      'captureNumber': '3',
+      'daysSinceLastCapture': '7',
+      'previousInterests': 'Bebedouro, Resfriador',
+      'currentInterest': 'Ordenhadeira',
+    };
+
+    let preview = template.content;
+    Object.entries(exampleData).forEach(([key, value]) => {
+      preview = preview.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+    });
+
+    return preview;
   };
 
   if (isLoading) {
@@ -130,6 +160,20 @@ export default function RecurrenceTemplates() {
                 </div>
 
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreviewTemplate(template)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopyContent(template.content)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -224,6 +268,43 @@ export default function RecurrenceTemplates() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de Preview */}
+      <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Preview do Template</DialogTitle>
+            <DialogDescription>
+              Exemplo de como a mensagem será enviada para o lead
+            </DialogDescription>
+          </DialogHeader>
+          {previewTemplate && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-2">Dados de Exemplo:</p>
+                <ul className="text-xs space-y-1 text-muted-foreground">
+                  <li>• Nome: João Silva</li>
+                  <li>• Captura: 3ª vez</li>
+                  <li>• Dias desde última: 7</li>
+                  <li>• Interesse anterior: Bebedouro, Resfriador</li>
+                  <li>• Interesse atual: Ordenhadeira</li>
+                </ul>
+              </div>
+              <div className="p-4 border rounded-lg bg-background">
+                <p className="text-sm whitespace-pre-wrap">{previewTemplateContent(previewTemplate)}</p>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleCopyContent(previewTemplateContent(previewTemplate))}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copiar Mensagem Renderizada
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
