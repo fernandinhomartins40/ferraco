@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { useRecurrenceLeadStats, useRecurrenceTemplateStats } from '@/hooks/api/useRecurrence';
 import { Repeat, Users, TrendingUp, MessageSquare, AlertCircle, Download, Filter, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -42,9 +43,11 @@ export default function RecurrenceDashboard() {
 
   if (loadingLeads || loadingTemplates) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
     );
   }
 
@@ -112,6 +115,7 @@ export default function RecurrenceDashboard() {
   };
 
   return (
+    <AdminLayout>
     <div className="p-6 space-y-6">
       {/* Header com filtros */}
       <div className="flex items-center justify-between">
@@ -360,5 +364,6 @@ export default function RecurrenceDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+    </AdminLayout>
   );
 }

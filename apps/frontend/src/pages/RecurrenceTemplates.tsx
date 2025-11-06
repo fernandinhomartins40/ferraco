@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -93,12 +94,15 @@ export default function RecurrenceTemplates() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+    <AdminLayout>
+      <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
+      </AdminLayout>
     );
   }
-
+    <AdminLayout>
+      <div className="p-6 space-y-6">
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -303,8 +307,9 @@ export default function RecurrenceTemplates() {
               </Button>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+      </div>
+    </AdminLayout>
     </div>
   );
 }
+    </AdminLayout>
