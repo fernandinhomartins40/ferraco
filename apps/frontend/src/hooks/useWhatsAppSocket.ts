@@ -223,7 +223,6 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
     isInitializing: connectionState.type === 'initializing',
     isQRAvailable: connectionState.type === 'qr-available',
     isAuthenticating: connectionState.type === 'authenticating',
-    isConnected: connectionState.type === 'connected',
     isDisconnected: connectionState.type === 'disconnected',
     isError: connectionState.type === 'error',
 

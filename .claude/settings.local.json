@@ -115,7 +115,8 @@
       "Bash(sshpass -p 'Fv1234567890!' ssh -o StrictHostKeyChecking=no root@72.60.10.108 \"docker ps | grep ferraco\")",
       "Bash(sshpass:*)",
       "Bash(openssl s_client:*)",
-      "Bash(openssl:*)"
+      "Bash(openssl:*)",
+      "Bash(git -C \"c:\\Projetos Cursor\\ferraco\" status --porcelain)"
     ],
     "deny": [],
     "ask": []

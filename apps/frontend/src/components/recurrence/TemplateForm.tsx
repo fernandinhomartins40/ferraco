@@ -127,7 +127,7 @@ export function TemplateForm({ template, onSuccess, onCancel }: TemplateFormProp
           {...register('content', { required: true })}
         />
         <p className="text-xs text-muted-foreground">
-          Variáveis disponíveis: {{'{'}lead.name}}, {{'{'}captureNumber}}, {{'{'}daysSinceLastCapture}}, {{'{'}previousInterests}}, {{'{'}currentInterest}}
+          Variáveis disponíveis: {`{{lead.name}}, {{captureNumber}}, {{daysSinceLastCapture}}, {{previousInterests}}, {{currentInterest}}`}
         </p>
       </div>
 
