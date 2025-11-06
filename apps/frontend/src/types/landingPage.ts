@@ -619,10 +619,17 @@ export interface SocialLink {
   label: string;
 }
 
+export interface FooterContactInfo {
+  address?: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface FooterConfig {
   enabled: boolean;
   logo?: HeaderLogo;
   tagline?: string;
+  contactInfo?: FooterContactInfo;
   sections: FooterSection[];
   social: {
     enabled: boolean;

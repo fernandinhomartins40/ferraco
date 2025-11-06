@@ -43,8 +43,13 @@ const Footer = ({ config }: FooterProps) => {
   const logoSrc = config?.logo?.image?.url || config?.logo?.image || logoFerraco;
   const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";
   const tagline = config?.tagline || "Há mais de 25 anos oferecendo soluções de qualidade superior para fazendas de todo o Brasil. Tradição, inovação e excelência em cada produto.";
-  const copyright = config?.copyright || `© ${new Date().getFullYear()} Ferraco Equipamentos. Todos os direitos reservados.`;
+  const copyright = config?.bottom?.copyright || `© ${new Date().getFullYear()} Ferraco Equipamentos. Todos os direitos reservados.`;
   const displaySocialLinks = config?.social?.enabled ? config.social.links.filter(link => link.href) : socialLinks;
+
+  // Contact info com fallback
+  const contactAddress = config?.contactInfo?.address || "Rua Industrial, 1234 - São Paulo - SP, 01234-567";
+  const contactPhone = config?.contactInfo?.phone || "(11) 3456-7890 | (11) 98765-4321";
+  const contactEmail = config?.contactInfo?.email || "contato@ferraco.com.br";
 
   return (
     <footer className="bg-accent text-white">
@@ -63,18 +68,24 @@ const Footer = ({ config }: FooterProps) => {
             
             {/* Contact Info */}
             <div className="space-y-3">
-              <div className="flex items-center">
-                <MapPin className="w-5 h-5 mr-3 text-secondary" />
-                <span className="text-sm">Rua Industrial, 1234 - São Paulo - SP, 01234-567</span>
-              </div>
-              <div className="flex items-center">
-                <Phone className="w-5 h-5 mr-3 text-secondary" />
-                <span className="text-sm">(11) 3456-7890 | (11) 98765-4321</span>
-              </div>
-              <div className="flex items-center">
-                <Mail className="w-5 h-5 mr-3 text-secondary" />
-                <span className="text-sm">contato@ferraco.com.br</span>
-              </div>
+              {contactAddress && (
+                <div className="flex items-center">
+                  <MapPin className="w-5 h-5 mr-3 text-secondary flex-shrink-0" />
+                  <span className="text-sm">{contactAddress}</span>
+                </div>
+              )}
+              {contactPhone && (
+                <div className="flex items-center">
+                  <Phone className="w-5 h-5 mr-3 text-secondary flex-shrink-0" />
+                  <span className="text-sm">{contactPhone}</span>
+                </div>
+              )}
+              {contactEmail && (
+                <div className="flex items-center">
+                  <Mail className="w-5 h-5 mr-3 text-secondary flex-shrink-0" />
+                  <span className="text-sm">{contactEmail}</span>
+                </div>
+              )}
             </div>
           </div>
 

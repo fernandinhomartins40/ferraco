@@ -199,10 +199,11 @@ export const FooterEditor = ({ config, onChange }: FooterEditorProps) => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="logo">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="logo">Logo</TabsTrigger>
           <TabsTrigger value="textos">Textos</TabsTrigger>
-          <TabsTrigger value="contatos">Contatos</TabsTrigger>
+          <TabsTrigger value="info-contato">Info Contato</TabsTrigger>
+          <TabsTrigger value="contatos">Links</TabsTrigger>
           <TabsTrigger value="sociais">Redes Sociais</TabsTrigger>
           <TabsTrigger value="config">Configurações</TabsTrigger>
         </TabsList>
@@ -268,7 +269,107 @@ export const FooterEditor = ({ config, onChange }: FooterEditorProps) => {
           </Card>
         </TabsContent>
 
-        {/* Aba Contatos */}
+        {/* Aba Informações de Contato */}
+        <TabsContent value="info-contato" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Informações de Contato</CardTitle>
+              <CardDescription>Endereço, telefone e e-mail que aparecem abaixo do logo no rodapé</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Endereço Completo</Label>
+                <Input
+                  value={config.contactInfo?.address || ''}
+                  onChange={(e) =>
+                    onChange({
+                      contactInfo: {
+                        ...config.contactInfo,
+                        address: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Rua Industrial, 1234 - São Paulo - SP, 01234-567"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Endereço completo com rua, número, bairro, cidade, estado e CEP
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>Telefones</Label>
+                <Input
+                  value={config.contactInfo?.phone || ''}
+                  onChange={(e) =>
+                    onChange({
+                      contactInfo: {
+                        ...config.contactInfo,
+                        phone: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="(11) 3456-7890 | (11) 98765-4321"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Telefone(s) de contato. Você pode adicionar múltiplos separados por |
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>E-mail</Label>
+                <Input
+                  value={config.contactInfo?.email || ''}
+                  onChange={(e) =>
+                    onChange({
+                      contactInfo: {
+                        ...config.contactInfo,
+                        email: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="contato@ferraco.com.br"
+                  type="email"
+                />
+                <p className="text-xs text-muted-foreground">
+                  E-mail principal para contato
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <p className="text-sm font-medium">📍 Prévia das informações:</p>
+                {config.contactInfo?.address && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span>📍</span>
+                    <span>{config.contactInfo.address}</span>
+                  </div>
+                )}
+                {config.contactInfo?.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span>📞</span>
+                    <span>{config.contactInfo.phone}</span>
+                  </div>
+                )}
+                {config.contactInfo?.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span>📧</span>
+                    <span>{config.contactInfo.email}</span>
+                  </div>
+                )}
+                {!config.contactInfo?.address && !config.contactInfo?.phone && !config.contactInfo?.email && (
+                  <p className="text-xs text-muted-foreground italic">Nenhuma informação de contato configurada</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba Links (anteriormente Contatos) */}
         <TabsContent value="contatos" className="space-y-6 mt-4">
           <Card>
             <CardHeader>
