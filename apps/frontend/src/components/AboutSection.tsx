@@ -54,7 +54,7 @@ const AboutSection = ({ onLeadModalOpen, config }: AboutSectionProps) => {
   ];
 
   return (
-    <section id="sobre" className="py-20 bg-muted/30">
+    <section id="sobre" className="py-20 bg-muted/30 scroll-mt-24">
       <div className="container mx-auto px-4">
         {/* About Header */}
         <div className="text-center mb-16">
