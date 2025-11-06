@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot, KeyRound, Palette, Send } from 'lucide-react';
+import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot, KeyRound, Palette, Send, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -108,6 +108,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       href: '/admin/chatbot-config',
       label: 'Chat',
       icon: Bot,
+      show: true
+    },
+    {
+      href: '/admin/recurrence/dashboard',
+      label: 'Recorrência',
+      icon: Repeat,
       show: true
     },
   ].filter(item => item.show);
