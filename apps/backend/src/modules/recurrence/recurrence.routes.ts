@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { recurrenceController } from './recurrence.controller';
-import { authenticateJWT } from '../../middleware/auth';
+import { authenticate } from '../../middleware/auth';
 
 const router = Router();
 
 // Todas as rotas requerem autenticação
-router.use(authenticateJWT);
+router.use(authenticate);
 
 // ============================================================================
 // TEMPLATES DE RECORRÊNCIA

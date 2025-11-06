@@ -1101,8 +1101,9 @@ class WhatsAppService {
           // ✅ CORREÇÃO: Usar checkNumberStatus com try-catch para evitar erro createUserWid
           // Alguns números podem causar erro interno no WPPConnect, então tratamos graciosamente
           let exists = false;
+          let statusResult: any = null;
           try {
-            const statusResult = await this.client!.checkNumberStatus(formatted);
+            statusResult = await this.client!.checkNumberStatus(formatted);
             logger.debug(`📊 Resultado WPPConnect para ${phoneNumber}:`, JSON.stringify(statusResult, null, 2));
 
             // ✅ Verificar propriedade numberExists do WPPConnect

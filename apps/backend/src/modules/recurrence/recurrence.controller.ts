@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { recurrenceMessageTemplateService } from '../../services/recurrenceMessageTemplate.service';
 import { leadRecurrenceService } from '../../services/leadRecurrence.service';
 import { logger } from '../../utils/logger';
-import { okResponse, createdResponse, badRequestResponse } from '../../utils/response';
+import { successResponse, createdResponse, badRequestResponse } from '../../utils/response';
 
 export class RecurrenceController {
   /**
@@ -19,7 +19,7 @@ export class RecurrenceController {
 
       const templates = await recurrenceMessageTemplateService.list(filters);
 
-      okResponse(res, templates);
+      successResponse(res, templates);
     } catch (error) {
       logger.error('Error listing recurrence templates:', error);
       next(error);
@@ -40,7 +40,7 @@ export class RecurrenceController {
         return badRequestResponse(res, 'Template não encontrado');
       }
 
-      okResponse(res, template);
+      successResponse(res, template);
     } catch (error) {
       logger.error('Error getting recurrence template:', error);
       next(error);
@@ -79,7 +79,7 @@ export class RecurrenceController {
 
       logger.info(`Template de recorrência atualizado: ${template.id}`);
 
-      okResponse(res, template);
+      successResponse(res, template);
     } catch (error) {
       logger.error('Error updating recurrence template:', error);
       next(error);
@@ -98,7 +98,7 @@ export class RecurrenceController {
 
       logger.info(`Template de recorrência deletado: ${id}`);
 
-      okResponse(res, { message: 'Template deletado com sucesso' });
+      successResponse(res, { message: 'Template deletado com sucesso' });
     } catch (error) {
       logger.error('Error deleting recurrence template:', error);
       next(error);
@@ -113,7 +113,7 @@ export class RecurrenceController {
     try {
       const stats = await recurrenceMessageTemplateService.getUsageStats();
 
-      okResponse(res, stats);
+      successResponse(res, stats);
     } catch (error) {
       logger.error('Error getting template stats:', error);
       next(error);
@@ -128,7 +128,7 @@ export class RecurrenceController {
     try {
       const stats = await leadRecurrenceService.getRecurrenceStats();
 
-      okResponse(res, stats);
+      successResponse(res, stats);
     } catch (error) {
       logger.error('Error getting lead recurrence stats:', error);
       next(error);
@@ -145,7 +145,7 @@ export class RecurrenceController {
 
       const history = await leadRecurrenceService.getLeadCaptureHistory(leadId);
 
-      okResponse(res, history);
+      successResponse(res, history);
     } catch (error) {
       logger.error('Error getting lead capture history:', error);
       next(error);
