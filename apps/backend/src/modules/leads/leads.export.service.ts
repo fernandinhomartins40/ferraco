@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import ExcelJS from 'exceljs';
-import { Readable } from 'stream';
-import { parse } from 'csv-parse';
+import { parse } from 'csv-parse/sync';
 import { logger } from '../../utils/logger';
 import { LeadsService } from './leads.service';
 
@@ -76,7 +75,7 @@ export class LeadsExportService {
 
     // Generate buffer
     const buffer = await workbook.csv.writeBuffer();
-    return buffer as Buffer;
+    return Buffer.from(buffer);
   }
 
   /**
@@ -136,7 +135,7 @@ export class LeadsExportService {
 
     // Generate buffer
     const buffer = await workbook.xlsx.writeBuffer();
-    return buffer as Buffer;
+    return Buffer.from(buffer);
   }
 
   // ==========================================================================
@@ -161,7 +160,7 @@ export class LeadsExportService {
    */
   private async parseExcel(buffer: Buffer): Promise<any[]> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(buffer as any);
 
     const worksheet = workbook.getWorksheet(1);
     if (!worksheet) {
@@ -236,75 +235,67 @@ export class LeadsExportService {
    * Parse CSV file
    */
   private async parseCSV(buffer: Buffer): Promise<any[]> {
-    return new Promise((resolve, reject) => {
-      const leads: any[] = [];
-      const stream = Readable.from(buffer);
+    const leads: any[] = [];
 
-      stream
-        .pipe(
-          parse({
-            columns: true,
-            skip_empty_lines: true,
-            trim: true,
-            bom: true,
-          })
-        )
-        .on('data', (row: any) => {
-          const lead: any = {};
-
-          // Map CSV columns to lead fields
-          Object.keys(row).forEach((key) => {
-            const normalizedKey = key.toLowerCase().trim();
-            const value = row[key];
-
-            switch (normalizedKey) {
-              case 'nome':
-              case 'name':
-                lead.name = String(value).trim();
-                break;
-              case 'email':
-              case 'e-mail':
-                lead.email = value ? String(value).trim() : undefined;
-                break;
-              case 'telefone':
-              case 'phone':
-              case 'celular':
-                lead.phone = String(value).replace(/\D/g, '').trim();
-                break;
-              case 'empresa':
-              case 'company':
-                lead.company = value ? String(value).trim() : undefined;
-                break;
-              case 'cargo':
-              case 'position':
-                lead.position = value ? String(value).trim() : undefined;
-                break;
-              case 'status':
-                lead.status = value ? String(value).trim() : 'NOVO';
-                break;
-              case 'prioridade':
-              case 'priority':
-                lead.priority = value ? String(value).trim().toUpperCase() : 'MEDIUM';
-                break;
-              case 'origem':
-              case 'source':
-                lead.source = value ? String(value).trim().toUpperCase() : 'IMPORT';
-                break;
-            }
-          });
-
-          // Only add if has name and phone
-          if (lead.name && lead.phone) {
-            leads.push(lead);
-          }
-        })
-        .on('end', () => {
-          resolve(leads);
-        })
-        .on('error', (error) => {
-          reject(error);
-        });
+    // Parse CSV synchronously
+    const records = parse(buffer.toString('utf-8'), {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      bom: true,
     });
+
+    for (const row of records) {
+      const lead: any = {};
+
+      // Map CSV columns to lead fields
+      Object.keys(row).forEach((key) => {
+        const normalizedKey = key.toLowerCase().trim();
+        const value = row[key];
+
+        switch (normalizedKey) {
+          case 'nome':
+          case 'name':
+            lead.name = String(value).trim();
+            break;
+          case 'email':
+          case 'e-mail':
+            lead.email = value ? String(value).trim() : undefined;
+            break;
+          case 'telefone':
+          case 'phone':
+          case 'celular':
+            lead.phone = String(value).replace(/\D/g, '').trim();
+            break;
+          case 'empresa':
+          case 'company':
+            lead.company = value ? String(value).trim() : undefined;
+            break;
+          case 'cargo':
+          case 'position':
+            lead.position = value ? String(value).trim() : undefined;
+            break;
+          case 'status':
+            lead.status = value ? String(value).trim() : 'NOVO';
+            break;
+          case 'prioridade':
+          case 'priority':
+            lead.priority = value ? String(value).trim().toUpperCase() : 'MEDIUM';
+            break;
+          case 'origem':
+          case 'source':
+            lead.source = value ? String(value).trim().toUpperCase() : 'IMPORT';
+            break;
+        }
+      });
+
+      // Only add if has name and phone
+      if (lead.name && lead.phone) {
+        leads.push(lead);
+      }
+    }
+
+    return leads;
   }
 
   /**
