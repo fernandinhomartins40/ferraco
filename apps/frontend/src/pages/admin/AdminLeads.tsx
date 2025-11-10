@@ -234,7 +234,20 @@ const AdminLeads = () => {
   const handleExport = async (format: 'csv' | 'excel' | 'json') => {
     try {
       setIsExporting(true);
-      const token = localStorage.getItem('token');
+
+      // Get token from ferraco-auth-storage
+      const authStorage = localStorage.getItem('ferraco-auth-storage');
+      let token = '';
+
+      if (authStorage) {
+        try {
+          const parsed = JSON.parse(authStorage);
+          token = parsed.state?.token || '';
+        } catch (error) {
+          console.error('Erro ao ler token:', error);
+        }
+      }
+
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/leads/export?format=${format}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -283,7 +296,20 @@ const AdminLeads = () => {
 
     try {
       setIsImporting(true);
-      const token = localStorage.getItem('token');
+
+      // Get token from ferraco-auth-storage
+      const authStorage = localStorage.getItem('ferraco-auth-storage');
+      let token = '';
+
+      if (authStorage) {
+        try {
+          const parsed = JSON.parse(authStorage);
+          token = parsed.state?.token || '';
+        } catch (error) {
+          console.error('Erro ao ler token:', error);
+        }
+      }
+
       const formData = new FormData();
       formData.append('file', selectedFile);
 
@@ -296,7 +322,8 @@ const AdminLeads = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao importar leads');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Erro ao importar leads');
       }
 
       const result = await response.json();
@@ -309,12 +336,13 @@ const AdminLeads = () => {
 
       // Refresh leads list
       await leadsQuery.refetch();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Erro',
-        description: 'Não foi possível importar os leads.',
+        description: error.message || 'Não foi possível importar os leads.',
         variant: 'destructive',
       });
+      console.error('Import error:', error);
     } finally {
       setIsImporting(false);
     }
