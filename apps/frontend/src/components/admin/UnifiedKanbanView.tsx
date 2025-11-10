@@ -264,6 +264,13 @@ const UnifiedKanbanView = ({
                 )}
               </div>
 
+              {/* Origem do Lead */}
+              {lead.source && lead.source === 'IMPORT' && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 text-xs">
+                  Lead Importado
+                </Badge>
+              )}
+
               {/* Informações de Automação (se aplicável) */}
               {isAutomation && position && (
                 <div className="space-y-2 pt-2 border-t">

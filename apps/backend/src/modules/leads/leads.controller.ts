@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { LeadsService } from './leads.service';
+import { LeadsExportService } from './leads.export.service';
 import {
   CreateLeadSchema,
   UpdateLeadSchema,
@@ -26,7 +27,10 @@ import { ValidationError, formatZodErrors } from '../../utils/zodHelpers';
 // ============================================================================
 
 export class LeadsController {
-  constructor(private service: LeadsService) {}
+  constructor(
+    private service: LeadsService,
+    private exportService?: LeadsExportService
+  ) {}
 
   // ==========================================================================
   // CRUD Operations
@@ -373,26 +377,85 @@ export class LeadsController {
    */
   export = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const format = (req.query.format as string) || 'json';
-      const filters = LeadFiltersSchema.parse({
-        ...req.query,
-        limit: 10000, // Max export limit
-      });
+      if (!this.exportService) {
+        badRequestResponse(res, 'Serviço de exportação não disponível');
+        return;
+      }
 
-      const result = await this.service.findAll(filters);
+      const format = (req.query.format as string) || 'csv';
+      const filters = LeadFiltersSchema.parse(req.query);
 
-      // For now, just return JSON
-      // In production, implement CSV/Excel export
-      logger.info('Export endpoint called', { format, count: result.data.length });
+      logger.info('Export endpoint called', { format });
 
-      if (format === 'json') {
+      if (format === 'csv') {
+        const buffer = await this.exportService.exportToCSV(filters);
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=leads.csv');
+        res.send(buffer);
+      } else if (format === 'excel' || format === 'xlsx') {
+        const buffer = await this.exportService.exportToExcel(filters);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=leads.xlsx');
+        res.send(buffer);
+      } else if (format === 'json') {
+        const result = await this.service.findAll({
+          ...filters,
+          limit: 10000,
+        });
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Content-Disposition', 'attachment; filename=leads.json');
         res.json(result.data);
       } else {
-        badRequestResponse(res, 'Formato de exportação não suportado. Use: json');
+        badRequestResponse(res, 'Formato de exportação não suportado. Use: csv, excel ou json');
       }
     } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * POST /api/leads/import
+   * Import leads from CSV or Excel file
+   */
+  import = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!this.exportService) {
+        badRequestResponse(res, 'Serviço de importação não disponível');
+        return;
+      }
+
+      if (!req.file) {
+        badRequestResponse(res, 'Nenhum arquivo enviado');
+        return;
+      }
+
+      const { buffer, originalname } = req.file;
+
+      // Parse file
+      const leads = await this.exportService.parseFile(buffer, originalname);
+
+      if (leads.length === 0) {
+        badRequestResponse(res, 'Nenhum lead válido encontrado no arquivo');
+        return;
+      }
+
+      // Import leads
+      const result = await this.exportService.importLeads(leads, req.user!.userId);
+
+      logger.info('Import completed', {
+        total: leads.length,
+        success: result.success,
+        failed: result.failed,
+      });
+
+      successResponse(res, {
+        total: leads.length,
+        success: result.success,
+        failed: result.failed,
+        errors: result.errors,
+      }, `${result.success} leads importados com sucesso`);
+    } catch (error) {
+      logger.error('Import failed', { error });
       next(error);
     }
   };

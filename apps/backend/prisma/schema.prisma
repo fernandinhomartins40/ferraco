@@ -207,6 +207,17 @@ enum NotificationChannel {
   SMS
 }
 
+enum LeadSource {
+  WEBSITE
+  WHATSAPP
+  FACEBOOK
+  INSTAGRAM
+  MANUAL
+  IMPORT
+  API
+  REFERRAL
+}
+
 // ============================================================================
 // TABELA: User (Usuários do Sistema)
 // ============================================================================

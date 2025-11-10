@@ -1,0 +1,6 @@
+Nome,Telefone,Email,Empresa,Cargo,Status,Prioridade,Origem
+João Silva,11999998888,joao@exemplo.com,Empresa A,Gerente,NOVO,MEDIUM,MANUAL
+Maria Santos,11988887777,maria@exemplo.com,Empresa B,Diretora,QUALIFICADO,HIGH,REFERRAL
+Pedro Costa,11977776666,pedro@exemplo.com,Empresa C,Coordenador,EM_ANDAMENTO,MEDIUM,WEBSITE
+Ana Paula,11966665555,ana@exemplo.com,Empresa D,Analista,NOVO,LOW,FACEBOOK
+Carlos Mendes,11955554444,carlos@exemplo.com,Empresa E,CEO,NOVO,URGENT,INSTAGRAM

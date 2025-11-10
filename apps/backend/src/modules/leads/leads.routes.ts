@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { LeadsController } from './leads.controller';
 import { LeadsService } from './leads.service';
+import { LeadsExportService } from './leads.export.service';
 import { authenticate, requirePermission } from '../../middleware/auth';
 import { prisma } from '../../config/database';
 
@@ -10,7 +12,29 @@ import { prisma } from '../../config/database';
 
 const router = Router();
 const service = new LeadsService(prisma);
-const controller = new LeadsController(service);
+const exportService = new LeadsExportService(prisma, service);
+const controller = new LeadsController(service, exportService);
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos CSV e Excel são permitidos'));
+    }
+  },
+});
 
 // ============================================================================
 // Public Routes (if any)
@@ -84,13 +108,20 @@ router.post(
 );
 
 // ==========================================================================
-// Export Routes (must come before :id routes)
+// Export/Import Routes (must come before :id routes)
 // ==========================================================================
 
 router.get(
   '/export',
   requirePermission('leads', 'read'),
   controller.export
+);
+
+router.post(
+  '/import',
+  requirePermission('leads', 'create'),
+  upload.single('file'),
+  controller.import
 );
 
 // ==========================================================================

@@ -36,6 +36,8 @@ import {
   Settings2,
   Bot,
   Layers,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
@@ -99,6 +101,17 @@ const AdminLeads = () => {
     mediaUrls: [] as string[],
     mediaType: '',
   });
+
+  // Import/Export State
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    success: number;
+    failed: number;
+    errors: any[];
+  } | null>(null);
 
   // Variable Insertion Hook
   const templateVariableInsertion = useVariableInsertion();
@@ -214,6 +227,96 @@ const AdminLeads = () => {
         description: 'Não foi possível atualizar o status do lead.',
         variant: 'destructive',
       });
+    }
+  };
+
+  // Export/Import Handlers
+  const handleExport = async (format: 'csv' | 'excel' | 'json') => {
+    try {
+      setIsExporting(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/leads/export?format=${format}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao exportar leads');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads.${format === 'excel' ? 'xlsx' : format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: 'Exportação concluída',
+        description: 'Os leads foram exportados com sucesso.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível exportar os leads.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setImportResult(null);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setIsImporting(true);
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/leads/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao importar leads');
+      }
+
+      const result = await response.json();
+      setImportResult(result.data);
+
+      toast({
+        title: 'Importação concluída',
+        description: `${result.data.success} leads importados com sucesso.`,
+      });
+
+      // Refresh leads list
+      await leadsQuery.refetch();
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível importar os leads.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -430,6 +533,37 @@ const AdminLeads = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => handleExport('csv')}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Exportar CSV
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleExport('excel')}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Exportar Excel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsImportDialogOpen(true)}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Importar Leads
+            </Button>
             <Button
               variant="outline"
               onClick={() => {
@@ -1027,6 +1161,94 @@ const AdminLeads = () => {
                 {createTemplate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Criar Template
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Import Dialog */}
+        <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Importar Leads</DialogTitle>
+              <DialogDescription>
+                Faça upload de um arquivo CSV ou Excel com os leads para importação.
+                Os leads importados serão marcados com origem "IMPORT".
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="file-upload">Arquivo CSV ou Excel *</Label>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleFileSelect}
+                  disabled={isImporting}
+                />
+                {selectedFile && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Arquivo selecionado: {selectedFile.name}
+                  </p>
+                )}
+              </div>
+
+              <Alert>
+                <AlertDescription>
+                  <strong>Formato do arquivo:</strong><br />
+                  O arquivo deve conter as colunas: Nome, Telefone (obrigatórios) e opcionalmente:
+                  Email, Empresa, Cargo, Status, Prioridade, Origem
+                </AlertDescription>
+              </Alert>
+
+              {importResult && (
+                <Alert className={importResult.failed > 0 ? 'border-orange-200 bg-orange-50' : 'border-green-200 bg-green-50'}>
+                  <AlertDescription>
+                    <strong>Resultado da importação:</strong><br />
+                    ✅ {importResult.success} leads importados com sucesso<br />
+                    {importResult.failed > 0 && (
+                      <>
+                        ❌ {importResult.failed} leads falharam<br />
+                        {importResult.errors.length > 0 && (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer">Ver erros</summary>
+                            <ul className="mt-2 text-xs">
+                              {importResult.errors.slice(0, 5).map((error, idx) => (
+                                <li key={idx}>
+                                  {error.lead?.name || 'Lead sem nome'}: {error.error}
+                                </li>
+                              ))}
+                              {importResult.errors.length > 5 && (
+                                <li>... e mais {importResult.errors.length - 5} erros</li>
+                              )}
+                            </ul>
+                          </details>
+                        )}
+                      </>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsImportDialogOpen(false);
+                  setSelectedFile(null);
+                  setImportResult(null);
+                }}
+              >
+                {importResult ? 'Fechar' : 'Cancelar'}
+              </Button>
+              {!importResult && (
+                <Button
+                  onClick={handleImport}
+                  disabled={isImporting || !selectedFile}
+                >
+                  {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Importar
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
