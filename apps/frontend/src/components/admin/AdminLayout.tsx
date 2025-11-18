@@ -116,6 +116,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       icon: Repeat,
       show: true
     },
+    {
+      href: '/admin/api-keys',
+      label: 'API Externa',
+      icon: KeyRound,
+      show: true
+    },
   ].filter(item => item.show);
 
   // Breadcrumb generation
