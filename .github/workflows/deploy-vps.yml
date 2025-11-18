@@ -306,15 +306,6 @@ jobs:
           echo "🔄 Gerando Prisma Client..."
           docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma generate"
 
-          # Verificar se novas tabelas foram criadas
-          echo "✅ Verificando novas tabelas da API Externa..."
-          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma db execute --stdin" <<'SQL'
-SELECT table_name FROM information_schema.tables
-WHERE table_schema = 'public'
-AND table_name IN ('api_keys', 'api_usage_logs', 'webhooks', 'webhook_deliveries', 'event_logs')
-ORDER BY table_name;
-SQL
-
           echo "✅ Migrations da API Externa aplicadas com sucesso!"
 
           # Mostrar logs iniciais
@@ -507,16 +498,11 @@ SQL
 
           echo ""
           echo "🔍 8. Verificando Tabelas da API Externa no Banco..."
-          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma db execute --stdin" <<'SQL' || echo "   ⚠️  Não foi possível verificar"
-SELECT
-  CASE
-    WHEN COUNT(*) = 5 THEN '✅ Todas as 5 tabelas da API Externa existem'
-    ELSE '❌ Faltam tabelas: ' || (5 - COUNT(*))::text
-  END as status
-FROM information_schema.tables
-WHERE table_schema = 'public'
-AND table_name IN ('api_keys', 'api_usage_logs', 'webhooks', 'webhook_deliveries', 'event_logs');
-SQL
+          echo "   Verificando se api_keys, webhooks, event_logs, etc. foram criadas..."
+          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma db execute --stdin <<'SQLEOF'
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('api_keys', 'api_usage_logs', 'webhooks', 'webhook_deliveries', 'event_logs') ORDER BY table_name;
+SQLEOF
+" || echo "   ⚠️  Não foi possível verificar tabelas"
 
           echo ""
           echo "🔍 9. Verificando Logs do Container (últimas 20 linhas)..."
