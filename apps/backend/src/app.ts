@@ -107,10 +107,147 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/v1/external`, externalRoutes);
 
   // API Documentation (Swagger)
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customCss: '.swagger-ui .topbar { display: none }',
+  const swaggerUiOptions = {
+    customCss: `
+      .swagger-ui .topbar { display: none }
+      .swagger-ui { max-width: 1400px; margin: 0 auto; }
+      .swagger-ui .info { margin: 50px 0; }
+      .swagger-ui .info .title {
+        font-size: 42px;
+        color: #1a202c;
+        font-weight: 700;
+      }
+      .swagger-ui .info .description {
+        font-size: 16px;
+        line-height: 1.8;
+        color: #4a5568;
+      }
+      .swagger-ui .scheme-container {
+        background: #f7fafc;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .swagger-ui .opblock-tag {
+        border-bottom: 2px solid #e2e8f0;
+        padding: 15px 0;
+        margin: 20px 0;
+      }
+      .swagger-ui .opblock-tag-section { margin-top: 20px; }
+      .swagger-ui .opblock {
+        margin: 15px 0;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border: 1px solid #e2e8f0;
+      }
+      .swagger-ui .opblock.opblock-post {
+        background: rgba(73, 204, 144, 0.1);
+        border-color: #49cc90;
+      }
+      .swagger-ui .opblock.opblock-get {
+        background: rgba(97, 175, 254, 0.1);
+        border-color: #61affe;
+      }
+      .swagger-ui .opblock.opblock-put {
+        background: rgba(252, 161, 48, 0.1);
+        border-color: #fca130;
+      }
+      .swagger-ui .opblock.opblock-delete {
+        background: rgba(249, 62, 62, 0.1);
+        border-color: #f93e3e;
+      }
+      .swagger-ui .opblock-summary { font-weight: 600; }
+      .swagger-ui .btn.authorize {
+        background: #4299e1;
+        border-color: #4299e1;
+        font-weight: 600;
+      }
+      .swagger-ui .btn.authorize svg { fill: white; }
+      .swagger-ui .btn.execute {
+        background: #48bb78;
+        border-color: #48bb78;
+        font-weight: 600;
+      }
+      .swagger-ui .parameters-col_description {
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .swagger-ui table thead tr td,
+      .swagger-ui table thead tr th {
+        background: #f7fafc;
+        font-weight: 600;
+        color: #2d3748;
+      }
+      .swagger-ui .response-col_status {
+        font-weight: 600;
+      }
+      .swagger-ui .model-box {
+        background: #f7fafc;
+        border-radius: 8px;
+        padding: 15px;
+      }
+      .swagger-ui .model-title {
+        font-weight: 600;
+        color: #2d3748;
+      }
+      .swagger-ui select {
+        border: 2px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 8px 12px;
+      }
+      .swagger-ui input[type=text],
+      .swagger-ui textarea {
+        border: 2px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 8px 12px;
+      }
+      .swagger-ui input[type=text]:focus,
+      .swagger-ui textarea:focus {
+        border-color: #4299e1;
+        outline: none;
+      }
+      .swagger-ui .authorization__btn {
+        background: #48bb78;
+        border-color: #48bb78;
+      }
+      .swagger-ui .markdown pre {
+        background: #2d3748;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Monaco', 'Menlo', monospace;
+      }
+      .swagger-ui .markdown code {
+        background: #edf2f7;
+        color: #e53e3e;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Monaco', 'Menlo', monospace;
+      }
+      .swagger-ui .tab li {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .swagger-ui .response-col_links {
+        display: none;
+      }
+    `,
     customSiteTitle: 'Ferraco CRM API Documentation',
-  }));
+    customfavIcon: '/favicon.ico',
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+      tryItOutEnabled: true,
+      defaultModelsExpandDepth: 2,
+      defaultModelExpandDepth: 2,
+      docExpansion: 'list',
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+    },
+  };
+
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
   app.get('/api/openapi.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
