@@ -18,6 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Plus, Copy, Trash2, RotateCw, Key, ExternalLink, Loader2 } from 'lucide-react';
 import api from '@/lib/apiClient';
 import { format } from 'date-fns';
@@ -56,6 +66,17 @@ const ApiKeys = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newKeyData, setNewKeyData] = useState<ApiKey | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -99,10 +120,6 @@ const ApiKeys = () => {
   };
 
   const handleRevokeApiKey = async (id: string) => {
-    if (!confirm('Tem certeza que deseja revogar esta API Key? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
     try {
       await api.post(`/api-keys/${id}/revoke`);
       toast.success('API Key revogada com sucesso');
@@ -113,10 +130,6 @@ const ApiKeys = () => {
   };
 
   const handleRotateApiKey = async (id: string) => {
-    if (!confirm('Tem certeza que deseja rotacionar esta API Key? A chave antiga será invalidada.')) {
-      return;
-    }
-
     try {
       const response = await api.post(`/api-keys/${id}/rotate`);
       setNewKeyData(response.data.data);
@@ -128,10 +141,6 @@ const ApiKeys = () => {
   };
 
   const handleDeleteApiKey = async (id: string) => {
-    if (!confirm('Tem certeza que deseja deletar esta API Key permanentemente?')) {
-      return;
-    }
-
     try {
       await api.delete(`/api-keys/${id}`);
       toast.success('API Key deletada com sucesso');
@@ -139,6 +148,42 @@ const ApiKeys = () => {
     } catch (error: any) {
       toast.error('Erro ao deletar API Key: ' + (error.response?.data?.error || error.message));
     }
+  };
+
+  const confirmRevoke = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Revogar API Key',
+      description: 'Tem certeza que deseja revogar esta API Key? Esta ação não pode ser desfeita.',
+      onConfirm: () => {
+        handleRevokeApiKey(id);
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
+  };
+
+  const confirmRotate = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Rotacionar API Key',
+      description: 'Tem certeza que deseja rotacionar esta API Key? A chave antiga será invalidada.',
+      onConfirm: () => {
+        handleRotateApiKey(id);
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
+  };
+
+  const confirmDelete = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Deletar API Key',
+      description: 'Tem certeza que deseja deletar esta API Key permanentemente? Esta ação não pode ser desfeita.',
+      onConfirm: () => {
+        handleDeleteApiKey(id);
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -221,7 +266,7 @@ const ApiKeys = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleRotateApiKey(apiKey.id)}
+                        onClick={() => confirmRotate(apiKey.id)}
                         title="Rotacionar chave"
                       >
                         <RotateCw className="w-4 h-4" />
@@ -229,7 +274,7 @@ const ApiKeys = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleRevokeApiKey(apiKey.id)}
+                        onClick={() => confirmRevoke(apiKey.id)}
                         title="Revogar"
                         disabled={apiKey.status === 'REVOKED'}
                       >
@@ -238,7 +283,7 @@ const ApiKeys = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDeleteApiKey(apiKey.id)}
+                        onClick={() => confirmDelete(apiKey.id)}
                         title="Deletar"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -467,6 +512,26 @@ Documentação completa: /api-docs`}</pre>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Confirmation Dialog */}
+        <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmDialog.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDialog.onConfirm}>
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );
