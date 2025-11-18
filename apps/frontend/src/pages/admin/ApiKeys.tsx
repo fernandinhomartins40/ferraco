@@ -386,7 +386,7 @@ const ApiKeys = () => {
 
         {/* Modal: New API Key Created */}
         <Dialog open={!!newKeyData} onOpenChange={(open) => !open && setNewKeyData(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-green-600">✅ API Key Criada com Sucesso!</DialogTitle>
               <DialogDescription>
@@ -394,7 +394,7 @@ const ApiKeys = () => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-x-hidden">
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-sm font-medium text-yellow-800 mb-1">⚠️ IMPORTANTE: Salve estas credenciais agora!</p>
                 <p className="text-xs text-yellow-700">
@@ -407,12 +407,13 @@ const ApiKeys = () => {
                   <div>
                     <Label>API Key (Público)</Label>
                     <div className="flex items-center gap-2 mt-1">
-                      <code className="flex-1 px-3 py-2 bg-muted rounded-md text-sm font-mono break-all">
+                      <code className="flex-1 px-3 py-2 bg-muted rounded-md text-sm font-mono break-all overflow-hidden">
                         {newKeyData.key}
                       </code>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="shrink-0"
                         onClick={() => copyToClipboard(newKeyData.key)}
                       >
                         <Copy className="w-4 h-4" />
@@ -424,12 +425,13 @@ const ApiKeys = () => {
                     <div>
                       <Label>Secret (Privado)</Label>
                       <div className="flex items-center gap-2 mt-1">
-                        <code className="flex-1 px-3 py-2 bg-red-50 rounded-md border border-red-200 text-sm font-mono break-all">
+                        <code className="flex-1 px-3 py-2 bg-red-50 rounded-md border border-red-200 text-sm font-mono break-all overflow-hidden">
                           {newKeyData.secret}
                         </code>
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="shrink-0"
                           onClick={() => copyToClipboard(newKeyData.secret!)}
                         >
                           <Copy className="w-4 h-4" />
@@ -440,7 +442,8 @@ const ApiKeys = () => {
 
                   <div className="bg-blue-50 rounded-lg p-4">
                     <p className="text-sm font-medium text-blue-800 mb-2">📚 Como usar:</p>
-                    <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">
+                    <div className="bg-white p-3 rounded border overflow-x-auto">
+                      <pre className="text-xs whitespace-pre-wrap break-all">
 {`curl http://seu-site.com/api/v1/external/leads \\
   -H "X-API-Key: ${newKeyData.key}" \\
   -H "X-API-Secret: ${newKeyData.secret || 'sk_live_...'}"
@@ -451,6 +454,7 @@ curl http://seu-site.com/api/v1/external/leads \\
   -H "Authorization: Bearer ${newKeyData.key}:${newKeyData.secret || 'sk_live_...'}"
 
 Documentação completa: /api-docs`}</pre>
+                    </div>
                   </div>
                 </>
               )}
