@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Copy, Eye, EyeOff, Trash2, RotateCw, Key, Calendar, Activity } from 'lucide-react';
-import api from '../../services/api';
+import api from '@/lib/apiClient';
 import { format } from 'date-fns';
 
 interface ApiKey {
