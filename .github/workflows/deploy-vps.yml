@@ -294,23 +294,56 @@ jobs:
           echo "⏳ Aguardando container iniciar (30 segundos)..."
           sleep 30
 
-          # Executar migrations da API Externa (novas tabelas)
-          echo "🗄️  Aplicando migrations da API Externa..."
-          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy" || {
-            echo "⚠️  Migrations falharam, tentando novamente..."
-            sleep 5
-            docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy"
-          }
+          # Verificar se container está rodando
+          echo "🔍 Verificando status do container..."
+          docker ps -a | grep ferraco-crm-vps || echo "❌ Container não encontrado!"
 
-          # Gerar Prisma Client atualizado
-          echo "🔄 Gerando Prisma Client..."
-          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma generate"
+          CONTAINER_STATUS=$(docker inspect -f '{{.State.Status}}' ferraco-crm-vps 2>/dev/null || echo "not-found")
+          echo "📊 Status do container: $CONTAINER_STATUS"
 
-          echo "✅ Migrations da API Externa aplicadas com sucesso!"
+          if [ "$CONTAINER_STATUS" != "running" ]; then
+            echo "❌ ERRO: Container não está rodando!"
+            echo "📋 Logs completos do container:"
+            docker logs ferraco-crm-vps --tail 200 2>&1 || echo "Não foi possível obter logs"
+            echo ""
+            echo "📋 Docker compose logs:"
+            docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} logs --tail 200 2>&1
+            echo ""
+            echo "📋 Estado detalhado do container:"
+            docker inspect ferraco-crm-vps 2>&1 | grep -A 20 "State"
+            exit 1
+          fi
+
+          echo "✅ Container está rodando!"
 
           # Mostrar logs iniciais
           echo "📋 Logs iniciais do container:"
-          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} logs --tail 30
+          docker logs ferraco-crm-vps --tail 50
+
+          # Executar migrations da API Externa (novas tabelas)
+          echo ""
+          echo "🗄️  Aplicando migrations da API Externa..."
+          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy" || {
+            echo "⚠️  Migrations falharam, mostrando logs e tentando novamente..."
+            docker logs ferraco-crm-vps --tail 50
+            sleep 5
+            docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy" || {
+              echo "❌ Migrations falharam após retry!"
+              docker logs ferraco-crm-vps --tail 100
+              exit 1
+            }
+          }
+
+          # Gerar Prisma Client atualizado
+          echo ""
+          echo "🔄 Gerando Prisma Client..."
+          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma generate" || {
+            echo "❌ Erro ao gerar Prisma Client!"
+            docker logs ferraco-crm-vps --tail 50
+            exit 1
+          }
+
+          echo "✅ Migrations da API Externa aplicadas com sucesso!"
 
           # Aguardar serviços internos (Nginx + Backend)
           echo "⏳ Aguardando serviços internos (60 segundos)..."
