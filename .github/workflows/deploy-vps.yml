@@ -294,6 +294,29 @@ jobs:
           echo "⏳ Aguardando container iniciar (30 segundos)..."
           sleep 30
 
+          # Executar migrations da API Externa (novas tabelas)
+          echo "🗄️  Aplicando migrations da API Externa..."
+          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy" || {
+            echo "⚠️  Migrations falharam, tentando novamente..."
+            sleep 5
+            docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy"
+          }
+
+          # Gerar Prisma Client atualizado
+          echo "🔄 Gerando Prisma Client..."
+          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma generate"
+
+          # Verificar se novas tabelas foram criadas
+          echo "✅ Verificando novas tabelas da API Externa..."
+          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma db execute --stdin" <<'SQL'
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
+AND table_name IN ('api_keys', 'api_usage_logs', 'webhooks', 'webhook_deliveries', 'event_logs')
+ORDER BY table_name;
+SQL
+
+          echo "✅ Migrations da API Externa aplicadas com sucesso!"
+
           # Mostrar logs iniciais
           echo "📋 Logs iniciais do container:"
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} logs --tail 30
@@ -476,7 +499,27 @@ jobs:
           curl -s http://127.0.0.1:${{ env.APP_PORT }}/api/landing-page/config | head -c 150 && echo "..." || echo "   ❌ Erro"
 
           echo ""
-          echo "🔍 7. Verificando Logs do Container (últimas 20 linhas)..."
+          echo "🔍 7. Verificando API Externa (Swagger)..."
+          echo "   /api-docs (Swagger UI):"
+          curl -s -o /dev/null -w "   Status: %{http_code}\n" http://127.0.0.1:${{ env.APP_PORT }}/api-docs
+          echo "   /api/openapi.json (OpenAPI Spec):"
+          curl -s http://127.0.0.1:${{ env.APP_PORT }}/api/openapi.json | head -c 100 && echo "..." || echo "   ❌ Erro"
+
+          echo ""
+          echo "🔍 8. Verificando Tabelas da API Externa no Banco..."
+          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma db execute --stdin" <<'SQL' || echo "   ⚠️  Não foi possível verificar"
+SELECT
+  CASE
+    WHEN COUNT(*) = 5 THEN '✅ Todas as 5 tabelas da API Externa existem'
+    ELSE '❌ Faltam tabelas: ' || (5 - COUNT(*))::text
+  END as status
+FROM information_schema.tables
+WHERE table_schema = 'public'
+AND table_name IN ('api_keys', 'api_usage_logs', 'webhooks', 'webhook_deliveries', 'event_logs');
+SQL
+
+          echo ""
+          echo "🔍 9. Verificando Logs do Container (últimas 20 linhas)..."
           docker logs ferraco-crm-vps --tail 20
 
           echo ""
@@ -505,12 +548,21 @@ jobs:
         echo "  🩺 Health: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/health"
         echo "  👨‍💼 Admin: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/admin"
         echo ""
+        echo "🆕 API Externa v1.0:"
+        echo "  📚 Documentação Swagger: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api-docs"
+        echo "  📄 OpenAPI Spec: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api/openapi.json"
+        echo "  🔑 API Keys: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api/api-keys"
+        echo "  🌐 Leads External: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api/v1/external/leads"
+        echo "  🔔 Webhooks: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api/v1/external/webhooks"
+        echo "  📦 Batch Ops: http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}/api/v1/external/batch"
+        echo ""
         echo "🏗️  Stack Tecnológica:"
         echo "  🎯 Backend: Node.js + Express + Prisma + PostgreSQL"
         echo "  🎨 Frontend: React + Vite + TypeScript + Tailwind"
         echo "  🌐 Proxy: Nginx (Alpine Linux)"
         echo "  🐳 Deploy: Docker (Container Único - Monorepo)"
-        echo "  🔐 Auth: JWT + Bcrypt"
+        echo "  🔐 Auth: JWT + Bcrypt + API Keys"
+        echo "  🆕 API Externa: Swagger/OpenAPI 3.0 + Webhooks + Batch Ops"
         echo ""
         echo "📌 Notas Importantes:"
         echo "  • Arquitetura: Monorepo (apps/backend + apps/frontend)"

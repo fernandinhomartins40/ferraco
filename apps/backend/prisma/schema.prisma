@@ -258,6 +258,7 @@ model User {
   signatures            DigitalSignature[]
   dashboardConfigs      DashboardConfig[]
   notifications         Notification[]
+  apiKeys               ApiKey[]
 
   @@index([email])
   @@index([username])
@@ -1858,6 +1859,241 @@ model WhatsAppBotMessage {
   @@index([botSessionId])
   @@index([timestamp])
   @@map("whatsapp_bot_messages")
+}
+
+// ============================================================================
+// TABELA: ApiKey (Chaves de API Externa)
+// ============================================================================
+
+enum ApiKeyType {
+  READONLY
+  WRITE
+  ADMIN
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model ApiKey {
+  id             String       @id @default(cuid())
+  name           String // Nome descritivo: "Zapier Integration", "Mobile App"
+  key            String       @unique // Chave pública: pk_live_abc123...
+  secretHash     String // Hash bcrypt do secret: sk_live_xyz789...
+  type           ApiKeyType   @default(WRITE)
+  status         ApiKeyStatus @default(ACTIVE)
+
+  // Scopes e permissões
+  scopes         String // JSON array: ["leads:read", "leads:write", "communications:write"]
+
+  // Rate limiting
+  rateLimitPerHour Int @default(1000)
+  rateLimitPerDay  Int @default(10000)
+
+  // Segurança
+  ipWhitelist    String? // JSON array de IPs/CIDR permitidos
+  allowedOrigins String? // JSON array de origins permitidos (CORS)
+
+  // Metadata
+  userId         String // Usuário que criou a API key
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Rastreamento
+  lastUsedAt     DateTime?
+  usageCount     Int       @default(0)
+
+  // Expiração
+  expiresAt      DateTime?
+
+  // Timestamps
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relações
+  usageLogs      ApiUsageLog[]
+  webhooks       Webhook[]
+
+  @@index([key])
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("api_keys")
+}
+
+// ============================================================================
+// TABELA: ApiUsageLog (Log de Uso da API)
+// ============================================================================
+
+model ApiUsageLog {
+  id            String   @id @default(cuid())
+  apiKeyId      String
+  apiKey        ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  // Request info
+  method        String // GET, POST, PUT, DELETE
+  endpoint      String // /api/v1/external/leads
+  statusCode    Int // 200, 404, 500
+
+  // Performance
+  responseTime  Int // Milissegundos
+
+  // Metadata
+  ipAddress     String
+  userAgent     String?
+  requestBody   String? @db.Text // JSON (sanitizado)
+  responseBody  String? @db.Text // JSON (sanitizado)
+  errorMessage  String?
+
+  // Timestamps
+  timestamp     DateTime @default(now())
+
+  @@index([apiKeyId])
+  @@index([timestamp])
+  @@index([endpoint])
+  @@map("api_usage_logs")
+}
+
+// ============================================================================
+// TABELA: Webhook (Webhooks de Eventos)
+// ============================================================================
+
+enum WebhookStatus {
+  ACTIVE
+  PAUSED
+  FAILED
+}
+
+model Webhook {
+  id            String        @id @default(cuid())
+  apiKeyId      String
+  apiKey        ApiKey        @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  // Configuração
+  url           String // URL de destino
+  events        String // JSON array: ["lead.created", "lead.updated", "communication.sent"]
+  secret        String // Secret para HMAC signature
+  status        WebhookStatus @default(ACTIVE)
+
+  // Metadata
+  name          String?
+  description   String?
+
+  // Retry config
+  maxRetries    Int           @default(3)
+  retryDelay    Int           @default(60000) // Milissegundos
+
+  // Rastreamento
+  lastTriggeredAt DateTime?
+  failureCount    Int       @default(0)
+  successCount    Int       @default(0)
+
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relações
+  deliveries    WebhookDelivery[]
+
+  @@index([apiKeyId])
+  @@index([status])
+  @@map("webhooks")
+}
+
+// ============================================================================
+// TABELA: WebhookDelivery (Histórico de Entregas de Webhooks)
+// ============================================================================
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+model WebhookDelivery {
+  id            String                 @id @default(cuid())
+  webhookId     String
+  webhook       Webhook                @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  // Event info
+  event         String // "lead.created", "communication.sent"
+  payload       String @db.Text // JSON
+
+  // Delivery info
+  status        WebhookDeliveryStatus @default(PENDING)
+  attempts      Int                   @default(0)
+  maxAttempts   Int                   @default(3)
+
+  // Response info
+  statusCode    Int?
+  responseBody  String? @db.Text
+  errorMessage  String?
+
+  // Performance
+  responseTime  Int? // Milissegundos
+
+  // Timestamps
+  createdAt     DateTime @default(now())
+  lastAttemptAt DateTime?
+  nextAttemptAt DateTime?
+  completedAt   DateTime?
+
+  @@index([webhookId])
+  @@index([status])
+  @@index([event])
+  @@index([createdAt])
+  @@index([nextAttemptAt])
+  @@map("webhook_deliveries")
+}
+
+// ============================================================================
+// TABELA: EventLog (Log de Eventos do Sistema)
+// ============================================================================
+
+enum EventType {
+  LEAD_CREATED
+  LEAD_UPDATED
+  LEAD_STATUS_CHANGED
+  LEAD_DELETED
+  COMMUNICATION_SENT
+  COMMUNICATION_FAILED
+  WHATSAPP_MESSAGE_RECEIVED
+  WHATSAPP_MESSAGE_SENT
+  AUTOMATION_EXECUTED
+  AUTOMATION_FAILED
+  WEBHOOK_TRIGGERED
+  API_KEY_CREATED
+  API_KEY_REVOKED
+}
+
+model EventLog {
+  id            String    @id @default(cuid())
+
+  // Event info
+  eventType     EventType
+  eventName     String // Nome descritivo do evento
+
+  // Resource info
+  resourceType  String // "Lead", "Communication", "Automation"
+  resourceId    String
+
+  // Metadata
+  userId        String?
+  apiKeyId      String?
+  payload       String  @db.Text // JSON com dados do evento
+
+  // Timestamps
+  timestamp     DateTime @default(now())
+
+  @@index([eventType])
+  @@index([resourceType])
+  @@index([resourceId])
+  @@index([timestamp])
+  @@index([userId])
+  @@index([apiKeyId])
+  @@map("event_logs")
 }
 
 // ============================================================================

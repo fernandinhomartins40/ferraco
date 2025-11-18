@@ -35,6 +35,12 @@ import whatsappAutomationRoutes from './modules/whatsapp-automation/whatsapp-aut
 import recurrenceRoutes from './modules/recurrence/recurrence.routes';
 import { tokenCleanupService } from './services/token-cleanup.service';
 
+// Import External API routes
+import { apiKeyRoutes } from './modules/api-keys';
+import { externalRoutes } from './modules/external';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
+
 export function createApp(): Application {
   const app = express();
 
@@ -96,7 +102,22 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/whatsapp-automations`, whatsappAutomationRoutes);
   app.use(`${API_PREFIX}/recurrence`, recurrenceRoutes);
 
+  // External API routes (v1)
+  app.use(`${API_PREFIX}/api-keys`, apiKeyRoutes);
+  app.use(`${API_PREFIX}/v1/external`, externalRoutes);
+
+  // API Documentation (Swagger)
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Ferraco CRM API Documentation',
+  }));
+  app.get('/api/openapi.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+
   logger.info('✅ All routes registered successfully');
+  logger.info('📚 API Documentation available at /api-docs');
 
   // Iniciar limpeza automática de tokens
   tokenCleanupService.start();
