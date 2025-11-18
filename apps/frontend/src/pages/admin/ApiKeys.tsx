@@ -70,7 +70,7 @@ const ApiKeys = () => {
 
   const loadApiKeys = async () => {
     try {
-      const response = await api.get('/api/api-keys');
+      const response = await api.get('/api-keys');
       setApiKeys(response.data.data || []);
     } catch (error: any) {
       console.error('Erro ao carregar API Keys:', error);
@@ -82,7 +82,7 @@ const ApiKeys = () => {
 
   const handleCreateApiKey = async () => {
     try {
-      const response = await api.post('/api/api-keys', formData);
+      const response = await api.post('/api-keys', formData);
       setNewKeyData(response.data.data);
       setShowCreateModal(false);
       setFormData({
@@ -104,7 +104,7 @@ const ApiKeys = () => {
     }
 
     try {
-      await api.post(`/api/api-keys/${id}/revoke`);
+      await api.post(`/api-keys/${id}/revoke`);
       toast.success('API Key revogada com sucesso');
       loadApiKeys();
     } catch (error: any) {
@@ -118,7 +118,7 @@ const ApiKeys = () => {
     }
 
     try {
-      const response = await api.post(`/api/api-keys/${id}/rotate`);
+      const response = await api.post(`/api-keys/${id}/rotate`);
       setNewKeyData(response.data.data);
       toast.success('API Key rotacionada com sucesso');
       loadApiKeys();
@@ -133,7 +133,7 @@ const ApiKeys = () => {
     }
 
     try {
-      await api.delete(`/api/api-keys/${id}`);
+      await api.delete(`/api-keys/${id}`);
       toast.success('API Key deletada com sucesso');
       loadApiKeys();
     } catch (error: any) {
