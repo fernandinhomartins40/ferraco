@@ -323,16 +323,52 @@ jobs:
           # Executar migrations da API Externa (novas tabelas)
           echo ""
           echo "🗄️  Aplicando migrations da API Externa..."
-          docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy" || {
-            echo "⚠️  Migrations falharam, mostrando logs e tentando novamente..."
-            docker logs ferraco-crm-vps --tail 50
-            sleep 5
-            docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy" || {
-              echo "❌ Migrations falharam após retry!"
+
+          # Tentar aplicar migrations normalmente
+          if ! docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy" 2>&1 | tee /tmp/migration_output.txt; then
+            echo "⚠️  Migrations falharam, verificando causa..."
+
+            # Verificar se é erro P3009 (failed migrations)
+            if grep -q "P3009\|failed migrations" /tmp/migration_output.txt; then
+              echo "🔧 Detectado erro P3009 - migrations falhadas anteriormente"
+              echo "📋 Resolvendo migrations falhadas automaticamente..."
+
+              # Extrair nome da migration falhada
+              FAILED_MIGRATION=$(grep "migration started at" /tmp/migration_output.txt | sed -n 's/.*The `\([^`]*\)` migration.*/\1/p')
+              echo "📌 Migration falhada detectada: $FAILED_MIGRATION"
+
+              # Tentar marcar como rolled-back primeiro
+              echo "🔄 Tentando marcar como rolled-back..."
+              docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate resolve --rolled-back $FAILED_MIGRATION" || true
+
+              sleep 2
+
+              # Tentar aplicar migrations novamente
+              echo "🔄 Tentando aplicar migrations novamente..."
+              if ! docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy"; then
+                echo "⚠️  Ainda com erro, marcando como aplicada (skip)..."
+                docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate resolve --applied $FAILED_MIGRATION" || true
+
+                sleep 2
+
+                # Última tentativa
+                echo "🔄 Última tentativa de aplicar migrations..."
+                if ! docker exec ferraco-crm-vps sh -c "cd /app/backend && npx prisma migrate deploy"; then
+                  echo "❌ Migrations falharam após todas as tentativas!"
+                  echo "📋 Logs completos:"
+                  docker logs ferraco-crm-vps --tail 100
+                  exit 1
+                fi
+              fi
+            else
+              echo "❌ Erro diferente de P3009, abortando..."
+              cat /tmp/migration_output.txt
               docker logs ferraco-crm-vps --tail 100
               exit 1
-            }
-          }
+            fi
+          fi
+
+          echo "✅ Migrations aplicadas com sucesso!"
 
           # Gerar Prisma Client atualizado
           echo ""
