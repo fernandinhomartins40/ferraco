@@ -25,13 +25,13 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Ferraco CRM',
-        short_name: 'Ferraco',
-        description: 'Sistema de CRM com gestão de leads e WhatsApp',
+        name: 'Ferraco CRM - Painel Administrativo',
+        short_name: 'Ferraco CRM',
+        description: 'Painel administrativo do Ferraco CRM com gestão de leads e WhatsApp',
         theme_color: '#3b82f6',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/admin',
+        start_url: '/login',
         scope: '/',
         orientation: 'portrait',
         icons: [

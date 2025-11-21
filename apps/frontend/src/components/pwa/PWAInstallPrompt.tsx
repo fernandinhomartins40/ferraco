@@ -68,10 +68,10 @@ export function PWAInstallPrompt() {
     <pwa-install
       ref={pwaInstallRef as any}
       manual-apple="true"
-      install-description="Instale o Ferraco CRM para acesso rápido e trabalhe offline!"
+      install-description="Instale o Painel Administrativo do Ferraco CRM para acesso rápido!"
       manifest-url="/manifest.webmanifest"
-      name="Ferraco CRM"
-      description="Sistema de gestão de relacionamento com clientes"
+      name="Ferraco CRM - Painel Administrativo"
+      description="Painel administrativo com gestão de leads e WhatsApp"
       icon="/pwa-512x512.png"
     />
   );
