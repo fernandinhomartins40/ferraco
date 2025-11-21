@@ -41,17 +41,46 @@ export function PWAInstallBanner() {
   useEffect(() => {
     if (isIOS()) {
       setPlatform('ios');
+      console.log('[PWA Banner] Plataforma detectada: iOS');
     } else if (isAndroid()) {
       setPlatform('android');
+      console.log('[PWA Banner] Plataforma detectada: Android');
     } else {
       setPlatform('desktop');
+      console.log('[PWA Banner] Plataforma detectada: Desktop');
     }
   }, []);
 
-  // No iOS Safari, mostrar sempre (não depende de isInstallable)
-  const shouldShow = platform === 'ios'
-    ? !isInstalled && !isDismissed && isSafari()
-    : !isInstalled && isInstallable && !isDismissed;
+  // Debug log
+  useEffect(() => {
+    console.log('[PWA Banner] Estado:', {
+      platform,
+      isInstalled,
+      isInstallable,
+      isDismissed,
+      isSafari: isSafari(),
+      isMobile: /iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent),
+      shouldShow: !isInstalled && !isDismissed && (
+        (platform === 'ios' && isSafari()) ||
+        (platform === 'android' && /iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent)) ||
+        (platform === 'desktop' && isInstallable)
+      ),
+    });
+  }, [platform, isInstalled, isInstallable, isDismissed]);
+
+  // Lógica de exibição:
+  // - iOS Safari: Sempre mostrar (não precisa de beforeinstallprompt)
+  // - Android/Desktop: Mostrar sempre no mobile, mesmo sem beforeinstallprompt
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent);
+
+  const shouldShow = !isInstalled && !isDismissed && (
+    // iOS Safari: sempre mostrar
+    (platform === 'ios' && isSafari()) ||
+    // Android: sempre mostrar no mobile (não depende de isInstallable)
+    (platform === 'android' && isMobile) ||
+    // Desktop: só mostrar se tiver o evento beforeinstallprompt
+    (platform === 'desktop' && isInstallable)
+  );
 
   if (!shouldShow) {
     return null;
