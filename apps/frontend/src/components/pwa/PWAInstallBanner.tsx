@@ -41,32 +41,12 @@ export function PWAInstallBanner() {
   useEffect(() => {
     if (isIOS()) {
       setPlatform('ios');
-      console.log('[PWA Banner] Plataforma detectada: iOS');
     } else if (isAndroid()) {
       setPlatform('android');
-      console.log('[PWA Banner] Plataforma detectada: Android');
     } else {
       setPlatform('desktop');
-      console.log('[PWA Banner] Plataforma detectada: Desktop');
     }
   }, []);
-
-  // Debug log
-  useEffect(() => {
-    console.log('[PWA Banner] Estado:', {
-      platform,
-      isInstalled,
-      isInstallable,
-      isDismissed,
-      isSafari: isSafari(),
-      isMobile: /iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent),
-      shouldShow: !isInstalled && !isDismissed && (
-        (platform === 'ios' && isSafari()) ||
-        (platform === 'android' && /iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent)) ||
-        (platform === 'desktop' && isInstallable)
-      ),
-    });
-  }, [platform, isInstalled, isInstallable, isDismissed]);
 
   // Lógica de exibição:
   // - iOS Safari: Sempre mostrar (não precisa de beforeinstallprompt)
