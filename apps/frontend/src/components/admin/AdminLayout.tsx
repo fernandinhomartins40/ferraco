@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot, KeyRound, Palette, Send, Repeat, Menu as MenuIcon } from 'lucide-react';
 import { MobileBottomNav } from './MobileBottomNav';
-import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
+import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt';
 import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -229,7 +229,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     <div className="min-h-screen bg-background transition-colors duration-300 pb-16 md:pb-0">
       {/* PWA Components */}
       <OfflineIndicator />
-      <PWAInstallBanner />
+      <PWAInstallPrompt />
 
       {/* Session Warning Alert */}
       {showSessionWarning && sessionInfo.isExpiringSoon && (
