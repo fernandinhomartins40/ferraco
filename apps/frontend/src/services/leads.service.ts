@@ -92,6 +92,11 @@ export interface UpdateLeadData extends Partial<CreateLeadData> {
   nextFollowUpAt?: string;
 }
 
+export interface ArchivedLeadsResponse {
+  data: Lead[];
+  total: number;
+}
+
 export interface LeadFilters {
   status?: string;
   priority?: string;
@@ -269,6 +274,22 @@ export const leadsService = {
    */
   async getLeadHistory(id: string): Promise<any[]> {
     const response = await apiClient.get(`${API_URL}/${id}/history`);
+    return response.data.data;
+  },
+
+  /**
+   * Obter leads arquivados
+   */
+  async getArchivedLeads(): Promise<ArchivedLeadsResponse> {
+    const response = await apiClient.get(`${API_URL}/archived`);
+    return response.data.data;
+  },
+
+  /**
+   * Restaurar lead arquivado
+   */
+  async restoreArchivedLead(id: string): Promise<Lead> {
+    const response = await apiClient.post(`${API_URL}/${id}/restore`);
     return response.data.data;
   },
 };

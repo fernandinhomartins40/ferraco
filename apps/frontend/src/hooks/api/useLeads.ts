@@ -308,6 +308,46 @@ export const useLeadHistory = (id: string) => {
   });
 };
 
+/**
+ * Hook para obter leads arquivados
+ */
+export const useArchivedLeads = () => {
+  return useQuery({
+    queryKey: ['leads-archived'],
+    queryFn: () => leadsService.getArchivedLeads(),
+    staleTime: 60000, // 1 minuto
+  });
+};
+
+/**
+ * Hook para restaurar lead arquivado
+ */
+export const useRestoreArchivedLead = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => leadsService.restoreArchivedLead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['leads-archived'] });
+      queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: leadKeys.statsByStatus() });
+      toast({
+        title: 'Sucesso!',
+        description: 'Lead restaurado com sucesso.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao restaurar lead',
+        description: error.response?.data?.message || 'Ocorreu um erro ao restaurar o lead.',
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
 // Legacy compatibility - manter para não quebrar código existente
 export { useLeads as default };
 export { useLeadsStats as useLeadStats };

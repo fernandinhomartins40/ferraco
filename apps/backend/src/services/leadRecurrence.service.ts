@@ -44,7 +44,7 @@ export class LeadRecurrenceService {
       // Normalizar telefone
       const normalizedPhone = this.normalizePhone(data.phone);
 
-      // 1. Buscar lead existente
+      // 1. Buscar lead existente (incluindo arquivados)
       const existingLead = await prisma.lead.findFirst({
         where: { phone: normalizedPhone },
         include: {
@@ -57,6 +57,7 @@ export class LeadRecurrenceService {
 
       const isRecurrent = !!existingLead;
       const captureNumber = isRecurrent ? existingLead.captureCount + 1 : 1;
+      const wasArchived = existingLead?.status === 'ARQUIVADO';
 
       // 2. Calcular dias desde última captura
       let daysSinceLastCapture: number | null = null;
@@ -84,12 +85,21 @@ export class LeadRecurrenceService {
 
       // 8. Log da operação
       if (isRecurrent) {
-        logger.info(
-          `🔄 Lead recorrente detectado: ${lead.name} (${normalizedPhone}) - ` +
-          `Captura #${captureNumber} - ` +
-          `${daysSinceLastCapture} dias desde última captura - ` +
-          `Interesse ${interestChanged ? 'MUDOU' : 'mantido'}`
-        );
+        if (wasArchived) {
+          logger.info(
+            `♻️ Lead ARQUIVADO reativado: ${lead.name} (${normalizedPhone}) - ` +
+            `Captura #${captureNumber} - ` +
+            `${daysSinceLastCapture} dias desde última captura - ` +
+            `Status alterado para NOVO`
+          );
+        } else {
+          logger.info(
+            `🔄 Lead recorrente detectado: ${lead.name} (${normalizedPhone}) - ` +
+            `Captura #${captureNumber} - ` +
+            `${daysSinceLastCapture} dias desde última captura - ` +
+            `Interesse ${interestChanged ? 'MUDOU' : 'mantido'}`
+          );
+        }
       } else {
         logger.info(`✨ Novo lead criado: ${lead.name} (${normalizedPhone})`);
       }
@@ -137,11 +147,16 @@ export class LeadRecurrenceService {
     // Calcular boost de score (lead recorrente vale mais)
     const scoreBoost = this.calculateRecurrenceScoreBoost(captureNumber);
 
+    // ✅ FIX: Reativar lead se estava arquivado
+    const wasArchived = existingLead.status === 'ARQUIVADO';
+    const newStatus = wasArchived ? 'NOVO' : existingLead.status;
+
     return await prisma.lead.update({
       where: { id: existingLead.id },
       data: {
         name: data.name || existingLead.name, // Atualizar nome se fornecido
         email: data.email || existingLead.email, // Atualizar email se fornecido
+        status: newStatus, // ✅ Reativar como NOVO se estava arquivado
         captureCount: captureNumber,
         lastCapturedAt: new Date(),
         metadata: JSON.stringify(newMetadata),
