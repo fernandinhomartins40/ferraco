@@ -20,6 +20,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -40,12 +48,16 @@ import {
   Upload,
   Archive,
   RotateCcw,
+  Menu,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useArchivedLeads, useRestoreArchivedLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
 import UnifiedKanbanView from '@/components/admin/UnifiedKanbanView';
 import { FloatingActionButton } from '@/components/admin/FloatingActionButton';
 import { RecurrenceConfig } from '@/components/admin/RecurrenceConfig';
+import { ResponsiveModal } from '@/components/ui/responsive-modal';
+import { PullToRefresh } from '@/components/mobile/PullToRefresh';
 import { useToast } from '@/hooks/use-toast';
 import { useKanbanColumns } from '@/hooks/useKanbanColumns';
 import { useAutomationKanban } from '@/hooks/useAutomationKanban';
@@ -56,6 +68,7 @@ import { useVariableInsertion } from '@/hooks/useVariableInsertion';
 
 const AdminLeads = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // State
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -407,6 +420,12 @@ const AdminLeads = () => {
     });
   };
 
+  // Pull to Refresh Handler
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['leads'] });
+    await queryClient.invalidateQueries({ queryKey: ['kanban-columns'] });
+  };
+
   // Automation Column Handlers
   const handleCreateAutomationColumn = async () => {
     if (!automationColumnFormData.name) {
@@ -557,6 +576,9 @@ const AdminLeads = () => {
 
   return (
     <AdminLayout>
+      {/* Pull to Refresh - Mobile only */}
+      <PullToRefresh onRefresh={handleRefresh} />
+
       <div className="w-full flex flex-col gap-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -634,114 +656,215 @@ const AdminLeads = () => {
               <Bot className="mr-2 h-4 w-4" />
               Nova Coluna de Automação
             </Button>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => resetForm()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Lead
-                </Button>
-              </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar Novo Lead</DialogTitle>
-                <DialogDescription>
-                  Adicione um novo lead ao sistema. Os dados serão salvos no banco de dados.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Nome *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Nome completo"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Telefone *</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="email@exemplo.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="company">Empresa</Label>
-                  <Input
-                    id="company"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    placeholder="Nome da empresa"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="source">Origem</Label>
-                  <Select
-                    value={formData.source}
-                    onValueChange={(value) => setFormData({ ...formData, source: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="website">Website</SelectItem>
-                      <SelectItem value="facebook">Facebook</SelectItem>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                      <SelectItem value="indicacao">Indicação</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="priority">Prioridade</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(value: any) => setFormData({ ...formData, priority: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LOW">Baixa</SelectItem>
-                      <SelectItem value="MEDIUM">Média</SelectItem>
-                      <SelectItem value="HIGH">Alta</SelectItem>
-                      <SelectItem value="URGENT">Urgente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
+            <Button onClick={() => {
+              resetForm();
+              setIsCreateDialogOpen(true);
+            }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Lead
+            </Button>
+          </div>
+
+          {/* Mobile: Sheet com ações secundárias */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="lg:hidden">
+                <Menu className="h-4 w-4 mr-2" />
+                Ações
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[85vh]">
+              <SheetHeader>
+                <SheetTitle>Ações de Leads</SheetTitle>
+                <SheetDescription>
+                  Gerencie exportações, importações e configurações
+                </SheetDescription>
+              </SheetHeader>
+              <div className="flex flex-col gap-3 mt-6">
                 <Button
                   variant="outline"
-                  onClick={() => setIsCreateDialogOpen(false)}
+                  onClick={() => handleExport('csv')}
+                  disabled={isExporting}
+                  className="w-full justify-start h-14"
                 >
-                  Cancelar
+                  {isExporting ? (
+                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                  ) : (
+                    <Download className="mr-3 h-5 w-5" />
+                  )}
+                  Exportar CSV
                 </Button>
                 <Button
-                  onClick={handleCreate}
-                  disabled={createLead.isPending || !formData.name || !formData.phone}
+                  variant="outline"
+                  onClick={() => handleExport('excel')}
+                  disabled={isExporting}
+                  className="w-full justify-start h-14"
                 >
-                  {createLead.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Criar Lead
+                  {isExporting ? (
+                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                  ) : (
+                    <Download className="mr-3 h-5 w-5" />
+                  )}
+                  Exportar Excel
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          </div>
+                <Separator />
+                <Button
+                  variant="outline"
+                  onClick={() => setIsImportDialogOpen(true)}
+                  className="w-full justify-start h-14"
+                >
+                  <Upload className="mr-3 h-5 w-5" />
+                  Importar Leads
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsArchivedDialogOpen(true)}
+                  className="w-full justify-start h-14"
+                >
+                  <Archive className="mr-3 h-5 w-5" />
+                  Leads Arquivados
+                  {archivedLeadsData && archivedLeadsData.total > 0 && (
+                    <Badge variant="secondary" className="ml-auto">
+                      {archivedLeadsData.total}
+                    </Badge>
+                  )}
+                </Button>
+                <Separator />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetColumnForm();
+                    setIsEditColumnMode(false);
+                    setIsColumnDialogOpen(true);
+                  }}
+                  className="w-full justify-start h-14"
+                >
+                  <Settings2 className="mr-3 h-5 w-5" />
+                  Gerenciar Colunas
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetAutomationColumnForm();
+                    setIsEditAutomationColumnMode(false);
+                    setIsAutomationColumnDialogOpen(true);
+                  }}
+                  className="w-full justify-start h-14"
+                >
+                  <Bot className="mr-3 h-5 w-5" />
+                  Nova Coluna de Automação
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
+
+        {/* Create Lead Modal - Responsivo */}
+        <ResponsiveModal
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+          title="Criar Novo Lead"
+          description="Adicione um novo lead ao sistema. Os dados serão salvos no banco de dados."
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleCreate}
+                disabled={createLead.isPending || !formData.name || !formData.phone}
+                className="flex-1"
+              >
+                {createLead.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Criar Lead
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nome completo"
+                className="h-12"
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Telefone *</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="(00) 00000-0000"
+                className="h-12"
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="email@exemplo.com"
+                className="h-12"
+              />
+            </div>
+            <div>
+              <Label htmlFor="company">Empresa</Label>
+              <Input
+                id="company"
+                value={formData.company}
+                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                placeholder="Nome da empresa"
+                className="h-12"
+              />
+            </div>
+            <div>
+              <Label htmlFor="source">Origem</Label>
+              <Select
+                value={formData.source}
+                onValueChange={(value) => setFormData({ ...formData, source: value })}
+              >
+                <SelectTrigger className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="website">Website</SelectItem>
+                  <SelectItem value="facebook">Facebook</SelectItem>
+                  <SelectItem value="instagram">Instagram</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="indicacao">Indicação</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="priority">Prioridade</Label>
+              <Select
+                value={formData.priority}
+                onValueChange={(value: any) => setFormData({ ...formData, priority: value })}
+              >
+                <SelectTrigger className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LOW">Baixa</SelectItem>
+                  <SelectItem value="MEDIUM">Média</SelectItem>
+                  <SelectItem value="HIGH">Alta</SelectItem>
+                  <SelectItem value="URGENT">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </ResponsiveModal>
 
         {/* Alert de dados reais */}
         <Alert className="border-green-200 bg-green-50">
@@ -1370,6 +1493,16 @@ const AdminLeads = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* FAB - Floating Action Button para mobile */}
+        <FloatingActionButton
+          onClick={() => {
+            resetForm();
+            setIsCreateDialogOpen(true);
+          }}
+          icon={Plus}
+          label="Novo Lead"
+        />
       </div>
     </AdminLayout>
   );

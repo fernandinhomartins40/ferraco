@@ -98,17 +98,47 @@ export const useLandingPageConfig = () => {
   // ============================================================================
 
   useEffect(() => {
-    const loadInitialConfig = () => {
+    const loadInitialConfig = async () => {
       try {
-        const config = loadConfig();
-        dispatch({ type: 'LOAD_CONFIG', payload: config });
-      } catch (error) {
-        console.error('Erro ao carregar configuração:', error);
-        toast({
-          title: 'Erro ao carregar',
-          description: 'Não foi possível carregar a configuração. Usando valores padrão.',
-          variant: 'destructive',
+        console.log('🔄 Carregando configuração do backend...');
+
+        // 1. Tentar carregar do backend primeiro
+        const response = await apiClient.get('/landing-page/config');
+        const backendConfig = response.data.data;
+
+        console.log('✅ Configuração carregada do backend:', {
+          hasHeader: !!backendConfig.header,
+          hasHero: !!backendConfig.hero,
+          headerLogo: backendConfig.header?.logo,
         });
+
+        // 2. Atualizar localStorage com dados do backend
+        saveConfig(backendConfig);
+
+        // 3. Carregar no estado
+        dispatch({ type: 'LOAD_CONFIG', payload: backendConfig });
+
+      } catch (error: any) {
+        console.warn('⚠️ Erro ao carregar do backend, usando localStorage como fallback:', error);
+
+        // Fallback: carregar do localStorage se backend falhar
+        try {
+          const localConfig = loadConfig();
+          dispatch({ type: 'LOAD_CONFIG', payload: localConfig });
+
+          toast({
+            title: 'Carregado do cache local',
+            description: 'Não foi possível conectar ao servidor. Usando configuração local.',
+            variant: 'default',
+          });
+        } catch (localError) {
+          console.error('❌ Erro ao carregar do localStorage:', localError);
+          toast({
+            title: 'Erro ao carregar',
+            description: 'Não foi possível carregar a configuração. Usando valores padrão.',
+            variant: 'destructive',
+          });
+        }
       } finally {
         setIsLoading(false);
       }

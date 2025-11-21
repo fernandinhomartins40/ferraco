@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { authenticate } from '../middleware/auth';
+import { getDefaultLandingPageConfig } from '../config/defaultLandingPageConfig';
 
 const router = Router();
 
@@ -15,15 +16,31 @@ const router = Router();
 router.get('/config', async (req: Request, res: Response) => {
   try {
     // Buscar a primeira (e única) configuração de landing page
-    const config = await prisma.landingPageConfig.findFirst({
+    let config = await prisma.landingPageConfig.findFirst({
       orderBy: { updatedAt: 'desc' },
     });
 
+    // Se não existe configuração, criar uma com valores padrão
     if (!config) {
-      return res.status(404).json({
-        success: false,
-        message: 'Configuração da landing page não encontrada',
+      console.log('⚠️ Nenhuma configuração encontrada, criando configuração padrão...');
+
+      // Importar configuração padrão do frontend
+      const defaultConfig = getDefaultLandingPageConfig();
+
+      config = await prisma.landingPageConfig.create({
+        data: {
+          header: JSON.stringify(defaultConfig.header),
+          hero: JSON.stringify(defaultConfig.hero),
+          marquee: JSON.stringify(defaultConfig.marquee),
+          about: JSON.stringify(defaultConfig.about),
+          products: JSON.stringify(defaultConfig.products),
+          experience: JSON.stringify(defaultConfig.experience),
+          contact: JSON.stringify(defaultConfig.contact),
+          footer: JSON.stringify(defaultConfig.footer),
+        },
       });
+
+      console.log('✅ Configuração padrão criada com sucesso');
     }
 
     // Parsear JSONs
