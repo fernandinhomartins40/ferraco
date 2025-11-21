@@ -44,6 +44,7 @@ import {
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useArchivedLeads, useRestoreArchivedLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
 import UnifiedKanbanView from '@/components/admin/UnifiedKanbanView';
+import { FloatingActionButton } from '@/components/admin/FloatingActionButton';
 import { RecurrenceConfig } from '@/components/admin/RecurrenceConfig';
 import { useToast } from '@/hooks/use-toast';
 import { useKanbanColumns } from '@/hooks/useKanbanColumns';
@@ -558,14 +559,16 @@ const AdminLeads = () => {
     <AdminLayout>
       <div className="w-full flex flex-col gap-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Leads</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold">Leads</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Gerencie seus leads do banco de dados PostgreSQL
             </p>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Desktop: All buttons */}
+          <div className="hidden lg:flex items-center gap-3">
             <Button
               variant="outline"
               onClick={() => handleExport('csv')}

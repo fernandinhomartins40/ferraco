@@ -7,6 +7,7 @@
  */
 
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { MobileKanban } from './MobileKanban';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -379,7 +380,20 @@ const UnifiedKanbanView = ({
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="w-full space-y-8">
         {/* Kanban de Status Normal */}
-        <div className="px-6 overflow-x-auto pb-4">
+
+        {/* Mobile View: Tabs */}
+        <div className="md:hidden px-4">
+          <MobileKanban
+            leads={leads}
+            columns={columns}
+            onUpdateLeadStatus={onUpdateLeadStatus}
+            onEditLead={onEditLead}
+            onDeleteLead={onDeleteLead}
+          />
+        </div>
+
+        {/* Desktop View: Drag & Drop */}
+        <div className="hidden md:block px-6 overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-max">
             {columns.map((column) => {
               const columnLeads = getLeadsByStatus(column.status);

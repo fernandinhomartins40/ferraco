@@ -178,4 +178,30 @@ All colors MUST be HSL.
   .animate-fade-in-up {
     animation: fade-in-up 0.6s ease-out forwards;
   }
+
+  /* Mobile Touch Utilities */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Touch Feedback */
+  .active\:scale-98:active {
+    transform: scale(0.98);
+  }
+
+  /* Disable text selection for UI elements */
+  .touch-none {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Smooth touch scrolling */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
 }

@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot, KeyRound, Palette, Send, Repeat } from 'lucide-react';
+import { Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell, Settings, Tags, MessageCircle, Zap, FileText, Brain, Target, LinkIcon, Shield, LogOut, User, ChevronRight, Clock, AlertTriangle, Bot, KeyRound, Palette, Send, Repeat, Menu as MenuIcon } from 'lucide-react';
+import { MobileBottomNav } from './MobileBottomNav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -214,8 +215,16 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleTheme]);
 
+  // Secondary nav items for mobile "More" menu
+  const secondaryNavItems = navItems.slice(4).map(item => ({
+    href: item.href,
+    icon: item.icon,
+    label: item.label,
+    badge: item.badge,
+  }));
+
   return (
-    <div className="min-h-screen bg-background transition-colors duration-300">
+    <div className="min-h-screen bg-background transition-colors duration-300 pb-16 md:pb-0">
       {/* Session Warning Alert */}
       {showSessionWarning && sessionInfo.isExpiringSoon && (
         <Alert className="m-4 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
@@ -237,16 +246,18 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         </Alert>
       )}
 
-      {/* Header */}
-      <header className="bg-card shadow-sm border-b border-border transition-colors duration-300">
-        <div className="container mx-auto px-4 py-4">
+      {/* Mobile Header */}
+      <header className="sticky top-0 z-40 bg-card shadow-sm border-b border-border transition-colors duration-300 md:relative">
+        <div className="container mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-primary">
-                Painel Administrativo
+            {/* Mobile: Logo compacto + Badge */}
+            <div className="flex items-center gap-2 md:gap-4">
+              <h1 className="text-lg md:text-2xl font-bold text-primary">
+                <span className="md:hidden">Ferraco</span>
+                <span className="hidden md:inline">Painel Administrativo</span>
               </h1>
               {alertCount > 0 && (
-                <Badge variant="destructive" className="animate-pulse">
+                <Badge variant="destructive" className="animate-pulse hidden sm:flex">
                   <Bell size={12} className="mr-1" />
                   {alertCount} leads antigos
                 </Badge>
@@ -254,17 +265,30 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             </div>
 
             {/* User Info and Actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-2 md:gap-4">
+              {/* Theme Toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="relative group h-9 w-9"
+                title={`Alterar para tema ${theme === 'light' ? 'escuro' : 'claro'}`}
+              >
+                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only">Alternar tema</span>
+              </Button>
+
               {/* User Dropdown Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2 hover:bg-muted">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className={cn('text-sm font-medium', getRoleColor(demoUser.role))}>
+                  <Button variant="ghost" className="flex items-center gap-2 hover:bg-muted h-9 px-2 md:px-3">
+                    <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                      <AvatarFallback className={cn('text-xs md:text-sm font-medium', getRoleColor(demoUser.role))}>
                         {demoUser.name.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="text-left hidden sm:block">
+                    <div className="text-left hidden lg:block">
                       <div className="text-sm font-medium">{demoUser.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {getRoleDisplayName(demoUser.role)}
@@ -297,32 +321,11 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              {/* Theme Toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="relative group"
-                title={`Alterar para tema ${theme === 'light' ? 'escuro' : 'claro'} (Ctrl+K)`}
-              >
-                <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                <span className="sr-only">Alternar tema</span>
-              </Button>
-
-              {/* Back to Site */}
-              <Button variant="outline" asChild>
-                <Link to="/" className="flex items-center space-x-2">
-                  <ArrowLeft size={16} />
-                  <span className="hidden sm:inline">Voltar ao Site</span>
-                </Link>
-              </Button>
             </div>
           </div>
 
-          {/* Breadcrumbs */}
-          <div className="mt-3 flex items-center space-x-2 text-sm text-muted-foreground">
+          {/* Breadcrumbs - Hidden on mobile */}
+          <div className="mt-3 hidden md:flex items-center space-x-2 text-sm text-muted-foreground">
             {breadcrumbs.map((crumb, index) => (
               <div key={crumb.href} className="flex items-center">
                 {index > 0 && <ChevronRight className="w-4 h-4 mx-2" />}
@@ -343,8 +346,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-64 bg-card shadow-sm border-r border-border min-h-[calc(100vh-73px)] transition-colors duration-300">
+        {/* Desktop Sidebar - Hidden on mobile */}
+        <aside className="hidden md:block w-64 bg-card shadow-sm border-r border-border min-h-[calc(100vh-73px)] transition-colors duration-300">
           <nav className="p-4">
             <ul className="space-y-1">
               {navItems.map((item) => {
@@ -400,10 +403,16 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
           {children}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav
+        alertCount={alertCount}
+        secondaryNavItems={secondaryNavItems}
+      />
 
       {/* Inactivity Warning Modal - Disabled in demo mode */}
       <InactivityWarningModal
