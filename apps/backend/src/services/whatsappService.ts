@@ -1982,8 +1982,20 @@ class WhatsAppService {
   async reinitialize(): Promise<void> {
     logger.info('🔄 Reinicializando WhatsApp...');
 
-    // Desconectar sessão atual se existir
-    await this.disconnect();
+    // ✅ FIX: Cleanup silencioso SEM emitir eventos (evita confundir frontend)
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+
+    if (this.client) {
+      try {
+        await this.client.close();
+        logger.info('🔌 Cliente WhatsApp fechado');
+      } catch (error) {
+        logger.warn('⚠️  Erro ao fechar cliente (será ignorado):', error);
+      }
+    }
 
     // Resetar estados
     this.isInitializing = false;
@@ -1991,13 +2003,13 @@ class WhatsAppService {
     this.qrCode = null;
     this.client = null;
 
-    // Aguardar 2 segundos antes de reiniciar
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // ✅ MELHORIA: Aguardar menos tempo (1 segundo é suficiente)
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Inicializar novamente
     await this.initialize();
 
-    logger.info('✅ WhatsApp reinicializado');
+    logger.info('✅ WhatsApp reinicializado - aguardando QR Code...');
   }
 
   /**
