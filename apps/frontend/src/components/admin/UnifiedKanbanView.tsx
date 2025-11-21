@@ -389,6 +389,8 @@ const UnifiedKanbanView = ({
             onUpdateLeadStatus={onUpdateLeadStatus}
             onEditLead={onEditLead}
             onDeleteLead={onDeleteLead}
+            automationColumns={automationColumns}
+            onMoveToAutomation={onMoveLeadToAutomationColumn}
           />
         </div>
 

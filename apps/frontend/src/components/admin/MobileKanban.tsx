@@ -14,6 +14,7 @@ import {
   Building,
   MoreVertical,
   ArrowRight,
+  Zap,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -23,7 +24,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { Lead } from '@/services/leads.service';
 import type { KanbanColumn } from '@/services/kanbanColumns.service';
+import type { AutomationKanbanColumn } from '@/services/automationKanban.service';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface MobileKanbanProps {
   leads: Lead[];
@@ -31,6 +40,8 @@ interface MobileKanbanProps {
   onUpdateLeadStatus: (leadId: string, newStatus: string) => Promise<void>;
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (leadId: string) => void;
+  automationColumns?: AutomationKanbanColumn[];
+  onMoveToAutomation?: (leadId: string, columnId: string) => void;
 }
 
 const getPriorityColor = (priority: Lead['priority']) => {
@@ -59,8 +70,11 @@ export const MobileKanban = ({
   onUpdateLeadStatus,
   onEditLead,
   onDeleteLead,
+  automationColumns = [],
+  onMoveToAutomation,
 }: MobileKanbanProps) => {
   const [activeColumn, setActiveColumn] = useState(columns[0]?.id || '');
+  const [selectedAutomationColumn, setSelectedAutomationColumn] = useState<Record<string, string>>({});
 
   const getLeadsByColumn = (columnId: string) => {
     const column = columns.find(c => c.id === columnId);
@@ -215,6 +229,59 @@ export const MobileKanban = ({
                           <span>Mover para {nextColumn.name}</span>
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
+                      )}
+
+                      {/* Automation Column Selector */}
+                      {automationColumns.length > 0 && onMoveToAutomation && (
+                        <div className="mt-3 pt-3 border-t">
+                          <label className="text-xs font-medium text-muted-foreground mb-2 block flex items-center gap-1">
+                            <Zap className="h-3 w-3" />
+                            Adicionar à Automação
+                          </label>
+                          <div className="flex gap-2">
+                            <Select
+                              value={selectedAutomationColumn[lead.id] || ''}
+                              onValueChange={(value) =>
+                                setSelectedAutomationColumn(prev => ({ ...prev, [lead.id]: value }))
+                              }
+                            >
+                              <SelectTrigger className="h-9 text-sm">
+                                <SelectValue placeholder="Selecione a coluna" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {automationColumns.map((autoCol) => (
+                                  <SelectItem key={autoCol.id} value={autoCol.id}>
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-3 h-3 rounded-full"
+                                        style={{ backgroundColor: autoCol.color }}
+                                      />
+                                      <span>{autoCol.name}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              size="sm"
+                              className="h-9 px-3"
+                              disabled={!selectedAutomationColumn[lead.id]}
+                              onClick={() => {
+                                const columnId = selectedAutomationColumn[lead.id];
+                                if (columnId) {
+                                  onMoveToAutomation(lead.id, columnId);
+                                  setSelectedAutomationColumn(prev => {
+                                    const newState = { ...prev };
+                                    delete newState[lead.id];
+                                    return newState;
+                                  });
+                                }
+                              }}
+                            >
+                              Adicionar
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
