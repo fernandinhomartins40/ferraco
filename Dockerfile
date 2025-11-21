@@ -26,7 +26,7 @@ RUN apk add --no-cache \
     libxi \
     libxtst \
     cups-libs \
-    libxss \
+    libxscrnsaver \
     libxrandr \
     alsa-lib \
     pango \
@@ -93,7 +93,7 @@ RUN apk add --no-cache \
     libxi \
     libxtst \
     cups-libs \
-    libxss \
+    libxscrnsaver \
     libxrandr \
     alsa-lib \
     pango \
