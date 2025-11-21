@@ -1,60 +1,193 @@
 /**
  * PWAInstallBanner - Banner para promover instalação do PWA
- * FASE 3 - PWA
+ * FASE 3 - PWA - Versão melhorada com detecção de plataforma e instruções iOS
  */
 
-import { useState } from 'react';
-import { X, Download, Smartphone } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Download, Smartphone, Share, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
+
+// Detectar plataforma
+const isIOS = () => {
+  const ua = window.navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test(ua);
+};
+
+const isAndroid = () => {
+  const ua = window.navigator.userAgent.toLowerCase();
+  return /android/.test(ua);
+};
+
+const isSafari = () => {
+  const ua = window.navigator.userAgent.toLowerCase();
+  return /safari/.test(ua) && !/chrome/.test(ua);
+};
 
 export function PWAInstallBanner() {
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
   const [isDismissed, setIsDismissed] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [platform, setPlatform] = useState<'ios' | 'android' | 'desktop'>('desktop');
 
-  // Não mostrar se já está instalado, não é instalável ou foi dispensado
-  if (isInstalled || !isInstallable || isDismissed) {
+  useEffect(() => {
+    if (isIOS()) {
+      setPlatform('ios');
+    } else if (isAndroid()) {
+      setPlatform('android');
+    } else {
+      setPlatform('desktop');
+    }
+  }, []);
+
+  // No iOS Safari, mostrar sempre (não depende de isInstallable)
+  const shouldShow = platform === 'ios'
+    ? !isInstalled && !isDismissed && isSafari()
+    : !isInstalled && isInstallable && !isDismissed;
+
+  if (!shouldShow) {
     return null;
   }
 
   const handleInstall = async () => {
-    const installed = await promptInstall();
-    if (installed) {
-      setIsDismissed(true);
+    if (platform === 'ios') {
+      // iOS: mostrar instruções
+      setShowIOSInstructions(true);
+    } else {
+      // Android/Desktop: usar prompt nativo
+      const installed = await promptInstall();
+      if (installed) {
+        setIsDismissed(true);
+      }
     }
   };
 
   return (
-    <Alert className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50 bg-primary text-primary-foreground border-primary shadow-2xl">
-      <Smartphone className="h-5 w-5" />
-      <AlertDescription className="flex items-center justify-between gap-3 ml-2">
-        <div className="flex-1">
-          <p className="font-semibold mb-1">Instalar Ferraco CRM</p>
-          <p className="text-sm opacity-90">
-            Use como app no seu dispositivo para acesso rápido
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleInstall}
-            className="whitespace-nowrap"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Instalar
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setIsDismissed(true)}
-            className="h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </AlertDescription>
-    </Alert>
+    <>
+      <Alert className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50 bg-primary text-primary-foreground border-primary shadow-2xl animate-in slide-in-from-bottom-4">
+        <Smartphone className="h-5 w-5" />
+        <AlertDescription className="flex items-center justify-between gap-3 ml-2">
+          <div className="flex-1">
+            <p className="font-semibold mb-1">
+              {platform === 'ios' ? 'Adicionar à Tela Inicial' : 'Instalar Ferraco CRM'}
+            </p>
+            <p className="text-sm opacity-90">
+              {platform === 'ios'
+                ? 'Use como app para acesso rápido'
+                : 'Instale o app para melhor experiência'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleInstall}
+              className="whitespace-nowrap"
+            >
+              {platform === 'ios' ? (
+                <>
+                  <Share className="h-4 w-4 mr-2" />
+                  Como instalar
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Instalar
+                </>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsDismissed(true)}
+              className="h-8 w-8 p-0 hover:bg-primary-foreground/20"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </AlertDescription>
+      </Alert>
+
+      {/* Dialog com instruções iOS */}
+      <Dialog open={showIOSInstructions} onOpenChange={setShowIOSInstructions}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Instalar Ferraco CRM no iOS
+            </DialogTitle>
+            <DialogDescription>
+              Siga os passos abaixo para adicionar o app à sua tela inicial
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                1
+              </div>
+              <div className="flex-1 pt-1">
+                <p className="font-medium mb-1">Abra o menu de compartilhamento</p>
+                <p className="text-sm text-muted-foreground">
+                  Toque no ícone <Share className="inline h-4 w-4 mx-1" />
+                  <span className="font-semibold">(Compartilhar)</span> na barra inferior do Safari
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                2
+              </div>
+              <div className="flex-1 pt-1">
+                <p className="font-medium mb-1">Adicionar à Tela de Início</p>
+                <p className="text-sm text-muted-foreground">
+                  Role para baixo e toque em
+                  <span className="font-semibold"> "Adicionar à Tela de Início"</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                3
+              </div>
+              <div className="flex-1 pt-1">
+                <p className="font-medium mb-1">Confirmar</p>
+                <p className="text-sm text-muted-foreground">
+                  Toque em <span className="font-semibold">"Adicionar"</span> no canto superior direito
+                </p>
+              </div>
+            </div>
+
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertDescription className="text-sm text-blue-900">
+                Após instalar, o app aparecerá na sua tela inicial e funcionará como um aplicativo nativo!
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowIOSInstructions(false)}>
+              Fechar
+            </Button>
+            <Button onClick={() => {
+              setShowIOSInstructions(false);
+              setIsDismissed(true);
+            }}>
+              Entendi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -194,9 +194,6 @@ const Footer = ({ config }: FooterProps) => {
           <p className="text-sm text-primary-foreground/70">
             {copyright}
           </p>
-          <p className="text-xs text-primary-foreground/60 mt-2">
-            CNPJ: 12.345.678/0001-90
-          </p>
         </div>
       </div>
     </footer>
