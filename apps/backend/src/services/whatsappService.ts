@@ -328,13 +328,6 @@ class WhatsAppService {
           // ⭐ IMPORTANTE: autoClose em 0 evita desconexões automáticas
           autoClose: 0,
 
-          // ⭐ CRITICAL FIX (Issue #2066, #2070): Desabilitar timeout de QR Code
-          // Em Docker/headless, QR pode levar >30s para gerar
-          qrTimeout: 0,
-
-          // ⭐ CRITICAL FIX: Desabilitar timeout de sincronização (3 min padrão)
-          deviceSyncTimeout: 0,
-
           // ⭐ Persistência de sessão - crítico para produção
           folderNameToken: this.sessionsPath,
           mkdirFolderToken: '',
@@ -345,8 +338,9 @@ class WhatsAppService {
           // ⭐ Puppeteer: flags otimizados para Docker/produção 2025
           puppeteerOptions: {
             headless: 'new' as any,
-            // ✅ Timeout aumentado para QR Code generation
-            timeout: 60000,
+            // ✅ CRITICAL FIX: Timeout aumentado para 5 minutos (Issue #2066, #2070)
+            // Em Docker/headless, QR Code pode levar até 60-120s para gerar
+            timeout: 300000,
             args: [
               // Segurança e sandbox
               '--no-sandbox',
