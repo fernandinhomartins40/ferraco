@@ -173,19 +173,39 @@ class WhatsAppService {
     try {
       this.client = await wppconnect.create(
         'ferraco-crm', // session name
-        // Callback QR Code
-        (base64Qrimg: string, asciiQR: string, attempt: number) => {
+        // ⭐ Callback QR Code - MELHORADO 2025
+        (base64Qrimg: string, asciiQR: string, attempt: number, urlCode?: string) => {
+          // ✅ Validar que QR Code não está vazio
+          if (!base64Qrimg || base64Qrimg.trim() === '') {
+            logger.error('❌ QR Code vazio recebido do WPPConnect');
+            return;
+          }
+
+          // ✅ Validar formato data:image
+          if (!base64Qrimg.startsWith('data:image/')) {
+            logger.warn(`⚠️  QR Code em formato não esperado (tentativa ${attempt})`);
+            // Tentar adicionar prefix se for base64 puro
+            if (!base64Qrimg.includes('data:')) {
+              base64Qrimg = `data:image/png;base64,${base64Qrimg}`;
+              logger.info('✅ Prefix data:image adicionado ao QR Code');
+            }
+          }
+
           this.qrCode = base64Qrimg;
           logger.info(`📱 QR Code gerado! Tentativa ${attempt}`);
-          logger.info('✅ Acesse /api/whatsapp/qr para visualizar o QR Code');
+          logger.info(`✅ Tamanho: ${Math.round(base64Qrimg.length / 1024)}KB`);
+          if (urlCode) {
+            logger.info(`🔗 URL Code disponível: ${urlCode.substring(0, 30)}...`);
+          }
 
           // ✅ FASE 2: Emitir QR Code via Socket.IO
           this.emitQRCode(base64Qrimg);
 
-          // QR code é regenerado automaticamente pelo WPPConnect
+          // ⭐ QR code é regenerado automaticamente pelo WPPConnect a cada 20-30s
           // Não anular o código, sempre manter o mais recente disponível
+          logger.info('⏱️  QR Code válido por ~20-30 segundos, será renovado automaticamente');
         },
-        // Callback status
+        // ⭐ Callback status - MELHORADO 2025
         (statusSession: string, session: string) => {
           logger.info(`📊 [${session}] Status: ${statusSession}`);
 
@@ -194,17 +214,22 @@ class WhatsAppService {
             case 'isLogged':
             case 'qrReadSuccess':
             case 'chatsAvailable':
-              this.isConnected = true;
-              this.qrCode = null;
-              this.isInitializing = false;
-              logger.info('✅ WhatsApp conectado com sucesso!');
+              // ✅ MELHORIA 2025: Validar que realmente está conectado antes de mudar estado
+              if (!this.isConnected) {
+                this.isConnected = true;
+                this.qrCode = null;
+                this.isInitializing = false;
+                logger.info('✅ WhatsApp conectado com sucesso!');
 
-              // ✅ FASE 2: Emitir evento de conexão pronta via Socket.IO
-              this.emitReady();
+                // ✅ FASE 2: Emitir evento de conexão pronta via Socket.IO
+                this.emitReady();
 
-              // ⚠️ ARQUITETURA STATELESS 2025: Sync automático removido
-              // Conversas são carregadas on-demand via getAllConversations()
-              logger.info('📱 WhatsApp pronto - arquitetura stateless (sem sync automático)');
+                // ⚠️ ARQUITETURA STATELESS 2025: Sync automático removido
+                // Conversas são carregadas on-demand via getAllConversations()
+                logger.info('📱 WhatsApp pronto - arquitetura stateless (sem sync automático)');
+              } else {
+                logger.debug('✅ WhatsApp já está conectado - status ignorado');
+              }
               break;
 
             case 'notLogged':
@@ -212,6 +237,11 @@ class WhatsAppService {
             case 'qrReadFail':
               this.isConnected = false;
               logger.info('⏳ Aguardando leitura do QR Code...');
+
+              // ⭐ MELHORIA 2025: Se QR falhou, logar detalhes
+              if (statusSession === 'qrReadError' || statusSession === 'qrReadFail') {
+                logger.warn('⚠️  Falha ao ler QR Code - novo código será gerado automaticamente');
+              }
 
               // ✅ FASE 2: Emitir status via Socket.IO
               this.emitStatus();
@@ -222,7 +252,17 @@ class WhatsAppService {
             case 'deleteToken':
               this.isConnected = false;
               this.qrCode = null;
-              logger.warn('⚠️  WhatsApp desconectado');
+              logger.warn(`⚠️  WhatsApp desconectado: ${statusSession}`);
+
+              // ⭐ MELHORIA 2025: Tentar reconectar automaticamente após 5s
+              setTimeout(() => {
+                if (!this.isConnected && !this.isInitializing) {
+                  logger.info('🔄 Tentando reconectar automaticamente...');
+                  this.reinitialize().catch((err) => {
+                    logger.error('❌ Erro ao reconectar:', err);
+                  });
+                }
+              }, 5000);
 
               // ✅ FASE 2: Emitir evento de desconexão via Socket.IO
               this.emitDisconnected(statusSession);
@@ -247,29 +287,56 @@ class WhatsAppService {
         },
         undefined, // onLoadingScreen
         undefined, // catchLinkCode
-        // Options
+        // Options - ✅ MELHORES PRÁTICAS 2025
         {
+          // ⭐ Headless mode - 'new' é a forma moderna recomendada
           headless: 'new' as any,
           devtools: false,
           debug: false,
           disableWelcome: true,
           updatesLog: false,
+
+          // ⭐ IMPORTANTE: autoClose em 0 evita desconexões automáticas
           autoClose: 0,
+
+          // ⭐ Persistência de sessão - crítico para produção
           folderNameToken: this.sessionsPath,
           mkdirFolderToken: '',
+
+          // ⭐ QR Code: desabilitar log no console (usamos Socket.IO)
           logQR: false,
+
+          // ⭐ Puppeteer: flags otimizados para Docker/produção 2025
           puppeteerOptions: {
             headless: 'new' as any,
+            // ✅ Timeout aumentado para QR Code generation
+            timeout: 60000,
             args: [
+              // Segurança e sandbox
               '--no-sandbox',
               '--disable-setuid-sandbox',
+
+              // Performance e memória (crítico para Docker)
               '--disable-dev-shm-usage',
-              '--disable-accelerated-2d-canvas',
-              '--no-first-run',
-              '--no-zygote',
               '--disable-gpu',
               '--disable-software-rasterizer',
+              '--disable-accelerated-2d-canvas',
+
+              // Estabilidade
+              '--no-first-run',
+              '--no-zygote',
               '--disable-extensions',
+              '--disable-background-networking',
+
+              // ⭐ NOVOS 2025: Melhorar geração de QR Code
+              '--disable-background-timer-throttling',
+              '--disable-backgrounding-occluded-windows',
+              '--disable-renderer-backgrounding',
+              '--disable-features=TranslateUI',
+              '--disable-ipc-flooding-protection',
+
+              // ⭐ Tamanho de janela (ajuda com rendering do QR)
+              '--window-size=1920,1080',
             ],
           },
         }
