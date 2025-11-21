@@ -213,11 +213,21 @@ jobs:
 
           echo "✅ Limpeza completa finalizada - preservando banco de dados PostgreSQL"
 
-          # Backup e preparação
+          # Backup e preparação - PRESERVANDO VOLUMES PERSISTENTES
           if [ -d "${{ env.APP_DIR }}" ]; then
-            echo "💾 Fazendo backup..."
+            echo "💾 Fazendo backup do código (preservando data/)..."
+
+            # Backup da pasta data/ (volumes persistentes)
+            if [ -d "${{ env.APP_DIR }}/data" ]; then
+              echo "📦 Preservando volumes persistentes (data/)..."
+              mv ${{ env.APP_DIR }}/data /tmp/ferraco-data-backup || true
+              echo "✅ Data/ preservado em /tmp/ferraco-data-backup"
+            fi
+
+            # Mover diretório antigo para backup
             BACKUP_DIR="${{ env.APP_DIR }}.backup.$(date +%Y%m%d-%H%M%S)"
             mv ${{ env.APP_DIR }} $BACKUP_DIR 2>/dev/null || true
+
             # Manter apenas últimos 3 backups
             ls -dt ${{ env.APP_DIR }}.backup.* 2>/dev/null | tail -n +4 | xargs -r rm -rf
           fi
@@ -228,6 +238,17 @@ jobs:
           cd ${{ env.APP_DIR }}
           tar -xzf /tmp/deploy.tar.gz
           rm -f /tmp/deploy.tar.gz
+
+          # Restaurar volumes persistentes
+          if [ -d "/tmp/ferraco-data-backup" ]; then
+            echo "📦 Restaurando volumes persistentes (data/)..."
+            mv /tmp/ferraco-data-backup ${{ env.APP_DIR }}/data
+            echo "✅ Volumes persistentes restaurados!"
+            echo "📊 Conteúdo de data/ferraco-uploads:"
+            ls -lah ${{ env.APP_DIR }}/data/ferraco-uploads | head -10 || echo "Pasta vazia ou não existe"
+          else
+            echo "ℹ️  Nenhum volume persistente anterior encontrado (primeiro deploy ou pasta inexistente)"
+          fi
 
           # Validar estrutura monorepo
           echo "🔍 Validando estrutura monorepo..."
