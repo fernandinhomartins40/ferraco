@@ -192,6 +192,27 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
     }
   }, []);
 
+  // ✅ FIX: Auto-request QR Code quando socket conectar
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    const handleConnect = () => {
+      console.log('✅ [Socket.IO] Conectado - solicitando status e QR Code automaticamente');
+      // Delay pequeno para garantir que servidor está pronto
+      setTimeout(() => {
+        socket.emit('whatsapp:request-status');
+        socket.emit('whatsapp:request-qr');
+      }, 300);
+    };
+
+    socket.on('connect', handleConnect);
+
+    return () => {
+      socket.off('connect', handleConnect);
+    };
+  }, []);
+
   // Helper: Reiniciar conexão
   const reconnect = useCallback(() => {
     console.log('🔄 [Socket.IO] Reiniciando conexão...');

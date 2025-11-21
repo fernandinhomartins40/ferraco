@@ -23,9 +23,6 @@ async function startServer(): Promise<void> {
     // Garantir que a configuração do chatbot existe
     await ensureDefaultChatbotConfig();
 
-    // Inicializar WhatsApp Service (assíncrono, não bloqueia o servidor)
-    await whatsappService.initialize();
-
     // ⭐ Inicializar Auto-save Service do Chatbot (verifica a cada 2 minutos)
     chatbotAutosaveService.start(2);
     logger.info('💾 Chatbot auto-save service iniciado');
@@ -40,7 +37,7 @@ async function startServer(): Promise<void> {
     // Create HTTP server
     const httpServer = createServer(app);
 
-    // Setup WebSocket (Socket.io) for real-time chat
+    // ✅ FIX: Setup WebSocket (Socket.io) ANTES de inicializar WhatsApp
     const io = new SocketIOServer(httpServer, {
       cors: {
         origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -69,10 +66,15 @@ async function startServer(): Promise<void> {
       });
     });
 
-    // Pass Socket.io instance to WhatsAppChatService, WhatsAppService and AutomationScheduler
+    // ✅ FIX: Configurar Socket.io nos serviços ANTES de inicializar WhatsApp
     whatsappChatService.setSocketServer(io);
     whatsappService.setSocketServer(io);
     automationSchedulerService.setSocketIO(io);
+
+    // ✅ FIX: Inicializar WhatsApp DEPOIS de configurar Socket.IO
+    // Agora o QR Code será emitido corretamente via Socket.IO
+    await whatsappService.initialize();
+    logger.info('📱 WhatsApp Service inicializado com Socket.IO configurado');
 
     // Start server
     const server = httpServer.listen(PORT, () => {
