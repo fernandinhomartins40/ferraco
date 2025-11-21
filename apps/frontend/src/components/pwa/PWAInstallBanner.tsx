@@ -90,11 +90,17 @@ export function PWAInstallBanner() {
     if (platform === 'ios') {
       // iOS: mostrar instruções
       setShowIOSInstructions(true);
+    } else if (platform === 'android' && !isInstallable) {
+      // Android sem beforeinstallprompt: mostrar instruções manuais
+      setShowIOSInstructions(true); // Reutilizar o dialog com instruções
     } else {
-      // Android/Desktop: usar prompt nativo
+      // Android/Desktop com beforeinstallprompt: usar prompt nativo
       const installed = await promptInstall();
       if (installed) {
         setIsDismissed(true);
+      } else if (platform === 'android') {
+        // Se falhar, mostrar instruções manuais
+        setShowIOSInstructions(true);
       }
     }
   };
@@ -145,13 +151,13 @@ export function PWAInstallBanner() {
         </AlertDescription>
       </Alert>
 
-      {/* Dialog com instruções iOS */}
+      {/* Dialog com instruções de instalação */}
       <Dialog open={showIOSInstructions} onOpenChange={setShowIOSInstructions}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Smartphone className="h-5 w-5" />
-              Instalar Ferraco CRM no iOS
+              Instalar Ferraco CRM {platform === 'ios' ? 'no iOS' : 'no Android'}
             </DialogTitle>
             <DialogDescription>
               Siga os passos abaixo para adicionar o app à sua tela inicial
@@ -159,43 +165,90 @@ export function PWAInstallBanner() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                1
-              </div>
-              <div className="flex-1 pt-1">
-                <p className="font-medium mb-1">Abra o menu de compartilhamento</p>
-                <p className="text-sm text-muted-foreground">
-                  Toque no ícone <Share className="inline h-4 w-4 mx-1" />
-                  <span className="font-semibold">(Compartilhar)</span> na barra inferior do Safari
-                </p>
-              </div>
-            </div>
+            {platform === 'ios' ? (
+              // Instruções iOS
+              <>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                    1
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="font-medium mb-1">Abra o menu de compartilhamento</p>
+                    <p className="text-sm text-muted-foreground">
+                      Toque no ícone <Share className="inline h-4 w-4 mx-1" />
+                      <span className="font-semibold">(Compartilhar)</span> na barra inferior do Safari
+                    </p>
+                  </div>
+                </div>
 
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                2
-              </div>
-              <div className="flex-1 pt-1">
-                <p className="font-medium mb-1">Adicionar à Tela de Início</p>
-                <p className="text-sm text-muted-foreground">
-                  Role para baixo e toque em
-                  <span className="font-semibold"> "Adicionar à Tela de Início"</span>
-                </p>
-              </div>
-            </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                    2
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="font-medium mb-1">Adicionar à Tela de Início</p>
+                    <p className="text-sm text-muted-foreground">
+                      Role para baixo e toque em
+                      <span className="font-semibold"> "Adicionar à Tela de Início"</span>
+                    </p>
+                  </div>
+                </div>
 
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                3
-              </div>
-              <div className="flex-1 pt-1">
-                <p className="font-medium mb-1">Confirmar</p>
-                <p className="text-sm text-muted-foreground">
-                  Toque em <span className="font-semibold">"Adicionar"</span> no canto superior direito
-                </p>
-              </div>
-            </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                    3
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="font-medium mb-1">Confirmar</p>
+                    <p className="text-sm text-muted-foreground">
+                      Toque em <span className="font-semibold">"Adicionar"</span> no canto superior direito
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // Instruções Android
+              <>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                    1
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="font-medium mb-1">Abra o menu do Chrome</p>
+                    <p className="text-sm text-muted-foreground">
+                      Toque nos <MoreVertical className="inline h-4 w-4 mx-1" />
+                      <span className="font-semibold">três pontos</span> no canto superior direito
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                    2
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="font-medium mb-1">Instalar app</p>
+                    <p className="text-sm text-muted-foreground">
+                      Toque em
+                      <span className="font-semibold"> "Instalar app"</span> ou
+                      <span className="font-semibold"> "Adicionar à tela inicial"</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                    3
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="font-medium mb-1">Confirmar</p>
+                    <p className="text-sm text-muted-foreground">
+                      Toque em <span className="font-semibold">"Instalar"</span> na janela que aparecer
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
 
             <Alert className="bg-blue-50 border-blue-200">
               <AlertDescription className="text-sm text-blue-900">
