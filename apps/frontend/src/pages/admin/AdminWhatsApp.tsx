@@ -62,6 +62,7 @@ const AdminWhatsApp = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showGroupManagement, setShowGroupManagement] = useState(false);
   const [showContactManagement, setShowContactManagement] = useState(false);
+  const [isReinitializing, setIsReinitializing] = useState(false);
 
   // ✅ FASE 3: Socket.IO + State Machine
   const {
@@ -72,6 +73,7 @@ const AdminWhatsApp = () => {
     error: socketError,
     account: whatsappAccount,
     requestStatus,
+    requestQRCode,
     reconnect,
     connectionStatus,
     isQRAvailable: hasQR,
@@ -194,15 +196,32 @@ const AdminWhatsApp = () => {
   };
 
   const handleReinitialize = async () => {
+    setIsReinitializing(true);
     try {
+      console.log('🔄 Solicitando reinicialização do WhatsApp...');
       toast.info('Gerando novo QR Code...');
+
       await api.post('/whatsapp/reinitialize');
+
       // QR Code será atualizado automaticamente pelo hook useWhatsAppSocket
       setStatus({ connected: false, hasQR: false, message: 'Reinicializando...' });
+
+      console.log('✅ Reinicialização solicitada com sucesso');
       toast.success('WhatsApp reinicializado! Aguarde o novo QR Code...');
-    } catch (error) {
-      toast.error('Erro ao reinicializar WhatsApp');
-      console.error(error);
+
+      // Aguardar 3 segundos e solicitar QR Code via Socket.IO
+      setTimeout(() => {
+        console.log('📡 Solicitando QR Code via Socket.IO após reinicialização');
+        requestQRCode();
+      }, 3000);
+    } catch (error: any) {
+      console.error('❌ Erro ao reinicializar WhatsApp:', error);
+      toast.error(error.response?.data?.message || 'Erro ao reinicializar WhatsApp');
+    } finally {
+      // Resetar loading após 5 segundos (tempo para gerar QR)
+      setTimeout(() => {
+        setIsReinitializing(false);
+      }, 5000);
     }
   };
 
@@ -417,6 +436,47 @@ const AdminWhatsApp = () => {
               </AlertDescription>
             </Alert>
 
+            {/* ✅ Botão para gerar QR Code quando desconectado SEM QR */}
+            {!isConnected && !qrCode && !isAuthenticating && (
+              <Card className="border-2 border-yellow-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <QrCode className="h-6 w-6 text-yellow-600" />
+                    WhatsApp Desconectado
+                  </CardTitle>
+                  <CardDescription>
+                    Clique no botão abaixo para gerar um novo QR Code
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      Você precisa escanear o QR Code para conectar o WhatsApp ao sistema.
+                    </AlertDescription>
+                  </Alert>
+                  <Button
+                    onClick={handleReinitialize}
+                    disabled={isReinitializing}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isReinitializing ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Gerando QR Code...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="h-5 w-5 mr-2" />
+                        Gerar QR Code
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* QR Code Card */}
             {/* ✅ FIX: Usar qrCode do Socket diretamente, não status?.hasQR */}
             {qrCode && !isConnected && (
@@ -461,10 +521,11 @@ const AdminWhatsApp = () => {
                   <Button
                     variant="outline"
                     onClick={handleReinitialize}
+                    disabled={isReinitializing}
                     className="w-full"
                   >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Gerar Novo QR Code
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isReinitializing ? 'animate-spin' : ''}`} />
+                    {isReinitializing ? 'Gerando QR Code...' : 'Gerar Novo QR Code'}
                   </Button>
                 </CardContent>
               </Card>

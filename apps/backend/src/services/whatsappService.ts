@@ -87,10 +87,32 @@ class WhatsAppService {
       });
 
       // Cliente solicitou QR Code
-      socket.on('whatsapp:request-qr', () => {
+      socket.on('whatsapp:request-qr', async () => {
         logger.info('📡 Cliente solicitou QR Code via Socket.IO');
+
+        // Se já tem QR Code, enviar imediatamente
         if (this.qrCode) {
           socket.emit('whatsapp:qr', this.qrCode);
+          logger.info('✅ QR Code existente enviado ao cliente');
+          return;
+        }
+
+        // ✅ FIX: Se não tem QR Code e não está conectado, reinicializar
+        if (!this.isConnected && !this.isInitializing) {
+          logger.info('🔄 Sem QR Code e desconectado - reinicializando automaticamente...');
+          try {
+            await this.reinitialize();
+            logger.info('✅ Reinicialização disparada - QR Code será gerado em breve');
+          } catch (error) {
+            logger.error('❌ Erro ao reinicializar para gerar QR Code:', error);
+            socket.emit('whatsapp:error', 'Erro ao gerar QR Code');
+          }
+        } else if (this.isInitializing) {
+          logger.info('⏳ WhatsApp está inicializando - QR Code será gerado automaticamente');
+        } else if (this.isConnected) {
+          logger.info('✅ WhatsApp já está conectado - sem necessidade de QR Code');
+        } else {
+          logger.warn('⚠️  Estado inconsistente ao solicitar QR Code');
         }
       });
     });
@@ -111,10 +133,17 @@ class WhatsAppService {
    * ✅ FASE 2: Emitir QR Code via Socket.IO
    */
   private emitQRCode(qrCode: string): void {
-    if (!this.io) return;
+    if (!this.io) {
+      logger.error('❌ Socket.IO não configurado - não é possível emitir QR Code');
+      return;
+    }
+
+    const clientsCount = this.io.sockets.sockets.size;
+    logger.info(`📡 Emitindo QR Code via Socket.IO para ${clientsCount} cliente(s)`);
+    logger.info(`📏 Tamanho do QR Code: ${Math.round(qrCode.length / 1024)}KB`);
 
     this.io.emit('whatsapp:qr', qrCode);
-    logger.info('📡 QR Code emitido via Socket.IO');
+    logger.info('✅ QR Code emitido com sucesso via Socket.IO');
   }
 
   /**
