@@ -316,7 +316,7 @@ class WhatsAppService {
         },
         undefined, // onLoadingScreen
         undefined, // catchLinkCode
-        // Options - ✅ MELHORES PRÁTICAS 2025
+        // Options - ✅ MELHORES PRÁTICAS 2025 + FIXES ISSUES GITHUB
         {
           // ⭐ Headless mode - 'new' é a forma moderna recomendada
           headless: 'new' as any,
@@ -327,6 +327,13 @@ class WhatsAppService {
 
           // ⭐ IMPORTANTE: autoClose em 0 evita desconexões automáticas
           autoClose: 0,
+
+          // ⭐ CRITICAL FIX (Issue #2066, #2070): Desabilitar timeout de QR Code
+          // Em Docker/headless, QR pode levar >30s para gerar
+          qrTimeout: 0,
+
+          // ⭐ CRITICAL FIX: Desabilitar timeout de sincronização (3 min padrão)
+          deviceSyncTimeout: 0,
 
           // ⭐ Persistência de sessão - crítico para produção
           folderNameToken: this.sessionsPath,
