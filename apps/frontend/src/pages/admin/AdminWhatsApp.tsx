@@ -148,10 +148,26 @@ const AdminWhatsApp = () => {
   useEffect(() => {
     if (!isConnected && connectionState.type === 'disconnected' && !qrCode && !isAuthenticating) {
       console.log('🔄 Não conectado e sem QR Code - solicitando automaticamente...');
-      const timer = setTimeout(() => {
-        handleReinitialize();
-      }, 1000);
 
+      const autoReinitialize = async () => {
+        setIsReinitializing(true);
+        try {
+          console.log('🔄 Auto-reinicializando WhatsApp...');
+          toast.info('Gerando QR Code automaticamente...');
+
+          await api.post('/whatsapp/reinitialize');
+          setStatus({ connected: false, hasQR: false, message: 'Reinicializando...' });
+
+          console.log('✅ Auto-reinicialização solicitada');
+        } catch (error: any) {
+          console.error('❌ Erro ao auto-reinicializar:', error);
+          toast.error('Erro ao gerar QR Code. Clique em "Gerar Novo QR Code"');
+        } finally {
+          setTimeout(() => setIsReinitializing(false), 5000);
+        }
+      };
+
+      const timer = setTimeout(autoReinitialize, 1000);
       return () => clearTimeout(timer);
     }
   }, [isConnected, connectionState.type, qrCode, isAuthenticating]);
