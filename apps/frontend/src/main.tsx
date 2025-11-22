@@ -2,14 +2,14 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// ✅ FIX: Limpar Service Workers antigos que podem estar causando problemas
+// ✅ CRITICAL FIX: Desregistrar TODOS os Service Workers até resolver problema de backend
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
-    // Manter apenas o Service Worker mais recente
-    if (registrations.length > 1) {
-      console.log('🧹 Limpando Service Workers antigos...');
-      registrations.slice(0, -1).forEach((registration) => {
+    if (registrations.length > 0) {
+      console.log('🧹 Removendo TODOS os Service Workers...');
+      registrations.forEach((registration) => {
         registration.unregister();
+        console.log('✅ Service Worker removido:', registration.scope);
       });
     }
   });

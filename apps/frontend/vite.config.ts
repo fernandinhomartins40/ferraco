@@ -22,8 +22,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
+      // ✅ TEMPORARY FIX: Desabilitar completamente até resolver backend
+      disable: true,
       registerType: 'autoUpdate',
-      // ✅ FIX: Forçar atualização imediata do Service Worker
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
