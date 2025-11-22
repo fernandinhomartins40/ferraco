@@ -192,17 +192,16 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
     }
   }, []);
 
-  // ✅ FIX: Auto-request QR Code quando socket conectar
+  // ✅ Auto-request STATUS quando socket conectar (QR Code é gerenciado pelo frontend)
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
 
     const handleConnect = () => {
-      console.log('✅ [Socket.IO] Conectado - solicitando status e QR Code automaticamente');
+      console.log('✅ [Socket.IO] Conectado - solicitando status automaticamente');
       // Delay pequeno para garantir que servidor está pronto
       setTimeout(() => {
         socket.emit('whatsapp:request-status');
-        socket.emit('whatsapp:request-qr');
       }, 300);
     };
 

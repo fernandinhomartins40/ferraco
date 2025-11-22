@@ -134,11 +134,27 @@ const AdminWhatsApp = () => {
     return messages[status] || 'Status desconhecido';
   };
 
-  // ✅ REMOVIDO: Auto-request agora é feito pelo hook useWhatsAppSocket
-  // O hook já solicita status e QR Code automaticamente quando conecta
+  // ✅ AUTO-REQUEST: Solicitar status ao carregar
+  useEffect(() => {
+    // Pequeno delay para garantir que socket conectou
+    const timer = setTimeout(() => {
+      requestStatus();
+    }, 500);
 
-  // ✅ REMOVIDO: checkStatus() - substituído por Socket.IO
-  // ✅ REMOVIDO: fetchQRCode() - substituído por Socket.IO
+    return () => clearTimeout(timer);
+  }, [requestStatus]);
+
+  // ✅ AUTO-GENERATE QR: Solicitar QR Code automaticamente quando desconectado
+  useEffect(() => {
+    if (!isConnected && connectionState.type === 'disconnected' && !qrCode && !isAuthenticating) {
+      console.log('🔄 Não conectado e sem QR Code - solicitando automaticamente...');
+      const timer = setTimeout(() => {
+        handleReinitialize();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, connectionState.type, qrCode, isAuthenticating]);
 
   const fetchAccountInfo = async () => {
     try {
@@ -208,12 +224,6 @@ const AdminWhatsApp = () => {
 
       console.log('✅ Reinicialização solicitada com sucesso');
       toast.success('WhatsApp reinicializado! Aguarde o novo QR Code...');
-
-      // Aguardar 3 segundos e solicitar QR Code via Socket.IO
-      setTimeout(() => {
-        console.log('📡 Solicitando QR Code via Socket.IO após reinicialização');
-        requestQRCode();
-      }, 3000);
     } catch (error: any) {
       console.error('❌ Erro ao reinicializar WhatsApp:', error);
       toast.error(error.response?.data?.message || 'Erro ao reinicializar WhatsApp');
@@ -435,47 +445,6 @@ const AdminWhatsApp = () => {
                 </div>
               </AlertDescription>
             </Alert>
-
-            {/* ✅ Botão para gerar QR Code quando desconectado SEM QR */}
-            {!isConnected && !qrCode && !isAuthenticating && (
-              <Card className="border-2 border-yellow-500">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <QrCode className="h-6 w-6 text-yellow-600" />
-                    WhatsApp Desconectado
-                  </CardTitle>
-                  <CardDescription>
-                    Clique no botão abaixo para gerar um novo QR Code
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Você precisa escanear o QR Code para conectar o WhatsApp ao sistema.
-                    </AlertDescription>
-                  </Alert>
-                  <Button
-                    onClick={handleReinitialize}
-                    disabled={isReinitializing}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isReinitializing ? (
-                      <>
-                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Gerando QR Code...
-                      </>
-                    ) : (
-                      <>
-                        <QrCode className="h-5 w-5 mr-2" />
-                        Gerar QR Code
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
 
             {/* QR Code Card */}
             {/* ✅ FIX: Usar qrCode do Socket diretamente, não status?.hasQR */}
