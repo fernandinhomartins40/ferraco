@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // ✅ FIX: Forçar atualização imediata do Service Worker
+      injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
         name: 'Ferraco CRM - Painel Administrativo',
@@ -109,16 +111,23 @@ export default defineConfig(({ mode }) => ({
             }
           },
           {
+            // ✅ FIX CRÍTICO: NetworkOnly para landing-page/config (sem cache)
+            urlPattern: /\/api\/landing-page\/config/i,
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: ({ url }) => {
-              // ✅ FIX: Excluir rotas que podem falhar do cache
+              // ✅ FIX: Excluir rotas sensíveis do cache
               const excludedPaths = [
-                '/api/landing-page/config',
-                '/api/auth/',
-                '/api/upload/'
+                '/landing-page/config',
+                '/auth/',
+                '/upload/'
               ];
 
-              return url.pathname.includes('/api/') &&
-                     !excludedPaths.some(path => url.pathname.includes(path));
+              const isAPI = url.pathname.includes('/api/');
+              const isExcluded = excludedPaths.some(path => url.pathname.includes(path));
+
+              return isAPI && !isExcluded;
             },
             handler: 'NetworkFirst',
             options: {
