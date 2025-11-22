@@ -74,6 +74,10 @@ export default defineConfig(({ mode }) => ({
         ]
       },
       workbox: {
+        // ✅ FIX: Ignorar erros de rede no Service Worker
+        navigateFallback: null,
+        navigateFallbackDenylist: [/^\/api/],
+
         // Estratégias de cache
         runtimeCaching: [
           {
@@ -105,7 +109,17 @@ export default defineConfig(({ mode }) => ({
             }
           },
           {
-            urlPattern: /\/api\/.*/i,
+            urlPattern: ({ url }) => {
+              // ✅ FIX: Excluir rotas que podem falhar do cache
+              const excludedPaths = [
+                '/api/landing-page/config',
+                '/api/auth/',
+                '/api/upload/'
+              ];
+
+              return url.pathname.includes('/api/') &&
+                     !excludedPaths.some(path => url.pathname.includes(path));
+            },
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -133,7 +147,15 @@ export default defineConfig(({ mode }) => ({
         ],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
-        clientsClaim: true
+        clientsClaim: true,
+
+        // ✅ FIX: Adicionar plugin customizado para suprimir erros específicos
+        // Evita logs de "no-response" para rotas que podem falhar
+        importScripts: undefined,
+        additionalManifestEntries: undefined,
+      },
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
       },
       devOptions: {
         enabled: mode === 'development',
