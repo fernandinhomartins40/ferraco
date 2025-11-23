@@ -520,32 +520,38 @@ export const AdminChatbotConfig = () => {
 
         {/* Tabs de Configuração */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="behavior" className="gap-2">
-              <Bot className="h-4 w-4" />
-              Comportamento
-            </TabsTrigger>
-            <TabsTrigger value="company" className="gap-2">
-              <Building2 className="h-4 w-4" />
-              Empresa
-            </TabsTrigger>
-            <TabsTrigger value="products" className="gap-2">
-              <Package className="h-4 w-4" />
-              Produtos
-            </TabsTrigger>
-            <TabsTrigger value="faq" className="gap-2">
-              <HelpCircle className="h-4 w-4" />
-              FAQ
-            </TabsTrigger>
-            <TabsTrigger value="whatsapp-templates" className="gap-2">
-              <MessageCircle className="h-4 w-4" />
-              Templates
-            </TabsTrigger>
-            <TabsTrigger value="links" className="gap-2">
-              <Share2 className="h-4 w-4" />
-              Links
-            </TabsTrigger>
-          </TabsList>
+          {/* Mobile: Scroll horizontal | Desktop: Grid */}
+          <div className="relative">
+            <TabsList className="w-full md:grid md:grid-cols-6 flex overflow-x-auto scrollbar-hide">
+              <TabsTrigger value="behavior" className="gap-1 md:gap-2 shrink-0 min-h-[48px]">
+                <Bot className="h-4 w-4" />
+                <span className="hidden sm:inline">Comportamento</span>
+                <span className="sm:hidden">Comp.</span>
+              </TabsTrigger>
+              <TabsTrigger value="company" className="gap-1 md:gap-2 shrink-0 min-h-[48px]">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Empresa</span>
+                <span className="sm:hidden">Emp.</span>
+              </TabsTrigger>
+              <TabsTrigger value="products" className="gap-1 md:gap-2 shrink-0 min-h-[48px]">
+                <Package className="h-4 w-4" />
+                Produtos
+              </TabsTrigger>
+              <TabsTrigger value="faq" className="gap-1 md:gap-2 shrink-0 min-h-[48px]">
+                <HelpCircle className="h-4 w-4" />
+                FAQ
+              </TabsTrigger>
+              <TabsTrigger value="whatsapp-templates" className="gap-1 md:gap-2 shrink-0 min-h-[48px]">
+                <MessageCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Templates</span>
+                <span className="sm:hidden">WA</span>
+              </TabsTrigger>
+              <TabsTrigger value="links" className="gap-1 md:gap-2 shrink-0 min-h-[48px]">
+                <Share2 className="h-4 w-4" />
+                Links
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ABA 1: Comportamento */}
           <TabsContent value="behavior" className="space-y-6">
@@ -779,15 +785,15 @@ export const AdminChatbotConfig = () => {
                     >
                       <Card className="border-2">
                         <CollapsibleTrigger asChild>
-                          <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
+                          <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors min-h-[64px] flex items-center">
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <ChevronDown
-                                  className={`h-5 w-5 transition-transform duration-200 ${
+                                  className={`h-5 w-5 transition-transform duration-200 shrink-0 ${
                                     expandedProducts[product.id] ? '' : '-rotate-90'
                                   }`}
                                 />
-                                <CardTitle className="text-lg">
+                                <CardTitle className="text-base md:text-lg truncate">
                                   {product.name || `Produto ${index + 1}`}
                                 </CardTitle>
                               </div>
@@ -798,16 +804,16 @@ export const AdminChatbotConfig = () => {
                                   e.stopPropagation();
                                   removeProduct(product.id);
                                 }}
-                                className="text-destructive hover:text-destructive"
+                                className="text-destructive hover:text-destructive shrink-0 h-10 w-10"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-5 w-5" />
                               </Button>
                             </div>
                           </CardHeader>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <CardContent className="space-y-4 pt-0">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>Nome do Produto *</Label>
                             <Input
@@ -1049,15 +1055,15 @@ export const AdminChatbotConfig = () => {
                     >
                       <Card className="border-2">
                         <CollapsibleTrigger asChild>
-                          <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
+                          <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors min-h-[64px] flex items-center">
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <ChevronDown
-                                  className={`h-5 w-5 transition-transform duration-200 ${
+                                  className={`h-5 w-5 transition-transform duration-200 shrink-0 ${
                                     expandedFaqs[faq.id] ? '' : '-rotate-90'
                                   }`}
                                 />
-                                <CardTitle className="text-lg">
+                                <CardTitle className="text-base md:text-lg truncate">
                                   {faq.question || `Pergunta ${index + 1}`}
                                 </CardTitle>
                               </div>
@@ -1068,9 +1074,9 @@ export const AdminChatbotConfig = () => {
                                   e.stopPropagation();
                                   removeFAQ(faq.id);
                                 }}
-                                className="text-destructive hover:text-destructive"
+                                className="text-destructive hover:text-destructive shrink-0 h-10 w-10"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-5 w-5" />
                               </Button>
                             </div>
                           </CardHeader>
