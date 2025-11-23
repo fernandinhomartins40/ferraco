@@ -38,6 +38,7 @@ import { useInactivityTimer } from '@/hooks/useInactivityTimer';
 import InactivityWarningModal from '@/components/InactivityWarningModal';
 import { leadStorage } from '@/utils/leadStorage';
 import { logger } from '@/lib/logger';
+import { BottomNavigation } from '@/components/mobile/BottomNavigation';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -430,12 +431,15 @@ const AdminLayoutContent = ({ children }: AdminLayoutProps) => {
             </div>
           </header>
 
-          {/* Main Content with responsive padding */}
-          <main className="p-4 md:p-6 overflow-x-hidden">
+          {/* Main Content with responsive padding + bottom nav spacing */}
+          <main className="p-4 md:p-6 pb-20 md:pb-6 overflow-x-hidden">
             {children}
           </main>
         </div>
       </SidebarInset>
+
+      {/* Bottom Navigation - Mobile Only */}
+      <BottomNavigation />
 
       {/* Inactivity Warning Modal */}
       <InactivityWarningModal

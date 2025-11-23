@@ -50,9 +50,12 @@ import { useWhatsAppTemplates } from '@/hooks/useWhatsAppTemplates';
 import type { KanbanColumn, CreateKanbanColumnDto, UpdateKanbanColumnDto } from '@/services/kanbanColumns.service';
 import { VariableInserter, DEFAULT_LEAD_VARIABLES, PRODUCT_VARIABLES } from '@/components/ui/variable-inserter';
 import { useVariableInsertion } from '@/hooks/useVariableInsertion';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileKanban } from '@/components/mobile/MobileKanban';
 
 const AdminLeads = () => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // State
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -791,6 +794,18 @@ const AdminLeads = () => {
                 </CardContent>
               </Card>
             </div>
+          ) : isMobile ? (
+            <MobileKanban
+              leads={leads}
+              columns={columns}
+              onEditLead={openEditDialog}
+              onDeleteLead={(id) => {
+                if (window.confirm('Tem certeza que deseja excluir este lead?')) {
+                  deleteLead.mutate(id);
+                }
+              }}
+              onUpdateLeadStatus={handleUpdateStatus}
+            />
           ) : (
             <UnifiedKanbanView
               // Kanban Normal

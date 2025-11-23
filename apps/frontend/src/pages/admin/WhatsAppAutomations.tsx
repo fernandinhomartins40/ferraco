@@ -140,10 +140,10 @@ export default function WhatsAppAutomations() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Automações WhatsApp</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold">Automações WhatsApp</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Monitoramento de envio automático de materiais para leads
             </p>
           </div>
@@ -152,14 +152,17 @@ export default function WhatsAppAutomations() {
             onClick={() => retryAllFailedMutation.mutate()}
             disabled={retryAllFailedMutation.isPending || stats?.failed === 0}
             variant="destructive"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-full sm:w-auto"
+            size="sm"
           >
             {retryAllFailedMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
-            Retentar Falhadas ({stats?.failed || 0})
+            <span className="hidden sm:inline">Retentar Falhadas</span>
+            <span className="sm:hidden">Retentar</span>
+            ({stats?.failed || 0})
           </Button>
         </div>
 
@@ -233,163 +236,275 @@ export default function WhatsAppAutomations() {
         {/* Filtros */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium">Filtrar por status:</span>
-              {['all', 'PENDING', 'PROCESSING', 'SENT', 'FAILED'].map((status) => (
-                <Button
-                  key={status}
-                  variant={selectedStatus === status ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedStatus(status)}
-                >
-                  {status === 'all' ? 'Todos' : getStatusLabel(status)}
-                </Button>
-              ))}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <span className="text-sm font-medium shrink-0">Filtrar por status:</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {['all', 'PENDING', 'PROCESSING', 'SENT', 'FAILED'].map((status) => (
+                  <Button
+                    key={status}
+                    variant={selectedStatus === status ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedStatus(status)}
+                    className="min-h-[44px]"
+                  >
+                    {status === 'all' ? 'Todos' : getStatusLabel(status)}
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Lista de Automações */}
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Lead
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Produtos
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Progresso
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Criado
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {listLoading ? (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                        <p className="text-sm text-muted-foreground mt-2">Carregando automações...</p>
-                      </td>
-                    </tr>
-                  ) : automations?.data.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
-                        <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto" />
-                        <p className="text-sm text-muted-foreground mt-2">Nenhuma automação encontrada</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    automations?.data.map((automation: WhatsAppAutomation) => {
-                      const products = JSON.parse(automation.productsToSend || '[]');
-                      const progress = automation.messagesTotal > 0
-                        ? (automation.messagesSent / automation.messagesTotal) * 100
-                        : 0;
+        {listLoading ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-sm text-muted-foreground mt-2">Carregando automações...</p>
+            </CardContent>
+          </Card>
+        ) : automations?.data.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto" />
+              <p className="text-sm text-muted-foreground mt-2">Nenhuma automação encontrada</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Mobile: Cards */}
+            <div className="md:hidden space-y-4">
+              {automations?.data.map((automation: WhatsAppAutomation) => {
+                const products = JSON.parse(automation.productsToSend || '[]');
+                const progress = automation.messagesTotal > 0
+                  ? (automation.messagesSent / automation.messagesTotal) * 100
+                  : 0;
 
-                      return (
-                        <tr key={automation.id} className="hover:bg-muted/50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(automation.status)}
-                              <Badge variant={automation.status === 'SENT' ? 'default' : automation.status === 'FAILED' ? 'destructive' : 'secondary'}>
-                                {getStatusLabel(automation.status)}
-                              </Badge>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm font-medium">
-                              {automation.lead?.name || 'Lead sem nome'}
-                            </div>
-                            <div className="text-sm text-muted-foreground">{automation.lead?.phone}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm">{products.join(', ')}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-secondary rounded-full h-2 max-w-[100px]">
-                                <div
-                                  className={`h-2 rounded-full ${
-                                    automation.status === 'SENT' ? 'bg-green-600' : 'bg-primary'
-                                  }`}
-                                  style={{ width: `${progress}%` }}
-                                />
+                return (
+                  <Card key={automation.id} className="overflow-hidden">
+                    <CardContent className="p-4 space-y-3">
+                      {/* Status + Actions */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(automation.status)}
+                          <Badge variant={automation.status === 'SENT' ? 'default' : automation.status === 'FAILED' ? 'destructive' : 'secondary'}>
+                            {getStatusLabel(automation.status)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedAutomation(automation.id);
+                              setDetailsOpen(true);
+                            }}
+                            title="Ver detalhes"
+                            className="h-10 w-10"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </Button>
+                          {(automation.status === 'FAILED' || automation.status === 'PENDING') && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                retryMutation.mutate({
+                                  id: automation.id,
+                                  resetMessages: automation.status === 'FAILED'
+                                })
+                              }
+                              disabled={retryMutation.isPending}
+                              title="Retentar"
+                              className="h-10 w-10"
+                            >
+                              {retryMutation.isPending ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                <RotateCcw className="h-5 w-5" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Lead Info */}
+                      <div>
+                        <div className="text-sm font-medium">
+                          {automation.lead?.name || 'Lead sem nome'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{automation.lead?.phone}</div>
+                      </div>
+
+                      {/* Products */}
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Produtos:</span> {products.join(', ')}
+                      </div>
+
+                      {/* Progress */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-muted-foreground">Progresso</span>
+                          <span className="text-xs font-medium">
+                            {automation.messagesSent}/{automation.messagesTotal}
+                          </span>
+                        </div>
+                        <div className="bg-secondary rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              automation.status === 'SENT' ? 'bg-green-600' : 'bg-primary'
+                            }`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        {automation.error && (
+                          <p className="text-xs text-destructive mt-1">{automation.error}</p>
+                        )}
+                      </div>
+
+                      {/* Date */}
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(automation.createdAt).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Desktop: Table */}
+            <Card className="hidden md:block">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          Lead
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          Produtos
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          Progresso
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          Criado
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {automations?.data.map((automation: WhatsAppAutomation) => {
+                        const products = JSON.parse(automation.productsToSend || '[]');
+                        const progress = automation.messagesTotal > 0
+                          ? (automation.messagesSent / automation.messagesTotal) * 100
+                          : 0;
+
+                        return (
+                          <tr key={automation.id} className="hover:bg-muted/50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(automation.status)}
+                                <Badge variant={automation.status === 'SENT' ? 'default' : automation.status === 'FAILED' ? 'destructive' : 'secondary'}>
+                                  {getStatusLabel(automation.status)}
+                                </Badge>
                               </div>
-                              <span className="text-xs text-muted-foreground">
-                                {automation.messagesSent}/{automation.messagesTotal}
-                              </span>
-                            </div>
-                            {automation.error && (
-                              <p className="text-xs text-destructive mt-1">{automation.error}</p>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {new Date(automation.createdAt).toLocaleDateString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedAutomation(automation.id);
-                                  setDetailsOpen(true);
-                                }}
-                                title="Ver detalhes"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-
-                              {(automation.status === 'FAILED' || automation.status === 'PENDING') && (
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-medium">
+                                {automation.lead?.name || 'Lead sem nome'}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{automation.lead?.phone}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm">{products.join(', ')}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-secondary rounded-full h-2 max-w-[100px]">
+                                  <div
+                                    className={`h-2 rounded-full ${
+                                      automation.status === 'SENT' ? 'bg-green-600' : 'bg-primary'
+                                    }`}
+                                    style={{ width: `${progress}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {automation.messagesSent}/{automation.messagesTotal}
+                                </span>
+                              </div>
+                              {automation.error && (
+                                <p className="text-xs text-destructive mt-1">{automation.error}</p>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                              {new Date(automation.createdAt).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex items-center gap-2">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
-                                    retryMutation.mutate({
-                                      id: automation.id,
-                                      resetMessages: automation.status === 'FAILED'
-                                    })
-                                  }
-                                  disabled={retryMutation.isPending}
-                                  title="Retentar"
-                                  className={retryMutation.isPending ? 'opacity-50' : ''}
+                                  onClick={() => {
+                                    setSelectedAutomation(automation.id);
+                                    setDetailsOpen(true);
+                                  }}
+                                  title="Ver detalhes"
                                 >
-                                  {retryMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <RotateCcw className="h-4 w-4" />
-                                  )}
+                                  <Eye className="h-4 w-4" />
                                 </Button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+
+                                {(automation.status === 'FAILED' || automation.status === 'PENDING') && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      retryMutation.mutate({
+                                        id: automation.id,
+                                        resetMessages: automation.status === 'FAILED'
+                                      })
+                                    }
+                                    disabled={retryMutation.isPending}
+                                    title="Retentar"
+                                    className={retryMutation.isPending ? 'opacity-50' : ''}
+                                  >
+                                    {retryMutation.isPending ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <RotateCcw className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         {/* Info Footer */}
         <Card className="border-blue-200 bg-blue-50">
