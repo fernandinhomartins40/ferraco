@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { InstallPWABanner } from "@/components/pwa/InstallPWABanner";
 
 // Configuração do QueryClient com tratamento de autenticação
 const queryClient = new QueryClient({
@@ -52,6 +53,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <InstallPWABanner />
         <BrowserRouter>
         <Routes>
           {/* Landing Page */}
