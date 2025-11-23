@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner';
 import api from '@/lib/apiClient';
 import { useWhatsAppSocket, type WhatsAppStatus as SocketWhatsAppStatus } from '@/hooks/useWhatsAppSocket';
+import { cn } from '@/lib/utils';
 // import { SocketDebug } from '@/components/debug/SocketDebug'; // ✅ Debug removido - problema resolvido
 
 // ✅ FASE 4: Lazy loading de componentes pesados (code splitting)
@@ -276,17 +277,17 @@ const AdminWhatsApp = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between">
+      <div className="space-y-4 md:space-y-6">
+        {/* Mobile-Responsive Header */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">WhatsApp Business</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold">WhatsApp Business</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Gerencie suas conversas e configure a integração WhatsApp
             </p>
           </div>
           {status?.connected && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -294,7 +295,7 @@ const AdminWhatsApp = () => {
                 className="flex items-center gap-2"
               >
                 <UserCircle className="h-4 w-4" />
-                Contatos
+                <span className="hidden sm:inline">Contatos</span>
               </Button>
               <Button
                 variant="outline"
@@ -303,15 +304,15 @@ const AdminWhatsApp = () => {
                 className="flex items-center gap-2"
               >
                 <Users className="h-4 w-4" />
-                Criar Grupo
+                <span className="hidden sm:inline">Criar Grupo</span>
               </Button>
             </div>
           )}
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - Mobile Optimized */}
         <Tabs defaultValue="config" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 max-w-full md:max-w-md">
             <TabsTrigger value="chat" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Chat
@@ -347,9 +348,14 @@ const AdminWhatsApp = () => {
               </Card>
             ) : (
               <div className="h-[calc(100vh-16rem)] min-h-[500px] border rounded-lg overflow-hidden bg-white">
-                <div className="flex h-full">
-                  {/* Sidebar - Lista de Conversas (sempre visível) */}
-                  <section className="w-96 border-r flex-shrink-0 bg-white h-full">
+                <div className="flex flex-col md:flex-row h-full">
+                  {/* Sidebar - Lista de Conversas (collapsible on mobile) */}
+                  <section className={cn(
+                    "border-r flex-shrink-0 bg-white",
+                    "w-full md:w-96",
+                    "h-auto md:h-full",
+                    selectedConversationId && "hidden md:block"
+                  )}>
                     {/* ✅ FASE 4: Suspense para lazy loading */}
                     <Suspense fallback={
                       <div className="flex items-center justify-center h-full">
@@ -363,8 +369,12 @@ const AdminWhatsApp = () => {
                     </Suspense>
                   </section>
 
-                  {/* Área Principal - Chat (sempre visível) */}
-                  <section className="flex-1 bg-gray-50 h-full">
+                  {/* Área Principal - Chat (full screen on mobile when selected) */}
+                  <section className={cn(
+                    "flex-1 bg-gray-50",
+                    "w-full h-full",
+                    !selectedConversationId && "hidden md:flex"
+                  )}>
                     {selectedConversationId ? (
                       <Suspense fallback={
                         <div className="flex items-center justify-center h-full">
@@ -450,20 +460,21 @@ const AdminWhatsApp = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">
-                  <div className="bg-white p-4 rounded-lg border-2 border-green-500">
+                  {/* QR Code - Responsive sizing */}
+                  <div className="bg-white p-3 sm:p-4 rounded-lg border-2 border-green-500 w-full max-w-xs mx-auto">
                     {qrCode.startsWith('data:image') ? (
                       <img
                         src={qrCode}
                         alt="QR Code WhatsApp"
-                        className="w-64 h-64"
+                        className="w-full h-auto aspect-square max-w-xs mx-auto"
                         onError={(e) => {
                           console.error('Erro ao carregar QR Code');
                           toast.error('Erro ao exibir QR Code. Tente reinicializar.');
                         }}
                       />
                     ) : (
-                      <div className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded">
-                        <p className="text-sm text-gray-500 text-center px-4">
+                      <div className="w-full aspect-square max-w-xs mx-auto flex items-center justify-center bg-gray-100 rounded">
+                        <p className="text-xs sm:text-sm text-gray-500 text-center px-4">
                           Formato de QR Code inválido.<br/>
                           Clique em "Gerar Novo QR Code" abaixo.
                         </p>
@@ -502,10 +513,12 @@ const AdminWhatsApp = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Número (com DDD)</label>
                     <Input
-                      type="text"
+                      type="tel"
+                      inputMode="numeric"
                       placeholder="Ex: 11999999999"
                       value={testPhone}
                       onChange={(e) => setTestPhone(e.target.value)}
+                      className="text-base" // Better for mobile
                     />
                   </div>
 
@@ -521,6 +534,7 @@ const AdminWhatsApp = () => {
                           handleSendTestMessage();
                         }
                       }}
+                      className="text-base" // Better for mobile
                     />
                   </div>
 

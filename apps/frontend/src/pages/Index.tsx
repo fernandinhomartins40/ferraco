@@ -8,7 +8,7 @@ import ExperienceSection from "@/components/ExperienceSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import LeadModal from "@/components/LeadModal";
-import axios from "axios";
+import api from "@/lib/apiClient";
 import type { LandingPageConfig } from "@/types/landingPage";
 
 const Index = () => {
@@ -22,7 +22,7 @@ const Index = () => {
     const fetchConfig = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get("/api/landing-page/config");
+        const response = await api.get("/landing-page/config");
         const loadedConfig = response.data.data;
         setConfig(loadedConfig);
         console.log("✅ Landing Page Config loaded from backend:", loadedConfig);

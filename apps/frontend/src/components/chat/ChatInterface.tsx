@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MoreVertical, Search, Phone, Video } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import axios from 'axios';
+import api from '@/lib/apiClient';
 
 interface ChatOption {
   id: string;
@@ -46,7 +46,7 @@ export const ChatInterface = ({ onSendMessage, source = 'website', campaign }: C
   useEffect(() => {
     const initSession = async () => {
       try {
-        const response = await axios.post('/api/chatbot/session/start', {
+        const response = await api.post('/chatbot/session/start', {
           userAgent: navigator.userAgent,
           source,
           campaign,
@@ -98,8 +98,8 @@ export const ChatInterface = ({ onSendMessage, source = 'website', campaign }: C
     try {
       setIsTyping(true);
 
-      const response = await axios.post(
-        `/api/chatbot/session/${sessionId}/message`,
+      const response = await api.post(
+        `/chatbot/session/${sessionId}/message`,
         {
           message: content,
           optionId,
