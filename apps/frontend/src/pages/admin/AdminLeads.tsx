@@ -38,8 +38,10 @@ import {
   Layers,
   Download,
   Upload,
+  Archive,
+  RotateCcw,
 } from 'lucide-react';
-import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/api/useLeads';
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useArchivedLeads, useRestoreArchivedLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
 import UnifiedKanbanView from '@/components/admin/UnifiedKanbanView';
 import { RecurrenceConfig } from '@/components/admin/RecurrenceConfig';
@@ -62,6 +64,7 @@ const AdminLeads = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isArchivedDialogOpen, setIsArchivedDialogOpen] = useState(false);
 
   // Column Management State
   const [isColumnDialogOpen, setIsColumnDialogOpen] = useState(false);
@@ -136,6 +139,8 @@ const AdminLeads = () => {
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
+  const { data: archivedLeadsData, isLoading: isLoadingArchived } = useArchivedLeads();
+  const restoreArchivedLead = useRestoreArchivedLead();
 
   // Kanban Columns Hooks
   const {
@@ -610,6 +615,23 @@ const AdminLeads = () => {
               <Upload className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Importar Leads</span>
               <span className="md:hidden text-xs">Importar</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsArchivedDialogOpen(true)}
+              className="min-h-[44px] col-span-2 md:col-span-1"
+              title="Leads Arquivados"
+            >
+              <Archive className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Leads Arquivados</span>
+              <span className="md:hidden text-xs">Arquivados</span>
+              {archivedLeadsData && archivedLeadsData.total > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {archivedLeadsData.total}
+                </Badge>
+              )}
             </Button>
 
             <Button
@@ -1330,6 +1352,76 @@ const AdminLeads = () => {
                   Importar
                 </Button>
               )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Archived Leads Dialog */}
+        <Dialog open={isArchivedDialogOpen} onOpenChange={setIsArchivedDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Leads Arquivados</DialogTitle>
+              <DialogDescription>
+                Visualize e restaure leads que foram arquivados. Leads restaurados voltam com status "NOVO".
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {isLoadingArchived ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : archivedLeadsData && archivedLeadsData.total > 0 ? (
+                <div className="space-y-2">
+                  {archivedLeadsData.data.map((lead) => (
+                    <Card key={lead.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{lead.name}</h4>
+                            <div className="text-sm text-muted-foreground space-y-1 mt-1">
+                              <p>📞 {lead.phone}</p>
+                              {lead.email && <p>✉️ {lead.email}</p>}
+                              {lead.company && <p>🏢 {lead.company}</p>}
+                              {lead.source && <p>📍 Origem: {lead.source}</p>}
+                              <p className="text-xs">
+                                Arquivado em: {new Date(lead.updatedAt).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              if (confirm(`Deseja restaurar o lead "${lead.name}"? Ele voltará com status NOVO.`)) {
+                                restoreArchivedLead.mutate(lead.id);
+                              }
+                            }}
+                            disabled={restoreArchivedLead.isPending}
+                          >
+                            {restoreArchivedLead.isPending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                            )}
+                            Restaurar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Archive className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Nenhum lead arquivado</p>
+                  <p className="text-sm">Leads deletados aparecerão aqui</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsArchivedDialogOpen(false)}>
+                Fechar
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

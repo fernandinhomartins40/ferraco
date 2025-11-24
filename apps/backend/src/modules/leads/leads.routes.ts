@@ -108,6 +108,16 @@ router.post(
 );
 
 // ==========================================================================
+// Archived Leads Routes (must come before :id routes)
+// ==========================================================================
+
+router.get(
+  '/archived',
+  requirePermission('leads', 'read'),
+  controller.getArchivedLeads
+);
+
+// ==========================================================================
 // Export/Import Routes (must come before :id routes)
 // ==========================================================================
 
@@ -166,6 +176,16 @@ router.delete(
   '/:id',
   requirePermission('leads', 'delete'),
   controller.delete
+);
+
+// ==========================================================================
+// Lead-specific Actions
+// ==========================================================================
+
+router.post(
+  '/:id/restore',
+  requirePermission('leads', 'update'),
+  controller.restoreArchivedLead
 );
 
 // ==========================================================================

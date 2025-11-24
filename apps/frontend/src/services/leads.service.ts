@@ -271,4 +271,20 @@ export const leadsService = {
     const response = await apiClient.get(`${API_URL}/${id}/history`);
     return response.data.data;
   },
+
+  /**
+   * Obter leads arquivados (status ARQUIVADO)
+   */
+  async getArchivedLeads(): Promise<{ data: Lead[]; total: number }> {
+    const response = await apiClient.get(`${API_URL}/archived`);
+    return response.data.data;
+  },
+
+  /**
+   * Restaurar lead arquivado (volta para status NOVO)
+   */
+  async restoreArchivedLead(id: string): Promise<Lead> {
+    const response = await apiClient.post(`${API_URL}/${id}/restore`);
+    return response.data.data;
+  },
 };

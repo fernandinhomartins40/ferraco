@@ -503,4 +503,40 @@ export class LeadsController {
       next(error);
     }
   };
+
+  // ==========================================================================
+  // Archived Leads Management
+  // ==========================================================================
+
+  /**
+   * GET /api/leads/archived
+   * Get all archived leads
+   */
+  getArchivedLeads = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.getArchivedLeads();
+
+      successResponse(res, {
+        data: result.data,
+        total: result.total,
+      }, 'Leads arquivados recuperados com sucesso');
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * POST /api/leads/:id/restore
+   * Restore an archived lead
+   */
+  restoreArchivedLead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = LeadIdParamSchema.parse(req.params);
+      const lead = await this.service.restoreArchivedLead(id);
+
+      successResponse(res, lead, 'Lead restaurado com sucesso');
+    } catch (error) {
+      next(error);
+    }
+  };
 }

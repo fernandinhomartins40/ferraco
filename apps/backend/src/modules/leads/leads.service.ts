@@ -722,4 +722,103 @@ export class LeadsService {
 
     return Math.min(score, 100);
   }
+
+  // ==========================================================================
+  // Archived Leads Management
+  // ==========================================================================
+
+  /**
+   * Get all archived leads
+   */
+  async getArchivedLeads(): Promise<{
+    data: LeadResponse[];
+    total: number;
+  }> {
+    logger.debug('Fetching archived leads');
+
+    const [data, total] = await Promise.all([
+      this.prisma.lead.findMany({
+        where: { status: 'ARQUIVADO' },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          tags: {
+            include: {
+              tag: {
+                select: {
+                  id: true,
+                  name: true,
+                  color: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.lead.count({ where: { status: 'ARQUIVADO' } }),
+    ]);
+
+    return {
+      data: data.map(lead => this.mapToResponse(lead as unknown as LeadWithRelations)),
+      total,
+    };
+  }
+
+  /**
+   * Restore an archived lead (change status back to NOVO)
+   */
+  async restoreArchivedLead(id: string): Promise<LeadResponse> {
+    logger.info('Restoring archived lead', { id });
+
+    const lead = await this.prisma.lead.findUnique({
+      where: { id },
+    });
+
+    if (!lead) {
+      throw new Error('Lead não encontrado');
+    }
+
+    if (lead.status !== 'ARQUIVADO') {
+      throw new Error('Lead não está arquivado');
+    }
+
+    // Restore lead to NOVO status
+    const restoredLead = await this.prisma.lead.update({
+      where: { id },
+      data: {
+        status: 'NOVO',
+        updatedAt: new Date(),
+      },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    logger.info('Lead restored successfully', { leadId: id });
+
+    return this.mapToResponse(restoredLead as unknown as LeadWithRelations);
+  }
 }
