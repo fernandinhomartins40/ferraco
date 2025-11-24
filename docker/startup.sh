@@ -16,6 +16,13 @@ chmod 777 /app/uploads /app/sessions
 chown -R node:node /app/uploads /app/sessions
 echo "✅ Diretórios criados com permissões corretas"
 
+# Limpar locks do Chromium (corrige problema de QR code após migração)
+echo "🧹 Limpando locks do Chromium..."
+find /app/sessions -name 'SingletonLock' -delete 2>/dev/null || true
+find /app/sessions -name 'SingletonSocket' -delete 2>/dev/null || true
+find /app/sessions -name 'SingletonCookie' -delete 2>/dev/null || true
+echo "✅ Locks do Chromium removidos"
+
 # Migrar banco de dados (Prisma) - pular se DATABASE_URL não estiver configurado
 if [ -n "$DATABASE_URL" ]; then
   echo "📊 Criando/Atualizando estrutura do banco de dados..."

@@ -169,7 +169,20 @@ echo "✅ Dados copiados para named volumes!"
 
 echo ""
 echo "========================================="
-echo "🔍 ETAPA 5: Verificar migração"
+echo "🧹 ETAPA 5: Limpar locks do Chromium"
+echo "========================================="
+
+echo "🔧 Removendo arquivos de lock do Chromium (SingletonLock, SingletonSocket, SingletonCookie)..."
+docker run --rm -v "ferraco_ferraco-sessions:/data" alpine sh -c "
+  find /data -name 'SingletonLock' -delete 2>/dev/null || true
+  find /data -name 'SingletonSocket' -delete 2>/dev/null || true
+  find /data -name 'SingletonCookie' -delete 2>/dev/null || true
+  echo '✅ Locks removidos'
+"
+
+echo ""
+echo "========================================="
+echo "🔍 ETAPA 6: Verificar migração"
 echo "========================================="
 
 # Verificar conteúdo dos volumes
