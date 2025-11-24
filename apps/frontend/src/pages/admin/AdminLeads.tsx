@@ -555,72 +555,103 @@ const AdminLeads = () => {
   return (
     <AdminLayout>
       <div className="w-full flex flex-col gap-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        {/* Header - Mobile Responsivo */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Leads</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold">Leads</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Gerencie seus leads do banco de dados PostgreSQL
             </p>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Mobile: Grid 2x3 | Desktop: Flex horizontal */}
+          <div className="grid grid-cols-2 gap-2 md:flex md:items-center md:gap-3">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => handleExport('csv')}
               disabled={isExporting}
+              className="min-h-[44px]"
+              title="Exportar CSV"
             >
               {isExporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 md:mr-2 animate-spin" />
               ) : (
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="h-4 w-4 md:mr-2" />
               )}
-              Exportar CSV
+              <span className="hidden md:inline">Exportar CSV</span>
+              <span className="md:hidden text-xs">CSV</span>
             </Button>
+
             <Button
               variant="outline"
+              size="sm"
               onClick={() => handleExport('excel')}
               disabled={isExporting}
+              className="min-h-[44px]"
+              title="Exportar Excel"
             >
               {isExporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 md:mr-2 animate-spin" />
               ) : (
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="h-4 w-4 md:mr-2" />
               )}
-              Exportar Excel
+              <span className="hidden md:inline">Exportar Excel</span>
+              <span className="md:hidden text-xs">Excel</span>
             </Button>
+
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setIsImportDialogOpen(true)}
+              className="min-h-[44px]"
+              title="Importar Leads"
             >
-              <Upload className="mr-2 h-4 w-4" />
-              Importar Leads
+              <Upload className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Importar Leads</span>
+              <span className="md:hidden text-xs">Importar</span>
             </Button>
+
             <Button
               variant="outline"
+              size="sm"
               onClick={() => {
                 resetColumnForm();
                 setIsEditColumnMode(false);
                 setIsColumnDialogOpen(true);
               }}
+              className="min-h-[44px]"
+              title="Gerenciar Colunas"
             >
-              <Settings2 className="mr-2 h-4 w-4" />
-              Gerenciar Colunas
+              <Settings2 className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Gerenciar Colunas</span>
+              <span className="md:hidden text-xs">Colunas</span>
             </Button>
+
             <Button
               variant="outline"
+              size="sm"
               onClick={() => {
                 resetAutomationColumnForm();
                 setIsEditAutomationColumnMode(false);
                 setIsAutomationColumnDialogOpen(true);
               }}
+              className="min-h-[44px] col-span-2 md:col-span-1"
+              title="Nova Coluna de Automação"
             >
-              <Bot className="mr-2 h-4 w-4" />
-              Nova Coluna de Automação
+              <Bot className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Nova Coluna de Automação</span>
+              <span className="md:hidden text-xs">Automação</span>
             </Button>
+
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => resetForm()}>
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button
+                  onClick={() => resetForm()}
+                  size="sm"
+                  className="min-h-[44px] col-span-2 md:col-span-1"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
                   Novo Lead
                 </Button>
               </DialogTrigger>
@@ -734,13 +765,13 @@ const AdminLeads = () => {
           </AlertDescription>
         </Alert>
 
-        {/* Filtro de Status */}
+        {/* Filtro de Status - Mobile Responsivo */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Label className="text-sm font-medium">Filtrar por status:</Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <Label className="text-sm font-medium shrink-0">Filtrar por status:</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px] min-h-[44px]">
                   <SelectValue placeholder="Filtrar por status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -756,11 +787,11 @@ const AdminLeads = () => {
           </CardContent>
         </Card>
 
-        {/* Título do Kanban de Automação */}
-        <div className="px-6 mt-8">
+        {/* Título do Kanban de Automação - Mobile Responsivo */}
+        <div className="px-2 md:px-6 mt-8">
           <div className="flex items-center gap-2">
-            <Bot className="h-6 w-6 text-primary" />
-            <h2 className="text-2xl font-bold">Automação de Mensagens WhatsApp</h2>
+            <Bot className="h-5 w-5 md:h-6 md:w-6 text-primary shrink-0" />
+            <h2 className="text-xl md:text-2xl font-bold">Automação de Mensagens WhatsApp</h2>
           </div>
           <p className="text-muted-foreground mt-1">
             Arraste leads entre colunas de status e automação para gerenciar o fluxo de vendas
