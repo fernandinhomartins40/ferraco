@@ -256,8 +256,11 @@ export class WhatsAppAntiSpamService {
     }
 
     const now = new Date();
-    const hour = now.getHours();
-    const dayOfWeek = now.getDay(); // 0 = Domingo, 6 = Sábado
+
+    // ✅ Converter para horário do Brasil (UTC-3)
+    const brazilTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const hour = brazilTime.getHours();
+    const dayOfWeek = brazilTime.getDay(); // 0 = Domingo, 6 = Sábado
 
     // Verificar final de semana
     if (dayOfWeek === 0 || dayOfWeek === 6) {
@@ -410,35 +413,37 @@ export class WhatsAppAntiSpamService {
   }
 
   /**
-   * Calcula segundos até segunda-feira 8h
+   * Calcula segundos até segunda-feira 8h (horário Brasil)
    */
   private getSecondsUntilMonday(): number {
     const now = new Date();
-    const dayOfWeek = now.getDay();
+    const brazilTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const dayOfWeek = brazilTime.getDay();
     const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
 
-    const nextMonday = new Date(now);
-    nextMonday.setDate(now.getDate() + daysUntilMonday);
+    const nextMonday = new Date(brazilTime);
+    nextMonday.setDate(brazilTime.getDate() + daysUntilMonday);
     nextMonday.setHours(LIMITS.BUSINESS_HOURS.START, 0, 0, 0);
 
     return Math.ceil((nextMonday.getTime() - now.getTime()) / 1000);
   }
 
   /**
-   * Calcula segundos até próximo horário comercial
+   * Calcula segundos até próximo horário comercial (horário Brasil)
    */
   private getSecondsUntilBusinessHours(): number {
     const now = new Date();
-    const hour = now.getHours();
+    const brazilTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const hour = brazilTime.getHours();
 
-    let nextBusinessHour = new Date(now);
+    let nextBusinessHour = new Date(brazilTime);
 
     if (hour < LIMITS.BUSINESS_HOURS.START) {
       // Antes do horário, aguardar até START
       nextBusinessHour.setHours(LIMITS.BUSINESS_HOURS.START, 0, 0, 0);
     } else {
       // Após o horário, aguardar até amanhã START
-      nextBusinessHour.setDate(now.getDate() + 1);
+      nextBusinessHour.setDate(brazilTime.getDate() + 1);
       nextBusinessHour.setHours(LIMITS.BUSINESS_HOURS.START, 0, 0, 0);
     }
 
