@@ -114,13 +114,20 @@ const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
   const heightClass = height === 'screen' ? 'h-screen' : height === 'auto' ? 'min-h-[60vh]' : '';
   const heightStyle = !heightClass && height !== 'auto' && height !== 'screen' ? { height } : {};
 
-  // Alinhamento dos botões
+  // Alinhamento dos botões e texto
   const alignmentClass =
     activeSlide.buttons.alignment === 'left'
       ? 'justify-start'
       : activeSlide.buttons.alignment === 'right'
       ? 'justify-end'
       : 'justify-center';
+
+  const textAlignmentClass =
+    activeSlide.buttons.alignment === 'left'
+      ? 'text-left'
+      : activeSlide.buttons.alignment === 'right'
+      ? 'text-right'
+      : 'text-center';
 
   // Função para lidar com cliques nos botões
   const handleButtonClick = (href?: string) => {
@@ -143,16 +150,16 @@ const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
         <div className="absolute inset-0 transition-opacity duration-500" style={overlayStyle}></div>
       )}
 
-      <div className="container mx-auto px-4 relative z-10">
+      <div className="container mx-auto px-6 sm:px-8 md:px-12 lg:px-16 relative z-10">
         <div
-          className={`max-w-4xl ${
-            config?.layout === 'centered' ? 'mx-auto text-center' : ''
+          className={`w-full ${
+            config?.layout === 'centered' ? 'max-w-4xl mx-auto' : 'max-w-6xl'
           } text-white`}
         >
-          <div className="animate-fade-in-up">
+          <div className={`animate-fade-in-up ${textAlignmentClass}`}>
             {/* Título */}
             <h1
-              className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight transition-all duration-500"
+              className={`text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight transition-all duration-500 ${textAlignmentClass}`}
               style={{
                 fontSize: activeSlide.title.style.fontSize,
                 fontWeight: activeSlide.title.style.fontWeight,
@@ -171,7 +178,11 @@ const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
 
             {/* Subtítulo */}
             <p
-              className="text-lg md:text-xl lg:text-2xl mb-4 opacity-90 max-w-3xl transition-all duration-500"
+              className={`text-lg md:text-xl lg:text-2xl mb-4 opacity-90 transition-all duration-500 ${textAlignmentClass} ${
+                activeSlide.buttons.alignment === 'center' ? 'mx-auto max-w-3xl' :
+                activeSlide.buttons.alignment === 'left' ? 'max-w-3xl' :
+                'max-w-3xl ml-auto'
+              }`}
               style={{
                 fontSize: activeSlide.subtitle.style.fontSize,
                 fontWeight: activeSlide.subtitle.style.fontWeight,
@@ -184,7 +195,11 @@ const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
             {/* Descrição */}
             {activeSlide.description.text && (
               <p
-                className="text-base md:text-lg mb-6 md:mb-8 opacity-80 max-w-2xl transition-all duration-500"
+                className={`text-base md:text-lg mb-6 md:mb-8 opacity-80 transition-all duration-500 ${textAlignmentClass} ${
+                  activeSlide.buttons.alignment === 'center' ? 'mx-auto max-w-2xl' :
+                  activeSlide.buttons.alignment === 'left' ? 'max-w-2xl' :
+                  'max-w-2xl ml-auto'
+                }`}
                 style={{
                   fontSize: activeSlide.description.style.fontSize,
                   color: activeSlide.description.style.textColor,
