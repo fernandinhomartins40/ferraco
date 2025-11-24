@@ -111,6 +111,7 @@ All colors MUST be HSL.
   }
 
   html {
+    scroll-behavior: smooth; /* Scroll suave para âncoras */
     scroll-padding-top: 96px; /* Altura do header fixo (lg:h-24) */
   }
 
