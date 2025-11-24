@@ -135,7 +135,7 @@ export const AboutEditor = ({ config, onChange }: AboutEditorProps) => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="main">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="main">Principal</TabsTrigger>
           <TabsTrigger value="features">Características</TabsTrigger>
           <TabsTrigger value="experience">Experiência</TabsTrigger>
@@ -362,7 +362,7 @@ export const AboutEditor = ({ config, onChange }: AboutEditorProps) => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <ColorPicker
                     label="Cor de Fundo"
                     value={config.experience?.button?.style?.backgroundColor || '#10b981'}
@@ -390,7 +390,7 @@ export const AboutEditor = ({ config, onChange }: AboutEditorProps) => {
                 </div>
 
                 <Label className="text-sm font-medium">Cores no Hover</Label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <ColorPicker
                     label="Fundo (hover)"
                     value={config.experience?.button?.style?.hover?.backgroundColor || '#059669'}
