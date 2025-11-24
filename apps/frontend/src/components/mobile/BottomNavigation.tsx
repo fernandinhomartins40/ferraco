@@ -115,8 +115,8 @@ export function BottomNavigation() {
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-lg">
-      <div className="flex items-center justify-around h-16">
+    <nav className="md:hidden fixed bottom-0 w-full inset-x-0 z-50 bg-card border-t border-border shadow-lg">
+      <div className="flex items-center justify-around h-16 max-w-screen-2xl mx-auto px-2">
         {mainNavItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item);
@@ -126,7 +126,7 @@ export function BottomNavigation() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[64px] transition-colors",
+                "flex flex-col items-center justify-center gap-1 px-2 py-2 min-w-[56px] transition-colors",
                 "hover:bg-muted/50 rounded-lg",
                 active && "text-primary"
               )}
@@ -150,7 +150,7 @@ export function BottomNavigation() {
           <SheetTrigger asChild>
             <button
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[64px]",
+                "flex flex-col items-center justify-center gap-1 px-2 py-2 min-w-[56px]",
                 "hover:bg-muted/50 rounded-lg transition-colors"
               )}
             >
