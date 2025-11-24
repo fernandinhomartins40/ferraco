@@ -445,6 +445,80 @@ async function main() {
     },
   });
 
+  // ============================================================================
+  // ✅ NOVO: Templates de Mensagens Genéricas (WhatsApp Automation)
+  // ============================================================================
+  console.log('\n📨 Creating generic message templates...');
+
+  const modalOrcamentoTemplate = await prisma.recurrenceMessageTemplate.create({
+    data: {
+      name: 'Boas-vindas Modal Orçamento',
+      description: 'Mensagem automática para leads capturados via modal de orçamento',
+      trigger: 'modal_orcamento',
+      minCaptures: 1,
+      content: `Olá {{lead.name}}! 👋
+
+Recebemos sua solicitação de orçamento através do nosso site.
+
+Nossa equipe comercial da {{company.name}} entrará em contato com você em até *2 horas úteis* pelo WhatsApp ou telefone.
+
+Enquanto isso, fique à vontade para:
+📞 Ligar para {{company.phone}}
+📧 Enviar email para {{company.email}}
+🌐 Acessar nosso site: {{company.website}}
+
+Obrigado pelo interesse!
+Equipe {{company.name}}`,
+      priority: 10,
+      isActive: true,
+      conditions: JSON.stringify({}),
+    },
+  });
+
+  const humanContactTemplate = await prisma.recurrenceMessageTemplate.create({
+    data: {
+      name: 'Solicitação de Atendimento Humano',
+      description: 'Mensagem para leads que solicitam falar com um atendente',
+      trigger: 'human_contact_request',
+      minCaptures: 1,
+      content: `Olá {{lead.name}}! 👋
+
+Entendemos que você gostaria de falar com um de nossos consultores.
+
+Um especialista da {{company.name}} entrará em contato em breve para atendê-lo pessoalmente.
+
+*Horário de atendimento:* {{company.workingHours}}
+
+Obrigado pela confiança!
+Equipe {{company.name}}`,
+      priority: 10,
+      isActive: true,
+      conditions: JSON.stringify({}),
+    },
+  });
+
+  const genericInquiryTemplate = await prisma.recurrenceMessageTemplate.create({
+    data: {
+      name: 'Contato Genérico',
+      description: 'Mensagem para leads sem interesse específico em produtos',
+      trigger: 'generic_inquiry',
+      minCaptures: 1,
+      content: `Olá {{lead.name}}! 👋
+
+Obrigado por entrar em contato com a {{company.name}}.
+
+Nossa equipe entrará em contato em breve para entender melhor como podemos ajudá-lo.
+
+📞 {{company.phone}}
+📧 {{company.email}}
+
+Até breve!`,
+      priority: 5,
+      isActive: true,
+      conditions: JSON.stringify({}),
+    },
+  });
+
   console.log('✅ Database seed completed successfully!');
   console.log('\n📊 Created:');
   console.log('  - 2 Teams');
@@ -456,6 +530,7 @@ async function main() {
   console.log('  - 2 Opportunities');
   console.log('  - 2 Communication Templates');
   console.log('  - 1 Automation');
+  console.log('  - 3 Generic Message Templates (modal_orcamento, human_contact_request, generic_inquiry)');
 
   // Create default Landing Page Config
   console.log('\n🎨 Creating default landing page config...');

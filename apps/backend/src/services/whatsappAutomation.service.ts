@@ -44,17 +44,29 @@ export class WhatsAppAutomationService {
 
       // Extrair interesse do metadata
       const metadata = JSON.parse(lead.metadata || '{}');
+      const leadSource = lead.source || metadata.source;
 
       // ⭐ PRIORIZAR selectedProducts (IDs) sobre interest (nomes com emoji)
       let interest = metadata.selectedProducts || metadata.interest;
 
       if (!interest || (Array.isArray(interest) && interest.length === 0)) {
         logger.info(`ℹ️  Lead ${leadId} (${lead.name}) não manifestou interesse em produtos`);
-        // Criar automação genérica se tiver wantsHumanContact
-        if (metadata.wantsHumanContact || metadata.requiresHumanAttendance) {
-          return await this.createGenericAutomation(leadId, lead);
+
+        // ✅ NOVO: Detectar cenário e criar automação apropriada
+        let templateTrigger = null;
+
+        if (leadSource === 'modal-orcamento') {
+          templateTrigger = 'modal_orcamento';
+          logger.info(`   📝 Detectado lead do modal de orçamento - enviando mensagem de boas-vindas`);
+        } else if (metadata.wantsHumanContact || metadata.requiresHumanAttendance) {
+          templateTrigger = 'human_contact_request';
+          logger.info(`   👨‍💼 Lead solicitou atendimento humano`);
+        } else {
+          templateTrigger = 'generic_inquiry';
+          logger.info(`   ℹ️  Lead sem interesse específico - enviando mensagem genérica`);
         }
-        return null;
+
+        return await this.createGenericAutomation(leadId, lead, templateTrigger);
       }
 
       // Buscar configuração do chatbot para validar produtos
@@ -159,25 +171,80 @@ export class WhatsAppAutomationService {
   /**
    * Cria automação genérica para leads sem produtos específicos
    */
-  private async createGenericAutomation(leadId: string, lead: any): Promise<string | null> {
+  private async createGenericAutomation(
+    leadId: string,
+    lead: any,
+    templateTrigger: string
+  ): Promise<string | null> {
     try {
+      // ✅ NOVO: Buscar template apropriado
+      const template = await prisma.recurrenceMessageTemplate.findFirst({
+        where: {
+          trigger: templateTrigger,
+          isActive: true
+        },
+        orderBy: { priority: 'desc' }
+      });
+
+      if (!template) {
+        logger.warn(`⚠️  Template não encontrado para trigger: ${templateTrigger}`);
+        // Fallback para template padrão hardcoded
+        return await this.createGenericAutomationFallback(leadId, lead, templateTrigger);
+      }
+
+      // Calcular total de mensagens (texto + mídias se houver)
+      const mediaUrls = template.mediaUrls ? JSON.parse(template.mediaUrls) : [];
+      const totalMessages = 1 + mediaUrls.length;
+
       const automation = await prisma.whatsAppAutomation.create({
         data: {
           leadId,
           status: 'PENDING',
-          productsToSend: JSON.stringify(['ATENDIMENTO_GERAL']),
-          messagesTotal: 1,
+          productsToSend: JSON.stringify([`TEMPLATE:${template.id}`]), // ← Flag especial
+          messagesTotal: totalMessages,
           scheduledFor: null
         }
       });
 
       logger.info(`✅ Automação genérica ${automation.id} criada para lead ${leadId} (${lead.name})`);
+      logger.info(`   Template: ${template.name} (${totalMessages} mensagens)`);
 
       this.addToQueue(automation.id, 2); // Prioridade 2 (alta)
 
       return automation.id;
     } catch (error) {
       logger.error('❌ Erro ao criar automação genérica:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fallback para quando não há template no banco (usa mensagens hardcoded)
+   */
+  private async createGenericAutomationFallback(
+    leadId: string,
+    lead: any,
+    templateTrigger: string
+  ): Promise<string | null> {
+    try {
+      logger.info(`⚙️  Usando fallback hardcoded para trigger: ${templateTrigger}`);
+
+      const automation = await prisma.whatsAppAutomation.create({
+        data: {
+          leadId,
+          status: 'PENDING',
+          productsToSend: JSON.stringify([`FALLBACK:${templateTrigger}`]),
+          messagesTotal: 1,
+          scheduledFor: null
+        }
+      });
+
+      logger.info(`✅ Automação genérica fallback ${automation.id} criada`);
+      this.addToQueue(automation.id, 2);
+
+      return automation.id;
+    } catch (error) {
+      logger.error('❌ Erro ao criar automação genérica fallback:', error);
       return null;
     }
   }
@@ -481,6 +548,18 @@ export class WhatsAppAutomationService {
       const allProducts = JSON.parse(config.products || '[]');
       const productNames = JSON.parse(automation.productsToSend);
 
+      // ✅ NOVO: Detectar automação com template genérico
+      if (productNames.length === 1 && productNames[0].startsWith('TEMPLATE:')) {
+        const templateId = productNames[0].replace('TEMPLATE:', '');
+        return await this.executeGenericTemplateAutomation(automationId, templateId, lead, config);
+      }
+
+      // ✅ NOVO: Detectar automação com fallback hardcoded
+      if (productNames.length === 1 && productNames[0].startsWith('FALLBACK:')) {
+        const templateTrigger = productNames[0].replace('FALLBACK:', '');
+        return await this.executeGenericFallbackAutomation(automationId, templateTrigger, lead, config);
+      }
+
       // Buscar templates (ou usar padrão)
       const templates = JSON.parse(config.whatsappTemplates || '{}');
       const defaultTemplates = {
@@ -633,6 +712,208 @@ export class WhatsAppAutomationService {
         }
       });
 
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ NOVO: Executa automação com template genérico (do banco de dados)
+   */
+  private async executeGenericTemplateAutomation(
+    automationId: string,
+    templateId: string,
+    lead: any,
+    config: any
+  ): Promise<void> {
+    try {
+      const template = await prisma.recurrenceMessageTemplate.findUnique({
+        where: { id: templateId }
+      });
+
+      if (!template) {
+        throw new Error(`Template ${templateId} não encontrado`);
+      }
+
+      logger.info(`📨 Executando automação genérica com template: ${template.name}`);
+
+      const phone = lead.phone;
+
+      // Processar template com variáveis
+      const message = this.processTemplate(template.content, {
+        lead: {
+          name: lead.name,
+          phone: lead.phone,
+          email: lead.email || ''
+        },
+        company: {
+          name: config.companyName || 'Ferraco',
+          phone: config.companyPhone || '',
+          email: config.companyEmail || '',
+          website: config.companyWebsite || '',
+          workingHours: config.workingHours || 'Segunda a Sexta, 8h às 18h'
+        }
+      });
+
+      // Enviar mensagem de texto
+      await this.sendText(automationId, phone, message, 1);
+      await this.delay(whatsappAntiSpamService.getHumanizedDelay());
+
+      // Enviar mídias se houver
+      if (template.mediaUrls) {
+        const mediaUrls = JSON.parse(template.mediaUrls);
+        let order = 2;
+
+        for (const mediaUrl of mediaUrls) {
+          if (template.mediaType === 'IMAGE') {
+            await this.sendImage(automationId, phone, mediaUrl, order++);
+          } else if (template.mediaType === 'VIDEO') {
+            await this.sendVideo(automationId, phone, mediaUrl, order++);
+          }
+          await this.delay(whatsappAntiSpamService.getHumanizedDelay(true));
+        }
+      }
+
+      // Atualizar contador de uso do template
+      await prisma.recurrenceMessageTemplate.update({
+        where: { id: templateId },
+        data: { usageCount: { increment: 1 } }
+      });
+
+      // Verificar se realmente enviou todas as mensagens
+      const finalAutomation = await prisma.whatsAppAutomation.findUnique({
+        where: { id: automationId },
+        select: { messagesSent: true, messagesTotal: true }
+      });
+
+      const sentMessages = finalAutomation?.messagesSent || 0;
+      const totalMessages = finalAutomation?.messagesTotal || 0;
+
+      // Marcar automação como concluída
+      await prisma.whatsAppAutomation.update({
+        where: { id: automationId },
+        data: {
+          status: sentMessages === totalMessages && sentMessages > 0 ? 'SENT' : 'PROCESSING',
+          completedAt: sentMessages === totalMessages && sentMessages > 0 ? new Date() : null
+        }
+      });
+
+      logger.info(`✅ Automação genérica ${automationId} concluída (template: ${template.name}, ${sentMessages}/${totalMessages} mensagens)`);
+
+    } catch (error: any) {
+      logger.error(`❌ Erro ao executar automação genérica ${automationId}:`, error);
+      await prisma.whatsAppAutomation.update({
+        where: { id: automationId },
+        data: {
+          status: 'FAILED',
+          error: error.message
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ NOVO: Executa automação com fallback hardcoded (quando não há template no banco)
+   */
+  private async executeGenericFallbackAutomation(
+    automationId: string,
+    templateTrigger: string,
+    lead: any,
+    config: any
+  ): Promise<void> {
+    try {
+      logger.info(`📨 Executando automação fallback para trigger: ${templateTrigger}`);
+
+      const phone = lead.phone;
+
+      // Templates hardcoded por trigger
+      const fallbackMessages: Record<string, string> = {
+        modal_orcamento: `Olá {{lead.name}}! 👋
+
+Recebemos sua solicitação de orçamento através do nosso site.
+
+Nossa equipe comercial da {{company.name}} entrará em contato com você em até *2 horas úteis* pelo WhatsApp ou telefone.
+
+Enquanto isso, fique à vontade para:
+📞 Ligar para {{company.phone}}
+📧 Enviar email para {{company.email}}
+🌐 Acessar nosso site: {{company.website}}
+
+Obrigado pelo interesse!
+Equipe {{company.name}}`,
+
+        human_contact_request: `Olá {{lead.name}}! 👋
+
+Entendemos que você gostaria de falar com um de nossos consultores.
+
+Um especialista da {{company.name}} entrará em contato em breve para atendê-lo pessoalmente.
+
+*Horário de atendimento:* {{company.workingHours}}
+
+Obrigado pela confiança!
+Equipe {{company.name}}`,
+
+        generic_inquiry: `Olá {{lead.name}}! 👋
+
+Obrigado por entrar em contato com a {{company.name}}.
+
+Nossa equipe entrará em contato em breve para entender melhor como podemos ajudá-lo.
+
+📞 {{company.phone}}
+📧 {{company.email}}
+
+Até breve!`
+      };
+
+      const messageTemplate = fallbackMessages[templateTrigger] || fallbackMessages.generic_inquiry;
+
+      // Processar template com variáveis
+      const message = this.processTemplate(messageTemplate, {
+        lead: {
+          name: lead.name,
+          phone: lead.phone,
+          email: lead.email || ''
+        },
+        company: {
+          name: config.companyName || 'Ferraco',
+          phone: config.companyPhone || '',
+          email: config.companyEmail || '',
+          website: config.companyWebsite || '',
+          workingHours: config.workingHours || 'Segunda a Sexta, 8h às 18h'
+        }
+      });
+
+      // Enviar mensagem de texto
+      await this.sendText(automationId, phone, message, 1);
+
+      // Verificar se enviou
+      const finalAutomation = await prisma.whatsAppAutomation.findUnique({
+        where: { id: automationId },
+        select: { messagesSent: true, messagesTotal: true }
+      });
+
+      const sentMessages = finalAutomation?.messagesSent || 0;
+
+      // Marcar como concluída
+      await prisma.whatsAppAutomation.update({
+        where: { id: automationId },
+        data: {
+          status: sentMessages > 0 ? 'SENT' : 'PROCESSING',
+          completedAt: sentMessages > 0 ? new Date() : null
+        }
+      });
+
+      logger.info(`✅ Automação fallback ${automationId} concluída (${sentMessages} mensagens)`);
+
+    } catch (error: any) {
+      logger.error(`❌ Erro ao executar automação fallback ${automationId}:`, error);
+      await prisma.whatsAppAutomation.update({
+        where: { id: automationId },
+        data: {
+          status: 'FAILED',
+          error: error.message
+        }
+      });
       throw error;
     }
   }
