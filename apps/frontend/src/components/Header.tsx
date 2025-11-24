@@ -37,44 +37,14 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
 
   const scrollToSection = (href: string) => {
     console.log('🔍 [Header] scrollToSection called with href:', href);
-    console.log('🔍 [Header] Current window.scrollY:', window.scrollY);
-    console.log('🔍 [Header] Document ready state:', document.readyState);
 
     const element = document.querySelector(href);
-    console.log('🔍 [Header] Element found:', element);
 
     if (element) {
-      const elementRect = element.getBoundingClientRect();
-      const elementTop = element.offsetTop;
-
-      console.log('✅ [Header] Scrolling to element:', {
-        id: element.id,
-        tagName: element.tagName,
-        offsetTop: elementTop,
-        scrollTop: window.scrollY,
-        boundingClientRect: {
-          top: elementRect.top,
-          left: elementRect.left,
-          bottom: elementRect.bottom,
-          right: elementRect.right
-        }
-      });
-
-      // Tentativa 1: scrollIntoView (idêntico ao Footer)
-      console.log('🔄 [Header] Attempting scrollIntoView...');
+      console.log('✅ [Header] Element found, scrolling to:', element.id);
       element.scrollIntoView({ behavior: "smooth" });
-
-      // Debug: verificar se o scroll mudou após um tempo
-      setTimeout(() => {
-        console.log('🔍 [Header] After scrollIntoView - window.scrollY:', window.scrollY);
-      }, 100);
-
-      console.log('✅ [Header] scrollIntoView executed');
     } else {
       console.error('❌ [Header] Element not found for href:', href);
-      console.log('🔍 [Header] Available sections with IDs:',
-        Array.from(document.querySelectorAll('[id]')).map(el => `#${el.id}`)
-      );
     }
   };
 
@@ -100,12 +70,8 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
               <button
                 key={item.label}
                 type="button"
-                onMouseDown={() => console.log('⬇️ [Header] Desktop mouseDown:', item.label)}
-                onClick={(e) => {
+                onClick={() => {
                   console.log('🖱️ [Header] Desktop button clicked:', item.label, item.href);
-                  console.log('🖱️ [Header] Event details:', { target: e.target, currentTarget: e.currentTarget });
-                  e.preventDefault();
-                  e.stopPropagation();
                   scrollToSection(item.href);
                 }}
                 className="text-primary-foreground hover:text-secondary font-medium transition-smooth relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-secondary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left after:pointer-events-none"
@@ -145,12 +111,8 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
                 <button
                   key={item.label}
                   type="button"
-                  onMouseDown={() => console.log('⬇️ [Header] Mobile mouseDown:', item.label)}
-                  onClick={(e) => {
+                  onClick={() => {
                     console.log('📱 [Header] Mobile button clicked:', item.label, item.href);
-                    console.log('📱 [Header] Event details:', { target: e.target, currentTarget: e.currentTarget });
-                    e.preventDefault();
-                    e.stopPropagation();
                     scrollToSection(item.href);
                     setIsMenuOpen(false);
                   }}
