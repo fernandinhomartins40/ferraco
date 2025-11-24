@@ -429,13 +429,13 @@ export class WhatsAppAutomationService {
       const stuckAutomations = await prisma.whatsAppAutomation.findMany({
         where: {
           status: 'PROCESSING',
-          updatedAt: { lt: tenMinutesAgo }
+          startedAt: { lt: tenMinutesAgo }
         },
         select: {
           id: true,
           messagesSent: true,
           messagesTotal: true,
-          updatedAt: true
+          startedAt: true
         }
       });
 
