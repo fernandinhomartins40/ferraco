@@ -83,8 +83,14 @@ const ExperienceSection = ({ onLeadModalOpen, config }: ExperienceSectionProps) 
     }
 
     if (href.startsWith('#')) {
-      const element = document.querySelector(href);
-      element?.scrollIntoView({ behavior: 'smooth' });
+      const sectionId = href.replace('#', '');
+      const element = document.getElementById(sectionId);
+      if (element) {
+        const headerOffset = 96;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+      }
     } else if (href.startsWith('http')) {
       window.open(href, '_blank');
     } else {

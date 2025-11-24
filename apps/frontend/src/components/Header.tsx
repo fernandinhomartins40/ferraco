@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoFerraco from "@/assets/logo-ferraco.webp";
@@ -33,17 +33,53 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
     logoSrc,
   });
 
-  const scrollToSection = (href: string) => {
-    const element = document.querySelector(href);
+  const scrollToSection = useCallback((href: string) => {
+    // Prevenir comportamento padrão de links
+    const sectionId = href.replace('#', '');
+    const element = document.getElementById(sectionId);
+
     if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-        inline: "nearest"
+      // Calcular offset do header fixo (96px)
+      const headerOffset = 96;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
       });
+
       setIsMenuOpen(false);
+
+      // Atualizar URL sem trigger de reload (opcional)
+      if (window.history.pushState) {
+        window.history.pushState(null, '', href);
+      }
     }
-  };
+  }, []);
+
+  // Lidar com navegação direta por hash URL (ex: /?#produtos)
+  useEffect(() => {
+    const handleHashNavigation = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        // Aguardar um pouco para garantir que o DOM está pronto
+        setTimeout(() => {
+          scrollToSection(hash);
+        }, 100);
+      }
+    };
+
+    // Executar ao montar o componente
+    handleHashNavigation();
+
+    // Escutar mudanças no hash
+    window.addEventListener('hashchange', handleHashNavigation);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashNavigation);
+    };
+  }, [scrollToSection]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-primary shadow-elegant">
