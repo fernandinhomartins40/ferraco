@@ -836,6 +836,13 @@ const AdminLeads = () => {
                 }
               }}
               onUpdateLeadStatus={handleUpdateStatus}
+              // Props de Automação WhatsApp
+              automationColumns={automationColumns}
+              leadsInAutomation={leadsInAutomation}
+              onMoveLeadToAutomationColumn={(leadId, columnId) => {
+                moveToAutomationColumn.mutate({ leadId, columnId });
+              }}
+              onRemoveLeadFromAutomation={removeLeadFromAutomation.mutate}
             />
           ) : (
             <UnifiedKanbanView
