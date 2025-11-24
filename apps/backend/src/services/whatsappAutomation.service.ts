@@ -1032,13 +1032,28 @@ Até breve!`
   }
 
   /**
-   * Incrementa contador de mensagens enviadas
+   * Incrementa contador de mensagens enviadas e auto-completa se necessário
    */
   private async incrementMessageCount(automationId: string): Promise<void> {
-    await prisma.whatsAppAutomation.update({
+    const automation = await prisma.whatsAppAutomation.update({
       where: { id: automationId },
-      data: { messagesSent: { increment: 1 } }
+      data: { messagesSent: { increment: 1 } },
+      select: { messagesSent: true, messagesTotal: true, status: true }
     });
+
+    // ✅ NOVO: Auto-completar se atingiu o total E não está SENT ainda
+    if (automation.messagesSent === automation.messagesTotal &&
+        automation.status !== 'SENT' &&
+        automation.messagesSent > 0) {
+      await prisma.whatsAppAutomation.update({
+        where: { id: automationId },
+        data: {
+          status: 'SENT',
+          completedAt: new Date()
+        }
+      });
+      logger.info(`✅ Automação ${automationId} auto-concluída (${automation.messagesSent}/${automation.messagesTotal} mensagens)`);
+    }
   }
 
   /**
