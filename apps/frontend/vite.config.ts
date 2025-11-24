@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => ({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/api-docs': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
       '/uploads': {
         target: 'http://localhost:3001',
         changeOrigin: true,
@@ -33,7 +37,7 @@ export default defineConfig(({ mode }) => ({
         display: 'standalone',
         orientation: 'portrait-primary',
         scope: '/',
-        start_url: '/admin',
+        start_url: '/login',
         icons: [
           {
             src: '/pwa-192x192.svg',

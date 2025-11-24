@@ -219,7 +219,7 @@ const ApiKeys = () => {
           <Button
             variant="outline"
             className="w-full sm:w-auto"
-            onClick={() => window.open(`${window.location.protocol}//${window.location.host}/api-docs`, '_blank')}
+            onClick={() => window.open('/api-docs', '_blank')}
           >
             <ExternalLink className="w-4 h-4 mr-2" />
             Documentação Swagger

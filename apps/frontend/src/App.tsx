@@ -46,6 +46,13 @@ const ApiKeys = lazy(() => import("./pages/admin/ApiKeys"));
 
 // Import ProtectedRoute
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { useAuth } from "./hooks/useAuth";
+
+// Componente de redirecionamento inteligente
+const SmartRedirect = () => {
+  const { isAuthenticated } = useAuth();
+  return <Navigate to={isAuthenticated ? "/admin" : "/login"} replace />;
+};
 
 const App = () => {
   return (
@@ -218,8 +225,8 @@ const App = () => {
             }
           />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/admin" replace />} />
+          {/* Fallback - redireciona para /login se não autenticado, /admin se autenticado */}
+          <Route path="*" element={<SmartRedirect />} />
         </Routes>
       </BrowserRouter>
       </TooltipProvider>
