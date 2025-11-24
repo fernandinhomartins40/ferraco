@@ -420,6 +420,64 @@ export class WhatsAppAutomationService {
   }
 
   /**
+   * ✅ FIX 3: Verifica e corrige automações travadas em PROCESSING há mais de 10 minutos
+   */
+  private async checkStuckAutomations(): Promise<void> {
+    try {
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+      const stuckAutomations = await prisma.whatsAppAutomation.findMany({
+        where: {
+          status: 'PROCESSING',
+          updatedAt: { lt: tenMinutesAgo }
+        },
+        select: {
+          id: true,
+          messagesSent: true,
+          messagesTotal: true,
+          updatedAt: true
+        }
+      });
+
+      if (stuckAutomations.length === 0) {
+        return;
+      }
+
+      logger.warn(`⚠️  Encontradas ${stuckAutomations.length} automações travadas em PROCESSING`);
+
+      for (const automation of stuckAutomations) {
+        const successPercentage = automation.messagesTotal > 0
+          ? automation.messagesSent / automation.messagesTotal
+          : 0;
+
+        let newStatus: 'SENT' | 'FAILED' = 'FAILED';
+
+        if (successPercentage >= 0.8) {
+          newStatus = 'SENT';
+          logger.info(`✅ Auto-completando automação travada ${automation.id} (${automation.messagesSent}/${automation.messagesTotal} = ${(successPercentage * 100).toFixed(1)}%)`);
+        } else if (automation.messagesSent > 0) {
+          newStatus = 'FAILED';
+          logger.warn(`❌ Marcando como FAILED automação ${automation.id} (${automation.messagesSent}/${automation.messagesTotal} = ${(successPercentage * 100).toFixed(1)}%)`);
+        } else {
+          newStatus = 'FAILED';
+          logger.warn(`❌ Marcando como FAILED automação ${automation.id} (0 mensagens enviadas)`);
+        }
+
+        await prisma.whatsAppAutomation.update({
+          where: { id: automation.id },
+          data: {
+            status: newStatus,
+            completedAt: new Date(),
+            error: newStatus === 'FAILED' ? 'Timeout: automação travada em PROCESSING por mais de 10 minutos' : null
+          }
+        });
+      }
+    } catch (error) {
+      logger.error('❌ Erro ao verificar automações travadas:', error);
+    }
+  }
+
+  /**
    * Processa fila de automações
    */
   private async processQueue(): Promise<void> {
@@ -427,6 +485,9 @@ export class WhatsAppAutomationService {
 
     this.isProcessingQueue = true;
     logger.debug(`🔄 Iniciando processamento da fila (${this.queue.size} itens)`);
+
+    // ✅ FIX 3: Verificar e corrigir automações travadas em PROCESSING
+    await this.checkStuckAutomations();
 
     while (this.queue.size > 0) {
       // Ordenar por prioridade (maior primeiro)
@@ -679,17 +740,20 @@ export class WhatsAppAutomationService {
       const sentMessages = finalAutomation?.messagesSent || 0;
       const totalMessages = finalAutomation?.messagesTotal || 0;
 
+      // ✅ FIX 2: Lógica mais permissiva - 80% ou mais = sucesso
       let finalStatus: 'SENT' | 'PROCESSING' | 'PENDING' = 'SENT';
+      const successThreshold = 0.8; // 80%
+      const successPercentage = totalMessages > 0 ? sentMessages / totalMessages : 0;
 
-      if (sentMessages === totalMessages && sentMessages > 0) {
-        finalStatus = 'SENT';
-        logger.info(`✅ Automação ${automationId} concluída com sucesso! (${sentMessages}/${totalMessages} mensagens)`);
-      } else if (sentMessages > 0) {
-        finalStatus = 'PROCESSING';
-        logger.warn(`⚠️  Automação ${automationId} parcialmente enviada (${sentMessages}/${totalMessages} mensagens)`);
-      } else {
+      if (sentMessages === 0) {
         finalStatus = 'PENDING';
         logger.warn(`⚠️  Automação ${automationId} não enviou nenhuma mensagem (0/${totalMessages})`);
+      } else if (successPercentage < successThreshold) {
+        finalStatus = 'PROCESSING';
+        logger.warn(`⚠️  Automação ${automationId} parcialmente enviada (${sentMessages}/${totalMessages} = ${(successPercentage * 100).toFixed(1)}%)`);
+      } else {
+        finalStatus = 'SENT';
+        logger.info(`✅ Automação ${automationId} concluída com sucesso! (${sentMessages}/${totalMessages} = ${(successPercentage * 100).toFixed(1)}%)`);
       }
 
       // Marcar como concluído
