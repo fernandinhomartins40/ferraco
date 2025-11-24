@@ -365,6 +365,21 @@ jobs:
           # Iniciar aplicação
           echo "🚀 Iniciando aplicação..."
           docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} up -d
+        DEPLOY_SCRIPT
+
+    - name: 🔍 Verificar e Configurar Aplicação
+      run: |
+        echo "🔍 Verificando e configurando aplicação..."
+
+        sshpass -p '${{ secrets.VPS_PASSWORD }}' ssh \
+          -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          -o ServerAliveInterval=30 \
+          -o ServerAliveCountMax=3 \
+          -o ConnectTimeout=30 \
+          ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << "VERIFY_DEPLOY_SCRIPT"
+          set -e
+          cd ${{ env.APP_DIR }}
 
           # Aguardar container iniciar
           echo "⏳ Aguardando container iniciar (30 segundos)..."
@@ -621,7 +636,7 @@ jobs:
             echo "❌ Deploy falhou - health check não passou!"
             exit 1
           fi
-        DEPLOY_SCRIPT
+        VERIFY_DEPLOY_SCRIPT
 
     - name: ✅ Post-Deploy Verification
       run: |
