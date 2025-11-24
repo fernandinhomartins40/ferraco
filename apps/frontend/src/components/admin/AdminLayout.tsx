@@ -301,8 +301,8 @@ const AdminLayoutContent = ({ children }: AdminLayoutProps) => {
       </Sidebar>
 
       {/* Main Content Area */}
-      <SidebarInset>
-        <div className="min-h-screen bg-background">
+      <SidebarInset className="overflow-x-hidden">
+        <div className="min-h-screen bg-background max-w-full overflow-x-hidden">
           {/* Session Warning Alert */}
           {showSessionWarning && sessionInfo.isExpiringSoon && (
             <Alert className="m-4 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
@@ -325,8 +325,8 @@ const AdminLayoutContent = ({ children }: AdminLayoutProps) => {
           )}
 
           {/* Mobile-First Header */}
-          <header className="sticky top-0 z-10 bg-card shadow-sm border-b border-border">
-            <div className="flex items-center gap-2 px-4 py-3">
+          <header className="sticky top-0 z-10 bg-card shadow-sm border-b border-border max-w-full overflow-x-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 max-w-full overflow-x-hidden">
               {/* Mobile Menu Toggle */}
               <SidebarTrigger className="md:hidden" />
 
@@ -432,7 +432,7 @@ const AdminLayoutContent = ({ children }: AdminLayoutProps) => {
           </header>
 
           {/* Main Content with responsive padding + bottom nav spacing */}
-          <main className="p-4 md:p-6 pb-20 md:pb-6 overflow-x-hidden">
+          <main className="p-4 md:p-6 pb-20 md:pb-6 max-w-full overflow-x-hidden">
             {children}
           </main>
         </div>
