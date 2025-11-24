@@ -102,7 +102,7 @@ export const IconSelector = ({ label, value, onChange, description }: IconSelect
               </div>
 
               <ScrollArea className="h-64">
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                   {filteredIcons.map((iconName) => (
                     <button
                       key={iconName}

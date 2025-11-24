@@ -87,7 +87,7 @@ export const ColorPicker = ({
               {presets.length > 0 && (
                 <div>
                   <Label>Cores Predefinidas</Label>
-                  <div className="grid grid-cols-6 gap-2 mt-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-2">
                     {presets.map((preset) => (
                       <button
                         key={preset}

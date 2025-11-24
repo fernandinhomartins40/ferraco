@@ -118,7 +118,7 @@ export const ExperienceEditor = ({ config, onChange }: ExperienceEditorProps) =>
   return (
     <div className="space-y-6">
       <Tabs defaultValue="main">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="main">Principal</TabsTrigger>
           <TabsTrigger value="highlights">Destaques</TabsTrigger>
           <TabsTrigger value="testimonials">Testemunhos</TabsTrigger>
@@ -193,7 +193,7 @@ export const ExperienceEditor = ({ config, onChange }: ExperienceEditorProps) =>
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
                         <div className="flex-1 space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-2">
                               <Label className="text-sm">Valor/Número</Label>
                               <Input
@@ -312,7 +312,7 @@ export const ExperienceEditor = ({ config, onChange }: ExperienceEditorProps) =>
                             />
                           </div>
 
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                             <div className="space-y-2">
                               <Label className="text-sm">Nome</Label>
                               <Input
@@ -429,7 +429,7 @@ export const ExperienceEditor = ({ config, onChange }: ExperienceEditorProps) =>
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <ColorPicker
                     label="Cor de Fundo"
                     value={config.cta?.button?.style?.backgroundColor || '#10b981'}
@@ -457,7 +457,7 @@ export const ExperienceEditor = ({ config, onChange }: ExperienceEditorProps) =>
                 </div>
 
                 <Label className="text-sm font-medium">Cores no Hover</Label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <ColorPicker
                     label="Fundo (hover)"
                     value={config.cta?.button?.style?.hover?.backgroundColor || '#059669'}

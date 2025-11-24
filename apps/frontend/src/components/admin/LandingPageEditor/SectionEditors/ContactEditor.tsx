@@ -209,7 +209,7 @@ export const ContactEditor = ({ config, onChange }: ContactEditorProps) => {
               <Card key={method.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="flex-1 grid grid-cols-2 gap-3">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label className="text-sm">Tipo</Label>
                         <Select
@@ -249,7 +249,7 @@ export const ContactEditor = ({ config, onChange }: ContactEditorProps) => {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label className="text-sm">Label</Label>
                       <Input

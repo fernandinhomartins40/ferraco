@@ -199,7 +199,7 @@ export const FooterEditor = ({ config, onChange }: FooterEditorProps) => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="logo">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
           <TabsTrigger value="logo">Logo</TabsTrigger>
           <TabsTrigger value="textos">Textos</TabsTrigger>
           <TabsTrigger value="info-contato">Info Contato</TabsTrigger>
@@ -747,7 +747,7 @@ export const FooterEditor = ({ config, onChange }: FooterEditorProps) => {
                   {config.bottom.links.map((link, index) => (
                     <Card key={link.id} className="p-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 grid grid-cols-2 gap-3">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs">Texto</Label>
                             <Input

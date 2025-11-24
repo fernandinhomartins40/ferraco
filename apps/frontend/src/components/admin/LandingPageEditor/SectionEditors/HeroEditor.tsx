@@ -254,7 +254,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
 
           <Separator />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Auto-play</Label>
               <Switch
@@ -274,7 +274,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center justify-between">
               <Label>Mostrar Setas</Label>
               <Switch
@@ -395,7 +395,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="content">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
               <TabsTrigger value="content">Conteúdo</TabsTrigger>
               <TabsTrigger value="buttons">Botões</TabsTrigger>
               <TabsTrigger value="background">Fundo</TabsTrigger>
@@ -421,7 +421,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FontSelector
                   label="Tamanho"
                   value={activeSlide.title.style.fontSize || '3rem'}
@@ -450,7 +450,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FontSelector
                   label="Tamanho"
                   value={activeSlide.subtitle.style.fontSize || '1.5rem'}
@@ -547,7 +547,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                     <div className="space-y-3">
                       <Label className="text-base font-medium">Cores do Botão</Label>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <ColorPicker
                           label="Cor de Fundo"
                           value={activeSlide.buttons.primary.style?.backgroundColor || '#10b981'}
@@ -575,7 +575,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                       </div>
 
                       <Label className="text-base font-medium mt-4">Cores no Hover</Label>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <ColorPicker
                           label="Fundo (hover)"
                           value={activeSlide.buttons.primary.style?.hover?.backgroundColor || '#059669'}
@@ -649,7 +649,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                     <div className="space-y-3">
                       <Label className="text-base font-medium">Cores do Botão</Label>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <ColorPicker
                           label="Cor de Fundo"
                           value={activeSlide.buttons.secondary.style?.backgroundColor || 'transparent'}
@@ -693,7 +693,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                       </div>
 
                       <Label className="text-base font-medium mt-4">Cores no Hover</Label>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <ColorPicker
                           label="Fundo (hover)"
                           value={activeSlide.buttons.secondary.style?.hover?.backgroundColor || '#ffffff'}

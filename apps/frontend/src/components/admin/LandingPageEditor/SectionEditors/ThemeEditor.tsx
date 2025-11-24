@@ -70,7 +70,7 @@ export const ThemeEditor = ({ config, onChange }: ThemeEditorProps) => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="colors">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
               <TabsTrigger value="colors">Cores</TabsTrigger>
               <TabsTrigger value="typography">Tipografia</TabsTrigger>
               <TabsTrigger value="spacing">Espaçamento</TabsTrigger>
@@ -285,7 +285,7 @@ export const ThemeEditor = ({ config, onChange }: ThemeEditorProps) => {
               <div className="space-y-4">
                 <Label>Espaçamentos</Label>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm">XS</Label>
                     <p className="text-xs text-muted-foreground mb-2">
