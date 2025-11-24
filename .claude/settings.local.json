@@ -116,7 +116,8 @@
       "Bash(sshpass:*)",
       "Bash(openssl s_client:*)",
       "Bash(openssl:*)",
-      "Bash(git -C \"c:\\Projetos Cursor\\ferraco\" status --porcelain)"
+      "Bash(git -C \"c:\\Projetos Cursor\\ferraco\" status --porcelain)",
+      "Bash(npx shadcn@latest add switch --overwrite)"
     ],
     "deny": [],
     "ask": []
