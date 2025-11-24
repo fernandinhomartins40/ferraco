@@ -12,14 +12,34 @@ interface HeaderProps {
 const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Mapeamento de hrefs antigos (inglês) para novos (português) para compatibilidade
+  const HREF_COMPATIBILITY_MAP: Record<string, string> = {
+    '#hero': '#inicio',
+    '#about': '#sobre',
+    '#products': '#produtos',
+    '#contact': '#contato',
+    '#experience': '#experiencia',
+  };
+
+  // Função para corrigir hrefs antigos automaticamente
+  const normalizeHref = (href: string): string => {
+    return HREF_COMPATIBILITY_MAP[href] || href;
+  };
+
   // Fallback para valores padrão do conteúdo atual
-  const menuItems = config?.menu?.items || [
+  const rawMenuItems = config?.menu?.items || [
     { label: "Início", href: "#inicio" },
     { label: "Sobre", href: "#sobre" },
     { label: "Produtos", href: "#produtos" },
     { label: "Experiência", href: "#experiencia" },
     { label: "Contato", href: "#contato" },
   ];
+
+  // Normalizar todos os hrefs (corrige automaticamente se vieram em inglês do banco)
+  const menuItems = rawMenuItems.map(item => ({
+    ...item,
+    href: normalizeHref(item.href)
+  }));
 
   console.log('🎨 [Header] Component rendered with menu items:', menuItems);
 
