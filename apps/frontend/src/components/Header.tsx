@@ -23,6 +23,14 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
 
   console.log('🎨 [Header] Component rendered with menu items:', menuItems);
 
+  // TESTE: Alert para confirmar que o código está carregando
+  if (typeof window !== 'undefined' && !window.__headerLoaded) {
+    window.__headerLoaded = true;
+    console.log('✅ HEADER V2-DEBUG CARREGADO!');
+    console.log('✅ Se você está vendo esta mensagem, o JavaScript está funcionando.');
+    console.log('✅ Agora clique em um item do menu.');
+  }
+
   const logoSrc = config?.logo?.image?.url || logoFerraco;
   const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";
   const ctaText = config?.cta?.text || "Solicitar Orçamento";
@@ -71,8 +79,11 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-primary shadow-elegant">
+    <header className="sticky top-0 z-50 bg-primary shadow-elegant" data-header-version="v2-debug" style={{ border: '5px solid red' }}>
       <div className="container mx-auto px-4">
+        <div style={{ background: 'yellow', color: 'black', padding: '5px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
+          🔴 HEADER V2-DEBUG ATIVO - Se você vê esta barra amarela, está na versão correta
+        </div>
         <div className="flex items-center justify-between h-20 lg:h-24">
           {/* Logo */}
           <div className="flex-shrink-0">

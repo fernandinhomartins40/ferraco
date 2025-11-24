@@ -19,17 +19,31 @@ const Index = () => {
 
   // Carregar configuração do backend ao montar o componente
   useEffect(() => {
+    console.log('🚀 [Index] Iniciando carregamento da config...');
+
     const fetchConfig = async () => {
       try {
         setIsLoading(true);
+        console.log('🔄 [Index] Fazendo requisição para /landing-page/config...');
+
         const response = await api.get("/landing-page/config");
         const loadedConfig = response.data.data;
+
+        console.log("✅ [Index] Landing Page Config loaded from backend:", loadedConfig);
+        console.log("✅ [Index] Header config:", loadedConfig.header);
+        console.log("✅ [Index] Menu items:", loadedConfig.header?.menu?.items);
+
         setConfig(loadedConfig);
-        console.log("✅ Landing Page Config loaded from backend:", loadedConfig);
       } catch (error: any) {
-        console.error("❌ Error loading landing page config:", error);
+        console.error("❌ [Index] Error loading landing page config:", error);
+        console.error("❌ [Index] Error details:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
         setError(error.response?.data?.message || "Erro ao carregar configuração");
       } finally {
+        console.log('🏁 [Index] Carregamento finalizado. isLoading = false');
         setIsLoading(false);
       }
     };
@@ -42,11 +56,13 @@ const Index = () => {
 
   // Se config ainda está carregando, mostra loading
   if (isLoading) {
+    console.log('⏳ [Index] Renderizando tela de loading...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando...</p>
+          <p className="text-muted-foreground">Carregando configuração...</p>
+          <p className="text-xs text-muted-foreground mt-2">Se demorar muito, verifique se o backend está rodando</p>
         </div>
       </div>
     );
@@ -54,12 +70,16 @@ const Index = () => {
 
   // Se houve erro, mostrar mensagem
   if (error || !config) {
+    console.log('❌ [Index] Renderizando tela de erro. Error:', error, 'Config:', config);
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="text-destructive mb-4">❌</div>
+          <div className="text-destructive mb-4 text-6xl">❌</div>
           <h2 className="text-2xl font-bold mb-2">Erro ao carregar página</h2>
           <p className="text-muted-foreground mb-4">{error || "Configuração não encontrada"}</p>
+          <p className="text-xs text-muted-foreground mb-4">
+            Verifique se o backend está rodando em http://localhost:3000 (ou porta configurada)
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
@@ -70,6 +90,8 @@ const Index = () => {
       </div>
     );
   }
+
+  console.log('✅ [Index] Renderizando página completa com Header!');
 
   return (
     <div className="min-h-screen">
