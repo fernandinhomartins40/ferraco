@@ -129,10 +129,9 @@ All colors MUST be HSL.
     min-width: 44px;
   }
 
-  /* Override for Switch component - must maintain natural dimensions */
-  button[role="switch"],
-  button[data-state],
-  [role="switch"] {
+  /* Override SOMENTE para Switch component - ultra-específico para não afetar outros componentes Radix */
+  button[role="switch"][data-state][type="button"],
+  button[role="switch"][data-state] {
     min-height: 1.5rem !important;  /* h-6 = 24px */
     min-width: 2.75rem !important;  /* w-11 = 44px */
     height: 1.5rem !important;
