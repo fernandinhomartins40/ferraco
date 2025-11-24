@@ -155,21 +155,21 @@ const AdminReports = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="w-full flex flex-col gap-6">
+        {/* Header - Mobile Responsivo */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-3xl font-bold flex items-center gap-2">
-              <BarChart3 className="h-8 w-8" />
+            <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <BarChart3 className="h-6 w-6 md:h-8 md:w-8" />
               Relatórios e Análises
             </h2>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-sm md:text-base text-muted-foreground mt-2">
               Acompanhe o desempenho e métricas do seu CRM (dados reais)
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px] min-h-[44px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -190,87 +190,93 @@ const AdminReports = () => {
           </AlertDescription>
         </Alert>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* KPI Cards - Grid Responsivo */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total de Leads</p>
-                  <p className="text-3xl font-bold mt-1">{totalLeads}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total de Leads</p>
+                  <p className="text-2xl md:text-3xl font-bold mt-1">{totalLeads}</p>
                   <div className="flex items-center gap-1 mt-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-600">+{leadsThisMonth} este mês</span>
+                    <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                    <span className="text-xs md:text-sm text-green-600">+{leadsThisMonth} este mês</span>
                   </div>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-blue-600" />
+                <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                  <Users className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                  <p className="text-3xl font-bold mt-1">{conversionRate.toFixed(1)}%</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Taxa de Conversão</p>
+                  <p className="text-2xl md:text-3xl font-bold mt-1">{conversionRate.toFixed(1)}%</p>
                   <div className="flex items-center gap-1 mt-2">
-                    <Percent className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Meta: 25%</span>
+                    <Percent className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                    <span className="text-xs md:text-sm text-muted-foreground">Meta: 25%</span>
                   </div>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <Target className="h-6 w-6 text-green-600" />
+                <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                  <Target className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Tempo Médio</p>
-                  <p className="text-3xl font-bold mt-1">{avgResponseTime}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Tempo Médio</p>
+                  <p className="text-2xl md:text-3xl font-bold mt-1">{avgResponseTime}</p>
                   <div className="flex items-center gap-1 mt-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Resposta</span>
+                    <Clock className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                    <span className="text-xs md:text-sm text-muted-foreground">Resposta</span>
                   </div>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-amber-600" />
+                <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <Clock className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Esta Semana</p>
-                  <p className="text-3xl font-bold mt-1">{stats?.weekCount || 0}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Esta Semana</p>
+                  <p className="text-2xl md:text-3xl font-bold mt-1">{stats?.weekCount || 0}</p>
                   <div className="flex items-center gap-1 mt-2">
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Últimos 7 dias</span>
+                    <MessageSquare className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                    <span className="text-xs md:text-sm text-muted-foreground">Últimos 7 dias</span>
                   </div>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                  <MessageSquare className="h-6 w-6 text-purple-600" />
+                <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                  <MessageSquare className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Charts Tabs */}
+        {/* Charts Tabs - Mobile Responsivo */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="funnel">Funil de Vendas</TabsTrigger>
-            <TabsTrigger value="sources">Fontes de Leads</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-3 h-auto">
+            <TabsTrigger value="overview" className="text-xs md:text-sm min-h-[44px]">
+              Visão Geral
+            </TabsTrigger>
+            <TabsTrigger value="funnel" className="text-xs md:text-sm min-h-[44px]">
+              Funil
+            </TabsTrigger>
+            <TabsTrigger value="sources" className="text-xs md:text-sm min-h-[44px]">
+              Fontes
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -284,27 +290,29 @@ const AdminReports = () => {
                     {period === '7d' ? 'Últimos 7 dias' : period === '30d' ? 'Últimos 30 dias' : period === '90d' ? 'Últimos 90 dias' : 'Todo período'}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 md:p-6">
                   {leadsTimeline.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <AreaChart data={leadsTimeline}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Area
-                          type="monotone"
-                          dataKey="leads"
-                          stroke="#3b82f6"
-                          fill="#3b82f6"
-                          fillOpacity={0.3}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    <div className="w-full h-[250px] md:h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={leadsTimeline}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} />
+                          <Tooltip />
+                          <Area
+                            type="monotone"
+                            dataKey="leads"
+                            stroke="#3b82f6"
+                            fill="#3b82f6"
+                            fillOpacity={0.3}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
                   ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Nenhum dado disponível para o período</p>
+                    <div className="text-center py-8 md:py-12 text-muted-foreground">
+                      <BarChart3 className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-xs md:text-sm">Nenhum dado disponível para o período</p>
                     </div>
                   )}
                 </CardContent>
@@ -316,31 +324,33 @@ const AdminReports = () => {
                   <CardTitle>Leads por Origem</CardTitle>
                   <CardDescription>Distribuição por canal</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 md:p-6">
                   {leadsBySource.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={leadsBySource}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, value }) => `${name}: ${value}`}
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {leadsBySource.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <div className="w-full h-[250px] md:h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={leadsBySource}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, value }) => `${name}: ${value}`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {leadsBySource.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
                   ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Nenhum lead com origem definida</p>
+                    <div className="text-center py-8 md:py-12 text-muted-foreground">
+                      <Users className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-xs md:text-sm">Nenhum lead com origem definida</p>
                     </div>
                   )}
                 </CardContent>
@@ -355,25 +365,27 @@ const AdminReports = () => {
                 <CardTitle>Funil de Vendas</CardTitle>
                 <CardDescription>Distribuição de leads por status</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 md:p-6">
                 {leadsByStatus.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={leadsByStatus}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]}>
-                        {leadsByStatus.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="w-full h-[300px] md:h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={leadsByStatus}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]}>
+                          {leadsByStatus.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhum lead para exibir no funil</p>
+                  <div className="text-center py-8 md:py-12 text-muted-foreground">
+                    <Target className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs md:text-sm">Nenhum lead para exibir no funil</p>
                   </div>
                 )}
               </CardContent>
@@ -433,31 +445,37 @@ const AdminReports = () => {
             <CardTitle>Exportar Relatórios</CardTitle>
             <CardDescription>Baixe os dados em diferentes formatos</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleExport('PDF')}
                 disabled={exportReport.isPending}
+                className="min-h-[44px] flex-1 sm:flex-initial"
               >
-                <Download className="h-4 w-4 mr-2" />
-                PDF
+                <Download className="h-4 w-4 md:mr-2" />
+                <span className="hidden sm:inline ml-2">PDF</span>
+                <span className="sm:hidden ml-2">PDF</span>
               </Button>
               <Button
                 variant="outline"
                 onClick={() => handleExport('CSV')}
                 disabled={exportReport.isPending}
+                className="min-h-[44px] flex-1 sm:flex-initial"
               >
-                <Download className="h-4 w-4 mr-2" />
-                CSV
+                <Download className="h-4 w-4 md:mr-2" />
+                <span className="hidden sm:inline ml-2">CSV</span>
+                <span className="sm:hidden ml-2">CSV</span>
               </Button>
               <Button
                 variant="outline"
                 onClick={() => handleExport('EXCEL')}
                 disabled={exportReport.isPending}
+                className="min-h-[44px] flex-1 sm:flex-initial"
               >
-                <Download className="h-4 w-4 mr-2" />
-                Excel
+                <Download className="h-4 w-4 md:mr-2" />
+                <span className="hidden sm:inline ml-2">Excel</span>
+                <span className="sm:hidden ml-2">Excel</span>
               </Button>
             </div>
           </CardContent>
