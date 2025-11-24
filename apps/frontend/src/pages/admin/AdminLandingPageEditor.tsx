@@ -114,8 +114,8 @@ export const AdminLandingPageEditor = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
+      <div className="w-full flex flex-col gap-4 md:gap-6">
+        {/* Header - Mobile Responsivo */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Editor de Landing Page</h1>
@@ -124,26 +124,51 @@ export const AdminLandingPageEditor = () => {
             </p>
           </div>
 
-          {/* Desktop: Botões horizontais | Mobile: Grid 2x2 */}
-          <div className="flex flex-wrap gap-2 md:flex-nowrap">
-            <Button variant="outline" size="sm" onClick={handleReset} className="flex-1 md:flex-initial min-h-[44px]">
+          {/* Mobile: Grid 2x2 | Desktop: Flex horizontal */}
+          <div className="grid grid-cols-2 gap-2 md:flex md:flex-nowrap md:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="min-h-[44px]"
+              title="Restaurar configurações padrão"
+            >
               <RotateCcw className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Restaurar</span>
             </Button>
 
-            <Button variant="outline" size="sm" onClick={exportConfig} className="flex-1 md:flex-initial min-h-[44px]">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportConfig}
+              className="min-h-[44px]"
+              title="Exportar configurações"
+            >
               <Download className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Exportar</span>
             </Button>
 
-            <Button variant="outline" size="sm" onClick={handleImport} className="flex-1 md:flex-initial min-h-[44px]">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImport}
+              className="min-h-[44px]"
+              title="Importar configurações"
+            >
               <Upload className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Importar</span>
             </Button>
 
-            <Button onClick={save} disabled={!isDirty || isSaving} size="sm" className="flex-1 md:flex-initial min-h-[44px]">
+            <Button
+              onClick={save}
+              disabled={!isDirty || isSaving}
+              size="sm"
+              className="min-h-[44px]"
+              title="Salvar alterações"
+            >
               <Save className="h-4 w-4 mr-2" />
-              {isSaving ? 'Salvando...' : isDirty ? 'Salvar *' : 'Salvo'}
+              <span className="hidden sm:inline">{isSaving ? 'Salvando...' : isDirty ? 'Salvar *' : 'Salvo'}</span>
+              <span className="sm:hidden">{isSaving ? '...' : isDirty ? '*' : '✓'}</span>
             </Button>
           </div>
         </div>
@@ -159,15 +184,15 @@ export const AdminLandingPageEditor = () => {
         )}
 
         {/* Main Layout */}
-        <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:gap-6">
           {/* Seções */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold mb-2">Seções</h2>
+                  <h2 className="text-base md:text-lg font-semibold mb-3">Seções</h2>
                   {/* Mobile: Scroll horizontal | Desktop: Grid 4 colunas */}
-                  <div className="flex overflow-x-auto gap-2 md:grid md:grid-cols-4 scrollbar-hide pb-2 md:pb-0">
+                  <div className="flex overflow-x-auto gap-2 md:grid md:grid-cols-4 scrollbar-hide pb-2 md:pb-0 -mx-1 px-1">
                     {sections.map((section) => {
                       const Icon = section.icon;
                       return (
@@ -175,7 +200,7 @@ export const AdminLandingPageEditor = () => {
                           key={section.key}
                           variant={currentSection === section.key ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start shrink-0 min-h-[44px]"
+                          className="justify-start shrink-0 min-h-[44px] whitespace-nowrap"
                           onClick={() => setCurrentSection(section.key)}
                         >
                           <Icon className="h-4 w-4 mr-2" />
@@ -280,13 +305,13 @@ export const AdminLandingPageEditor = () => {
 
           {/* Preview */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="space-y-4">
                 {/* Preview Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <h2 className="text-lg font-semibold">Preview</h2>
+                  <h2 className="text-base md:text-lg font-semibold">Preview</h2>
 
-                  <div className="flex gap-2 justify-between sm:justify-start">
+                  <div className="flex gap-2 justify-between sm:justify-start flex-wrap">
                     <div className="flex gap-2">
                       <Button
                         variant={previewMode === 'desktop' ? 'default' : 'outline'}
@@ -335,7 +360,7 @@ export const AdminLandingPageEditor = () => {
 
                 {/* Preview Content */}
                 {showPreview ? (
-                  <div className="w-full border rounded-lg overflow-auto bg-background h-[400px] md:h-[600px]">
+                  <div className="w-full border rounded-lg overflow-auto bg-background h-[350px] sm:h-[450px] md:h-[600px]">
                     <LandingPagePreview
                       config={config}
                       currentSection={currentSection}
@@ -343,36 +368,40 @@ export const AdminLandingPageEditor = () => {
                     />
                   </div>
                 ) : (
-                  <div className="h-[400px] md:h-[600px] bg-muted rounded-lg flex items-center justify-center">
-                    <p className="text-muted-foreground">Preview oculto</p>
+                  <div className="h-[350px] sm:h-[450px] md:h-[600px] bg-muted rounded-lg flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">Preview oculto</p>
                   </div>
                 )}
 
                 {/* Preview Info */}
                 <div className="text-xs text-muted-foreground text-center">
-                  Modo: {previewMode} • Última modificação:{' '}
-                  {new Date(config.lastModified).toLocaleString('pt-BR')}
+                  <span className="hidden sm:inline">Modo: {previewMode} • Última modificação: {new Date(config.lastModified).toLocaleString('pt-BR')}</span>
+                  <span className="sm:hidden">{previewMode} • {new Date(config.lastModified).toLocaleDateString('pt-BR')}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Keyboard Shortcuts Help */}
-        <Card>
+        {/* Keyboard Shortcuts Help - Responsivo */}
+        <Card className="hidden md:block">
           <CardContent className="p-4">
-            <div className="flex gap-6 text-xs text-muted-foreground">
-              <div>
-                <kbd className="px-2 py-1 bg-muted rounded">Ctrl+S</kbd> Salvar
+            <div className="flex flex-wrap gap-4 md:gap-6 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-muted rounded text-[10px] md:text-xs">Ctrl+S</kbd>
+                <span>Salvar</span>
               </div>
-              <div>
-                <kbd className="px-2 py-1 bg-muted rounded">Ctrl+E</kbd> Exportar
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-muted rounded text-[10px] md:text-xs">Ctrl+E</kbd>
+                <span>Exportar</span>
               </div>
-              <div>
-                <kbd className="px-2 py-1 bg-muted rounded">Ctrl+P</kbd> Toggle Preview
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-muted rounded text-[10px] md:text-xs">Ctrl+P</kbd>
+                <span>Preview</span>
               </div>
-              <div>
-                <kbd className="px-2 py-1 bg-muted rounded">Ctrl+Shift+R</kbd> Restaurar
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-muted rounded text-[10px] md:text-xs">Ctrl+Shift+R</kbd>
+                <span>Restaurar</span>
               </div>
             </div>
           </CardContent>
