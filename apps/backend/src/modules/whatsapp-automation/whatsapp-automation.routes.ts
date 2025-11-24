@@ -9,26 +9,26 @@ const router = Router();
 // All routes require authentication
 // ============================================================================
 
-// Statistics
+// Statistics (rotas específicas PRIMEIRO)
 router.get('/stats', authenticate, whatsappAutomationController.getStats);
 router.get('/anti-spam-stats', authenticate, whatsappAutomationController.getAntiSpamStats);
 
-// Emergency controls
+// Emergency controls (rotas específicas PRIMEIRO)
 router.post('/reset-anti-spam', authenticate, whatsappAutomationController.resetAntiSpam);
 
-// Failed automations
+// Failed automations (rotas específicas PRIMEIRO)
 router.get('/failed', authenticate, whatsappAutomationController.findAllFailed);
 router.post('/retry-all-failed', authenticate, whatsappAutomationController.retryAllFailed);
 
-// CRUD Operations
+// By Lead (rotas específicas PRIMEIRO)
+router.get('/lead/:leadId', authenticate, whatsappAutomationController.findByLeadId);
+
+// Retry (ANTES das rotas genéricas com :id)
+router.post('/:id/retry', authenticate, whatsappAutomationController.retry);
+
+// CRUD Operations (rotas genéricas POR ÚLTIMO)
 router.post('/', authenticate, whatsappAutomationController.create);
 router.get('/', authenticate, whatsappAutomationController.findAll);
 router.get('/:id', authenticate, whatsappAutomationController.findById);
-
-// Retry
-router.post('/:id/retry', authenticate, whatsappAutomationController.retry);
-
-// By Lead
-router.get('/lead/:leadId', authenticate, whatsappAutomationController.findByLeadId);
 
 export default router;

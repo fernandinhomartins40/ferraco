@@ -181,13 +181,26 @@ export class WhatsAppAutomationController {
    */
   retry = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      logger.info(`🔄 Recebido request de retry para automação`, {
+        params: req.params,
+        body: req.body,
+        method: req.method,
+        url: req.url
+      });
+
       const { id } = AutomationIdParamSchema.parse(req.params);
-      const { resetMessages } = RetryAutomationSchema.parse(req.body || {});
+      const bodyData = req.body || {};
+      const { resetMessages = false } = RetryAutomationSchema.parse(bodyData);
+
+      logger.info(`✅ Validação OK - processando retry`, { id, resetMessages });
 
       await whatsappAutomationService.retryAutomation(id, resetMessages);
 
+      logger.info(`✅ Retry completado para automação ${id}`);
       successResponse(res, { id }, 'Automação reenviada para a fila');
     } catch (error) {
+      logger.error(`❌ Erro no retry:`, error);
+
       if (error instanceof z.ZodError) {
         badRequestResponse(res, 'Erro de validação', error.errors);
         return;
