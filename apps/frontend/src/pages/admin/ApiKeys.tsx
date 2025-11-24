@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -211,16 +211,18 @@ const ApiKeys = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3">
-          <Button onClick={() => setShowCreateModal(true)}>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Criar API Key
           </Button>
-          <Button variant="outline" asChild>
-            <a href="/api-docs" target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Documentação Swagger
-            </a>
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => window.open(`${window.location.protocol}//${window.location.host}/api-docs`, '_blank')}
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Documentação Swagger
           </Button>
         </div>
 
@@ -252,22 +254,23 @@ const ApiKeys = () => {
             {apiKeys.map((apiKey) => (
               <Card key={apiKey.id}>
                 <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>{apiKey.name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-2">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                    <div className="flex-1">
+                      <CardTitle className="break-words">{apiKey.name}</CardTitle>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Badge variant={apiKey.status === 'ACTIVE' ? 'default' : 'destructive'}>
                           {apiKey.status}
                         </Badge>
                         <Badge variant="outline">{apiKey.type}</Badge>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 sm:shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => confirmRotate(apiKey.id)}
                         title="Rotacionar chave"
+                        className="shrink-0"
                       >
                         <RotateCw className="w-4 h-4" />
                       </Button>
@@ -277,6 +280,7 @@ const ApiKeys = () => {
                         onClick={() => confirmRevoke(apiKey.id)}
                         title="Revogar"
                         disabled={apiKey.status === 'REVOKED'}
+                        className="shrink-0"
                       >
                         <Key className="w-4 h-4" />
                       </Button>
@@ -285,6 +289,7 @@ const ApiKeys = () => {
                         size="icon"
                         onClick={() => confirmDelete(apiKey.id)}
                         title="Deletar"
+                        className="shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -323,7 +328,7 @@ const ApiKeys = () => {
                   </div>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
                     <div>
                       <p className="text-sm text-muted-foreground">Rate Limit</p>
                       <p className="font-medium">{apiKey.rateLimitPerHour}/hora</p>
@@ -334,7 +339,7 @@ const ApiKeys = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Último Uso</p>
-                      <p className="font-medium text-sm">
+                      <p className="font-medium text-sm break-words">
                         {apiKey.lastUsedAt ? format(new Date(apiKey.lastUsedAt), 'dd/MM/yyyy HH:mm') : 'Nunca'}
                       </p>
                     </div>
@@ -351,7 +356,7 @@ const ApiKeys = () => {
 
         {/* Modal: Create API Key */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
             <DialogHeader>
               <DialogTitle>Criar Nova API Key</DialogTitle>
               <DialogDescription>
@@ -380,18 +385,18 @@ const ApiKeys = () => {
                         type="checkbox"
                         checked={formData.scopes.includes(option.value)}
                         onChange={() => toggleScope(option.value)}
-                        className="mt-1"
+                        className="mt-1 shrink-0"
                       />
-                      <div>
-                        <div className="font-medium text-sm">{option.label}</div>
-                        <div className="text-xs text-muted-foreground">{option.description}</div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm break-words">{option.label}</div>
+                        <div className="text-xs text-muted-foreground break-words">{option.description}</div>
                       </div>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="rateHour">Rate Limit (por hora)</Label>
                   <Input
@@ -415,13 +420,14 @@ const ApiKeys = () => {
               </div>
             </div>
 
-            <DialogFooter className="mt-6">
-              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+            <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setShowCreateModal(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
               <Button
                 onClick={handleCreateApiKey}
                 disabled={!formData.name || formData.scopes.length === 0}
+                className="w-full sm:w-auto"
               >
                 Criar API Key
               </Button>
@@ -431,7 +437,7 @@ const ApiKeys = () => {
 
         {/* Modal: New API Key Created */}
         <Dialog open={!!newKeyData} onOpenChange={(open) => !open && setNewKeyData(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
             <DialogHeader>
               <DialogTitle className="text-green-600">✅ API Key Criada com Sucesso!</DialogTitle>
               <DialogDescription>
@@ -440,7 +446,7 @@ const ApiKeys = () => {
             </DialogHeader>
 
             <div className="space-y-4 overflow-x-hidden">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
                 <p className="text-sm font-medium text-yellow-800 mb-1">⚠️ IMPORTANTE: Salve estas credenciais agora!</p>
                 <p className="text-xs text-yellow-700">
                   O secret não será mostrado novamente. Guarde em local seguro.
@@ -451,14 +457,14 @@ const ApiKeys = () => {
                 <>
                   <div>
                     <Label>API Key (Público)</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <code className="flex-1 px-3 py-2 bg-muted rounded-md text-sm font-mono break-all overflow-hidden">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-1">
+                      <code className="flex-1 px-3 py-2 bg-muted rounded-md text-xs sm:text-sm font-mono break-all overflow-auto max-w-full">
                         {newKeyData.key}
                       </code>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="shrink-0"
+                        className="shrink-0 self-end sm:self-auto"
                         onClick={() => copyToClipboard(newKeyData.key)}
                       >
                         <Copy className="w-4 h-4" />
@@ -469,14 +475,14 @@ const ApiKeys = () => {
                   {newKeyData.secret && (
                     <div>
                       <Label>Secret (Privado)</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <code className="flex-1 px-3 py-2 bg-red-50 rounded-md border border-red-200 text-sm font-mono break-all overflow-hidden">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-1">
+                        <code className="flex-1 px-3 py-2 bg-red-50 rounded-md border border-red-200 text-xs sm:text-sm font-mono break-all overflow-auto max-w-full">
                           {newKeyData.secret}
                         </code>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="shrink-0"
+                          className="shrink-0 self-end sm:self-auto"
                           onClick={() => copyToClipboard(newKeyData.secret!)}
                         >
                           <Copy className="w-4 h-4" />
@@ -485,10 +491,10 @@ const ApiKeys = () => {
                     </div>
                   )}
 
-                  <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="bg-blue-50 rounded-lg p-3 sm:p-4">
                     <p className="text-sm font-medium text-blue-800 mb-2">📚 Como usar:</p>
-                    <div className="bg-white p-3 rounded border overflow-x-auto">
-                      <pre className="text-xs whitespace-pre-wrap break-all">
+                    <div className="bg-white p-2 sm:p-3 rounded border overflow-x-auto">
+                      <pre className="text-[10px] sm:text-xs whitespace-pre-wrap break-all">
 {`curl http://seu-site.com/api/v1/external/leads \\
   -H "X-API-Key: ${newKeyData.key}" \\
   -H "X-API-Secret: ${newKeyData.secret || 'sk_live_...'}"
