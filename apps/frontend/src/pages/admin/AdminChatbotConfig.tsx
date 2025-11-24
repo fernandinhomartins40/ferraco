@@ -474,32 +474,32 @@ export const AdminChatbotConfig = () => {
           </CardHeader>
           <CardContent>
             <Progress value={progress} className="h-3" />
-            <div className="grid grid-cols-5 gap-2 mt-4">
-              <div className="text-center">
+            <div className="flex overflow-x-auto gap-2 mt-4 scrollbar-hide">
+              <div className="text-center shrink-0 min-w-[80px]">
                 <div className={`text-xs ${behavior.name && behavior.greeting ? 'text-green-600 font-medium' : 'text-muted-foreground'}`}>
                   {behavior.name && behavior.greeting ? <CheckCircle className="h-4 w-4 mx-auto mb-1" /> : <AlertCircle className="h-4 w-4 mx-auto mb-1" />}
                   Comportamento
                 </div>
               </div>
-              <div className="text-center">
+              <div className="text-center shrink-0 min-w-[80px]">
                 <div className={`text-xs ${companyData.name && companyData.description ? 'text-green-600 font-medium' : 'text-muted-foreground'}`}>
                   {companyData.name && companyData.description ? <CheckCircle className="h-4 w-4 mx-auto mb-1" /> : <AlertCircle className="h-4 w-4 mx-auto mb-1" />}
                   Empresa
                 </div>
               </div>
-              <div className="text-center">
+              <div className="text-center shrink-0 min-w-[80px]">
                 <div className={`text-xs ${products.length > 0 ? 'text-green-600 font-medium' : 'text-muted-foreground'}`}>
                   {products.length > 0 ? <CheckCircle className="h-4 w-4 mx-auto mb-1" /> : <AlertCircle className="h-4 w-4 mx-auto mb-1" />}
                   Produtos
                 </div>
               </div>
-              <div className="text-center">
+              <div className="text-center shrink-0 min-w-[80px]">
                 <div className={`text-xs ${faqs.length > 0 ? 'text-green-600 font-medium' : 'text-muted-foreground'}`}>
                   {faqs.length > 0 ? <CheckCircle className="h-4 w-4 mx-auto mb-1" /> : <AlertCircle className="h-4 w-4 mx-auto mb-1" />}
                   FAQ
                 </div>
               </div>
-              <div className="text-center">
+              <div className="text-center shrink-0 min-w-[80px]">
                 <div className="text-xs text-green-600 font-medium">
                   <CheckCircle className="h-4 w-4 mx-auto mb-1" />
                   Links
@@ -673,7 +673,7 @@ export const AdminChatbotConfig = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="company-name">Nome da Empresa *</Label>
                     <Input
@@ -706,7 +706,7 @@ export const AdminChatbotConfig = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="company-phone">Telefone</Label>
                     <Input
@@ -1359,7 +1359,7 @@ export const AdminChatbotConfig = () => {
                           </Button>
 
                           <div className="flex-1 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label>Nome da Campanha *</Label>
                                 <Input
