@@ -112,7 +112,7 @@ export const ColorPicker = ({
           value={localValue}
           onChange={(e) => handleChange(e.target.value)}
           placeholder="#000000"
-          className="flex-1 font-mono"
+          className="flex-1 font-mono min-w-0"
         />
       </div>
     </div>

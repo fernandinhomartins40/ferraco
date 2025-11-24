@@ -76,12 +76,25 @@ const secondaryNavItems: NavItem[] = [
     icon: Send,
   },
   {
+    href: '/admin/landing-page',
+    label: 'Landing Page',
+    icon: Palette,
+  },
+  {
+    href: '/admin/chatbot-config',
+    label: 'Chatbot',
+    icon: Bot,
+  },
+  {
+    href: '/admin/recurrence/dashboard',
+    label: 'Recorrência',
+    icon: Repeat,
+  },
+  {
     href: '/admin/api-keys',
     label: 'API Externa',
     icon: KeyRound,
   },
-  // Landing Page, Chatbot Config e Recorrência: Disponíveis apenas em desktop/tablet (via sidebar)
-  // Páginas removidas do mobile devido à complexidade de interface que não se adapta bem a telas pequenas
 ];
 
 export function BottomNavigation() {

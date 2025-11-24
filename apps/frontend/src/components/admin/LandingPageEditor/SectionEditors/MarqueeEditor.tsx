@@ -54,14 +54,14 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
   ];
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="space-y-6">
       {/* Configurações Gerais */}
-      <Card className="w-full">
+      <Card>
         <CardHeader>
           <CardTitle>Configurações Gerais</CardTitle>
           <CardDescription>Configure o marquee animado</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 w-full max-w-full overflow-hidden">
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>Marquee Ativo</Label>
             <Switch
@@ -112,7 +112,7 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
       </Card>
 
       {/* Lista de Itens */}
-      <Card className="w-full">
+      <Card>
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -125,7 +125,7 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="w-full max-w-full overflow-hidden">
+        <CardContent className="space-y-4">
           {config.items.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <p className="mb-4">Nenhum item adicionado ainda</p>
@@ -135,18 +135,18 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
               </Button>
             </div>
           ) : (
-            <div className="space-y-4 w-full max-w-full">
+            <div className="space-y-4">
               {config.items.map((item, index) => (
-                <Card key={item.id} className="relative w-full max-w-full">
-                  <CardContent className="p-3 sm:p-4 w-full max-w-full overflow-hidden">
-                    <div className="flex items-start gap-2 sm:gap-3 w-full">
+                <Card key={item.id} className="relative">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
                       {/* Drag Handle - Hidden on mobile */}
                       <div className="pt-2 cursor-move text-muted-foreground hidden sm:block">
                         <GripVertical className="h-5 w-5" />
                       </div>
 
                       {/* Form Fields */}
-                      <div className="flex-1 space-y-3 min-w-0 w-full">
+                      <div className="flex-1 space-y-3 min-w-0">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-2">
                             <Label className="text-sm">Ícone</Label>
@@ -169,16 +169,15 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
                               value={item.text}
                               onChange={(e) => updateItem(index, { text: e.target.value })}
                               placeholder="Ex: Qualidade Garantida"
-                              className="w-full"
                             />
                           </div>
                         </div>
 
                         {/* Preview */}
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md overflow-hidden">
+                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
                           <span className="text-xs text-muted-foreground shrink-0">Preview:</span>
                           <div
-                            className="flex items-center gap-2 min-w-0 truncate"
+                            className="flex items-center gap-2 min-w-0"
                             style={{ color: config.iconColor }}
                           >
                             <span className="font-medium shrink-0">{item.icon}</span>
@@ -211,14 +210,14 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
       </Card>
 
       {/* Preview Geral */}
-      <Card className="w-full">
+      <Card>
         <CardHeader>
           <CardTitle>Preview do Marquee</CardTitle>
           <CardDescription className="hidden sm:block">Visualização de como o marquee aparecerá</CardDescription>
         </CardHeader>
-        <CardContent className="w-full max-w-full overflow-hidden">
+        <CardContent>
           <div
-            className="p-3 sm:p-4 rounded-md overflow-hidden w-full"
+            className="p-3 sm:p-4 rounded-md overflow-hidden"
             style={{
               backgroundColor: config.backgroundColor || '#f3f4f6',
             }}
