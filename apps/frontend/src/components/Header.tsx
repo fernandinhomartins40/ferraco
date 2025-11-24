@@ -25,6 +25,15 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
   const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";
   const ctaText = config?.cta?.text || "Solicitar Orçamento";
 
+  // Função de scroll igual ao Footer (que funciona!)
+  const scrollToSection = (href: string) => {
+    const element = document.querySelector(href);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+      setIsMenuOpen(false); // Fechar menu mobile
+    }
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-primary shadow-elegant">
       <div className="container mx-auto px-4">
@@ -41,13 +50,13 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
           {/* Desktop Menu */}
           <nav className="hidden md:flex items-center space-x-8">
             {menuItems.map((item) => (
-              <a
+              <button
                 key={item.label}
-                href={item.href}
+                onClick={() => scrollToSection(item.href)}
                 className="text-primary-foreground hover:text-secondary font-medium transition-smooth relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-secondary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
               >
                 {item.label}
-              </a>
+              </button>
             ))}
           </nav>
 
@@ -78,14 +87,13 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
           <div className="md:hidden py-4 border-t border-primary-foreground/20">
             <nav className="flex flex-col space-y-4">
               {menuItems.map((item) => (
-                <a
+                <button
                   key={item.label}
-                  href={item.href}
+                  onClick={() => scrollToSection(item.href)}
                   className="text-primary-foreground hover:text-secondary font-medium text-left transition-smooth"
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   {item.label}
-                </a>
+                </button>
               ))}
               <Button
                 onClick={() => {
