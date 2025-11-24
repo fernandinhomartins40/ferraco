@@ -77,10 +77,15 @@ services:
 
 volumes:
   postgres-data:
+    name: ferraco-postgres-data
   ferraco-uploads:
+    name: ferraco-uploads
   ferraco-sessions:
+    name: ferraco-sessions
   ferraco-logs:
+    name: ferraco-logs
   ferraco-data:
+    name: ferraco-data
 
 networks:
   ferraco-network:

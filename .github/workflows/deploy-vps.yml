@@ -273,7 +273,81 @@ jobs:
             echo "⚠️  DATABASE_URL não definido - aplicação usará .env na VPS"
           fi
 
+          # VERIFICAÇÃO DE VOLUMES CRÍTICOS (Solução 2 - Proteção contra perda de dados)
+          echo ""
+          echo "========================================="
+          echo "🔒 VERIFICAÇÃO DE VOLUMES CRÍTICOS"
+          echo "========================================="
+
+          REQUIRED_VOLUMES="ferraco-postgres-data ferraco-uploads ferraco-sessions"
+          VOLUMES_OK=true
+
+          for VOLUME in $REQUIRED_VOLUMES; do
+            if docker volume inspect $VOLUME >/dev/null 2>&1; then
+              SIZE=$(docker run --rm -v ${VOLUME}:/data:ro alpine du -sh /data 2>/dev/null | cut -f1 || echo "N/A")
+              echo "✅ Volume $VOLUME existe (tamanho: $SIZE)"
+            else
+              echo "⚠️  Volume $VOLUME NÃO existe - será criado automaticamente"
+              # Não é erro crítico, Docker Compose criará o volume
+            fi
+          done
+
+          echo "✅ Verificação de volumes concluída"
+
+          # BACKUP AUTOMÁTICO DE VOLUMES (Solução 3 - Proteção contra perda de dados)
+          echo ""
+          echo "========================================="
+          echo "💾 BACKUP AUTOMÁTICO DE VOLUMES"
+          echo "========================================="
+
+          BACKUP_DIR="/root/ferraco-volumes-backup-$(date +%Y%m%d-%H%M%S)"
+          mkdir -p $BACKUP_DIR
+
+          # Backup de uploads (imagens)
+          if docker volume inspect ferraco-uploads >/dev/null 2>&1; then
+            echo "📦 Backup de ferraco-uploads..."
+            docker run --rm \
+              -v ferraco-uploads:/data:ro \
+              -v $BACKUP_DIR:/backup \
+              alpine tar -czf /backup/uploads.tar.gz -C /data . 2>/dev/null || echo "  ⚠️  Volume vazio ou erro no backup"
+
+            if [ -f "$BACKUP_DIR/uploads.tar.gz" ]; then
+              UPLOAD_SIZE=$(du -sh $BACKUP_DIR/uploads.tar.gz | cut -f1)
+              echo "  ✅ Backup criado: uploads.tar.gz ($UPLOAD_SIZE)"
+            fi
+          else
+            echo "  ℹ️  Volume ferraco-uploads não existe, pulando backup"
+          fi
+
+          # Backup de sessions (WhatsApp)
+          if docker volume inspect ferraco-sessions >/dev/null 2>&1; then
+            echo "📦 Backup de ferraco-sessions..."
+            docker run --rm \
+              -v ferraco-sessions:/data:ro \
+              -v $BACKUP_DIR:/backup \
+              alpine tar -czf /backup/sessions.tar.gz -C /data . 2>/dev/null || echo "  ⚠️  Volume vazio ou erro no backup"
+
+            if [ -f "$BACKUP_DIR/sessions.tar.gz" ]; then
+              SESSION_SIZE=$(du -sh $BACKUP_DIR/sessions.tar.gz | cut -f1)
+              echo "  ✅ Backup criado: sessions.tar.gz ($SESSION_SIZE)"
+            fi
+          else
+            echo "  ℹ️  Volume ferraco-sessions não existe, pulando backup"
+          fi
+
+          echo ""
+          echo "✅ Backup automático concluído em: $BACKUP_DIR"
+
+          # Manter apenas últimos 5 backups
+          echo "🧹 Limpando backups antigos (mantendo últimos 5)..."
+          ls -dt /root/ferraco-volumes-backup-* 2>/dev/null | tail -n +6 | xargs -r rm -rf
+          echo "✅ Limpeza de backups concluída"
+
           # Build da imagem
+          echo ""
+          echo "========================================="
+          echo "🏗️  BUILDING IMAGEM DOCKER"
+          echo "========================================="
           echo "🏗️  Building imagem Docker (isso pode levar alguns minutos)..."
           if [ -n "${{ secrets.DATABASE_URL }}" ]; then
             DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \

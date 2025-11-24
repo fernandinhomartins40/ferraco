@@ -121,13 +121,13 @@ echo "========================================="
 echo "📦 ETAPA 3: Criar named volumes"
 echo "========================================="
 
-# Criar named volumes se não existirem
-for VOLUME in ferraco-uploads ferraco-sessions ferraco-logs ferraco-data; do
-  if ! docker volume inspect ferraco_${VOLUME} >/dev/null 2>&1; then
-    echo "  Criando volume: ferraco_${VOLUME}"
-    docker volume create ferraco_${VOLUME}
+# Criar named volumes se não existirem (SEM prefixo duplicado)
+for VOLUME in ferraco-postgres-data ferraco-uploads ferraco-sessions ferraco-logs ferraco-data; do
+  if ! docker volume inspect ${VOLUME} >/dev/null 2>&1; then
+    echo "  Criando volume: ${VOLUME}"
+    docker volume create ${VOLUME}
   else
-    echo "  ✓ Volume já existe: ferraco_${VOLUME}"
+    echo "  ✓ Volume já existe: ${VOLUME}"
   fi
 done
 
@@ -147,9 +147,9 @@ copy_to_volume() {
   if [ -d "$SOURCE_DIR" ] && [ "$(ls -A $SOURCE_DIR 2>/dev/null)" ]; then
     echo "  Copiando $SOURCE_DIR → $VOLUME_NAME..."
 
-    # Criar container temporário para copiar dados
+    # Criar container temporário para copiar dados (SEM prefixo duplicado)
     docker run --rm \
-      -v "ferraco_${VOLUME_NAME}:${CONTAINER_PATH}" \
+      -v "${VOLUME_NAME}:${CONTAINER_PATH}" \
       -v "$(pwd)/${SOURCE_DIR}:/source:ro" \
       alpine sh -c "cp -a /source/. ${CONTAINER_PATH}/ && chmod -R 777 ${CONTAINER_PATH}"
 
@@ -173,7 +173,7 @@ echo "🧹 ETAPA 5: Limpar locks do Chromium"
 echo "========================================="
 
 echo "🔧 Removendo arquivos de lock do Chromium (SingletonLock, SingletonSocket, SingletonCookie)..."
-docker run --rm -v "ferraco_ferraco-sessions:/data" alpine sh -c "
+docker run --rm -v "ferraco-sessions:/data" alpine sh -c "
   find /data -name 'SingletonLock' -delete 2>/dev/null || true
   find /data -name 'SingletonSocket' -delete 2>/dev/null || true
   find /data -name 'SingletonCookie' -delete 2>/dev/null || true
@@ -189,8 +189,8 @@ echo "========================================="
 echo "📊 Conteúdo dos named volumes:"
 for VOLUME in ferraco-uploads ferraco-sessions ferraco-logs ferraco-data; do
   echo ""
-  echo "  Volume: ferraco_${VOLUME}"
-  docker run --rm -v "ferraco_${VOLUME}:/data:ro" alpine sh -c "ls -lah /data | head -10"
+  echo "  Volume: ${VOLUME}"
+  docker run --rm -v "${VOLUME}:/data:ro" alpine sh -c "ls -lah /data | head -10"
 done
 
 echo ""
@@ -201,10 +201,11 @@ echo ""
 echo "📋 Próximos passos:"
 echo ""
 echo "1. Os dados foram copiados para named volumes Docker:"
-echo "   - ferraco_ferraco-uploads"
-echo "   - ferraco_ferraco-sessions"
-echo "   - ferraco_ferraco-logs"
-echo "   - ferraco_ferraco-data"
+echo "   - ferraco-uploads"
+echo "   - ferraco-sessions"
+echo "   - ferraco-logs"
+echo "   - ferraco-data"
+echo "   - ferraco-postgres-data"
 echo ""
 echo "2. Backup completo salvo em:"
 echo "   $BACKUP_DIR"
