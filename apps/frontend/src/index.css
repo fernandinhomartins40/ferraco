@@ -124,9 +124,19 @@ All colors MUST be HSL.
   }
 
   /* Ensure touch targets are at least 44px (Apple guidelines) */
-  button, [role="button"], [type="button"], [type="submit"] {
+  /* Exclude Switch component from this rule */
+  button:not([data-radix-collection-item]),
+  [role="button"]:not([data-radix-collection-item]),
+  [type="button"]:not([data-radix-collection-item]),
+  [type="submit"]:not([data-radix-collection-item]) {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Switch component should maintain its natural dimensions */
+  button[role="switch"] {
+    min-height: auto;
+    min-width: auto;
   }
 
   /* Smooth scrolling on mobile */
