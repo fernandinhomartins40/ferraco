@@ -241,11 +241,11 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
       {/* Configurações Gerais */}
       <Card>
         <CardHeader>
-          <CardTitle>Configurações Gerais do Hero</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Configurações Gerais do Hero</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Seção Ativa</Label>
+          <div className="flex items-center justify-between gap-4">
+            <Label className="text-sm sm:text-base">Seção Ativa</Label>
             <Switch
               checked={config.enabled}
               onCheckedChange={(enabled) => onChange({ enabled })}
@@ -254,37 +254,40 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
 
           <Separator />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Auto-play</Label>
-              <Switch
-                checked={config.autoPlay}
-                onCheckedChange={(autoPlay) => onChange({ autoPlay })}
-              />
+              <div className="flex items-center justify-between sm:justify-start sm:gap-3">
+                <Label className="text-sm sm:text-base">Auto-play</Label>
+                <Switch
+                  checked={config.autoPlay}
+                  onCheckedChange={(autoPlay) => onChange({ autoPlay })}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Intervalo (segundos)</Label>
+              <Label className="text-sm sm:text-base">Intervalo (segundos)</Label>
               <Input
                 type="number"
                 value={config.autoPlayInterval}
                 onChange={(e) => onChange({ autoPlayInterval: Number(e.target.value) })}
                 disabled={!config.autoPlay}
+                className="h-10 text-sm sm:text-base"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center justify-between">
-              <Label>Mostrar Setas</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <Label className="text-sm sm:text-base">Mostrar Setas</Label>
               <Switch
                 checked={config.showNavigation}
                 onCheckedChange={(showNavigation) => onChange({ showNavigation })}
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label>Mostrar Indicadores</Label>
+            <div className="flex items-center justify-between gap-4">
+              <Label className="text-sm sm:text-base">Mostrar Indicadores</Label>
               <Switch
                 checked={config.showIndicators}
                 onCheckedChange={(showIndicators) => onChange({ showIndicators })}
@@ -295,9 +298,9 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
           <Separator />
 
           <div className="space-y-2">
-            <Label>Layout</Label>
+            <Label className="text-sm sm:text-base">Layout</Label>
             <Select value={config.layout} onValueChange={(layout: any) => onChange({ layout })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 text-sm sm:text-base"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="centered">Centralizado</SelectItem>
                 <SelectItem value="split">Dividido</SelectItem>
@@ -307,9 +310,9 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label>Altura</Label>
+            <Label className="text-sm sm:text-base">Altura</Label>
             <Select value={config.height} onValueChange={(height) => onChange({ height })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 text-sm sm:text-base"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="auto">Automático</SelectItem>
                 <SelectItem value="screen">Altura da Tela</SelectItem>
@@ -324,12 +327,12 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
       {/* Gerenciamento de Slides */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Slides ({config.slides.length})</CardTitle>
-              <CardDescription>Gerencie os slides do Hero</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Slides ({config.slides.length})</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Gerencie os slides do Hero</CardDescription>
             </div>
-            <Button onClick={addSlide} size="sm">
+            <Button onClick={addSlide} size="sm" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Novo Slide
             </Button>
@@ -340,45 +343,47 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
             {config.slides.map((slide, index) => (
               <div
                 key={slide.id}
-                className={`flex items-center gap-2 p-3 rounded-lg border ${
+                className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 rounded-lg border ${
                   index === activeSlideIndex ? 'border-primary bg-primary/5' : 'border-border'
                 }`}
               >
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={() => setActiveSlideIndex(index)}
-                  className="flex-1 justify-start"
+                  className="flex-1 justify-start text-xs sm:text-sm"
                 >
-                  <span className="font-medium">
+                  <span className="font-medium truncate">
                     Slide {index + 1}: {slide.title.text}
                   </span>
                 </Button>
 
-                <div className="flex gap-1">
+                <div className="flex gap-1 justify-end sm:justify-start">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => moveSlide(index, 'up')}
                     disabled={index === 0}
+                    className="h-8 w-8 sm:h-10 sm:w-10"
                   >
-                    <ChevronUp className="h-4 w-4" />
+                    <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => moveSlide(index, 'down')}
                     disabled={index === config.slides.length - 1}
+                    className="h-8 w-8 sm:h-10 sm:w-10"
                   >
-                    <ChevronDown className="h-4 w-4" />
+                    <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => removeSlide(index)}
-                    className="text-destructive"
+                    className="text-destructive h-8 w-8 sm:h-10 sm:w-10"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 </div>
               </div>
@@ -390,38 +395,40 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
       {/* Editor do Slide Ativo */}
       <Card>
         <CardHeader>
-          <CardTitle>Editando: Slide {activeSlideIndex + 1}</CardTitle>
-          <CardDescription>Configure o conteúdo deste slide</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Editando: Slide {activeSlideIndex + 1}</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Configure o conteúdo deste slide</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="content">
-            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
-              <TabsTrigger value="content">Conteúdo</TabsTrigger>
-              <TabsTrigger value="buttons">Botões</TabsTrigger>
-              <TabsTrigger value="background">Fundo</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 h-auto">
+              <TabsTrigger value="content" className="text-xs sm:text-sm py-2">Conteúdo</TabsTrigger>
+              <TabsTrigger value="buttons" className="text-xs sm:text-sm py-2">Botões</TabsTrigger>
+              <TabsTrigger value="background" className="text-xs sm:text-sm py-2">Fundo</TabsTrigger>
             </TabsList>
 
             {/* Conteúdo */}
             <TabsContent value="content" className="space-y-4 mt-4">
               {/* Título */}
               <div className="space-y-2">
-                <Label>Título</Label>
+                <Label className="text-sm sm:text-base">Título</Label>
                 <Input
                   value={activeSlide.title.text}
                   onChange={(e) => updateTitle({ text: e.target.value })}
+                  className="h-10 text-sm sm:text-base"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Texto Destacado (opcional)</Label>
+                <Label className="text-sm sm:text-base">Texto Destacado (opcional)</Label>
                 <Input
                   value={activeSlide.title.highlight || ''}
                   onChange={(e) => updateTitle({ highlight: e.target.value })}
                   placeholder="Palavra para destacar"
+                  className="h-10 text-sm sm:text-base"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FontSelector
                   label="Tamanho"
                   value={activeSlide.title.style.fontSize || '3rem'}
@@ -443,14 +450,15 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
 
               {/* Subtítulo */}
               <div className="space-y-2">
-                <Label>Subtítulo</Label>
+                <Label className="text-sm sm:text-base">Subtítulo</Label>
                 <Input
                   value={activeSlide.subtitle.text}
                   onChange={(e) => updateSubtitle({ text: e.target.value })}
+                  className="h-10 text-sm sm:text-base"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FontSelector
                   label="Tamanho"
                   value={activeSlide.subtitle.style.fontSize || '1.5rem'}
@@ -472,11 +480,12 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
 
               {/* Descrição */}
               <div className="space-y-2">
-                <Label>Descrição</Label>
+                <Label className="text-sm sm:text-base">Descrição</Label>
                 <Textarea
                   value={activeSlide.description.text}
                   onChange={(e) => updateDescription({ text: e.target.value })}
                   rows={3}
+                  className="text-sm sm:text-base"
                 />
               </div>
 
@@ -492,7 +501,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
             {/* Botões */}
             <TabsContent value="buttons" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label>Alinhamento dos Botões</Label>
+                <Label className="text-sm sm:text-base">Alinhamento dos Botões</Label>
                 <Select
                   value={activeSlide.buttons.alignment}
                   onValueChange={(alignment: any) =>
@@ -501,7 +510,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                     })
                   }
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-10 text-sm sm:text-base"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="left">Esquerda</SelectItem>
                     <SelectItem value="center">Centro</SelectItem>
@@ -514,24 +523,26 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
 
               {/* Botão Primário */}
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Botão Primário</Label>
+                <Label className="text-base sm:text-lg font-semibold">Botão Primário</Label>
                 {activeSlide.buttons.primary && (
                   <>
                     <div className="space-y-2">
-                      <Label>Texto</Label>
+                      <Label className="text-sm sm:text-base">Texto</Label>
                       <Input
                         placeholder="Texto do botão"
                         value={activeSlide.buttons.primary.text}
                         onChange={(e) => updatePrimaryButton({ text: e.target.value })}
+                        className="h-10 text-sm sm:text-base"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Link (href)</Label>
+                      <Label className="text-sm sm:text-base">Link (href)</Label>
                       <Input
                         placeholder="#produtos, #contato, etc"
                         value={activeSlide.buttons.primary.href}
                         onChange={(e) => updatePrimaryButton({ href: e.target.value })}
+                        className="h-10 text-sm sm:text-base"
                       />
                     </div>
 
@@ -545,9 +556,9 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
 
                     {/* Estilos do Botão Primário */}
                     <div className="space-y-3">
-                      <Label className="text-base font-medium">Cores do Botão</Label>
+                      <Label className="text-sm sm:text-base font-medium">Cores do Botão</Label>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <ColorPicker
                           label="Cor de Fundo"
                           value={activeSlide.buttons.primary.style?.backgroundColor || '#10b981'}
@@ -774,12 +785,12 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
             {/* Background */}
             <TabsContent value="background" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label>Tipo de Fundo</Label>
+                <Label className="text-sm sm:text-base">Tipo de Fundo</Label>
                 <Select
                   value={activeSlide.background.type}
                   onValueChange={(type: any) => updateBackground({ type })}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-10 text-sm sm:text-base"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="color">Cor Sólida</SelectItem>
                     <SelectItem value="gradient">Gradiente</SelectItem>
@@ -817,7 +828,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                     }
                   />
                   <div className="space-y-2">
-                    <Label>Direção</Label>
+                    <Label className="text-sm sm:text-base">Direção</Label>
                     <Select
                       value={activeSlide.background.gradient.direction}
                       onValueChange={(direction) =>
@@ -826,7 +837,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                         })
                       }
                     >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-10 text-sm sm:text-base"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="to right">Horizontal →</SelectItem>
                         <SelectItem value="to left">Horizontal ←</SelectItem>
@@ -857,8 +868,8 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
 
               {/* Overlay */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Overlay Escuro</Label>
+                <div className="flex items-center justify-between gap-4">
+                  <Label className="text-sm sm:text-base">Overlay Escuro</Label>
                   <Switch
                     checked={activeSlide.background.overlay?.enabled}
                     onCheckedChange={(enabled) =>
@@ -875,7 +886,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                 {activeSlide.background.overlay?.enabled && (
                   <>
                     <div className="space-y-2">
-                      <Label>Opacidade: {activeSlide.background.overlay.opacity}%</Label>
+                      <Label className="text-sm sm:text-base">Opacidade: {activeSlide.background.overlay.opacity}%</Label>
                       <input
                         type="range"
                         min="0"
@@ -889,7 +900,7 @@ export const HeroEditor = ({ config, onChange }: HeroEditorProps) => {
                             },
                           })
                         }
-                        className="w-full"
+                        className="w-full h-2 sm:h-3"
                       />
                     </div>
                   </>

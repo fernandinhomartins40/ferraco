@@ -28,8 +28,8 @@ export const HeaderEditor = ({ config, onChange }: HeaderEditorProps) => {
       {/* Logo */}
       <Card>
         <CardHeader>
-          <CardTitle>Logotipo</CardTitle>
-          <CardDescription>Altere a imagem do logo da empresa</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Logotipo</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Altere a imagem do logo da empresa</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {config.logo.type === 'image' && config.logo.image && (
@@ -46,18 +46,19 @@ export const HeaderEditor = ({ config, onChange }: HeaderEditorProps) => {
       {/* Botão CTA - Apenas Texto */}
       <Card>
         <CardHeader>
-          <CardTitle>Botão de Ação</CardTitle>
-          <CardDescription>Altere o texto do botão no cabeçalho</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Botão de Ação</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Altere o texto do botão no cabeçalho</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Texto do Botão</Label>
+            <Label className="text-sm sm:text-base">Texto do Botão</Label>
             <Input
               value={config.cta.text}
               onChange={(e) => updateCTA({ text: e.target.value })}
               placeholder="Solicitar Orçamento"
+              className="h-10 text-sm sm:text-base"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Este é o texto que aparecerá no botão do cabeçalho
             </p>
           </div>

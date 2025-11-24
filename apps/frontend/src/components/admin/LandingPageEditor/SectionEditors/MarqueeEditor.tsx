@@ -58,12 +58,12 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
       {/* Configurações Gerais */}
       <Card>
         <CardHeader>
-          <CardTitle>Configurações Gerais</CardTitle>
-          <CardDescription>Configure o marquee animado</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Configurações Gerais</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Configure o marquee animado</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Marquee Ativo</Label>
+          <div className="flex items-center justify-between gap-4">
+            <Label className="text-sm sm:text-base">Marquee Ativo</Label>
             <Switch
               checked={config.enabled}
               onCheckedChange={(enabled) => onChange({ enabled })}
@@ -73,15 +73,16 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
           <Separator />
 
           <div className="space-y-2">
-            <Label>Velocidade da Animação (segundos)</Label>
+            <Label className="text-sm sm:text-base">Velocidade da Animação (segundos)</Label>
             <Input
               type="number"
               value={config.speed}
               onChange={(e) => onChange({ speed: Number(e.target.value) })}
               min="10"
               max="60"
+              className="h-10 text-sm sm:text-base"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Tempo que o marquee leva para completar uma volta (recomendado: 30s)
             </p>
           </div>
@@ -149,9 +150,9 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
                       <div className="flex-1 space-y-3 min-w-0">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-2">
-                            <Label className="text-sm">Ícone</Label>
+                            <Label className="text-xs sm:text-sm">Ícone</Label>
                             <select
-                              className="w-full px-3 py-2 border rounded-md text-sm"
+                              className="w-full px-3 py-2 border rounded-md text-xs sm:text-sm h-10"
                               value={item.icon}
                               onChange={(e) => updateItem(index, { icon: e.target.value })}
                             >
@@ -164,11 +165,12 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm">Texto</Label>
+                            <Label className="text-xs sm:text-sm">Texto</Label>
                             <Input
                               value={item.text}
                               onChange={(e) => updateItem(index, { text: e.target.value })}
                               placeholder="Ex: Qualidade Garantida"
+                              className="h-10 text-xs sm:text-sm"
                             />
                           </div>
                         </div>
@@ -212,8 +214,8 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
       {/* Preview Geral */}
       <Card>
         <CardHeader>
-          <CardTitle>Preview do Marquee</CardTitle>
-          <CardDescription className="hidden sm:block">Visualização de como o marquee aparecerá</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Preview do Marquee</CardTitle>
+          <CardDescription className="text-xs sm:text-sm hidden sm:block">Visualização de como o marquee aparecerá</CardDescription>
         </CardHeader>
         <CardContent>
           <div
