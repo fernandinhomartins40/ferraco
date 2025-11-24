@@ -26,6 +26,10 @@ router.get('/lead/:leadId', authenticate, whatsappAutomationController.findByLea
 // Retry (ANTES das rotas genéricas com :id)
 router.post('/:id/retry', authenticate, whatsappAutomationController.retry);
 
+// Schedule (rotas específicas de agendamento)
+router.patch('/:id/schedule', authenticate, whatsappAutomationController.updateSchedule);
+router.post('/:id/send-now', authenticate, whatsappAutomationController.sendNow);
+
 // CRUD Operations (rotas genéricas POR ÚLTIMO)
 router.post('/', authenticate, whatsappAutomationController.create);
 router.get('/', authenticate, whatsappAutomationController.findAll);

@@ -497,6 +497,32 @@ export class WhatsAppAutomationService {
       const [automationId, queueData] = sorted[0];
       this.queue.delete(automationId);
 
+      // ✅ Verificar se automação tem agendamento
+      const automation = await prisma.whatsAppAutomation.findUnique({
+        where: { id: automationId },
+        select: { scheduledFor: true, status: true }
+      });
+
+      if (automation && automation.scheduledFor) {
+        const now = new Date();
+        const scheduledTime = new Date(automation.scheduledFor);
+
+        if (scheduledTime > now) {
+          // Agendamento ainda não chegou, reagendar
+          const delayMs = scheduledTime.getTime() - now.getTime();
+          logger.info(`⏰ Automação ${automationId} agendada para ${scheduledTime.toLocaleString('pt-BR')} - reagendando`);
+
+          setTimeout(() => {
+            this.queue.set(automationId, queueData);
+            if (!this.isProcessingQueue) {
+              this.processQueue();
+            }
+          }, Math.min(delayMs, 300000)); // Max 5 minutos, depois recheca
+
+          continue;
+        }
+      }
+
       try {
         await this.executeAutomation(automationId);
       } catch (error) {
@@ -1314,6 +1340,60 @@ Até breve!`
     }
 
     return failedAutomations.length;
+  }
+
+  /**
+   * Atualiza o agendamento de uma automação
+   */
+  async updateSchedule(id: string, scheduledFor: Date | null): Promise<void> {
+    const automation = await prisma.whatsAppAutomation.findUnique({
+      where: { id }
+    });
+
+    if (!automation) {
+      throw new Error(`Automação ${id} não encontrada`);
+    }
+
+    if (automation.status !== 'PENDING') {
+      throw new Error(`Não é possível agendar automação com status ${automation.status}`);
+    }
+
+    await prisma.whatsAppAutomation.update({
+      where: { id },
+      data: { scheduledFor }
+    });
+
+    logger.info(`📅 Agendamento atualizado para automação ${id}:`, {
+      scheduledFor: scheduledFor?.toISOString() || 'null (envio imediato)'
+    });
+  }
+
+  /**
+   * Remove agendamento e adiciona à fila para envio imediato
+   */
+  async sendNow(id: string): Promise<void> {
+    const automation = await prisma.whatsAppAutomation.findUnique({
+      where: { id }
+    });
+
+    if (!automation) {
+      throw new Error(`Automação ${id} não encontrada`);
+    }
+
+    if (automation.status !== 'PENDING') {
+      throw new Error(`Não é possível enviar automação com status ${automation.status}`);
+    }
+
+    // Remove agendamento
+    await prisma.whatsAppAutomation.update({
+      where: { id },
+      data: { scheduledFor: null }
+    });
+
+    // Adiciona à fila com prioridade alta
+    this.addToQueue(id, 10);
+
+    logger.info(`🚀 Automação ${id} adicionada à fila para envio imediato`);
   }
 
   /**

@@ -24,6 +24,7 @@ export interface WhatsAppAutomation {
   productsToSend: string;
   messagesTotal: number;
   messagesSent: number;
+  scheduledFor?: string | null;
   error?: string | null;
   createdAt: string;
   startedAt?: string | null;
@@ -144,5 +145,21 @@ export const whatsappAutomationService = {
   async listFailed(): Promise<WhatsAppAutomation[]> {
     const response = await apiClient.get('/whatsapp-automations/failed');
     return response.data.data;
+  },
+
+  /**
+   * Atualizar agendamento de uma automação
+   */
+  async updateSchedule(id: string, scheduledFor: string | null): Promise<void> {
+    await apiClient.patch(`/whatsapp-automations/${id}/schedule`, {
+      scheduledFor
+    });
+  },
+
+  /**
+   * Enviar imediatamente (remover agendamento)
+   */
+  async sendNow(id: string): Promise<void> {
+    await apiClient.post(`/whatsapp-automations/${id}/send-now`);
   }
 };

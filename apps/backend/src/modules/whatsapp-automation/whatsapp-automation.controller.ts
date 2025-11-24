@@ -248,6 +248,59 @@ export class WhatsAppAutomationController {
       next(error);
     }
   };
+
+  /**
+   * PATCH /api/whatsapp-automations/:id/schedule
+   * Atualiza o agendamento de uma automação
+   */
+  updateSchedule = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = AutomationIdParamSchema.parse(req.params);
+      const { scheduledFor } = req.body;
+
+      await whatsappAutomationService.updateSchedule(id, scheduledFor ? new Date(scheduledFor) : null);
+
+      successResponse(res, { id, scheduledFor }, 'Agendamento atualizado com sucesso');
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        badRequestResponse(res, 'Erro de validação', error.errors);
+        return;
+      }
+
+      if (error instanceof Error && error.message.includes('não encontrada')) {
+        notFoundResponse(res, error.message);
+        return;
+      }
+
+      next(error);
+    }
+  };
+
+  /**
+   * POST /api/whatsapp-automations/:id/send-now
+   * Remove agendamento e envia imediatamente
+   */
+  sendNow = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = AutomationIdParamSchema.parse(req.params);
+
+      await whatsappAutomationService.sendNow(id);
+
+      successResponse(res, { id }, 'Automação enviada para processamento imediato');
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        badRequestResponse(res, 'Erro de validação', error.errors);
+        return;
+      }
+
+      if (error instanceof Error && error.message.includes('não encontrada')) {
+        notFoundResponse(res, error.message);
+        return;
+      }
+
+      next(error);
+    }
+  };
 }
 
 export const whatsappAutomationController = new WhatsAppAutomationController();

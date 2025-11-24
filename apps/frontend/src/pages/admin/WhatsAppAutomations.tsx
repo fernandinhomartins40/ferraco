@@ -4,6 +4,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Sheet,
@@ -41,6 +42,7 @@ import {
   Video,
   Shield,
   Clock3,
+  Play,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -50,6 +52,8 @@ export default function WhatsAppAutomations() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedAutomation, setSelectedAutomation] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState<string>('');
+  const [scheduledTime, setScheduledTime] = useState<string>('');
 
   // Query: Estatísticas
   const { data: stats, isLoading: statsLoading } = useQuery<WhatsAppAutomationStats>({
@@ -109,6 +113,47 @@ export default function WhatsAppAutomations() {
       toast({
         title: 'Erro ao retentar',
         description: error.message || 'Não foi possível retentar as automações.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Mutation: Update Schedule
+  const updateScheduleMutation = useMutation({
+    mutationFn: ({ id, scheduledFor }: { id: string; scheduledFor: string | null }) =>
+      whatsappAutomationService.updateSchedule(id, scheduledFor),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-automations'] });
+      toast({
+        title: 'Agendamento atualizado',
+        description: 'O horário de envio foi atualizado com sucesso.',
+      });
+      setScheduledDate('');
+      setScheduledTime('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao agendar',
+        description: error.message || 'Não foi possível atualizar o agendamento.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Mutation: Send Now
+  const sendNowMutation = useMutation({
+    mutationFn: (id: string) => whatsappAutomationService.sendNow(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-automations'] });
+      toast({
+        title: 'Envio iniciado',
+        description: 'A automação será processada imediatamente.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao enviar',
+        description: error.message || 'Não foi possível iniciar o envio.',
         variant: 'destructive',
       });
     }
@@ -357,14 +402,28 @@ export default function WhatsAppAutomations() {
                           >
                             <Eye className="h-5 w-5" />
                           </Button>
-                          {(automation.status === 'FAILED' || automation.status === 'PENDING') && (
+                          {automation.status === 'PENDING' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedAutomation(automation.id);
+                                setDetailsOpen(true);
+                              }}
+                              title="Agendar envio"
+                              className="h-10 w-10"
+                            >
+                              <Calendar className="h-5 w-5" />
+                            </Button>
+                          )}
+                          {automation.status === 'FAILED' && (
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() =>
                                 retryMutation.mutate({
                                   id: automation.id,
-                                  resetMessages: automation.status === 'FAILED'
+                                  resetMessages: true
                                 })
                               }
                               disabled={retryMutation.isPending}
@@ -755,6 +814,100 @@ export default function WhatsAppAutomations() {
                   </Card>
                 )}
 
+                {/* Agendamento */}
+                {automationDetails.automation.status === 'PENDING' && (
+                  <Card className="border-blue-200 bg-blue-50">
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Agendamento de Envio
+                      </CardTitle>
+                      <CardDescription>
+                        Configure quando esta automação deve ser enviada
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {automationDetails.automation.scheduledFor && (
+                        <Alert className="border-blue-300 bg-blue-100">
+                          <Clock3 className="h-4 w-4 text-blue-700" />
+                          <AlertDescription className="ml-2 text-blue-900">
+                            Agendado para: {new Date(automationDetails.automation.scheduledFor).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Data</label>
+                          <Input
+                            type="date"
+                            value={scheduledDate}
+                            onChange={(e) => setScheduledDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Horário</label>
+                          <Input
+                            type="time"
+                            value={scheduledTime}
+                            onChange={(e) => setScheduledTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            if (scheduledDate && scheduledTime) {
+                              const scheduledFor = `${scheduledDate}T${scheduledTime}:00`;
+                              updateScheduleMutation.mutate({
+                                id: automationDetails.automation.id,
+                                scheduledFor
+                              });
+                            } else {
+                              toast({
+                                title: 'Campos obrigatórios',
+                                description: 'Preencha data e horário para agendar.',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                          disabled={updateScheduleMutation.isPending}
+                          className="flex-1"
+                          variant="outline"
+                        >
+                          {updateScheduleMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <Clock className="h-4 w-4 mr-2" />
+                          )}
+                          Agendar
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            sendNowMutation.mutate(automationDetails.automation.id);
+                            setDetailsOpen(false);
+                          }}
+                          disabled={sendNowMutation.isPending}
+                          className="flex-1"
+                        >
+                          {sendNowMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <Play className="h-4 w-4 mr-2" />
+                          )}
+                          Enviar Agora
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Datas */}
                 <Card>
                   <CardHeader>
@@ -768,6 +921,14 @@ export default function WhatsAppAutomations() {
                       <span className="text-muted-foreground">Criada:</span>
                       <span>{new Date(automationDetails.automation.createdAt).toLocaleString('pt-BR')}</span>
                     </div>
+                    {automationDetails.automation.scheduledFor && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Agendada para:</span>
+                        <span className="font-medium text-blue-700">
+                          {new Date(automationDetails.automation.scheduledFor).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                    )}
                     {automationDetails.automation.startedAt && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Iniciada:</span>
