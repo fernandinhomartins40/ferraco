@@ -116,31 +116,32 @@ export const AdminLandingPageEditor = () => {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Editor de Landing Page</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold">Editor de Landing Page</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Customize o conteúdo e estilo da sua landing page
             </p>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleReset}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Restaurar
+          {/* Desktop: Botões horizontais | Mobile: Grid 2x2 */}
+          <div className="flex flex-wrap gap-2 md:flex-nowrap">
+            <Button variant="outline" size="sm" onClick={handleReset} className="flex-1 md:flex-initial min-h-[44px]">
+              <RotateCcw className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Restaurar</span>
             </Button>
 
-            <Button variant="outline" size="sm" onClick={exportConfig}>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
+            <Button variant="outline" size="sm" onClick={exportConfig} className="flex-1 md:flex-initial min-h-[44px]">
+              <Download className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Exportar</span>
             </Button>
 
-            <Button variant="outline" size="sm" onClick={handleImport}>
-              <Upload className="h-4 w-4 mr-2" />
-              Importar
+            <Button variant="outline" size="sm" onClick={handleImport} className="flex-1 md:flex-initial min-h-[44px]">
+              <Upload className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Importar</span>
             </Button>
 
-            <Button onClick={save} disabled={!isDirty || isSaving}>
+            <Button onClick={save} disabled={!isDirty || isSaving} size="sm" className="flex-1 md:flex-initial min-h-[44px]">
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? 'Salvando...' : isDirty ? 'Salvar *' : 'Salvo'}
             </Button>
@@ -165,7 +166,8 @@ export const AdminLandingPageEditor = () => {
               <div className="space-y-4">
                 <div>
                   <h2 className="text-lg font-semibold mb-2">Seções</h2>
-                  <div className="grid grid-cols-4 gap-2">
+                  {/* Mobile: Scroll horizontal | Desktop: Grid 4 colunas */}
+                  <div className="flex overflow-x-auto gap-2 md:grid md:grid-cols-4 scrollbar-hide pb-2 md:pb-0">
                     {sections.map((section) => {
                       const Icon = section.icon;
                       return (
@@ -173,7 +175,7 @@ export const AdminLandingPageEditor = () => {
                           key={section.key}
                           variant={currentSection === section.key ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start"
+                          className="justify-start shrink-0 min-h-[44px]"
                           onClick={() => setCurrentSection(section.key)}
                         >
                           <Icon className="h-4 w-4 mr-2" />
@@ -281,37 +283,51 @@ export const AdminLandingPageEditor = () => {
             <CardContent className="p-6">
               <div className="space-y-4">
                 {/* Preview Controls */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-lg font-semibold">Preview</h2>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant={previewMode === 'desktop' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPreviewMode('desktop')}
-                    >
-                      <Monitor className="h-4 w-4" />
-                    </Button>
+                  <div className="flex gap-2 justify-between sm:justify-start">
+                    <div className="flex gap-2">
+                      <Button
+                        variant={previewMode === 'desktop' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPreviewMode('desktop')}
+                        className="min-h-[44px] min-w-[44px]"
+                        title="Desktop"
+                      >
+                        <Monitor className="h-4 w-4" />
+                      </Button>
+
+                      <Button
+                        variant={previewMode === 'tablet' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPreviewMode('tablet')}
+                        className="min-h-[44px] min-w-[44px]"
+                        title="Tablet"
+                      >
+                        <Tablet className="h-4 w-4" />
+                      </Button>
+
+                      <Button
+                        variant={previewMode === 'mobile' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPreviewMode('mobile')}
+                        className="min-h-[44px] min-w-[44px]"
+                        title="Mobile"
+                      >
+                        <Smartphone className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <Separator orientation="vertical" className="h-8 hidden sm:block" />
 
                     <Button
-                      variant={previewMode === 'tablet' ? 'default' : 'outline'}
+                      variant="outline"
                       size="sm"
-                      onClick={() => setPreviewMode('tablet')}
+                      onClick={togglePreview}
+                      className="min-h-[44px] min-w-[44px]"
+                      title={showPreview ? "Ocultar Preview" : "Mostrar Preview"}
                     >
-                      <Tablet className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      variant={previewMode === 'mobile' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPreviewMode('mobile')}
-                    >
-                      <Smartphone className="h-4 w-4" />
-                    </Button>
-
-                    <Separator orientation="vertical" className="h-8" />
-
-                    <Button variant="outline" size="sm" onClick={togglePreview}>
                       {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -319,7 +335,7 @@ export const AdminLandingPageEditor = () => {
 
                 {/* Preview Content */}
                 {showPreview ? (
-                  <div className="w-full border rounded-lg overflow-auto bg-background" style={{ height: '600px' }}>
+                  <div className="w-full border rounded-lg overflow-auto bg-background h-[400px] md:h-[600px]">
                     <LandingPagePreview
                       config={config}
                       currentSection={currentSection}
@@ -327,7 +343,7 @@ export const AdminLandingPageEditor = () => {
                     />
                   </div>
                 ) : (
-                  <div className="h-[600px] bg-muted rounded-lg flex items-center justify-center">
+                  <div className="h-[400px] md:h-[600px] bg-muted rounded-lg flex items-center justify-center">
                     <p className="text-muted-foreground">Preview oculto</p>
                   </div>
                 )}
