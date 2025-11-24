@@ -21,6 +21,8 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
     { label: "Contato", href: "#contato" },
   ];
 
+  console.log('🎨 [Header] Component rendered with menu items:', menuItems);
+
   const logoSrc = config?.logo?.image?.url || logoFerraco;
   const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";
   const ctaText = config?.cta?.text || "Solicitar Orçamento";
@@ -86,11 +88,16 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
             {menuItems.map((item) => (
               <button
                 key={item.label}
-                onClick={() => {
+                type="button"
+                onMouseDown={() => console.log('⬇️ [Header] Desktop mouseDown:', item.label)}
+                onClick={(e) => {
                   console.log('🖱️ [Header] Desktop button clicked:', item.label, item.href);
+                  console.log('🖱️ [Header] Event details:', { target: e.target, currentTarget: e.currentTarget });
+                  e.preventDefault();
+                  e.stopPropagation();
                   scrollToSection(item.href);
                 }}
-                className="text-primary-foreground hover:text-secondary font-medium transition-smooth relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-secondary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+                className="text-primary-foreground hover:text-secondary font-medium transition-smooth relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-secondary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left after:pointer-events-none"
               >
                 {item.label}
               </button>
@@ -126,8 +133,13 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
               {menuItems.map((item) => (
                 <button
                   key={item.label}
-                  onClick={() => {
+                  type="button"
+                  onMouseDown={() => console.log('⬇️ [Header] Mobile mouseDown:', item.label)}
+                  onClick={(e) => {
                     console.log('📱 [Header] Mobile button clicked:', item.label, item.href);
+                    console.log('📱 [Header] Event details:', { target: e.target, currentTarget: e.currentTarget });
+                    e.preventDefault();
+                    e.stopPropagation();
                     scrollToSection(item.href);
                     setIsMenuOpen(false);
                   }}
