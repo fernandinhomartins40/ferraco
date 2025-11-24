@@ -114,7 +114,7 @@ export const AdminLandingPageEditor = () => {
 
   return (
     <AdminLayout>
-      <div className="w-full flex flex-col gap-6">
+      <div className="flex flex-col gap-6 max-w-full overflow-x-hidden">
         {/* Header - Mobile Responsivo */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -183,11 +183,11 @@ export const AdminLandingPageEditor = () => {
         )}
 
         {/* Main Layout */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 max-w-full overflow-x-hidden">
           {/* Seções */}
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="space-y-4">
+          <Card className="max-w-full overflow-x-hidden">
+            <CardContent className="p-4 md:p-6 max-w-full overflow-x-hidden">
+              <div className="space-y-4 max-w-full overflow-x-hidden">
                 <div>
                   <h2 className="text-base md:text-lg font-semibold mb-3">Seções</h2>
                   {/* Mobile: Scroll horizontal | Desktop: Grid 4 colunas */}
@@ -212,7 +212,7 @@ export const AdminLandingPageEditor = () => {
 
                 <Separator />
 
-                <div>
+                <div className="max-w-full overflow-x-hidden">
                   {/* Header Editor */}
                   {currentSection === 'header' && (
                     <HeaderEditor
@@ -303,8 +303,8 @@ export const AdminLandingPageEditor = () => {
           </Card>
 
           {/* Preview */}
-          <Card>
-            <CardContent className="p-4 md:p-6">
+          <Card className="max-w-full overflow-x-hidden">
+            <CardContent className="p-4 md:p-6 max-w-full overflow-x-hidden">
               <div className="space-y-4">
                 {/* Preview Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
