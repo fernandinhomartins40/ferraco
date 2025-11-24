@@ -11,18 +11,18 @@ const Footer = ({ config }: FooterProps) => {
   const { isAuthenticated, user } = useAuth();
 
   const quickLinks = [
-    { label: "Início", href: "#inicio" },
-    { label: "Sobre", href: "#sobre" },
-    { label: "Produtos", href: "#produtos" },
-    { label: "Experiência", href: "#experiencia" },
-    { label: "Contato", href: "#contato" }
+    { label: "Início", href: "#hero" },
+    { label: "Sobre", href: "#about" },
+    { label: "Produtos", href: "#products" },
+    { label: "Experiência", href: "#experience" },
+    { label: "Contato", href: "#contact" }
   ];
 
   const productLinks = [
-    { label: "Ferramentas Industriais", href: "#produtos" },
-    { label: "Peças Sob Medida", href: "#produtos" },
-    { label: "Estruturas Metálicas", href: "#produtos" },
-    { label: "Equipamentos Industriais", href: "#produtos" }
+    { label: "Ferramentas Industriais", href: "#products" },
+    { label: "Peças Sob Medida", href: "#products" },
+    { label: "Estruturas Metálicas", href: "#products" },
+    { label: "Equipamentos Industriais", href: "#products" }
   ];
 
   const socialLinks = [

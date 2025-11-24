@@ -12,73 +12,29 @@ interface HeaderProps {
 const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Mapeamento de hrefs antigos (inglês) para novos (português) para compatibilidade
-  const HREF_COMPATIBILITY_MAP: Record<string, string> = {
-    '#hero': '#inicio',
-    '#about': '#sobre',
-    '#products': '#produtos',
-    '#contact': '#contato',
-    '#experience': '#experiencia',
-  };
-
-  // Função para corrigir hrefs antigos automaticamente
-  const normalizeHref = (href: string): string => {
-    return HREF_COMPATIBILITY_MAP[href] || href;
-  };
-
-  // Fallback para valores padrão do conteúdo atual
-  const rawMenuItems = config?.menu?.items || [
-    { label: "Início", href: "#inicio" },
-    { label: "Sobre", href: "#sobre" },
-    { label: "Produtos", href: "#produtos" },
-    { label: "Experiência", href: "#experiencia" },
-    { label: "Contato", href: "#contato" },
+  // Fallback para valores padrão
+  const menuItems = config?.menu?.items || [
+    { label: "Início", href: "#hero" },
+    { label: "Sobre", href: "#about" },
+    { label: "Produtos", href: "#products" },
+    { label: "Experiência", href: "#experience" },
+    { label: "Contato", href: "#contact" },
   ];
-
-  // Normalizar todos os hrefs (corrige automaticamente se vieram em inglês do banco)
-  const menuItems = rawMenuItems.map(item => ({
-    ...item,
-    href: normalizeHref(item.href)
-  }));
-
-  console.log('🎨 [Header] Component rendered with menu items:', menuItems);
-
-  // TESTE: Alert para confirmar que o código está carregando
-  if (typeof window !== 'undefined' && !window.__headerLoaded) {
-    window.__headerLoaded = true;
-    console.log('✅ HEADER V2-DEBUG CARREGADO!');
-    console.log('✅ Se você está vendo esta mensagem, o JavaScript está funcionando.');
-    console.log('✅ Agora clique em um item do menu.');
-
-    // Alert impossível de ignorar
-    setTimeout(() => {
-      alert('✅ HEADER V2-DEBUG CARREGADO! Console.log está funcionando? Verifique a aba Console do DevTools.');
-    }, 1000);
-  }
 
   const logoSrc = config?.logo?.image?.url || logoFerraco;
   const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";
   const ctaText = config?.cta?.text || "Solicitar Orçamento";
 
   const scrollToSection = (href: string) => {
-    console.log('🔍 [Header] scrollToSection called with href:', href);
-
     const element = document.querySelector(href);
-
     if (element) {
-      console.log('✅ [Header] Element found, scrolling to:', element.id);
       element.scrollIntoView({ behavior: "smooth" });
-    } else {
-      console.error('❌ [Header] Element not found for href:', href);
     }
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-primary shadow-elegant" data-header-version="v2-debug" style={{ border: '5px solid red' }}>
+    <header className="sticky top-0 z-50 bg-primary shadow-elegant">
       <div className="container mx-auto px-4">
-        <div style={{ background: 'yellow', color: 'black', padding: '5px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-          🔴 HEADER V2-DEBUG ATIVO - Se você vê esta barra amarela, está na versão correta
-        </div>
         <div className="flex items-center justify-between h-20 lg:h-24">
           {/* Logo */}
           <div className="flex-shrink-0">
@@ -95,11 +51,7 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
               <button
                 key={item.label}
                 type="button"
-                onClick={() => {
-                  alert(`CLIQUE DETECTADO: ${item.label} -> ${item.href}`);
-                  console.log('🖱️ [Header] Desktop button clicked:', item.label, item.href);
-                  scrollToSection(item.href);
-                }}
+                onClick={() => scrollToSection(item.href)}
                 className="text-primary-foreground hover:text-secondary font-medium transition-smooth relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-secondary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left after:pointer-events-none"
               >
                 {item.label}
@@ -138,8 +90,6 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
                   key={item.label}
                   type="button"
                   onClick={() => {
-                    alert(`MOBILE CLIQUE DETECTADO: ${item.label} -> ${item.href}`);
-                    console.log('📱 [Header] Mobile button clicked:', item.label, item.href);
                     scrollToSection(item.href);
                     setIsMenuOpen(false);
                   }}

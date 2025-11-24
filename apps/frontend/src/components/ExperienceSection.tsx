@@ -99,7 +99,7 @@ const ExperienceSection = ({ onLeadModalOpen, config }: ExperienceSectionProps) 
   };
 
   return (
-    <section id="experiencia" className="py-20 bg-accent text-white scroll-mt-24">
+    <section id="experience" className="py-20 bg-accent text-white scroll-mt-24">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">

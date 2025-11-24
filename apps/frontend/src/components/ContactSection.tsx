@@ -53,7 +53,7 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
   const displayContactInfo = config?.methods && config.methods.length > 0 ? config.methods : defaultContactInfo;
 
   return (
-    <section id="contato" className="py-20 bg-background scroll-mt-24">
+    <section id="contact" className="py-20 bg-background scroll-mt-24">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">

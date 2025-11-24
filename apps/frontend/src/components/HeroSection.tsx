@@ -152,7 +152,7 @@ const HeroSection = ({ onLeadModalOpen, config }: HeroSectionProps) => {
 
   return (
     <section
-      id="inicio"
+      id="hero"
       className={`relative pt-20 lg:pt-24 flex items-center overflow-hidden transition-all duration-500 scroll-mt-24 ${heightClass}`}
       style={{ ...backgroundStyle, ...heightStyle }}
     >
