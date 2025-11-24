@@ -20,12 +20,13 @@ import { logger } from '../utils/logger';
 
 const LIMITS = {
   // Limites por janela de tempo (sliding window)
-  PER_MINUTE: 12,           // Máximo 12 mensagens por minuto (WhatsApp recomenda 10-15)
-  PER_HOUR: 200,            // Máximo 200 mensagens por hora
-  PER_DAY: 1000,            // Máximo 1000 mensagens por dia
+  // ✅ CORREÇÃO: Aumentado para permitir mais automações simultâneas
+  PER_MINUTE: 20,           // Aumentado de 12 para 20 mensagens por minuto
+  PER_HOUR: 500,            // Aumentado de 200 para 500 mensagens por hora
+  PER_DAY: 2000,            // Aumentado de 1000 para 2000 mensagens por dia
 
   // Limites por destinatário
-  PER_CONTACT_PER_DAY: 5,   // Máximo 5 mensagens para o mesmo contato por dia
+  PER_CONTACT_PER_DAY: 10,  // Aumentado de 5 para 10 mensagens para o mesmo contato por dia
 
   // Delays entre mensagens (em milissegundos)
   MIN_DELAY_BETWEEN_MESSAGES: 2000,    // 2 segundos (mínimo)
@@ -35,9 +36,11 @@ const LIMITS = {
   DELAY_AFTER_MEDIA: 5000,             // 5 segundos após enviar mídia
 
   // Horário comercial (formato 24h)
+  // ✅ NOVO: Configurável via ENV
   BUSINESS_HOURS: {
-    START: 8,   // 08:00
-    END: 20,    // 20:00
+    START: parseInt(process.env.WHATSAPP_BUSINESS_HOURS_START || '8', 10),   // Padrão: 08:00
+    END: parseInt(process.env.WHATSAPP_BUSINESS_HOURS_END || '20', 10),      // Padrão: 20:00
+    ENABLED: process.env.WHATSAPP_ENABLE_BUSINESS_HOURS !== 'false',         // Padrão: true
   },
 
   // Circuit breaker
@@ -247,6 +250,11 @@ export class WhatsAppAntiSpamService {
    * Verifica se está dentro do horário comercial
    */
   private isBusinessHours(): RateLimitResult {
+    // ✅ NOVO: Se horário comercial desabilitado, sempre permitir
+    if (!LIMITS.BUSINESS_HOURS.ENABLED) {
+      return { allowed: true };
+    }
+
     const now = new Date();
     const hour = now.getHours();
     const dayOfWeek = now.getDay(); // 0 = Domingo, 6 = Sábado

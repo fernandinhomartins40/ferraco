@@ -425,24 +425,30 @@ export class WhatsAppAutomationService {
 
     if (!antiSpamCheck.allowed) {
       logger.warn(`🛡️ Automação ${automationId} bloqueada: ${antiSpamCheck.reason}`);
+      logger.info(`   ⏰ Retry agendado para: ${antiSpamCheck.retryAfter ? `${antiSpamCheck.retryAfter}s` : 'indeterminado'}`);
 
-      // Atualizar automação para aguardar
+      // ✅ CORREÇÃO: NÃO marcar como erro - apenas reagendar
       await prisma.whatsAppAutomation.update({
         where: { id: automationId },
         data: {
           status: 'PENDING',
-          error: `Aguardando: ${antiSpamCheck.reason}`
+          error: null, // ✅ LIMPAR ERRO (não é uma falha real)
+          // Agendar para o futuro se tiver retryAfter
+          scheduledFor: antiSpamCheck.retryAfter
+            ? new Date(Date.now() + antiSpamCheck.retryAfter * 1000)
+            : null
         }
       });
 
       // Re-agendar para depois
       if (antiSpamCheck.retryAfter) {
         setTimeout(() => {
+          logger.info(`🔄 Reagendando automação ${automationId} após bloqueio anti-spam`);
           this.addToQueue(automationId, 1);
         }, antiSpamCheck.retryAfter * 1000);
       }
 
-      return;
+      return; // ✅ NÃO lançar erro - apenas pausar
     }
 
     // Marcar como processando
@@ -453,6 +459,16 @@ export class WhatsAppAutomationService {
         startedAt: new Date(),
         error: null
       }
+    });
+
+    // ✅ NOVO: Logging detalhado com status transition
+    logger.info(`📊 Automação ${automationId} - Transição de Status:`, {
+      previousStatus: automation.status,
+      newStatus: 'PROCESSING',
+      lead: { name: lead.name, phone },
+      messagesSent: automation.messagesSent,
+      messagesTotal: automation.messagesTotal,
+      products: JSON.parse(automation.productsToSend)
     });
 
     logger.info(`🚀 Iniciando automação ${automationId} para ${lead.name} (${phone})`);
@@ -575,16 +591,36 @@ export class WhatsAppAutomationService {
         order++
       );
 
+      // ✅ CORREÇÃO: Verificar se realmente enviou todas as mensagens
+      const finalAutomation = await prisma.whatsAppAutomation.findUnique({
+        where: { id: automationId },
+        select: { messagesSent: true, messagesTotal: true }
+      });
+
+      const sentMessages = finalAutomation?.messagesSent || 0;
+      const totalMessages = finalAutomation?.messagesTotal || 0;
+
+      let finalStatus: 'SENT' | 'PROCESSING' | 'PENDING' = 'SENT';
+
+      if (sentMessages === totalMessages && sentMessages > 0) {
+        finalStatus = 'SENT';
+        logger.info(`✅ Automação ${automationId} concluída com sucesso! (${sentMessages}/${totalMessages} mensagens)`);
+      } else if (sentMessages > 0) {
+        finalStatus = 'PROCESSING';
+        logger.warn(`⚠️  Automação ${automationId} parcialmente enviada (${sentMessages}/${totalMessages} mensagens)`);
+      } else {
+        finalStatus = 'PENDING';
+        logger.warn(`⚠️  Automação ${automationId} não enviou nenhuma mensagem (0/${totalMessages})`);
+      }
+
       // Marcar como concluído
       await prisma.whatsAppAutomation.update({
         where: { id: automationId },
         data: {
-          status: 'SENT',
-          completedAt: new Date()
+          status: finalStatus,
+          completedAt: finalStatus === 'SENT' ? new Date() : null
         }
       });
-
-      logger.info(`✅ Automação ${automationId} concluída com sucesso!`);
 
     } catch (error: any) {
       logger.error(`❌ Erro ao executar automação ${automationId}:`, error);
@@ -941,6 +977,9 @@ export class WhatsAppAutomationService {
 
     const successRate = total > 0 ? (sent / total) * 100 : 0;
 
+    // ✅ NOVO: Incluir estatísticas do anti-spam
+    const antiSpamStats = this.getAntiSpamStats();
+
     return {
       total,
       pending,
@@ -951,7 +990,8 @@ export class WhatsAppAutomationService {
       successRate: Math.round(successRate * 100) / 100,
       lastExecutionAt: lastExecution?.completedAt || null,
       queueSize: this.queue.size,
-      isProcessing: this.isProcessingQueue
+      isProcessing: this.isProcessingQueue,
+      antiSpam: antiSpamStats // ✅ NOVO: Dados do anti-spam
     };
   }
 

@@ -4,6 +4,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Sheet,
   SheetContent,
@@ -38,6 +39,8 @@ import {
   FileText,
   Image as ImageIcon,
   Video,
+  Shield,
+  Clock3,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -232,6 +235,56 @@ export default function WhatsAppAutomations() {
             </CardContent>
           </Card>
         </div>
+
+        {/* ✅ NOVO: Alerta de Circuit Breaker */}
+        {stats?.antiSpam?.isPaused && stats?.antiSpam?.pausedUntil && (
+          <Alert variant="destructive" className="border-red-600 bg-red-50">
+            <Shield className="h-5 w-5 text-red-600" />
+            <AlertDescription className="ml-2">
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-red-900">Sistema Anti-Spam Pausado</span>
+                <span className="text-sm text-red-700">
+                  Detectadas falhas consecutivas. Envios retomam em: {new Date(stats.antiSpam.pausedUntil).toLocaleTimeString('pt-BR')}
+                </span>
+                <span className="text-xs text-red-600 mt-1">
+                  Automações pendentes serão processadas automaticamente após este período.
+                </span>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* ✅ NOVO: Info sobre rate limiting */}
+        {stats?.antiSpam && !stats.antiSpam.isPaused && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <Clock3 className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-blue-900">Status do Sistema Anti-Spam</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-blue-700">
+                    <div>
+                      <span className="font-medium">Último minuto:</span>{' '}
+                      {stats.antiSpam.messagesLastMinute || 0}/20
+                    </div>
+                    <div>
+                      <span className="font-medium">Última hora:</span>{' '}
+                      {stats.antiSpam.messagesLastHour || 0}/500
+                    </div>
+                    <div>
+                      <span className="font-medium">Hoje:</span>{' '}
+                      {stats.antiSpam.messagesLastDay || 0}/2000
+                    </div>
+                    <div>
+                      <span className="font-medium">Taxa de falha:</span>{' '}
+                      {stats.antiSpam.failureRate?.toFixed(1) || 0}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filtros */}
         <Card>
