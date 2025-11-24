@@ -213,13 +213,13 @@ jobs:
 
           echo "✅ Limpeza completa finalizada - preservando banco de dados PostgreSQL"
 
-          # Backup e preparação
+          # Limpeza seletiva (preserva volumes Docker named)
           if [ -d "${{ env.APP_DIR }}" ]; then
-            echo "💾 Fazendo backup..."
-            BACKUP_DIR="${{ env.APP_DIR }}.backup.$(date +%Y%m%d-%H%M%S)"
-            mv ${{ env.APP_DIR }} $BACKUP_DIR 2>/dev/null || true
-            # Manter apenas últimos 3 backups
-            ls -dt ${{ env.APP_DIR }}.backup.* 2>/dev/null | tail -n +4 | xargs -r rm -rf
+            echo "🧹 Removendo código antigo (preservando named volumes Docker)..."
+            cd ${{ env.APP_DIR }}
+            # Remove apenas código da aplicação, NÃO remove ./data (se existir de deploys antigos)
+            rm -rf apps packages node_modules docker .git* *.json *.ts *.md *.yml *.yaml *.sh 2>/dev/null || true
+            echo "✅ Código antigo removido, volumes Docker preservados"
           fi
 
           # Extrair código
@@ -248,11 +248,13 @@ jobs:
 
           echo "✅ Estrutura monorepo validada!"
 
-          # Criar diretórios persistentes (volumes Docker usarão esses diretórios)
-          echo "🗄️  Criando diretórios persistentes para volumes Docker..."
-          mkdir -p data/ferraco-data data/ferraco-logs data/ferraco-uploads
-          chmod 777 data/ferraco-data data/ferraco-logs data/ferraco-uploads
-          echo "✅ Diretórios criados: data/ferraco-data, data/ferraco-logs, data/ferraco-uploads"
+          # Named volumes Docker (não precisa criar diretórios locais)
+          echo "ℹ️  Usando named volumes Docker (gerenciados automaticamente)"
+          echo "   - ferraco-uploads (imagens persistentes)"
+          echo "   - ferraco-sessions (WhatsApp persistente)"
+          echo "   - ferraco-logs (logs persistentes)"
+          echo "   - ferraco-data (dados gerais persistentes)"
+          echo "   - postgres-data (banco de dados persistente)"
 
           # Configurar variáveis de ambiente para Docker
           echo "⚙️  Configurando ambiente Docker..."
@@ -411,32 +413,31 @@ jobs:
             sleep 5
           done
 
-          # Verificação de volumes e permissões
+          # Verificação de named volumes Docker
           echo ""
-          echo "🔍 Verificando volumes e permissões..."
-          if [ -d "data/ferraco-uploads" ]; then
-            echo "✅ Diretório uploads existe"
-            ls -la data/ferraco-uploads
-            UPLOAD_PERM=$(stat -c '%a' data/ferraco-uploads)
-            echo "   Permissões: $UPLOAD_PERM"
-            if [ "$UPLOAD_PERM" = "777" ]; then
-              echo "✅ Permissões corretas (777)"
-            else
-              echo "⚠️  Permissões incorretas, corrigindo..."
-              chmod 777 data/ferraco-uploads
-            fi
-          else
-            echo "❌ Diretório uploads não existe!"
-          fi
+          echo "🔍 Verificando named volumes Docker..."
+          echo "📦 Volumes criados/existentes:"
+          docker volume ls --filter "name=ferraco" --format "table {{.Name}}\t{{.Driver}}\t{{.Mountpoint}}"
 
           # Verificar montagem de volumes no container
           echo ""
           echo "🔍 Verificando montagem de volumes no container..."
           docker exec ferraco-crm-vps ls -la /app/uploads 2>/dev/null || echo "⚠️  Diretório /app/uploads não acessível"
+          docker exec ferraco-crm-vps ls -la /app/sessions 2>/dev/null || echo "⚠️  Diretório /app/sessions não acessível"
+          docker exec ferraco-crm-vps ls -la /app/logs 2>/dev/null || echo "⚠️  Diretório /app/logs não acessível"
+          docker exec ferraco-crm-vps ls -la /app/data 2>/dev/null || echo "⚠️  Diretório /app/data não acessível"
+
+          echo ""
+          echo "🔍 Testando permissões de escrita nos volumes..."
           docker exec ferraco-crm-vps touch /app/uploads/.test 2>/dev/null && \
             echo "✅ Volume /app/uploads com permissão de escrita" || \
             echo "❌ Volume /app/uploads SEM permissão de escrita"
           docker exec ferraco-crm-vps rm -f /app/uploads/.test 2>/dev/null || true
+
+          docker exec ferraco-crm-vps touch /app/sessions/.test 2>/dev/null && \
+            echo "✅ Volume /app/sessions com permissão de escrita" || \
+            echo "❌ Volume /app/sessions SEM permissão de escrita"
+          docker exec ferraco-crm-vps rm -f /app/sessions/.test 2>/dev/null || true
 
           # Verificar configuração do Express para servir arquivos estáticos
           echo ""
@@ -526,52 +527,50 @@ jobs:
           docker ps --filter "name=ferraco" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
           echo ""
-          echo "🔍 2. Verificando Volumes..."
-          echo "   📁 data/ferraco-data:"
-          ls -lah data/ferraco-data | head -5
-          echo "   📁 data/ferraco-logs:"
-          ls -lah data/ferraco-logs | head -5
-          echo "   📁 data/ferraco-uploads:"
-          ls -lah data/ferraco-uploads | head -5
+          echo "🔍 2. Verificando Named Volumes Docker..."
+          docker volume ls --filter "name=ferraco" --format "table {{.Name}}\t{{.Driver}}\t{{.Mountpoint}}"
 
           echo ""
-          echo "🔍 3. Verificando Permissões..."
-          stat -c "   %n: %a (%A)" data/ferraco-data
-          stat -c "   %n: %a (%A)" data/ferraco-logs
-          stat -c "   %n: %a (%A)" data/ferraco-uploads
-
-          echo ""
-          echo "🔍 4. Verificando Montagem no Container..."
+          echo "🔍 3. Verificando Montagem no Container..."
           echo "   /app/uploads:"
           docker exec ferraco-crm-vps ls -lah /app/uploads | head -5 || echo "   ❌ Erro ao acessar /app/uploads"
+          echo "   /app/sessions:"
+          docker exec ferraco-crm-vps ls -lah /app/sessions | head -5 || echo "   ❌ Erro ao acessar /app/sessions"
+          echo "   /app/logs:"
+          docker exec ferraco-crm-vps ls -lah /app/logs | head -5 || echo "   ❌ Erro ao acessar /app/logs"
+          echo "   /app/data:"
+          docker exec ferraco-crm-vps ls -lah /app/data | head -5 || echo "   ❌ Erro ao acessar /app/data"
 
           echo ""
-          echo "🔍 5. Testando Escrita no Volume..."
+          echo "🔍 4. Testando Escrita nos Volumes..."
           docker exec ferraco-crm-vps sh -c "echo 'test' > /app/uploads/.deploy-test && rm /app/uploads/.deploy-test" && \
             echo "   ✅ Volume /app/uploads com escrita OK" || \
             echo "   ❌ Volume /app/uploads SEM permissão de escrita"
+          docker exec ferraco-crm-vps sh -c "echo 'test' > /app/sessions/.deploy-test && rm /app/sessions/.deploy-test" && \
+            echo "   ✅ Volume /app/sessions com escrita OK" || \
+            echo "   ❌ Volume /app/sessions SEM permissão de escrita"
 
           echo ""
-          echo "🔍 6. Verificando Endpoints..."
+          echo "🔍 5. Verificando Endpoints..."
           echo "   /health:"
           curl -s http://127.0.0.1:${{ env.APP_PORT }}/health | head -c 100 && echo "" || echo "   ❌ Erro"
           echo "   /api/landing-page/config:"
           curl -s http://127.0.0.1:${{ env.APP_PORT }}/api/landing-page/config | head -c 150 && echo "..." || echo "   ❌ Erro"
 
           echo ""
-          echo "🔍 7. Verificando API Externa (Swagger)..."
+          echo "🔍 6. Verificando API Externa (Swagger)..."
           echo "   /api-docs (Swagger UI):"
           curl -s -o /dev/null -w "   Status: %{http_code}\n" http://127.0.0.1:${{ env.APP_PORT }}/api-docs
           echo "   /api/openapi.json (OpenAPI Spec):"
           curl -s http://127.0.0.1:${{ env.APP_PORT }}/api/openapi.json | head -c 100 && echo "..." || echo "   ❌ Erro"
 
           echo ""
-          echo "🔍 8. Verificando Tabelas da API Externa no Banco..."
+          echo "🔍 7. Verificando Tabelas da API Externa no Banco..."
           echo "   Tabelas esperadas: api_keys, api_usage_logs, webhooks, webhook_deliveries, event_logs"
           echo "   ✅ Verificação via migrations concluída"
 
           echo ""
-          echo "🔍 9. Verificando Logs do Container (últimas 20 linhas)..."
+          echo "🔍 8. Verificando Logs do Container (últimas 20 linhas)..."
           docker logs ferraco-crm-vps --tail 20
 
           echo ""

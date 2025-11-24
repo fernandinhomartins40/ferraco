@@ -53,11 +53,11 @@ services:
       WHATSAPP_SESSIONS_PATH: /app/sessions
 
     volumes:
-      # Dados persistentes
-      - ./data/ferraco-data:/app/data
-      - ./data/ferraco-logs:/app/logs
-      - ./data/ferraco-uploads:/app/uploads
-      - ./data/ferraco-whatsapp-sessions:/app/sessions
+      # Dados persistentes (named volumes - persistem entre deploys)
+      - ferraco-data:/app/data
+      - ferraco-logs:/app/logs
+      - ferraco-uploads:/app/uploads
+      - ferraco-sessions:/app/sessions
 
     depends_on:
       postgres:
@@ -77,6 +77,10 @@ services:
 
 volumes:
   postgres-data:
+  ferraco-uploads:
+  ferraco-sessions:
+  ferraco-logs:
+  ferraco-data:
 
 networks:
   ferraco-network:
