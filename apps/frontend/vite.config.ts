@@ -39,6 +39,44 @@ export default defineConfig(({ mode }) => ({
         scope: '/',
         start_url: '/login',
         icons: [
+          // PNG icons (required for Windows PWA)
+          {
+            src: '/pwa-96x96.png',
+            sizes: '96x96',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-144x144.png',
+            sizes: '144x144',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-maskable-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/pwa-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          // SVG icons (fallback for modern browsers)
           {
             src: '/pwa-192x192.svg',
             sizes: '192x192',
@@ -50,18 +88,6 @@ export default defineConfig(({ mode }) => ({
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any'
-          },
-          {
-            src: '/pwa-maskable-192x192.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml',
-            purpose: 'maskable'
-          },
-          {
-            src: '/pwa-maskable-512x512.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'maskable'
           }
         ]
       },
