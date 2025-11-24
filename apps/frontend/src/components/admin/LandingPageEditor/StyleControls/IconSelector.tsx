@@ -89,7 +89,7 @@ export const IconSelector = ({ label, value, onChange, description }: IconSelect
               {value ? renderIcon(value) : <Search className="h-5 w-5" />}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80">
+          <PopoverContent className="w-80 max-w-[calc(100vw-2rem)]">
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

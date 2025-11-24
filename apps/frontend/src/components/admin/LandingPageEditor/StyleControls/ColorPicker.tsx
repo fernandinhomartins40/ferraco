@@ -61,7 +61,7 @@ export const ColorPicker = ({
               <span className="sr-only">Escolher cor</span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-64">
+          <PopoverContent className="w-64 max-w-[calc(100vw-2rem)]">
             <div className="space-y-4">
               <div>
                 <Label>Cor Personalizada</Label>
