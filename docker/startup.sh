@@ -10,11 +10,34 @@ echo "========================================="
 
 # Criar diretórios necessários com permissões corretas
 echo "📁 Criando diretórios necessários..."
-mkdir -p /app/uploads /app/data /app/logs /app/sessions
+mkdir -p /app/data /app/logs
 chmod 755 /app/data /app/logs
-chmod 777 /app/uploads /app/sessions
-chown -R node:node /app/uploads /app/sessions
-echo "✅ Diretórios criados com permissões corretas"
+
+# VOLUMES DOCKER (montados automaticamente pelo Docker)
+# Apenas garantir permissões se já existirem
+echo "🔍 Verificando volumes Docker..."
+if [ -d "/app/uploads" ]; then
+  echo "  ✅ /app/uploads detectado (volume Docker)"
+  chmod 777 /app/uploads
+  chown -R node:node /app/uploads
+else
+  echo "  ⚠️  /app/uploads NÃO encontrado - criando diretório temporário"
+  mkdir -p /app/uploads
+  chmod 777 /app/uploads
+  chown -R node:node /app/uploads
+fi
+
+if [ -d "/app/sessions" ]; then
+  echo "  ✅ /app/sessions detectado (volume Docker)"
+  chmod 777 /app/sessions
+  chown -R node:node /app/sessions
+else
+  echo "  ⚠️  /app/sessions NÃO encontrado - criando diretório temporário"
+  mkdir -p /app/sessions
+  chmod 777 /app/sessions
+  chown -R node:node /app/sessions
+fi
+echo "✅ Diretórios e volumes configurados"
 
 # Limpar locks do Chromium (corrige problema de QR code após migração)
 echo "🧹 Limpando locks do Chromium..."

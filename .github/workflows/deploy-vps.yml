@@ -180,8 +180,8 @@ jobs:
 
           # Parar containers anteriores (SEM remover volumes - preserva banco de dados!)
           echo "⏹️  Parando containers anteriores..."
-          cd ${{ env.APP_DIR }} 2>/dev/null || true
-          docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --remove-orphans 2>/dev/null || true
+          # CORREÇÃO: Usar caminho absoluto para garantir que o docker-compose.vps.yml seja encontrado
+          docker compose -f ${{ env.APP_DIR }}/docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} down --remove-orphans 2>/dev/null || true
           echo "✅ Volumes preservados (banco de dados mantido)"
 
           # Remover containers se ainda existirem
@@ -391,6 +391,47 @@ jobs:
           fi
 
           echo "✅ Container está rodando!"
+
+          # VERIFICAÇÃO CRÍTICA: Garantir que volumes estão montados corretamente
+          echo ""
+          echo "========================================="
+          echo "🔍 VERIFICAÇÃO CRÍTICA DE VOLUMES"
+          echo "========================================="
+
+          # Verificar se /app/uploads é um volume montado (não diretório da imagem)
+          echo "📦 Verificando montagem de /app/uploads..."
+          UPLOAD_MOUNT=$(docker exec ferraco-crm-vps sh -c "mountpoint -q /app/uploads && echo 'mounted' || echo 'notmounted'" 2>/dev/null || echo "error")
+          if [ "$UPLOAD_MOUNT" = "mounted" ]; then
+            echo "  ✅ /app/uploads está montado como volume Docker"
+          elif [ "$UPLOAD_MOUNT" = "notmounted" ]; then
+            echo "  ⚠️  AVISO: /app/uploads NÃO é um volume montado (dados podem ser perdidos!)"
+            echo "  📋 Verificando mounts do container:"
+            docker inspect ferraco-crm-vps | grep -A 20 "Mounts" || echo "Erro ao inspecionar mounts"
+          else
+            echo "  ⚠️  Erro ao verificar montagem (container pode não estar pronto)"
+          fi
+
+          # Verificar se /app/sessions é um volume montado
+          echo "📦 Verificando montagem de /app/sessions..."
+          SESSION_MOUNT=$(docker exec ferraco-crm-vps sh -c "mountpoint -q /app/sessions && echo 'mounted' || echo 'notmounted'" 2>/dev/null || echo "error")
+          if [ "$SESSION_MOUNT" = "mounted" ]; then
+            echo "  ✅ /app/sessions está montado como volume Docker"
+          elif [ "$SESSION_MOUNT" = "notmounted" ]; then
+            echo "  ⚠️  AVISO: /app/sessions NÃO é um volume montado (sessões WhatsApp podem ser perdidas!)"
+            echo "  📋 Verificando mounts do container:"
+            docker inspect ferraco-crm-vps | grep -A 20 "Mounts" || echo "Erro ao inspecionar mounts"
+          else
+            echo "  ⚠️  Erro ao verificar montagem (container pode não estar pronto)"
+          fi
+
+          # Listar todos os volumes montados no container
+          echo ""
+          echo "📋 Volumes montados no container ferraco-crm-vps:"
+          docker inspect ferraco-crm-vps --format='{{range .Mounts}}{{.Type}}: {{.Source}} -> {{.Destination}} ({{.Name}}){{"\n"}}{{end}}' || echo "Erro ao listar volumes"
+
+          echo "✅ Verificação de volumes concluída"
+          echo "========================================="
+          echo ""
 
           # Mostrar logs iniciais
           echo "📋 Logs iniciais do container:"

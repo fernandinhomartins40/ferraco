@@ -79,7 +79,8 @@ COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/startup.sh /app/startup.sh
 
 # Criar diretórios necessários e ajustar permissões
-RUN mkdir -p /run/nginx /var/log/nginx /var/lib/nginx/tmp/client_body /app/data /app/logs /app/uploads /app/sessions && \
+# CORREÇÃO: Remover /app/uploads e /app/sessions (serão volumes Docker montados em runtime)
+RUN mkdir -p /run/nginx /var/log/nginx /var/lib/nginx/tmp/client_body /app/data /app/logs && \
     chmod +x /app/startup.sh && \
     chown -R nginx:nginx /var/log/nginx /var/lib/nginx /run/nginx && \
     chown -R node:node /app
