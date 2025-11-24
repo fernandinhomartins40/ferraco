@@ -101,7 +101,7 @@ export function InstallPWABanner() {
   if ((platform === 'android' || platform === 'desktop') && deferredPrompt) {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50 animate-in slide-in-from-bottom duration-300">
-        <Alert className="border-primary bg-primary/5 shadow-lg">
+        <Alert className="border-primary bg-card shadow-lg backdrop-blur-sm">
           <Download className="h-5 w-5 text-primary" />
           <AlertDescription className="flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
@@ -147,7 +147,7 @@ export function InstallPWABanner() {
   if (platform === 'ios') {
     return (
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50 animate-in slide-in-from-bottom duration-300">
-        <Alert className="border-primary bg-primary/5 shadow-lg">
+        <Alert className="border-primary bg-card shadow-lg backdrop-blur-sm">
           <Share className="h-5 w-5 text-primary" />
           <AlertDescription className="flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
@@ -168,7 +168,7 @@ export function InstallPWABanner() {
             </div>
 
             {/* iOS Instructions */}
-            <div className="bg-background/50 rounded-lg p-3 text-sm space-y-2">
+            <div className="bg-background rounded-lg p-3 text-sm space-y-2 border border-border">
               <div className="flex items-center gap-2">
                 <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-xs font-bold text-primary">1</span>

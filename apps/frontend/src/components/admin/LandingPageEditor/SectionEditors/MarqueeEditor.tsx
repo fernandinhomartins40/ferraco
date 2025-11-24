@@ -54,14 +54,14 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-hidden">
       {/* Configurações Gerais */}
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Configurações Gerais</CardTitle>
           <CardDescription>Configure o marquee animado</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 w-full max-w-full overflow-hidden">
           <div className="flex items-center justify-between">
             <Label>Marquee Ativo</Label>
             <Switch
@@ -112,20 +112,20 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
       </Card>
 
       {/* Lista de Itens */}
-      <Card>
+      <Card className="w-full">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Itens do Marquee</CardTitle>
-              <CardDescription>Adicione e edite os itens que aparecem no marquee</CardDescription>
+              <CardDescription className="hidden sm:block">Adicione e edite os itens que aparecem no marquee</CardDescription>
             </div>
-            <Button onClick={addItem} size="sm">
+            <Button onClick={addItem} size="sm" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Item
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="w-full max-w-full overflow-hidden">
           {config.items.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <p className="mb-4">Nenhum item adicionado ainda</p>
@@ -135,19 +135,19 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 w-full max-w-full">
               {config.items.map((item, index) => (
-                <Card key={item.id} className="relative">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      {/* Drag Handle */}
-                      <div className="pt-2 cursor-move text-muted-foreground">
+                <Card key={item.id} className="relative w-full max-w-full">
+                  <CardContent className="p-3 sm:p-4 w-full max-w-full overflow-hidden">
+                    <div className="flex items-start gap-2 sm:gap-3 w-full">
+                      {/* Drag Handle - Hidden on mobile */}
+                      <div className="pt-2 cursor-move text-muted-foreground hidden sm:block">
                         <GripVertical className="h-5 w-5" />
                       </div>
 
                       {/* Form Fields */}
-                      <div className="flex-1 space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="flex-1 space-y-3 min-w-0 w-full">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-2">
                             <Label className="text-sm">Ícone</Label>
                             <select
@@ -169,20 +169,21 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
                               value={item.text}
                               onChange={(e) => updateItem(index, { text: e.target.value })}
                               placeholder="Ex: Qualidade Garantida"
+                              className="w-full"
                             />
                           </div>
                         </div>
 
                         {/* Preview */}
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
-                          <span className="text-xs text-muted-foreground">Preview:</span>
+                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md overflow-hidden">
+                          <span className="text-xs text-muted-foreground shrink-0">Preview:</span>
                           <div
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-2 min-w-0 truncate"
                             style={{ color: config.iconColor }}
                           >
-                            <span className="font-medium">{item.icon}</span>
+                            <span className="font-medium shrink-0">{item.icon}</span>
                             <span
-                              className="font-bold text-sm"
+                              className="font-bold text-sm truncate"
                               style={{ color: config.textColor }}
                             >
                               {item.text}
@@ -196,7 +197,7 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
                         variant="ghost"
                         size="icon"
                         onClick={() => removeItem(index)}
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive hover:text-destructive shrink-0"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -210,24 +211,24 @@ export const MarqueeEditor = ({ config, onChange }: MarqueeEditorProps) => {
       </Card>
 
       {/* Preview Geral */}
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Preview do Marquee</CardTitle>
-          <CardDescription>Visualização de como o marquee aparecerá</CardDescription>
+          <CardDescription className="hidden sm:block">Visualização de como o marquee aparecerá</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="w-full max-w-full overflow-hidden">
           <div
-            className="p-4 rounded-md overflow-hidden"
+            className="p-3 sm:p-4 rounded-md overflow-hidden w-full"
             style={{
               backgroundColor: config.backgroundColor || '#f3f4f6',
             }}
           >
-            <div className="flex items-center gap-8 animate-marquee">
+            <div className="flex items-center gap-6 sm:gap-8 animate-marquee">
               {config.items.map((item, index) => (
                 <div key={`${item.id}-${index}`} className="flex items-center gap-2 whitespace-nowrap">
-                  <span style={{ color: config.iconColor }}>{item.icon}</span>
+                  <span style={{ color: config.iconColor }} className="text-sm sm:text-base">{item.icon}</span>
                   <span
-                    className="font-bold"
+                    className="font-bold text-sm sm:text-base"
                     style={{ color: config.textColor }}
                   >
                     {item.text}
