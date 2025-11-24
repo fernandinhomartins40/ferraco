@@ -4,13 +4,13 @@ import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
 
 /**
- * Switch Component - Material Design 3 Style
+ * Switch Component - iOS/Modern Style
  *
- * Especificações baseadas no Material Design 3:
- * - Track: 52px width × 32px height (13rem × 8rem)
- * - Thumb: 24px diameter (6rem) quando unchecked, 28px (7rem) quando checked
- * - Padding interno: 4px
- * - Translação: 20px quando checked
+ * Design limpo e profissional inspirado em iOS e switches modernos:
+ * - Track: 44px width × 24px height (proporção 1.83:1)
+ * - Thumb: 20px diameter (círculo perfeito, sempre)
+ * - Padding interno: 2px
+ * - Animação suave e natural
  */
 const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitives.Root>,
@@ -18,8 +18,8 @@ const Switch = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SwitchPrimitives.Root
     className={cn(
-      // Track (container)
-      "peer inline-flex h-8 w-[3.25rem] shrink-0 cursor-pointer items-center rounded-full",
+      // Track (container) - proporções perfeitas
+      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5",
       "transition-colors duration-200 ease-in-out",
       // Estados de cor
       "data-[state=unchecked]:bg-input",
@@ -35,16 +35,12 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        // Thumb base
-        "pointer-events-none block rounded-full bg-background shadow-md",
-        // Tamanho dinâmico: menor quando off, maior quando on
-        "h-6 w-6 data-[state=checked]:h-7 data-[state=checked]:w-7",
-        // Posicionamento e transição
-        "transition-all duration-200 ease-in-out",
-        "data-[state=unchecked]:translate-x-0.5",
-        "data-[state=checked]:translate-x-[1.35rem]",
-        // Sombra mais pronunciada quando ativo
-        "data-[state=checked]:shadow-lg",
+        // Thumb - SEMPRE círculo perfeito (5 = 20px)
+        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg",
+        // Movimento suave
+        "transition-transform duration-200 ease-in-out",
+        "data-[state=unchecked]:translate-x-0",
+        "data-[state=checked]:translate-x-5",
       )}
     />
   </SwitchPrimitives.Root>
