@@ -46,16 +46,16 @@ export const ColorPicker = ({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 overflow-x-hidden">
       <Label htmlFor={label}>{label}</Label>
       {description && <p className="text-sm text-muted-foreground">{description}</p>}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 w-full overflow-x-hidden">
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              className="w-12 h-10 p-1 rounded-md border-2"
+              className="w-12 h-10 p-1 rounded-md border-2 shrink-0"
               style={{ backgroundColor: localValue }}
             >
               <span className="sr-only">Escolher cor</span>
@@ -112,7 +112,7 @@ export const ColorPicker = ({
           value={localValue}
           onChange={(e) => handleChange(e.target.value)}
           placeholder="#000000"
-          className="flex-1 font-mono min-w-0"
+          className="flex-1 font-mono min-w-0 w-0"
         />
       </div>
     </div>
