@@ -219,9 +219,11 @@ export function MobileKanban({
                                   Excluir
                                 </DropdownMenuItem>
 
-                                {/* Mover para outra coluna */}
+                                <DropdownMenuSeparator />
+
+                                {/* Mover para outra coluna normal */}
                                 <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-                                  Mover para:
+                                  Mover para Status:
                                 </DropdownMenuItem>
                                 {columns
                                   .filter((col) => col.status !== lead.status)
@@ -235,6 +237,27 @@ export function MobileKanban({
                                       {col.name}
                                     </DropdownMenuItem>
                                   ))}
+
+                                {/* Mover para coluna de automação */}
+                                {onMoveLeadToAutomationColumn && automationColumns.length > 0 && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                                      <Bot className="h-3 w-3 mr-1" />
+                                      Mover para Automação:
+                                    </DropdownMenuItem>
+                                    {automationColumns.map((col: any) => (
+                                      <DropdownMenuItem
+                                        key={col.id}
+                                        onClick={() => onMoveLeadToAutomationColumn(lead.id, col.id)}
+                                        className="pl-6"
+                                      >
+                                        <ChevronRight className="h-3 w-3 mr-1" />
+                                        {col.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -370,7 +393,8 @@ export function MobileKanban({
                                         <>
                                           <DropdownMenuSeparator />
                                           <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-                                            Mover para:
+                                            <Bot className="h-3 w-3 mr-1" />
+                                            Mover para Automação:
                                           </DropdownMenuItem>
                                           {automationColumns
                                             .filter((col: any) => col.id !== column.id)
@@ -384,6 +408,32 @@ export function MobileKanban({
                                                 {col.name}
                                               </DropdownMenuItem>
                                             ))}
+                                        </>
+                                      )}
+
+                                      {/* Mover para coluna normal de status */}
+                                      {columns.length > 0 && (
+                                        <>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                                            Mover para Status:
+                                          </DropdownMenuItem>
+                                          {columns.map((col) => (
+                                            <DropdownMenuItem
+                                              key={col.id}
+                                              onClick={() => {
+                                                // Primeiro remove da automação, depois atualiza o status
+                                                if (onRemoveLeadFromAutomation) {
+                                                  onRemoveLeadFromAutomation(lead.id);
+                                                }
+                                                onUpdateLeadStatus(lead.id, col.status);
+                                              }}
+                                              className="pl-6"
+                                            >
+                                              <ChevronRight className="h-3 w-3 mr-1" />
+                                              {col.name}
+                                            </DropdownMenuItem>
+                                          ))}
                                         </>
                                       )}
                                     </DropdownMenuContent>
