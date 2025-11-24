@@ -29,6 +29,11 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
     console.log('✅ HEADER V2-DEBUG CARREGADO!');
     console.log('✅ Se você está vendo esta mensagem, o JavaScript está funcionando.');
     console.log('✅ Agora clique em um item do menu.');
+
+    // Alert impossível de ignorar
+    setTimeout(() => {
+      alert('✅ HEADER V2-DEBUG CARREGADO! Console.log está funcionando? Verifique a aba Console do DevTools.');
+    }, 1000);
   }
 
   const logoSrc = config?.logo?.image?.url || logoFerraco;
@@ -71,6 +76,7 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
                 key={item.label}
                 type="button"
                 onClick={() => {
+                  alert(`CLIQUE DETECTADO: ${item.label} -> ${item.href}`);
                   console.log('🖱️ [Header] Desktop button clicked:', item.label, item.href);
                   scrollToSection(item.href);
                 }}
@@ -112,6 +118,7 @@ const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
                   key={item.label}
                   type="button"
                   onClick={() => {
+                    alert(`MOBILE CLIQUE DETECTADO: ${item.label} -> ${item.href}`);
                     console.log('📱 [Header] Mobile button clicked:', item.label, item.href);
                     scrollToSection(item.href);
                     setIsMenuOpen(false);
