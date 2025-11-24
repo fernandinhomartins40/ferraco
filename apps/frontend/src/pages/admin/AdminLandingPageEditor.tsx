@@ -114,7 +114,7 @@ export const AdminLandingPageEditor = () => {
 
   return (
     <AdminLayout>
-      <div className="w-full flex flex-col gap-4 md:gap-6">
+      <div className="w-full flex flex-col gap-6">
         {/* Header - Mobile Responsivo */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -175,16 +175,15 @@ export const AdminLandingPageEditor = () => {
 
         {/* Status */}
         {isDirty && (
-          <Alert>
-            <AlertDescription>
-              Você tem alterações não salvas. Pressione <kbd className="px-2 py-1 bg-muted rounded">Ctrl+S</kbd> ou
-              clique em Salvar.
+          <Alert className="mx-0">
+            <AlertDescription className="text-sm">
+              Você tem alterações não salvas. <span className="hidden sm:inline">Pressione <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Ctrl+S</kbd> ou clique em</span><span className="sm:hidden">Clique em</span> Salvar.
             </AlertDescription>
           </Alert>
         )}
 
         {/* Main Layout */}
-        <div className="flex flex-col gap-4 md:gap-6">
+        <div className="flex flex-col gap-6">
           {/* Seções */}
           <Card>
             <CardContent className="p-4 md:p-6">
@@ -240,8 +239,8 @@ export const AdminLandingPageEditor = () => {
 
                   {currentSection === 'marquee' && !config.marquee && (
                     <Card>
-                      <CardContent className="p-8 text-center">
-                        <p className="text-muted-foreground mb-4">
+                      <CardContent className="p-4 md:p-6 text-center">
+                        <p className="text-sm md:text-base text-muted-foreground mb-4">
                           Configuração de Marquee não encontrada. Clique em "Restaurar Padrões" para adicionar.
                         </p>
                       </CardContent>
@@ -291,8 +290,8 @@ export const AdminLandingPageEditor = () => {
                   {/* Meta Editor (futuro) */}
                   {currentSection === 'meta' && (
                     <Card>
-                      <CardContent className="p-8 text-center">
-                        <p className="text-muted-foreground">
+                      <CardContent className="p-4 md:p-6 text-center">
+                        <p className="text-sm md:text-base text-muted-foreground">
                           Editor de Meta Tags será implementado em breve
                         </p>
                       </CardContent>
