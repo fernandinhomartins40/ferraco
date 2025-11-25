@@ -1682,27 +1682,55 @@ class WhatsAppService {
     try {
       // 1. ✅ STATELESS: Buscar TODAS as conversas direto do WhatsApp
       logger.info('📋 Iniciando busca de conversas do WhatsApp...');
-      const allChats = await this.client!.getAllChats();
-      logger.info(`📋 Total de chats encontrados: ${allChats?.length || 0}`);
 
-      // 2. Filtrar apenas conversas privadas (não grupos)
+      // ✅ CORREÇÃO: Usar evaluateAndReturn com filtro seguro para evitar stack overflow
+      const allChats = await this.client!.page.evaluate(() => {
+        return window.WAPI.getAllChats().filter((chat: any) => {
+          // Filtrar APENAS conversas privadas (não grupos) NO BROWSER
+          // Evita carregar propriedades circulares que causam stack overflow
+          try {
+            return !chat.isGroup && chat.id && chat.id._serialized && chat.id._serialized.includes('@c.us');
+          } catch {
+            return false;
+          }
+        }).map((chat: any) => {
+          // Retornar APENAS propriedades seguras (sem referências circulares)
+          return {
+            id: { _serialized: chat.id._serialized },
+            name: chat.name || chat.contact?.name || chat.contact?.pushname || null,
+            t: chat.t,
+            unreadCount: chat.unreadCount || 0,
+            pin: chat.pin || false,
+            archive: chat.archive || false,
+            lastMessage: chat.lastMessage ? {
+              body: chat.lastMessage.body,
+              type: chat.lastMessage.type,
+              timestamp: chat.lastMessage.t
+            } : null,
+            profilePicThumb: chat.contact?.profilePicThumb || null
+          };
+        });
+      });
+
+      logger.info(`📋 Total de conversas privadas encontradas: ${allChats?.length || 0}`);
+
+      // 2. Validação
       if (!Array.isArray(allChats)) {
-        logger.error('❌ getAllChats não retornou um array:', typeof allChats);
+        logger.error('❌ Busca de chats não retornou um array:', typeof allChats);
         return [];
       }
 
       const privateChats = allChats
-        .filter((chat: Chat) => !chat.isGroup)
-        .sort((a: Chat, b: Chat) => ((b as any).t || 0) - ((a as any).t || 0))
+        .sort((a: any, b: any) => ((b as any).t || 0) - ((a as any).t || 0))
         .slice(0, limit);
 
-      logger.info(`📋 Conversas privadas encontradas: ${privateChats.length}`);
+      logger.info(`📋 Conversas selecionadas: ${privateChats.length}`);
 
       // 3. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
       const { prisma } = await import('../config/database');
 
       const enrichedChats = await Promise.all(
-        privateChats.map(async (chat: Chat) => {
+        privateChats.map(async (chat: any) => {
           try {
             const phone = chat.id._serialized.replace('@c.us', '');
 
@@ -1721,18 +1749,16 @@ class WhatsAppService {
               },
             });
 
-            // Extrair preview da última mensagem (tenta diferentes propriedades)
+            // Extrair preview da última mensagem
             let lastMessagePreview = null;
-            const chatAny = chat as any;
-            if (chatAny.lastMessage) {
+            if (chat.lastMessage) {
               lastMessagePreview =
-                chatAny.lastMessage.body ||
-                chatAny.lastMessage.content ||
-                (chatAny.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
-                (chatAny.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
-                (chatAny.lastMessage.type === 'audio' || chatAny.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
-                (chatAny.lastMessage.type === 'document' ? '📄 Documento' : null) ||
-                (chatAny.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
+                chat.lastMessage.body ||
+                (chat.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
+                (chat.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
+                (chat.lastMessage.type === 'audio' || chat.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
+                (chat.lastMessage.type === 'document' ? '📄 Documento' : null) ||
+                (chat.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
                 'Nova mensagem';
             }
 
@@ -1740,7 +1766,7 @@ class WhatsAppService {
               id: chat.id._serialized,
               phone,
               name: chat.name || contactMetadata?.name || phone,
-              profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+              profilePicUrl: chat.profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
               lastMessageAt: chat.t ? new Date(chat.t * 1000) : null,
               lastMessagePreview,
               unreadCount: chat.unreadCount || 0,
@@ -1753,7 +1779,7 @@ class WhatsAppService {
                 id: phone,
                 phone,
                 name: chat.name || contactMetadata?.name || phone,
-                profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+                profilePicUrl: chat.profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
               },
             };
           } catch (chatError: any) {
