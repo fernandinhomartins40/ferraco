@@ -1698,8 +1698,6 @@ class WhatsAppService {
           // Pegar todos os chats do Store nativo
           const allChatsModels = Store.Chat.getModelsArray();
 
-          logger.info(`📞 Store.Chat retornou ${allChatsModels.length} chats totais`);
-
           // Filtrar conversas privadas IMEDIATAMENTE (antes de serializar)
           // Verificar se id.server contém "c.us" (privado) vs "g.us" (grupo)
           const privateChatsModels = allChatsModels.filter((chat: any) => {
@@ -1710,8 +1708,6 @@ class WhatsAppService {
               return false;
             }
           });
-
-          logger.info(`📞 Filtrando ${privateChatsModels.length} conversas privadas`);
 
           // Extrair APENAS os campos necessários (manualmente, sem acessar getters)
           const simplifiedChats = privateChatsModels
