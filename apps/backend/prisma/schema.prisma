@@ -241,19 +241,20 @@ model User {
   lastLogin DateTime?
 
   // Relações
-  permissions           UserPermission[]
-  teamMemberships       TeamMember[]
-  preferences           UserPreferences?
-  refreshTokens         RefreshToken[]
-  assignedLeads         Lead[]             @relation("AssignedTo")
-  createdLeads          Lead[]             @relation("CreatedBy")
-  notes                 Note[]
-  interactions          Interaction[]
-  opportunitiesCreated  Opportunity[]      @relation("OpportunityCreatedBy")
-  opportunitiesAssigned Opportunity[]      @relation("OpportunityAssignedTo")
-  automationsCreated    Automation[]       @relation("AutomationCreatedBy")
-  pipelinesCreated      Pipeline[]         @relation("PipelineCreatedBy")
-  integrationsCreated   Integration[]      @relation("IntegrationCreatedBy")
+  permissions                  UserPermission[]
+  teamMemberships              TeamMember[]
+  preferences                  UserPreferences?
+  refreshTokens                RefreshToken[]
+  assignedLeads                Lead[]                       @relation("AssignedTo")
+  createdLeads                 Lead[]                       @relation("CreatedBy")
+  notes                        Note[]
+  interactions                 Interaction[]
+  opportunitiesCreated         Opportunity[]                @relation("OpportunityCreatedBy")
+  opportunitiesAssigned        Opportunity[]                @relation("OpportunityAssignedTo")
+  automationsCreated           Automation[]                 @relation("AutomationCreatedBy")
+  pipelinesCreated             Pipeline[]                   @relation("PipelineCreatedBy")
+  integrationsCreated          Integration[]                @relation("IntegrationCreatedBy")
+  landingPageConfigHistoryChanges LandingPageConfigHistory[]
   reportsCreated        Report[]           @relation("ReportCreatedBy")
   auditLogs             AuditLog[]
   signatures            DigitalSignature[]
@@ -729,7 +730,41 @@ model LandingPageConfig {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // Relações
+  history LandingPageConfigHistory[]
+
   @@map("landing_page_config")
+}
+
+// ============================================================================
+// TABELA: LandingPageConfigHistory (Histórico de Alterações)
+// ============================================================================
+
+model LandingPageConfigHistory {
+  id        String   @id @default(cuid())
+  configId  String?  @map("config_id")
+  header    String   @db.Text // JSON
+  hero      String   @db.Text // JSON
+  marquee   String   @db.Text // JSON
+  about     String   @db.Text // JSON
+  products  String   @db.Text // JSON
+  experience String  @db.Text // JSON
+  contact   String   @db.Text // JSON
+  footer    String   @db.Text // JSON
+
+  // Metadados
+  changeType      String  @default("manual_save") @map("change_type") // 'manual_save', 'auto_save', 'import', 'reset'
+  changedByUserId String? @map("changed_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relações
+  config      LandingPageConfig? @relation(fields: [configId], references: [id], onDelete: SetNull)
+  changedByUser User?            @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([configId])
+  @@index([createdAt(sort: Desc)])
+  @@index([changeType])
+  @@map("landing_page_config_history")
 }
 
 // ============================================================================
