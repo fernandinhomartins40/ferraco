@@ -42,10 +42,13 @@ RUN npm ci
 RUN npm run prisma:generate
 
 # Build do backend (deve ser executado da raiz do monorepo)
-RUN npm run build:backend
+RUN npm run build:backend || { echo "❌ ERRO: Build do backend falhou!"; cat apps/backend/typescript-errors.txt 2>/dev/null || true; exit 1; }
+
+# Verificar se dist/ foi criado
+RUN ls -la apps/backend/dist/ || { echo "❌ ERRO: Diretório dist/ não foi criado!"; exit 1; }
 
 # Build do frontend (deve ser executado da raiz do monorepo)
-RUN npm run build:frontend
+RUN npm run build:frontend || { echo "❌ ERRO: Build do frontend falhou!"; exit 1; }
 
 # Stage 2: Runtime - Container Único
 FROM node:20-alpine
