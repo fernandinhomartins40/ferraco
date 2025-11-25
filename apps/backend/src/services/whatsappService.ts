@@ -559,21 +559,19 @@ class WhatsAppService {
     // Mesma abordagem que funcionou para listar conversas e mensagens
     const result = await Promise.race([
       (this.client as any).page.evaluate(async (chatId: string, text: string, opts: any) => {
-        // @ts-ignore - window.Store é injetado pelo WhatsApp Web
-        const Store = window.Store;
+        // @ts-ignore - WPP é global injetado pelo WPPConnect no browser
+        const WPP = window.WPP;
 
-        if (!Store || !Store.Chat) {
-          throw new Error('Store.Chat não disponível no WhatsApp Web');
+        if (!WPP || !WPP.chat) {
+          throw new Error('WPP.chat não disponível no WhatsApp Web');
         }
 
-        // Buscar ou criar chat
-        const chat = await Store.Chat.find(chatId);
-        if (!chat) {
-          throw new Error(`Chat ${chatId} não encontrado`);
-        }
-
-        // Enviar mensagem via API nativa
-        const sentMsg = await chat.sendMessage(text);
+        // ✅ CORREÇÃO: Usar WPP.chat.sendTextMessage() diretamente
+        // Referência: https://github.com/wppconnect-team/wa-js/blob/main/src/chat/functions/sendTextMessage.ts
+        const sentMsg = await WPP.chat.sendTextMessage(chatId, text, {
+          waitForAck: true,
+          ...opts
+        });
 
         // Retornar dados serializados
         return {
@@ -622,26 +620,22 @@ class WhatsAppService {
 
     const result = await Promise.race([
       (this.client as any).page.evaluate(async (chatId: string, base64: string, fname: string, cap: string) => {
-        // @ts-ignore - window.Store existe no browser context
-        const Store = window.Store;
+        // @ts-ignore - WPP é global injetado pelo WPPConnect
+        const WPP = window.WPP;
 
-        if (!Store || !Store.Chat) {
-          throw new Error('Store.Chat não disponível');
+        if (!WPP || !WPP.chat) {
+          throw new Error('WPP.chat não disponível');
         }
 
-        const chat = await Store.Chat.find(chatId);
-        if (!chat) {
-          throw new Error(`Chat ${chatId} não encontrado`);
-        }
+        // ✅ CORREÇÃO: Usar WPP.chat.sendFileMessage() para imagens
+        // Criar base64 com data URI
+        const dataUri = `data:image/jpeg;base64,${base64}`;
 
-        // Criar objeto de mídia para imagem
-        const mediaData = await Store.OpaqueData.createFromData(base64, 'image/jpeg');
-
-        // Enviar imagem com caption
-        const sentMsg = await chat.sendMessage(mediaData, {
-          caption: cap || '',
+        const sentMsg = await WPP.chat.sendFileMessage(chatId, dataUri, {
           type: 'image',
-          filename: fname || 'image.jpg'
+          caption: cap || '',
+          filename: fname || 'image.jpg',
+          waitForAck: true
         });
 
         return {
@@ -685,35 +679,25 @@ class WhatsAppService {
     // Aceita URL ou base64
     const result = await Promise.race([
       (this.client as any).page.evaluate(async (chatId: string, video: string, cap: string, gif: boolean) => {
-        // @ts-ignore - window.Store existe no browser context
-        const Store = window.Store;
+        // @ts-ignore - WPP é global injetado pelo WPPConnect
+        const WPP = window.WPP;
 
-        if (!Store || !Store.Chat) {
-          throw new Error('Store.Chat não disponível');
+        if (!WPP || !WPP.chat) {
+          throw new Error('WPP.chat não disponível');
         }
 
-        const chat = await Store.Chat.find(chatId);
-        if (!chat) {
-          throw new Error(`Chat ${chatId} não encontrado`);
-        }
-
-        // Se for base64, converter
+        // Se não começar com data:, adicionar
         let videoData = video;
-        if (video.startsWith('data:')) {
-          videoData = video.split(',')[1];
+        if (!video.startsWith('data:')) {
+          videoData = `data:${gif ? 'image/gif' : 'video/mp4'};base64,${video}`;
         }
 
-        // Criar objeto de mídia para vídeo
-        const mediaData = await Store.OpaqueData.createFromData(
-          videoData,
-          gif ? 'image/gif' : 'video/mp4'
-        );
-
-        // Enviar vídeo com caption
-        const sentMsg = await chat.sendMessage(mediaData, {
-          caption: cap || '',
+        // ✅ CORREÇÃO: Usar WPP.chat.sendFileMessage() para vídeos
+        const sentMsg = await WPP.chat.sendFileMessage(chatId, videoData, {
           type: gif ? 'gif' : 'video',
-          filename: gif ? 'video.gif' : 'video.mp4'
+          caption: cap || '',
+          filename: gif ? 'video.gif' : 'video.mp4',
+          waitForAck: true
         });
 
         return {
@@ -747,35 +731,28 @@ class WhatsAppService {
 
     logger.info(`🎤 Enviando áudio PTT via Store.Chat: ${formatted.substring(0, 12)}***`);
 
-    // ⚠️ SOLUÇÃO 2025: Usar window.Store.Chat nativo para enviar áudio PTT
+    // ⚠️ SOLUÇÃO 2025: Usar WPP.chat.sendFileMessage() para áudio PTT
     const result = await Promise.race([
       (this.client as any).page.evaluate(async (chatId: string, audio: string) => {
-        // @ts-ignore - window.Store existe no browser context
-        const Store = window.Store;
+        // @ts-ignore - WPP é global injetado pelo WPPConnect
+        const WPP = window.WPP;
 
-        if (!Store || !Store.Chat) {
-          throw new Error('Store.Chat não disponível');
+        if (!WPP || !WPP.chat) {
+          throw new Error('WPP.chat não disponível');
         }
 
-        const chat = await Store.Chat.find(chatId);
-        if (!chat) {
-          throw new Error(`Chat ${chatId} não encontrado`);
-        }
-
-        // Se for base64, converter
+        // Se não começar com data:, adicionar
         let audioData = audio;
-        if (audio.startsWith('data:')) {
-          audioData = audio.split(',')[1];
+        if (!audio.startsWith('data:')) {
+          audioData = `data:audio/ogg;base64,${audio}`;
         }
 
-        // Criar objeto de mídia para áudio PTT
-        const mediaData = await Store.OpaqueData.createFromData(audioData, 'audio/ogg; codecs=opus');
-
-        // Enviar áudio como PTT (Push-to-Talk)
-        const sentMsg = await chat.sendMessage(mediaData, {
-          type: 'ptt',
+        // ✅ CORREÇÃO: Usar WPP.chat.sendFileMessage() com isPtt: true
+        const sentMsg = await WPP.chat.sendFileMessage(chatId, audioData, {
+          type: 'audio',
           isPtt: true,
-          filename: 'audio.ogg'
+          filename: 'audio.ogg',
+          waitForAck: true
         });
 
         return {
