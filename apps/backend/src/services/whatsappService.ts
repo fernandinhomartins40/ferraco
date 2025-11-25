@@ -1686,6 +1686,7 @@ class WhatsAppService {
       // ✅ CORREÇÃO: Usar evaluateAndReturn com filtro seguro para evitar stack overflow
       // @ts-ignore - page.evaluate executa no contexto do browser onde WAPI está disponível
       const allChats = await this.client!.page.evaluate(() => {
+        // @ts-ignore - WAPI é injetado pelo WPPConnect no contexto do browser
         return WAPI.getAllChats().filter((chat: any) => {
           // Filtrar APENAS conversas privadas (não grupos) NO BROWSER
           // Evita carregar propriedades circulares que causam stack overflow
