@@ -162,6 +162,16 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
       events?.onError?.(error);
     });
 
+    // ✅ NOVO: Evento de QR Code expirado
+    socket.on('whatsapp:qr-expired', () => {
+      console.warn('⏱️ [Socket.IO] QR Code expirado');
+      // Limpar QR code atual e aguardar novo
+      dispatch({
+        type: 'INITIALIZE',
+      });
+      events?.onError?.('QR Code expirado. Gerando novo...');
+    });
+
     // Cleanup ao desmontar
     return () => {
       console.log('🔌 [Socket.IO] Desconectando...');
@@ -170,6 +180,7 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
       socket.off('whatsapp:ready');
       socket.off('whatsapp:disconnected');
       socket.off('whatsapp:error');
+      socket.off('whatsapp:qr-expired');
       socket.disconnect();
       socketRef.current = null;
 

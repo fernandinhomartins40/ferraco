@@ -56,6 +56,8 @@ class WhatsAppWebJSService {
   private isInitializing: boolean = false;
   private qrCode: string | null = null;
   private sessionPath: string;
+  private qrDebounceTimer: NodeJS.Timeout | null = null;
+  private qrTimeoutTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     // Diretório de sessão (Docker volume em produção)
@@ -108,35 +110,48 @@ class WhatsAppWebJSService {
       });
 
       // Event: QR Code gerado
+      // ✅ FIX: Implementar debounce de 500ms para evitar atualizações muito rápidas
       this.client.on('qr', async (qr: string) => {
-        logger.info('📱 QR Code gerado');
-
-        // Converter QR Code string para Data URI (base64)
-        try {
-          const qrDataUri = await QRCode.toDataURL(qr, {
-            errorCorrectionLevel: 'M',
-            type: 'image/png',
-            width: 300,
-            margin: 1,
-          });
-
-          this.qrCode = qrDataUri;
-          this.isConnected = false;
-
-          // Emitir via Socket.IO (enviar data URI, não string raw)
-          if (this.io) {
-            this.io.emit('whatsapp:qr', { qr: qrDataUri });
-            this.io.emit('whatsapp:status', 'INITIALIZING');
-            logger.info('✅ QR Code emitido via Socket.IO (base64)');
-          }
-        } catch (error) {
-          logger.error('❌ Erro ao gerar QR Code base64:', error);
-          this.qrCode = qr; // Fallback para string raw
-          if (this.io) {
-            this.io.emit('whatsapp:qr', { qr });
-            this.io.emit('whatsapp:status', 'INITIALIZING');
-          }
+        // Limpar timer anterior se existir
+        if (this.qrDebounceTimer) {
+          clearTimeout(this.qrDebounceTimer);
         }
+
+        // Debounce de 500ms
+        this.qrDebounceTimer = setTimeout(async () => {
+          logger.info('📱 QR Code gerado (debounced)');
+
+          // Converter QR Code string para Data URI (base64)
+          try {
+            const qrDataUri = await QRCode.toDataURL(qr, {
+              errorCorrectionLevel: 'M',
+              type: 'image/png',
+              width: 300,
+              margin: 1,
+            });
+
+            this.qrCode = qrDataUri;
+            this.isConnected = false;
+
+            // Emitir via Socket.IO (enviar data URI, não string raw)
+            if (this.io) {
+              this.io.emit('whatsapp:qr', { qr: qrDataUri });
+              this.io.emit('whatsapp:status', 'INITIALIZING');
+              logger.info('✅ QR Code emitido via Socket.IO (base64)');
+            }
+
+            // ✅ FIX: Iniciar timer de timeout (60 segundos)
+            this.startQRTimeout();
+
+          } catch (error) {
+            logger.error('❌ Erro ao gerar QR Code base64:', error);
+            this.qrCode = qr; // Fallback para string raw
+            if (this.io) {
+              this.io.emit('whatsapp:qr', { qr });
+              this.io.emit('whatsapp:status', 'INITIALIZING');
+            }
+          }
+        }, 500); // Aguardar 500ms antes de processar
       });
 
       // Event: Cliente pronto
@@ -145,6 +160,9 @@ class WhatsAppWebJSService {
         this.isConnected = true;
         this.isInitializing = false;
         this.qrCode = null;
+
+        // ✅ FIX: Limpar timers ao conectar
+        this.clearQRTimers();
 
         // Emitir via Socket.IO
         if (this.io) {
@@ -164,6 +182,9 @@ class WhatsAppWebJSService {
         logger.error('❌ Falha na autenticação:', msg);
         this.isConnected = false;
         this.isInitializing = false;
+
+        // ✅ FIX: Limpar timers em falha
+        this.clearQRTimers();
 
         if (this.io) {
           this.io.emit('whatsapp:status', 'DISCONNECTED');
@@ -205,9 +226,17 @@ class WhatsAppWebJSService {
 
     } catch (error: any) {
       logger.error('❌ Erro ao inicializar WhatsApp:', error);
+      // ✅ FIX: Sempre resetar flag em caso de erro
       this.isInitializing = false;
       this.client = null;
+      this.clearQRTimers();
       throw error;
+    } finally {
+      // ✅ FIX: Garantir que isInitializing seja resetado em qualquer cenário
+      // (só se não conectou com sucesso)
+      if (!this.isConnected) {
+        this.isInitializing = false;
+      }
     }
   }
 
@@ -258,7 +287,7 @@ class WhatsAppWebJSService {
   }
 
   /**
-   * Desconectar
+   * Desconectar (mantém sessão para reconexão automática)
    */
   async disconnect(): Promise<void> {
     if (!this.client) {
@@ -267,14 +296,151 @@ class WhatsAppWebJSService {
     }
 
     try {
+      // ✅ FIX: Apenas fechar cliente, SEM destruir sessão
+      // A sessão LocalAuth permanece no disco para reconexão futura
+      await this.client.logout();
+      this.client = null;
+      this.isConnected = false;
+      this.qrCode = null;
+      this.isInitializing = false;
+      this.clearQRTimers();
+      logger.info('✅ WhatsApp desconectado (sessão mantida)');
+    } catch (error: any) {
+      logger.error('❌ Erro ao desconectar WhatsApp:', error);
+      // Fallback: destruir cliente se logout falhar
+      try {
+        await this.client.destroy();
+        this.client = null;
+      } catch (destroyError) {
+        logger.error('❌ Erro ao destruir cliente:', destroyError);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ NOVO: Logout completo (remove sessão e gera novo QR code)
+   */
+  async logout(): Promise<void> {
+    if (!this.client) {
+      logger.warn('⚠️  Nenhum cliente para fazer logout');
+      return;
+    }
+
+    try {
+      logger.info('🔓 Fazendo logout e removendo sessão...');
+
+      // Destruir cliente E sessão
       await this.client.destroy();
       this.client = null;
       this.isConnected = false;
       this.qrCode = null;
-      logger.info('✅ WhatsApp desconectado');
+      this.isInitializing = false;
+      this.clearQRTimers();
+
+      // Deletar arquivos de sessão manualmente
+      this.deleteSessionFiles();
+
+      logger.info('✅ Logout completo (sessão removida)');
     } catch (error: any) {
-      logger.error('❌ Erro ao desconectar WhatsApp:', error);
+      logger.error('❌ Erro ao fazer logout:', error);
+      this.client = null;
+      this.isConnected = false;
+      this.isInitializing = false;
       throw error;
+    }
+  }
+
+  /**
+   * ✅ NOVO: Reinicializar WhatsApp (gerar novo QR code)
+   */
+  async reinitialize(): Promise<void> {
+    logger.info('🔄 Reinicializando WhatsApp...');
+
+    try {
+      // 1. Fazer logout completo (remove sessão)
+      if (this.client) {
+        await this.logout();
+      }
+
+      // 2. Aguardar 1 segundo para garantir limpeza
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 3. Inicializar novamente (vai gerar novo QR code)
+      await this.initialize();
+
+      logger.info('✅ WhatsApp reinicializado com sucesso');
+    } catch (error: any) {
+      logger.error('❌ Erro ao reinicializar WhatsApp:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ NOVO: Limpar timers de QR code
+   */
+  private clearQRTimers(): void {
+    if (this.qrDebounceTimer) {
+      clearTimeout(this.qrDebounceTimer);
+      this.qrDebounceTimer = null;
+    }
+    if (this.qrTimeoutTimer) {
+      clearTimeout(this.qrTimeoutTimer);
+      this.qrTimeoutTimer = null;
+    }
+  }
+
+  /**
+   * ✅ NOVO: Iniciar timeout para QR code (60 segundos)
+   */
+  private startQRTimeout(): void {
+    // Limpar timeout anterior
+    if (this.qrTimeoutTimer) {
+      clearTimeout(this.qrTimeoutTimer);
+    }
+
+    // Criar novo timeout de 60 segundos
+    this.qrTimeoutTimer = setTimeout(() => {
+      if (!this.isConnected && this.qrCode) {
+        logger.warn('⏱️  QR Code expirado (60 segundos). Gerando novo...');
+
+        // Emitir evento de expiração
+        if (this.io) {
+          this.io.emit('whatsapp:qr-expired');
+        }
+
+        // Limpar QR code atual
+        this.qrCode = null;
+
+        // whatsapp-web.js vai gerar automaticamente um novo QR code
+      }
+    }, 60000); // 60 segundos
+  }
+
+  /**
+   * ✅ NOVO: Deletar arquivos de sessão
+   */
+  private deleteSessionFiles(): void {
+    try {
+      if (fs.existsSync(this.sessionPath)) {
+        // Deletar todos os arquivos da sessão
+        const files = fs.readdirSync(this.sessionPath);
+        for (const file of files) {
+          const filePath = path.join(this.sessionPath, file);
+          const stat = fs.statSync(filePath);
+
+          if (stat.isDirectory()) {
+            // Deletar diretório recursivamente
+            fs.rmSync(filePath, { recursive: true, force: true });
+          } else {
+            // Deletar arquivo
+            fs.unlinkSync(filePath);
+          }
+        }
+        logger.info('🗑️  Arquivos de sessão deletados');
+      }
+    } catch (error) {
+      logger.error('❌ Erro ao deletar arquivos de sessão:', error);
     }
   }
 

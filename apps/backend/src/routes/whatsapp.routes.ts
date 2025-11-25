@@ -276,11 +276,12 @@ router.post('/disconnect', authenticate, async (req: Request, res: Response) => 
 /**
  * POST /api/whatsapp/reinitialize
  * Reinicializar WhatsApp (gerar novo QR code)
+ * ✅ FIX: Suporta ambos whatsapp-web.js E WPPConnect
  */
 router.post('/reinitialize', authenticate, async (req: Request, res: Response) => {
   try {
-    // reinitialize disponível apenas no whatsappService (WPPConnect)
-    await whatsappService.reinitialize();
+    const activeService = getActiveWhatsAppService();
+    await activeService.reinitialize();
 
     res.json({
       success: true,

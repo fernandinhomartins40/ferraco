@@ -63,6 +63,7 @@ const AdminWhatsApp = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showGroupManagement, setShowGroupManagement] = useState(false);
   const [showContactManagement, setShowContactManagement] = useState(false);
+  const [qrTimeRemaining, setQrTimeRemaining] = useState<number | null>(null);
 
   // ✅ FASE 3: Socket.IO + State Machine
   const {
@@ -116,6 +117,31 @@ const AdminWhatsApp = () => {
       setAccount(whatsappAccount);
     }
   }, [whatsappAccount]);
+
+  // ✅ NOVO: Timer de 60 segundos para QR code
+  useEffect(() => {
+    if (qrCode && !isConnected) {
+      // Iniciar contagem regressiva de 60 segundos
+      setQrTimeRemaining(60);
+
+      const interval = setInterval(() => {
+        setQrTimeRemaining((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(interval);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        clearInterval(interval);
+        setQrTimeRemaining(null);
+      };
+    } else {
+      setQrTimeRemaining(null);
+    }
+  }, [qrCode, isConnected]);
 
   // Helper: Mapear status do socket para mensagem
   const getStatusMessage = (status: SocketWhatsAppStatus): string => {
@@ -460,12 +486,28 @@ const AdminWhatsApp = () => {
             {qrCode && !isConnected && (
               <Card className="border-2 border-green-500">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <QrCode className="h-6 w-6 text-green-600" />
-                    Escanear QR Code
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="h-6 w-6 text-green-600" />
+                      Escanear QR Code
+                    </div>
+                    {/* ✅ NOVO: Timer visual */}
+                    {qrTimeRemaining !== null && (
+                      <Badge
+                        variant={qrTimeRemaining <= 10 ? "destructive" : "secondary"}
+                        className="text-sm font-mono"
+                      >
+                        {qrTimeRemaining}s
+                      </Badge>
+                    )}
                   </CardTitle>
                   <CardDescription>
                     Abra o WhatsApp no celular e escaneie o código abaixo
+                    {qrTimeRemaining !== null && qrTimeRemaining <= 10 && (
+                      <span className="block text-orange-600 font-medium mt-1">
+                        ⚠️ QR Code expira em {qrTimeRemaining} segundos
+                      </span>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">
