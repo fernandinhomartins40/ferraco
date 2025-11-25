@@ -104,8 +104,10 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
     });
 
     // Eventos do WhatsApp - usar funções inline para evitar dependências
-    socket.on('whatsapp:qr', (qrCode: string) => {
+    socket.on('whatsapp:qr', (data: string | { qr: string }) => {
       console.log('📱 [Socket.IO] QR Code recebido');
+      // Fix: Backend emite { qr: "..." } mas também suporta string direta
+      const qrCode = typeof data === 'string' ? data : data.qr;
       qrAttemptRef.current += 1;
       dispatch({
         type: 'QR_RECEIVED',
