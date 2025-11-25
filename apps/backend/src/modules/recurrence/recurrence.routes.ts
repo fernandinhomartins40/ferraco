@@ -57,8 +57,16 @@ router.get('/stats/templates', recurrenceController.getTemplateStats.bind(recurr
 /**
  * GET /api/recurrence/stats/leads
  * Estatísticas de recorrência de leads
+ * Query params: period ('7d' | '30d' | '90d' | 'all')
  */
 router.get('/stats/leads', recurrenceController.getLeadStats.bind(recurrenceController));
+
+/**
+ * GET /api/recurrence/stats/trends
+ * Tendências de capturas ao longo do tempo
+ * Query params: period ('7d' | '30d' | '90d' | 'all'), groupBy ('day' | 'week' | 'month')
+ */
+router.get('/stats/trends', recurrenceController.getCaptureTrends.bind(recurrenceController));
 
 // ============================================================================
 // HISTÓRICO DE CAPTURAS

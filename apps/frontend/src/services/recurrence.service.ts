@@ -65,7 +65,15 @@ export interface RecurrenceStats {
     captureCount: number;
     lastCapturedAt: string;
     leadScore: number;
+    source?: string;
   }[];
+}
+
+export interface CaptureTrend {
+  period: string;
+  newLeads: number;
+  recurrentLeads: number;
+  totalCaptures: number;
 }
 
 export interface TemplateUsageStats {
@@ -126,13 +134,38 @@ class RecurrenceService {
   // ESTATÍSTICAS
   // ============================================================================
 
-  async getLeadStats() {
-    const response = await api.get<RecurrenceStats>('/recurrence/stats/leads');
+  async getLeadStats(filters?: {
+    period?: '7d' | '30d' | '90d' | 'all';
+    source?: string;
+    interest?: string;
+  }) {
+    const params = new URLSearchParams();
+    if (filters?.period) params.append('period', filters.period);
+    if (filters?.source) params.append('source', filters.source);
+    if (filters?.interest) params.append('interest', filters.interest);
+
+    const response = await api.get<RecurrenceStats>(
+      `/recurrence/stats/leads?${params.toString()}`
+    );
     return response.data;
   }
 
   async getTemplateStats() {
     const response = await api.get<TemplateUsageStats>('/recurrence/stats/templates');
+    return response.data;
+  }
+
+  async getCaptureTrends(filters?: {
+    period?: '7d' | '30d' | '90d' | 'all';
+    groupBy?: 'day' | 'week' | 'month';
+  }) {
+    const params = new URLSearchParams();
+    if (filters?.period) params.append('period', filters.period);
+    if (filters?.groupBy) params.append('groupBy', filters.groupBy);
+
+    const response = await api.get<CaptureTrend[]>(
+      `/recurrence/stats/trends?${params.toString()}`
+    );
     return response.data;
   }
 

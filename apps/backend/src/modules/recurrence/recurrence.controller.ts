@@ -123,14 +123,64 @@ export class RecurrenceController {
   /**
    * GET /api/recurrence/stats/leads
    * Estatísticas de recorrência de leads
+   * Query params: period ('7d' | '30d' | '90d' | 'all'), source, interest
    */
   async getLeadStats(req: Request, res: Response, next: NextFunction) {
     try {
-      const stats = await leadRecurrenceService.getRecurrenceStats();
+      const { period, source, interest } = req.query;
+
+      // Validar período
+      const validPeriods = ['7d', '30d', '90d', 'all'];
+      const selectedPeriod = period && validPeriods.includes(period as string)
+        ? (period as '7d' | '30d' | '90d' | 'all')
+        : undefined;
+
+      // Filtros adicionais
+      const filters: any = {};
+      if (source) filters.source = source as string;
+      if (interest) filters.interest = interest as string;
+
+      const stats = await leadRecurrenceService.getRecurrenceStats(
+        selectedPeriod,
+        Object.keys(filters).length > 0 ? filters : undefined
+      );
 
       successResponse(res, stats);
     } catch (error) {
       logger.error('Error getting lead recurrence stats:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/recurrence/stats/trends
+   * Tendências de capturas ao longo do tempo
+   * Query params: period ('7d' | '30d' | '90d' | 'all'), groupBy ('day' | 'week' | 'month')
+   */
+  async getCaptureTrends(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { period, groupBy } = req.query;
+
+      // Validar período
+      const validPeriods = ['7d', '30d', '90d', 'all'];
+      const selectedPeriod = period && validPeriods.includes(period as string)
+        ? (period as '7d' | '30d' | '90d' | 'all')
+        : '30d';
+
+      // Validar groupBy
+      const validGroupBy = ['day', 'week', 'month'];
+      const selectedGroupBy = groupBy && validGroupBy.includes(groupBy as string)
+        ? (groupBy as 'day' | 'week' | 'month')
+        : undefined;
+
+      const trends = await leadRecurrenceService.getCaptureTrends(
+        selectedPeriod,
+        selectedGroupBy
+      );
+
+      successResponse(res, trends);
+    } catch (error) {
+      logger.error('Error getting capture trends:', error);
       next(error);
     }
   }

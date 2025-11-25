@@ -35,6 +35,13 @@ export const PublicCreateLeadSchema = z.object({
     .max(50, 'Fonte deve ter no máximo 50 caracteres')
     .trim()
     .default('landing-page'),
+
+  // ✅ NOVO: Validação de interesse (pode ser string ou array de strings)
+  interest: z.union([
+    z.string().max(200, 'Interesse deve ter no máximo 200 caracteres'),
+    z.array(z.string().max(100, 'Cada interesse deve ter no máximo 100 caracteres'))
+      .max(10, 'Máximo de 10 interesses permitidos')
+  ]).optional(),
 });
 
 export type PublicCreateLeadInput = z.infer<typeof PublicCreateLeadSchema>;

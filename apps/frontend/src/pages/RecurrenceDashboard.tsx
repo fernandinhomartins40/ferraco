@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { useRecurrenceLeadStats, useRecurrenceTemplateStats } from '@/hooks/api/useRecurrence';
+import { useRecurrenceLeadStats, useRecurrenceTemplateStats, useCaptureTrends } from '@/hooks/api/useRecurrence';
 import { Repeat, Users, TrendingUp, MessageSquare, AlertCircle, Download, Filter, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Select,
@@ -35,11 +35,13 @@ import {
 } from '@/components/ui/dialog';
 
 export default function RecurrenceDashboard() {
-  const { data: leadStats, isLoading: loadingLeads } = useRecurrenceLeadStats();
-  const { data: templateStats, isLoading: loadingTemplates } = useRecurrenceTemplateStats();
-
-  const [timeRange, setTimeRange] = useState('7d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('7d');
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
+
+  // ✅ NOVO: Usar hooks com filtros reais
+  const { data: leadStats, isLoading: loadingLeads } = useRecurrenceLeadStats({ period: timeRange });
+  const { data: templateStats, isLoading: loadingTemplates } = useRecurrenceTemplateStats();
+  const { data: trends, isLoading: loadingTrends } = useCaptureTrends({ period: timeRange });
 
   if (loadingLeads || loadingTemplates) {
     return (
@@ -61,15 +63,23 @@ export default function RecurrenceDashboard() {
       ? leadStats.avgCapturesPerLead.toFixed(1)
       : '0.0';
 
-  // Dados simulados para gráfico de tendências (idealmente viriam da API)
-  const trendData = [
-    { month: 'Jan', recorrentes: 12, novos: 45 },
-    { month: 'Fev', recorrentes: 18, novos: 52 },
-    { month: 'Mar', recorrentes: 25, novos: 48 },
-    { month: 'Abr', recorrentes: 32, novos: 55 },
-    { month: 'Mai', recorrentes: 28, novos: 50 },
-    { month: 'Jun', recorrentes: 35, novos: 60 },
-  ];
+  // ✅ NOVO: Dados reais de tendências da API
+  const trendData = trends?.map(trend => {
+    // Formatar período para exibição
+    let label = trend.period;
+    try {
+      const date = parseISO(trend.period);
+      label = format(date, 'dd/MM', { locale: ptBR });
+    } catch {
+      // Se não conseguir parsear, usar o valor original
+    }
+
+    return {
+      month: label,
+      novos: trend.newLeads,
+      recorrentes: trend.recurrentLeads,
+    };
+  }) || [];
 
   // Função para exportar CSV
   const exportToCsv = () => {
@@ -199,20 +209,33 @@ export default function RecurrenceDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Tendência de Recorrência</CardTitle>
-          <CardDescription>Comparação entre leads novos e recorrentes ao longo do tempo</CardDescription>
+          <CardDescription>
+            Comparação entre leads novos e recorrentes ao longo do tempo ({timeRange === '7d' ? 'últimos 7 dias' : timeRange === '30d' ? 'últimos 30 dias' : timeRange === '90d' ? 'últimos 90 dias' : 'todo período'})
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="novos" stroke="#8884d8" name="Leads Novos" />
-              <Line type="monotone" dataKey="recorrentes" stroke="#82ca9d" name="Leads Recorrentes" />
-            </LineChart>
-          </ResponsiveContainer>
+          {loadingTrends ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : trendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="novos" stroke="#8884d8" name="Leads Novos" />
+                <Line type="monotone" dataKey="recorrentes" stroke="#82ca9d" name="Leads Recorrentes" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[300px] text-center">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Nenhum dado disponível para o período selecionado</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

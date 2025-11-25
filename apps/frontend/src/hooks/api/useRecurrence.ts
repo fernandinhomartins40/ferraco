@@ -124,11 +124,29 @@ export const useDeleteTemplate = () => {
 /**
  * Hook para estatísticas de leads recorrentes
  */
-export const useRecurrenceLeadStats = () => {
+export const useRecurrenceLeadStats = (filters?: {
+  period?: '7d' | '30d' | '90d' | 'all';
+  source?: string;
+  interest?: string;
+}) => {
   return useQuery({
-    queryKey: recurrenceKeys.leadStats(),
-    queryFn: () => recurrenceService.getLeadStats(),
+    queryKey: [...recurrenceKeys.leadStats(), filters],
+    queryFn: () => recurrenceService.getLeadStats(filters),
     staleTime: 30000, // 30 segundos
+  });
+};
+
+/**
+ * Hook para tendências de capturas
+ */
+export const useCaptureTrends = (filters?: {
+  period?: '7d' | '30d' | '90d' | 'all';
+  groupBy?: 'day' | 'week' | 'month';
+}) => {
+  return useQuery({
+    queryKey: [...recurrenceKeys.all, 'trends', filters],
+    queryFn: () => recurrenceService.getCaptureTrends(filters),
+    staleTime: 60000, // 60 segundos (mais estável)
   });
 };
 
