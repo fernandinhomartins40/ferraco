@@ -140,7 +140,16 @@ const AdminWhatsApp = () => {
       requestStatus();
     }, 500);
 
-    return () => clearTimeout(timer);
+    // ✅ FIX: Timeout de segurança - se após 3s não receber status, sair do loading
+    const fallbackTimer = setTimeout(() => {
+      console.warn('⚠️ Timeout aguardando status - saindo do loading');
+      setIsLoading(false);
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(fallbackTimer);
+    };
   }, [requestStatus]);
 
   // ✅ AUTO-GENERATE QR: Solicitar QR Code automaticamente quando desconectado
