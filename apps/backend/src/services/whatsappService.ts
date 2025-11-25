@@ -1681,31 +1681,47 @@ class WhatsAppService {
 
     try {
       // 1. ✅ STATELESS: Buscar conversas direto do WhatsApp
-      // ✅ CORRIGIDO: Usar listChats() com parâmetros corretos para evitar stack overflow
-      // Documentação oficial: https://wppconnect.io/wppconnect/classes/Whatsapp.html
-      // Parâmetros: onlyUsers=true (evita serialização de grupos), count=limit (otimização)
-      const privateChats = await Promise.race([
-        this.client!.listChats({
-          count: limit,
-          onlyUsers: true
-        }),
+      // ⚠️ SOLUÇÃO ALTERNATIVA: Usar page.evaluate() para bypassar _serializeChatObj() que causa stack overflow
+      // Motivo: listChats() com qualquer filtro (onlyUsers, onlyGroups) causa loop infinito em getIsUser/getIsGroup
+      // Referência: https://wppconnect.io/wppconnect/classes/Whatsapp.html
+      const allChats = await Promise.race([
+        (this.client as any).page.evaluate(async (limit: number) => {
+          // Chamar WPP.chat.list() direto no browser context
+          // @ts-ignore - WPP é global no browser context do WhatsApp Web
+          const chats = await WPP.chat.list({ count: limit * 3 }); // Buscar mais porque vamos filtrar
+
+          // Serializar manualmente APENAS as propriedades essenciais (evita recursão)
+          return chats
+            .filter((chat: any) => !chat.isGroup) // Filtrar grupos manualmente
+            .map((chat: any) => ({
+              id: chat.id._serialized || chat.id,
+              name: chat.name || chat.contact?.name || '',
+              t: chat.t,
+              unreadCount: chat.unreadCount || 0,
+              pin: chat.pin || 0,
+              archive: chat.archive || false,
+              profilePicThumb: chat.contact?.profilePicThumb?.eurl || null,
+              lastMessage: chat.lastMessage ? {
+                body: chat.lastMessage.body || '',
+                type: chat.lastMessage.type || 'chat',
+              } : null,
+            }))
+            .sort((a: any, b: any) => (b.t || 0) - (a.t || 0))
+            .slice(0, limit);
+        }, limit),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout ao buscar conversas do WhatsApp')), 30000)
         )
-      ]) as Chat[];
+      ]) as any[];
 
-      logger.info(`📞 WPPConnect retornou ${privateChats.length} conversas privadas (limit: ${limit})`);
+      logger.info(`📞 WPPConnect retornou ${allChats.length} conversas privadas (via page.evaluate, bypass serialization)`);
 
-      // 2. Ordenar por timestamp (mais recentes primeiro)
-      const sortedChats = privateChats
-        .sort((a: Chat, b: Chat) => ((b as any).t || 0) - ((a as any).t || 0));
-
-      // 3. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
+      // 2. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
       const { prisma } = await import('../config/database');
 
       const enrichedChats = await Promise.all(
-        sortedChats.map(async (chat: Chat) => {
-          const phone = chat.id._serialized.replace('@c.us', '');
+        allChats.map(async (chat: any) => {
+          const phone = chat.id.replace('@c.us', '');
 
           // Buscar metadata do contato no PostgreSQL
           const contactMetadata = await prisma.whatsAppContact.findUnique({
@@ -1722,30 +1738,28 @@ class WhatsAppService {
             },
           });
 
-          // Extrair preview da última mensagem (tenta diferentes propriedades)
+          // Extrair preview da última mensagem
           let lastMessagePreview = null;
-          const chatAny = chat as any;
-          if (chatAny.lastMessage) {
+          if (chat.lastMessage) {
             lastMessagePreview =
-              chatAny.lastMessage.body ||
-              chatAny.lastMessage.content ||
-              (chatAny.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
-              (chatAny.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
-              (chatAny.lastMessage.type === 'audio' || chatAny.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
-              (chatAny.lastMessage.type === 'document' ? '📄 Documento' : null) ||
-              (chatAny.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
+              chat.lastMessage.body ||
+              (chat.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
+              (chat.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
+              (chat.lastMessage.type === 'audio' || chat.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
+              (chat.lastMessage.type === 'document' ? '📄 Documento' : null) ||
+              (chat.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
               'Nova mensagem';
           }
 
           return {
-            id: chat.id._serialized,
+            id: chat.id,
             phone,
             name: chat.name || contactMetadata?.name || phone,
-            profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+            profilePicUrl: chat.profilePicThumb || contactMetadata?.profilePicUrl || null,
             lastMessageAt: chat.t ? new Date(chat.t * 1000) : null,
             lastMessagePreview,
             unreadCount: chat.unreadCount || 0,
-            isPinned: chat.pin || false,
+            isPinned: !!chat.pin,
             isArchived: chat.archive || false,
             // Metadata do CRM
             lead: contactMetadata?.lead || null,
@@ -1754,7 +1768,7 @@ class WhatsAppService {
               id: phone,
               phone,
               name: chat.name || contactMetadata?.name || phone,
-              profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+              profilePicUrl: chat.profilePicThumb || contactMetadata?.profilePicUrl || null,
             },
           };
         })
