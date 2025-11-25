@@ -2493,6 +2493,7 @@ class WhatsAppService {
       }
 
       // 4. Listar globals importantes
+      // @ts-ignore - window existe no browser context
       exploration.globals = Object.keys(window).filter(key =>
         key.toLowerCase().includes('whatsapp') ||
         key.toLowerCase().includes('wpp') ||
