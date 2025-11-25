@@ -1869,10 +1869,9 @@ class WhatsAppService {
             throw new Error(`Chat ${chatId} não encontrado`);
           }
 
-          // Carregar mensagens do chat (isso dispara o carregamento no WhatsApp)
-          await chat.loadMessages();
-
-          // Pegar mensagens do chat (já carregadas)
+          // ✅ CORREÇÃO 2025: Mensagens já estão carregadas em chat.msgs
+          // chat.loadMessages() NÃO EXISTE na API nativa do WhatsApp Web
+          // Referência: whatsapp-web.js Issue #1622, PR #1015
           const messages = chat.msgs.getModelsArray();
 
           // Pegar apenas as últimas N mensagens e extrair campos necessários
