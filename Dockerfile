@@ -2,7 +2,15 @@
 # Stage 1: Build completo (Backend + Frontend)
 FROM node:20-alpine AS builder
 
+# Build args para forçar rebuild quando código mudar
+ARG BUILD_TIMESTAMP=0
+ARG GIT_COMMIT=unknown
+
 WORKDIR /app
+
+# Labels para rastreamento
+LABEL build.timestamp="${BUILD_TIMESTAMP}"
+LABEL git.commit="${GIT_COMMIT}"
 
 # Instalar bash e dependências do Puppeteer/Chromium (necessário para WPPConnect)
 RUN apk add --no-cache \
@@ -42,11 +50,17 @@ RUN npm run build:frontend
 # Stage 2: Runtime - Container Único
 FROM node:20-alpine
 
+# Build args (passar do stage anterior)
+ARG BUILD_TIMESTAMP=0
+ARG GIT_COMMIT=unknown
+
 WORKDIR /app
 
 # Definir variáveis de ambiente padrão
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
+ENV GIT_COMMIT=${GIT_COMMIT}
 
 # Instalar Nginx, OpenSSL, bash, PostgreSQL client e dependências do Chromium/Puppeteer
 RUN apk add --no-cache \

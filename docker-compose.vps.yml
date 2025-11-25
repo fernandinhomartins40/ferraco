@@ -24,6 +24,7 @@ services:
       dockerfile: Dockerfile
       args:
         BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-0}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     image: ferraco-crm:latest
     ports:
       - "3050:3050"

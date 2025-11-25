@@ -213,21 +213,24 @@ jobs:
 
           echo "✅ Limpeza completa finalizada - preservando banco de dados PostgreSQL"
 
-          # Limpeza seletiva (preserva volumes Docker named)
+          # Limpeza COMPLETA do diretório (preserva apenas volumes Docker named)
+          echo "🧹 Removendo COMPLETAMENTE código antigo..."
           if [ -d "${{ env.APP_DIR }}" ]; then
-            echo "🧹 Removendo código antigo (preservando named volumes Docker)..."
-            cd ${{ env.APP_DIR }}
-            # Remove apenas código da aplicação, NÃO remove ./data (se existir de deploys antigos)
-            rm -rf apps packages node_modules docker .git* *.json *.ts *.md *.yml *.yaml *.sh 2>/dev/null || true
-            echo "✅ Código antigo removido, volumes Docker preservados"
+            cd /root
+            rm -rf "${{ env.APP_DIR }}"
+            echo "✅ Diretório ${{ env.APP_DIR }} removido completamente"
           fi
 
-          # Extrair código
-          echo "📁 Extraindo aplicação..."
+          # Recriar diretório limpo
+          echo "📁 Criando diretório limpo..."
           mkdir -p ${{ env.APP_DIR }}
           cd ${{ env.APP_DIR }}
+
+          # Extrair código
+          echo "📦 Extraindo código novo..."
           tar -xzf /tmp/deploy.tar.gz
           rm -f /tmp/deploy.tar.gz
+          echo "✅ Código extraído com sucesso"
 
           # Validar estrutura monorepo
           echo "🔍 Validando estrutura monorepo..."
@@ -241,6 +244,23 @@ jobs:
           [ -f "apps/backend/package.json" ] || { echo "❌ apps/backend/package.json não encontrado!"; exit 1; }
           [ -f "apps/frontend/package.json" ] || { echo "❌ apps/frontend/package.json não encontrado!"; exit 1; }
           [ -d "apps/backend/prisma" ] || { echo "❌ apps/backend/prisma não encontrado!"; exit 1; }
+
+          # Validar que o código WhatsApp corrigido está presente (commit 5d5cf7e)
+          echo "🔍 Validando fix do WhatsApp (stack overflow)..."
+          WHATSAPP_SERVICE="apps/backend/src/services/whatsappService.ts"
+          if [ -f "$WHATSAPP_SERVICE" ]; then
+            # Verificar se contém o fix correto (filtro por @c.us no Node.js, não no browser)
+            if grep -q "filter((chat: any) => chat.id.includes('@c.us'))" "$WHATSAPP_SERVICE"; then
+              echo "  ✅ Fix do WhatsApp presente (filtro @c.us no Node.js)"
+            else
+              echo "  ⚠️  AVISO: Fix do WhatsApp pode estar desatualizado!"
+              echo "  Verificando linhas críticas..."
+              grep -n "getAllConversations\|filter.*@c.us\|filter.*isGroup" "$WHATSAPP_SERVICE" | head -5 || true
+            fi
+          else
+            echo "  ❌ ERRO: whatsappService.ts não encontrado!"
+            exit 1
+          fi
 
           # Corrigir permissões dos scripts
           echo "🔧 Corrigindo permissões dos scripts..."
@@ -259,11 +279,18 @@ jobs:
           # Configurar variáveis de ambiente para Docker
           echo "⚙️  Configurando ambiente Docker..."
           export BUILD_TIMESTAMP=$(date +%s)
+          export GIT_COMMIT="${{ github.sha }}"
+          export GIT_BRANCH="${{ github.ref_name }}"
           export JWT_SECRET="ferraco-vps-jwt-production-secret-2025"
           export CORS_ORIGIN="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export ALLOWED_ORIGINS="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export LOG_LEVEL=info
           export NODE_ENV=production
+
+          echo "📦 Build Info:"
+          echo "   Commit: $GIT_COMMIT"
+          echo "   Branch: $GIT_BRANCH"
+          echo "   Timestamp: $BUILD_TIMESTAMP"
 
           # DATABASE_URL (do secret ou do .env na VPS)
           if [ -n "${{ secrets.DATABASE_URL }}" ]; then
@@ -349,18 +376,25 @@ jobs:
           echo "🏗️  BUILDING IMAGEM DOCKER"
           echo "========================================="
           echo "🏗️  Building imagem Docker (isso pode levar alguns minutos)..."
+          echo "   Build timestamp: $BUILD_TIMESTAMP"
+          echo "   Git commit: $GIT_COMMIT"
+
           if [ -n "${{ secrets.DATABASE_URL }}" ]; then
             DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
               --no-cache \
               --pull \
               --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
+              --build-arg GIT_COMMIT=$GIT_COMMIT \
               --build-arg DATABASE_URL="${{ secrets.DATABASE_URL }}"
           else
             DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
               --no-cache \
               --pull \
-              --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP
+              --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
+              --build-arg GIT_COMMIT=$GIT_COMMIT
           fi
+
+          echo "✅ Imagem Docker construída com sucesso!"
 
           # Iniciar aplicação
           echo "🚀 Iniciando aplicação..."
@@ -448,7 +482,39 @@ jobs:
           echo "========================================="
           echo ""
 
+          # Verificar versão do código dentro do container
+          echo ""
+          echo "========================================="
+          echo "🔍 VERIFICAÇÃO DE CÓDIGO NO CONTAINER"
+          echo "========================================="
+          echo "📦 Verificando versão do código dentro do container..."
+
+          # Verificar build info (variáveis de ambiente)
+          echo ""
+          echo "📋 Build Info no Container:"
+          docker exec ferraco-crm-vps sh -c "echo \"  Build Timestamp: \$BUILD_TIMESTAMP\"" || echo "  ⚠️  BUILD_TIMESTAMP não encontrado"
+          docker exec ferraco-crm-vps sh -c "echo \"  Git Commit: \$GIT_COMMIT\"" || echo "  ⚠️  GIT_COMMIT não encontrado"
+
+          # Verificar se o fix do WhatsApp está no container
+          echo ""
+          echo "🔍 Verificando fix do WhatsApp no container..."
+          if docker exec ferraco-crm-vps grep -q "filter((chat: any) => chat.id.includes('@c.us'))" /app/backend/src/services/whatsappService.ts 2>/dev/null; then
+            echo "  ✅ Fix do WhatsApp PRESENTE no container (filtro @c.us)"
+          elif docker exec ferraco-crm-vps grep -q "filter((chat: any) => chat.id.includes('@c.us'))" /app/backend/dist/services/whatsappService.js 2>/dev/null; then
+            echo "  ✅ Fix do WhatsApp PRESENTE no container (código compilado)"
+          else
+            echo "  ⚠️  AVISO: Fix do WhatsApp pode NÃO estar presente!"
+            echo "  Verificando código no container..."
+            docker exec ferraco-crm-vps sh -c "grep -n 'getAllConversations' /app/backend/src/services/whatsappService.ts | head -3" 2>/dev/null || \
+            docker exec ferraco-crm-vps sh -c "grep -n 'getAllConversations' /app/backend/dist/services/whatsappService.js | head -3" 2>/dev/null || \
+              echo "  ❌ Arquivo não encontrado no container!"
+          fi
+
+          echo "✅ Verificação de código concluída"
+          echo "========================================="
+
           # Mostrar logs iniciais
+          echo ""
           echo "📋 Logs iniciais do container:"
           docker logs ferraco-crm-vps --tail 50
 
