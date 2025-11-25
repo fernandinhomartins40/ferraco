@@ -553,9 +553,43 @@ class WhatsAppService {
     }
 
     const formatted = await this.formatPhoneNumber(to);
-    const result = await this.client!.sendText(formatted, message, options);
 
-    logger.info(`📨 Mensagem enviada: ${to}`, { messageId: result.id });
+    // ⚠️ SOLUÇÃO 2025: Usar window.Store.Chat nativo (bypassa wrapper WPP)
+    // Motivo: client.sendText() causa stack overflow em getIsGroup
+    // Mesma abordagem que funcionou para listar conversas e mensagens
+    const result = await Promise.race([
+      (this.client as any).page.evaluate(async (chatId: string, text: string, opts: any) => {
+        // @ts-ignore - window.Store é injetado pelo WhatsApp Web
+        const Store = window.Store;
+
+        if (!Store || !Store.Chat) {
+          throw new Error('Store.Chat não disponível no WhatsApp Web');
+        }
+
+        // Buscar ou criar chat
+        const chat = await Store.Chat.find(chatId);
+        if (!chat) {
+          throw new Error(`Chat ${chatId} não encontrado`);
+        }
+
+        // Enviar mensagem via API nativa
+        const sentMsg = await chat.sendMessage(text);
+
+        // Retornar dados serializados
+        return {
+          id: sentMsg.id?._serialized || sentMsg.id?.toString() || '',
+          ack: sentMsg.ack || 0,
+          timestamp: sentMsg.t || Date.now(),
+          from: chatId,
+          body: text
+        };
+      }, formatted, message, options || {}),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout ao enviar mensagem para ${formatted}`)), 30000)
+      )
+    ]) as any;
+
+    logger.info(`📨 Mensagem enviada via Store.Chat: ${to}`, { messageId: result.id });
 
     return result;
   }
@@ -576,7 +610,52 @@ class WhatsAppService {
   ): Promise<any> {
     this.validateConnection();
     const formatted = await this.formatPhoneNumber(to);
-    return await this.client!.sendImage(formatted, pathOrBase64, filename, caption);
+
+    // ⚠️ SOLUÇÃO 2025: Usar window.Store.Chat nativo para enviar imagem
+    // Converte path/base64 para base64 puro se necessário
+    let base64Data = pathOrBase64;
+
+    // Se começar com data:, extrair só o base64
+    if (base64Data.startsWith('data:')) {
+      base64Data = base64Data.split(',')[1];
+    }
+
+    const result = await Promise.race([
+      (this.client as any).page.evaluate(async (chatId: string, base64: string, fname: string, cap: string) => {
+        const Store = window.Store;
+
+        if (!Store || !Store.Chat) {
+          throw new Error('Store.Chat não disponível');
+        }
+
+        const chat = await Store.Chat.find(chatId);
+        if (!chat) {
+          throw new Error(`Chat ${chatId} não encontrado`);
+        }
+
+        // Criar objeto de mídia para imagem
+        const mediaData = await Store.OpaqueData.createFromData(base64, 'image/jpeg');
+
+        // Enviar imagem com caption
+        const sentMsg = await chat.sendMessage(mediaData, {
+          caption: cap || '',
+          type: 'image',
+          filename: fname || 'image.jpg'
+        });
+
+        return {
+          id: sentMsg.id?._serialized || '',
+          ack: sentMsg.ack || 0,
+          timestamp: sentMsg.t || Date.now()
+        };
+      }, formatted, base64Data, filename || 'image.jpg', caption || ''),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout ao enviar imagem para ${formatted}`)), 60000)
+      )
+    ]) as any;
+
+    logger.info(`🖼️ Imagem enviada via Store.Chat: ${to}`);
+    return result;
   }
 
   /**
@@ -588,54 +667,66 @@ class WhatsAppService {
    * @returns ID da mensagem no WhatsApp
    */
   async sendVideo(to: string, videoUrl: string, caption?: string, asGif: boolean = false): Promise<string | undefined> {
-    // Validações iniciais
-    if (!this.client) {
-      throw new Error('Cliente WhatsApp não inicializado. Reinicie o serviço.');
-    }
-
-    if (!this.isConnected) {
-      throw new Error('WhatsApp não conectado. Escaneie o QR Code primeiro.');
-    }
+    this.validateConnection();
 
     if (!videoUrl || typeof videoUrl !== 'string' || videoUrl.trim() === '') {
       throw new Error('URL do vídeo inválida');
     }
 
-    const toMasked = to.substring(0, 8) + '***';
+    const formatted = await this.formatPhoneNumber(to);
 
-    logger.info(`🎥 Enviando vídeo${asGif ? ' como GIF' : ''}`, {
-      to: toMasked,
-      videoUrl: videoUrl.substring(0, 50) + '...',
-      hasCaption: !!caption,
-      asGif,
-      timestamp: new Date().toISOString(),
+    logger.info(`🎥 Enviando vídeo via Store.Chat${asGif ? ' (GIF)' : ''}`, {
+      to: formatted.substring(0, 12) + '***',
+      videoUrl: videoUrl.substring(0, 50) + '...'
     });
 
-    return await this.sendWithRetry(async () => {
-      try {
-        const formattedNumber = await this.formatPhoneNumber(to);
+    // ⚠️ SOLUÇÃO 2025: Usar window.Store.Chat nativo para enviar vídeo
+    // Aceita URL ou base64
+    const result = await Promise.race([
+      (this.client as any).page.evaluate(async (chatId: string, video: string, cap: string, gif: boolean) => {
+        const Store = window.Store;
 
-        // ✅ CORREÇÃO: Usar sendFile para vídeos normais, sendVideoAsGif apenas se asGif=true
-        const result = asGif
-          ? await this.client!.sendVideoAsGif(formattedNumber, videoUrl, 'video.mp4', caption || '')
-          : await this.client!.sendFile(formattedNumber, videoUrl, 'video.mp4', caption || '');
+        if (!Store || !Store.Chat) {
+          throw new Error('Store.Chat não disponível');
+        }
 
-        logger.info(`✅ Vídeo enviado com sucesso${asGif ? ' (GIF)' : ''}`, {
-          to: toMasked,
-          messageId: result.id,
+        const chat = await Store.Chat.find(chatId);
+        if (!chat) {
+          throw new Error(`Chat ${chatId} não encontrado`);
+        }
+
+        // Se for base64, converter
+        let videoData = video;
+        if (video.startsWith('data:')) {
+          videoData = video.split(',')[1];
+        }
+
+        // Criar objeto de mídia para vídeo
+        const mediaData = await Store.OpaqueData.createFromData(
+          videoData,
+          gif ? 'image/gif' : 'video/mp4'
+        );
+
+        // Enviar vídeo com caption
+        const sentMsg = await chat.sendMessage(mediaData, {
+          caption: cap || '',
+          type: gif ? 'gif' : 'video',
+          filename: gif ? 'video.gif' : 'video.mp4'
         });
 
-        return result.id;
+        return {
+          id: sentMsg.id?._serialized || '',
+          ack: sentMsg.ack || 0,
+          timestamp: sentMsg.t || Date.now()
+        };
+      }, formatted, videoUrl, caption || '', asGif),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout ao enviar vídeo para ${formatted}`)), 90000)
+      )
+    ]) as any;
 
-      } catch (error: any) {
-        logger.error('❌ Erro ao enviar vídeo', {
-          error: error.message,
-          to: toMasked,
-          videoUrl: videoUrl.substring(0, 50) + '...',
-        });
-        throw error;
-      }
-    });
+    logger.info(`✅ Vídeo enviado via Store.Chat: ${formatted.substring(0, 12)}***`);
+    return result.id;
   }
 
   /**
@@ -646,12 +737,57 @@ class WhatsAppService {
    * @returns ID da mensagem no WhatsApp
    */
   /**
-   * ⭐ FASE 2: Enviar áudio PTT (SIMPLIFICADO)
+   * ⭐ FASE 2: Enviar áudio PTT (Push-to-Talk)
    */
   async sendAudio(to: string, audioPath: string): Promise<any> {
     this.validateConnection();
     const formatted = await this.formatPhoneNumber(to);
-    return await this.client!.sendPtt(formatted, audioPath);
+
+    logger.info(`🎤 Enviando áudio PTT via Store.Chat: ${formatted.substring(0, 12)}***`);
+
+    // ⚠️ SOLUÇÃO 2025: Usar window.Store.Chat nativo para enviar áudio PTT
+    const result = await Promise.race([
+      (this.client as any).page.evaluate(async (chatId: string, audio: string) => {
+        const Store = window.Store;
+
+        if (!Store || !Store.Chat) {
+          throw new Error('Store.Chat não disponível');
+        }
+
+        const chat = await Store.Chat.find(chatId);
+        if (!chat) {
+          throw new Error(`Chat ${chatId} não encontrado`);
+        }
+
+        // Se for base64, converter
+        let audioData = audio;
+        if (audio.startsWith('data:')) {
+          audioData = audio.split(',')[1];
+        }
+
+        // Criar objeto de mídia para áudio PTT
+        const mediaData = await Store.OpaqueData.createFromData(audioData, 'audio/ogg; codecs=opus');
+
+        // Enviar áudio como PTT (Push-to-Talk)
+        const sentMsg = await chat.sendMessage(mediaData, {
+          type: 'ptt',
+          isPtt: true,
+          filename: 'audio.ogg'
+        });
+
+        return {
+          id: sentMsg.id?._serialized || '',
+          ack: sentMsg.ack || 0,
+          timestamp: sentMsg.t || Date.now()
+        };
+      }, formatted, audioPath),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout ao enviar áudio para ${formatted}`)), 60000)
+      )
+    ]) as any;
+
+    logger.info(`✅ Áudio PTT enviado via Store.Chat: ${formatted.substring(0, 12)}***`);
+    return result;
   }
 
   /**
@@ -1878,8 +2014,51 @@ class WhatsAppService {
           const recentMessages = messages.slice(-count);
 
           // Serializar manualmente para evitar getters recursivos
-          return recentMessages.map((msg: any) => {
+          // ✅ INCLUIR DOWNLOAD DE MÍDIA NO BROWSER (evita stack overflow)
+          return await Promise.all(recentMessages.map(async (msg: any) => {
             try {
+              // ✅ BAIXAR MÍDIA DIRETO NO BROWSER SE NECESSÁRIO
+              let mediaUrl = null;
+              let mediaType = null;
+
+              const hasMediaType = ['image', 'video', 'audio', 'ptt', 'sticker', 'document'].includes(msg.type);
+
+              if (hasMediaType && msg.mediaData) {
+                try {
+                  // Baixar mídia (se ainda não estiver baixada)
+                  if (!msg.mediaData._blob) {
+                    await msg.downloadMedia();
+                  }
+
+                  // Extrair preview/thumbnail base64
+                  if (msg.type === 'image' || msg.type === 'sticker') {
+                    // Para imagens, usar thumbnail ou imagem completa
+                    mediaUrl = msg.mediaData.preview || msg.body;
+                    mediaType = msg.mimetype || 'image/jpeg';
+                  } else if (msg.type === 'video') {
+                    // Para vídeos, usar thumbnail
+                    mediaUrl = msg.mediaData.preview;
+                    mediaType = msg.mimetype || 'video/mp4';
+                  } else if (msg.type === 'audio' || msg.type === 'ptt') {
+                    // Para áudio, não tem preview - enviar placeholder
+                    mediaUrl = 'audio-placeholder';
+                    mediaType = msg.mimetype || 'audio/ogg';
+                  } else if (msg.type === 'document') {
+                    // Para documentos, enviar metadata
+                    mediaUrl = 'document-placeholder';
+                    mediaType = msg.mimetype || 'application/octet-stream';
+                  }
+
+                  // Se tem mediaUrl mas não tem data: prefix, adicionar
+                  if (mediaUrl && !mediaUrl.startsWith('data:') && !mediaUrl.includes('placeholder')) {
+                    mediaUrl = `data:${mediaType};base64,${mediaUrl}`;
+                  }
+                } catch (mediaError) {
+                  // Falhou ao baixar mídia - enviar placeholder
+                  mediaUrl = `${msg.type}-placeholder`;
+                }
+              }
+
               return {
                 id: msg.id?._serialized || msg.id?.toString() || '',
                 body: msg.body || '',
@@ -1888,7 +2067,9 @@ class WhatsAppService {
                 from: msg.from?._serialized || msg.from?.toString() || '',
                 to: msg.to?._serialized || msg.to?.toString() || '',
                 fromMe: msg.id?.fromMe || false,
-                hasMedia: msg.hasMedia || false,
+                hasMedia: hasMediaType,
+                mediaUrl: mediaUrl,
+                mediaType: mediaType,
                 ack: msg.ack || 0,
                 isForwarded: msg.isForwarded || false,
                 quotedMsg: msg.quotedMsg ? {
@@ -1907,83 +2088,39 @@ class WhatsAppService {
                 to: '',
                 fromMe: false,
                 hasMedia: false,
+                mediaUrl: null,
+                mediaType: null,
                 ack: 0,
                 isForwarded: false,
                 quotedMsg: null,
               };
             }
-          }).filter((msg: any) => msg.id); // Remover mensagens inválidas
+          })).then(msgs => msgs.filter((msg: any) => msg.id)); // Remover mensagens inválidas
         }, chatId, count),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Timeout ao buscar mensagens para ${chatId}`)), 30000)
         )
       ]) as any[];
 
-      logger.info(`💬 Store.Msg retornou ${messages.length} mensagens para ${chatId.substring(0, 15)}...`);
+      logger.info(`💬 Store.Msg retornou ${messages.length} mensagens (com mídia baixada no browser)`);
 
-      // Formatar mensagens para o formato esperado pelo frontend
-      const formattedMessages = await Promise.all(messages.map(async (msg: any) => {
-        // ✅ CRÍTICO: Gerar mediaUrl para tipos de mídia
-        let mediaUrl = null;
-
-        // Verificar se mensagem tem mídia
-        const hasMediaType = ['image', 'video', 'audio', 'ptt', 'sticker', 'document'].includes(msg.type);
-
-        if (hasMediaType) {
-          try {
-            // ✅ MELHORIA: downloadMedia pode retornar string, Buffer, ou objeto
-            // Tratamento robusto para todos os tipos possíveis
-            const mediaData = await this.client!.downloadMedia(msg.id);
-
-            let base64Data: string | null = null;
-
-            // Tratar diferentes tipos de retorno
-            if (!mediaData) {
-              logger.warn(`⚠️  downloadMedia retornou null/undefined para ${msg.id.substring(0, 15)}...`);
-            } else if (Buffer.isBuffer(mediaData)) {
-              // Retornou Buffer - converter para base64
-              base64Data = mediaData.toString('base64');
-              logger.debug(`📦 Mídia recebida como Buffer (${Math.round(base64Data.length / 1024)}KB)`);
-            } else if (typeof mediaData === 'string') {
-              // Retornou string base64 diretamente
-              base64Data = mediaData;
-              logger.debug(`📝 Mídia recebida como string (${Math.round(base64Data.length / 1024)}KB)`);
-            } else if (typeof mediaData === 'object' && (mediaData as any).data) {
-              // Retornou objeto { data: string, mimetype?: string }
-              base64Data = (mediaData as any).data;
-              logger.debug(`📋 Mídia recebida como objeto (${Math.round(base64Data.length / 1024)}KB)`);
-            }
-
-            if (base64Data && base64Data.length > 0) {
-              // Determinar mimetype correto
-              const mimeType = msg.mimetype || this.getMimeTypeFromMessageType(msg.type);
-
-              // Adicionar prefix data URI
-              mediaUrl = `data:${mimeType};base64,${base64Data}`;
-
-              logger.info(`✅ Mídia baixada: ${msg.type} (${Math.round(base64Data.length / 1024)}KB)`);
-            } else {
-              logger.warn(`⚠️  downloadMedia retornou vazio para ${msg.id.substring(0, 15)}...`);
-            }
-          } catch (mediaError: any) {
-            logger.error(`❌ Erro ao baixar mídia ${msg.id.substring(0, 15)}...: ${mediaError.message}`);
-          }
-        }
-
+      // ✅ NOVO 2025: Mensagens já vêm com mediaUrl baixado no browser (evita stack overflow)
+      // Apenas formatar para o padrão esperado pelo frontend
+      const formattedMessages = messages.map((msg: any) => {
         return {
           id: msg.id,
           conversationId: chatId,
           type: msg.type,
           content: msg.body || '',
-          mediaUrl,
-          mediaType: msg.mimetype || null,
+          mediaUrl: msg.mediaUrl,  // Já vem com base64 do browser
+          mediaType: msg.mediaType,
           fromMe: msg.fromMe || false,
           status: this.mapAckToStatus(msg.ack),
           timestamp: new Date(msg.timestamp * 1000),
           quotedMessage: msg.quotedMsg ? {
             id: msg.quotedMsg.id,
             content: msg.quotedMsg.body || '',
-            fromMe: msg.quotedMsg.fromMe || false,
+            fromMe: false,
             contact: {
               id: cleanPhone,
               phone: cleanPhone,
@@ -1996,7 +2133,7 @@ class WhatsAppService {
             name: cleanPhone,
           },
         };
-      }));
+      });
 
       logger.info(`✅ ${formattedMessages.length} mensagens formatadas e retornadas para ${chatId.substring(0, 15)}...`);
 
