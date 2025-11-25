@@ -173,16 +173,15 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/account', authenticate, async (req: Request, res: Response) => {
   try {
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // getAccountInfo disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
       });
     }
 
-    const accountInfo = await activeService.getAccountInfo();
+    const accountInfo = await whatsappService.getAccountInfo();
 
     res.json({
       success: true,
@@ -280,8 +279,8 @@ router.post('/disconnect', authenticate, async (req: Request, res: Response) => 
  */
 router.post('/reinitialize', authenticate, async (req: Request, res: Response) => {
   try {
-    const activeService = getActiveWhatsAppService();
-    await activeService.reinitialize();
+    // reinitialize disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.reinitialize();
 
     res.json({
       success: true,
@@ -366,6 +365,7 @@ router.get('/conversations/v2', authenticate, async (req: Request, res: Response
     });
 
   } catch (error: any) {
+    const activeService = getActiveWhatsAppService();
     logger.error('❌ Erro ao listar conversas (v2):', {
       message: error.message,
       stack: error.stack,
