@@ -46,7 +46,6 @@ interface FormattedConversation {
     fromMe: boolean;
   } | null;
   timestamp: number;
-  profilePicUrl?: string;
 }
 
 class WhatsAppWebJSService {
@@ -398,7 +397,7 @@ class WhatsAppWebJSService {
                 }
               : null,
             timestamp: chat.timestamp || 0,
-            profilePicUrl: await chat.getProfilePicUrl().catch(() => undefined),
+            // profilePicUrl removido - não está disponível na API do whatsapp-web.js
           };
         })
       );
