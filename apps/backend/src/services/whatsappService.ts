@@ -622,6 +622,7 @@ class WhatsAppService {
 
     const result = await Promise.race([
       (this.client as any).page.evaluate(async (chatId: string, base64: string, fname: string, cap: string) => {
+        // @ts-ignore - window.Store existe no browser context
         const Store = window.Store;
 
         if (!Store || !Store.Chat) {
@@ -684,6 +685,7 @@ class WhatsAppService {
     // Aceita URL ou base64
     const result = await Promise.race([
       (this.client as any).page.evaluate(async (chatId: string, video: string, cap: string, gif: boolean) => {
+        // @ts-ignore - window.Store existe no browser context
         const Store = window.Store;
 
         if (!Store || !Store.Chat) {
@@ -748,6 +750,7 @@ class WhatsAppService {
     // ⚠️ SOLUÇÃO 2025: Usar window.Store.Chat nativo para enviar áudio PTT
     const result = await Promise.race([
       (this.client as any).page.evaluate(async (chatId: string, audio: string) => {
+        // @ts-ignore - window.Store existe no browser context
         const Store = window.Store;
 
         if (!Store || !Store.Chat) {
