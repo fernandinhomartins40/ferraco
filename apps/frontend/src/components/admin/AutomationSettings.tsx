@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, Clock, Globe, Calendar } from 'lucide-react';
-import api from '@/services/api';
+import { apiClient } from '@/lib/apiClient';
 
 interface AutomationSettingsData {
   id: string;
@@ -56,7 +56,7 @@ export function AutomationSettings() {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/automation-kanban/settings');
+      const response = await apiClient.get('/automation-kanban/settings');
       setSettings(response.data);
     } catch (error) {
       toast({
@@ -74,7 +74,7 @@ export function AutomationSettings() {
 
     try {
       setSaving(true);
-      await api.put('/automation-kanban/settings', settings);
+      await apiClient.put('/automation-kanban/settings', settings);
       toast({
         title: 'Configurações salvas',
         description: 'As configurações de automação foram atualizadas com sucesso.',
