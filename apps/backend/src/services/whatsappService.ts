@@ -2392,6 +2392,257 @@ class WhatsAppService {
   }
 
   /**
+   * 🔍 DEBUG: Explorar APIs disponíveis no window.WPP e window.Store
+   * Mapeia toda a estrutura disponível no WhatsApp Web para encontrar APIs que funcionam
+   * @returns Estrutura completa de APIs disponíveis
+   */
+  async exploreWhatsAppAPIs(): Promise<any> {
+    this.validateConnection();
+
+    logger.info('🔍 Iniciando exploração de APIs do WhatsApp Web...');
+
+    const result = await (this.client as any).page.evaluate(() => {
+      const exploration: any = {
+        timestamp: new Date().toISOString(),
+        wpp: {},
+        store: {},
+        webpack: {},
+        globals: []
+      };
+
+      // 1. Explorar window.WPP (APIs do WPPConnect)
+      try {
+        // @ts-ignore
+        const WPP = window.WPP;
+        if (WPP) {
+          exploration.wpp = {
+            available: true,
+            modules: Object.keys(WPP),
+            details: {}
+          };
+
+          // Explorar cada módulo do WPP
+          Object.keys(WPP).forEach(moduleName => {
+            try {
+              const module = WPP[moduleName];
+              if (module && typeof module === 'object') {
+                exploration.wpp.details[moduleName] = {
+                  type: typeof module,
+                  functions: Object.keys(module).filter(key => typeof module[key] === 'function'),
+                  properties: Object.keys(module).filter(key => typeof module[key] !== 'function')
+                };
+              }
+            } catch (e) {
+              exploration.wpp.details[moduleName] = { error: 'Cannot access' };
+            }
+          });
+        } else {
+          exploration.wpp.available = false;
+        }
+      } catch (error: any) {
+        exploration.wpp.error = error.message;
+      }
+
+      // 2. Explorar window.Store (APIs nativas WhatsApp)
+      try {
+        // @ts-ignore
+        const Store = window.Store;
+        if (Store) {
+          exploration.store = {
+            available: true,
+            modules: Object.keys(Store).slice(0, 100), // Limitar para não sobrecarregar
+            totalModules: Object.keys(Store).length,
+            details: {}
+          };
+
+          // Explorar módulos-chave conhecidos
+          const keyModules = ['Chat', 'Msg', 'Contact', 'Conn', 'User', 'MediaUpload', 'DownloadManager'];
+          keyModules.forEach(moduleName => {
+            try {
+              if (Store[moduleName]) {
+                const module = Store[moduleName];
+                exploration.store.details[moduleName] = {
+                  type: typeof module,
+                  functions: Object.keys(module).filter(key => typeof module[key] === 'function').slice(0, 20),
+                  properties: Object.keys(module).filter(key => typeof module[key] !== 'function').slice(0, 20)
+                };
+              }
+            } catch (e) {
+              exploration.store.details[moduleName] = { error: 'Cannot access' };
+            }
+          });
+        } else {
+          exploration.store.available = false;
+        }
+      } catch (error: any) {
+        exploration.store.error = error.message;
+      }
+
+      // 3. Procurar por módulos Webpack
+      try {
+        // @ts-ignore
+        if (window.webpackChunkwhatsapp_web_client) {
+          exploration.webpack = {
+            available: true,
+            // @ts-ignore
+            chunksCount: window.webpackChunkwhatsapp_web_client.length
+          };
+        }
+      } catch (error: any) {
+        exploration.webpack.error = error.message;
+      }
+
+      // 4. Listar globals importantes
+      exploration.globals = Object.keys(window).filter(key =>
+        key.toLowerCase().includes('whatsapp') ||
+        key.toLowerCase().includes('wpp') ||
+        key.toLowerCase().includes('store') ||
+        key === 'require'
+      );
+
+      return exploration;
+    });
+
+    logger.info('✅ Exploração concluída');
+    logger.info(`📊 WPP disponível: ${result.wpp.available}`);
+    logger.info(`📊 Store disponível: ${result.store.available}`);
+
+    if (result.wpp.available) {
+      logger.info(`📊 WPP módulos encontrados: ${result.wpp.modules.join(', ')}`);
+    }
+
+    if (result.store.available) {
+      logger.info(`📊 Store módulos encontrados (primeiros 10): ${result.store.modules.slice(0, 10).join(', ')}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * 🧪 DEBUG: Testar funções alternativas de envio de mensagem
+   * Testa diferentes APIs do WPP para encontrar uma que não causa stack overflow
+   * @param to Número de teste
+   * @param message Mensagem de teste
+   * @returns Resultados dos testes
+   */
+  async testAlternativeSendMethods(to: string, message: string = 'Teste de API'): Promise<any> {
+    this.validateConnection();
+    const formatted = await this.formatPhoneNumber(to);
+
+    logger.info(`🧪 Testando métodos alternativos de envio para ${formatted}...`);
+
+    const results = await (this.client as any).page.evaluate(async (chatId: string, text: string) => {
+      const testResults: any = {
+        timestamp: new Date().toISOString(),
+        chatId,
+        tests: []
+      };
+
+      // @ts-ignore
+      const WPP = window.WPP;
+      // @ts-ignore
+      const Store = window.Store;
+
+      // Teste 1: WPP.chat.sendTextMessage (atual - com stack overflow)
+      try {
+        testResults.tests.push({
+          method: 'WPP.chat.sendTextMessage',
+          status: 'attempting',
+          error: null
+        });
+
+        if (WPP && WPP.chat && WPP.chat.sendTextMessage) {
+          const result = await Promise.race([
+            WPP.chat.sendTextMessage(chatId, text + ' [Teste 1: WPP.chat]'),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+          ]);
+          testResults.tests[0].status = 'success';
+          testResults.tests[0].result = 'Mensagem enviada';
+        } else {
+          testResults.tests[0].status = 'unavailable';
+        }
+      } catch (error: any) {
+        testResults.tests[0].status = 'failed';
+        testResults.tests[0].error = error.message;
+      }
+
+      // Teste 2: WPP.conn (conexão direta - se existir)
+      try {
+        testResults.tests.push({
+          method: 'WPP.conn',
+          status: 'attempting',
+          error: null
+        });
+
+        if (WPP && WPP.conn) {
+          testResults.tests[1].available = true;
+          testResults.tests[1].functions = Object.keys(WPP.conn).filter(k => typeof WPP.conn[k] === 'function');
+          testResults.tests[1].status = 'explored';
+        } else {
+          testResults.tests[1].status = 'unavailable';
+        }
+      } catch (error: any) {
+        testResults.tests[1].status = 'failed';
+        testResults.tests[1].error = error.message;
+      }
+
+      // Teste 3: WPP.msg (se existir)
+      try {
+        testResults.tests.push({
+          method: 'WPP.msg',
+          status: 'attempting',
+          error: null
+        });
+
+        if (WPP && WPP.msg) {
+          testResults.tests[2].available = true;
+          testResults.tests[2].functions = Object.keys(WPP.msg).filter(k => typeof WPP.msg[k] === 'function');
+          testResults.tests[2].status = 'explored';
+        } else {
+          testResults.tests[2].status = 'unavailable';
+        }
+      } catch (error: any) {
+        testResults.tests[2].status = 'failed';
+        testResults.tests[2].error = error.message;
+      }
+
+      // Teste 4: Store direto (low-level)
+      try {
+        testResults.tests.push({
+          method: 'Store.sendMessage (raw)',
+          status: 'attempting',
+          error: null
+        });
+
+        if (Store && Store.sendMessage && typeof Store.sendMessage === 'function') {
+          testResults.tests[3].available = true;
+          testResults.tests[3].status = 'found';
+        } else {
+          testResults.tests[3].status = 'unavailable';
+        }
+      } catch (error: any) {
+        testResults.tests[3].status = 'failed';
+        testResults.tests[3].error = error.message;
+      }
+
+      return testResults;
+    }, formatted, message);
+
+    logger.info('✅ Testes concluídos');
+    results.tests.forEach((test: any, index: number) => {
+      logger.info(`Test ${index + 1} [${test.method}]: ${test.status}`);
+      if (test.error) {
+        logger.error(`  Error: ${test.error}`);
+      }
+      if (test.functions) {
+        logger.info(`  Funções disponíveis: ${test.functions.join(', ')}`);
+      }
+    });
+
+    return results;
+  }
+
+  /**
    * ✅ FASE 2: Configurar Socket.IO (unificado)
    * Substitui setSocketServer() - agora usa setSocketIO() declarado acima
    * @param io Instância do Socket.IO

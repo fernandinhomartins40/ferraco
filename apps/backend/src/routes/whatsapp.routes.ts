@@ -1703,4 +1703,86 @@ router.delete('/upload-media/:filename', authenticate, async (req: Request, res:
   }
 });
 
+// ==========================================
+// 🔍 DEBUG: ROTAS DE EXPLORAÇÃO E TESTE DE APIs
+// ==========================================
+
+/**
+ * GET /api/whatsapp/debug/explore-apis
+ * Explorar todas as APIs disponíveis no window.WPP e window.Store
+ * Retorna estrutura completa de módulos e funções disponíveis
+ */
+router.get('/debug/explore-apis', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    logger.info('🔍 Iniciando exploração de APIs WhatsApp...');
+
+    const exploration = await whatsappService.exploreWhatsAppAPIs();
+
+    res.json({
+      success: true,
+      data: exploration,
+      message: 'Exploração concluída',
+    });
+
+  } catch (error: any) {
+    logger.error('❌ Erro ao explorar APIs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao explorar APIs',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/debug/test-send-methods
+ * Testar diferentes métodos de envio de mensagem
+ *
+ * @body { to: string, message?: string }
+ */
+router.post('/debug/test-send-methods', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { to, message } = req.body;
+
+    if (!to) {
+      return res.status(400).json({
+        success: false,
+        message: 'Campo "to" é obrigatório',
+      });
+    }
+
+    if (!whatsappService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    logger.info(`🧪 Testando métodos de envio para: ${to}`);
+
+    const testResults = await whatsappService.testAlternativeSendMethods(to, message);
+
+    res.json({
+      success: true,
+      data: testResults,
+      message: 'Testes concluídos',
+    });
+
+  } catch (error: any) {
+    logger.error('❌ Erro ao testar métodos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao testar métodos',
+      message: error.message,
+    });
+  }
+});
+
 export default router;
