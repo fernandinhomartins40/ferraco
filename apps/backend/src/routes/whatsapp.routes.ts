@@ -18,12 +18,21 @@
 
 import { Router, Request, Response } from 'express';
 import { whatsappService } from '../services/whatsappService';
+import { whatsappWebJSService } from '../services/whatsappWebJS.service';
 // ✅ REMOVIDO: whatsappChatService está deprecated (arquitetura stateless 2025)
 import { authenticate } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+
+/**
+ * Helper: Retorna o serviço WhatsApp ativo baseado na variável USE_WHATSAPP_WEB_JS
+ */
+const getActiveWhatsAppService = () => {
+  const useWhatsAppWebJS = process.env.USE_WHATSAPP_WEB_JS === 'true';
+  return useWhatsAppWebJS ? whatsappWebJSService : whatsappService;
+};
 
 const router = Router();
 
@@ -99,7 +108,8 @@ const uploadWhatsappMedia = multer({
  */
 router.get('/qr', authenticate, async (req: Request, res: Response) => {
   try {
-    const qrCode = whatsappService.getQRCode();
+    const activeService = getActiveWhatsAppService();
+    const qrCode = activeService.getQRCode();
 
     if (!qrCode) {
       return res.status(404).json({
@@ -131,7 +141,8 @@ router.get('/qr', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/status', authenticate, async (req: Request, res: Response) => {
   try {
-    const status = whatsappService.getStatus();
+    const activeService = getActiveWhatsAppService();
+    const status = activeService.getStatus();
 
     res.json({
       success: true,
@@ -162,14 +173,16 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/account', authenticate, async (req: Request, res: Response) => {
   try {
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
       });
     }
 
-    const accountInfo = await whatsappService.getAccountInfo();
+    const accountInfo = await activeService.getAccountInfo();
 
     res.json({
       success: true,
@@ -209,7 +222,9 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
@@ -217,7 +232,7 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
     }
 
     // Enviar mensagem
-    await whatsappService.sendTextMessage(to, message);
+    await activeService.sendTextMessage(to, message);
 
     res.json({
       success: true,
@@ -241,7 +256,8 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
  */
 router.post('/disconnect', authenticate, async (req: Request, res: Response) => {
   try {
-    await whatsappService.disconnect();
+    const activeService = getActiveWhatsAppService();
+    await activeService.disconnect();
 
     res.json({
       success: true,
@@ -264,7 +280,8 @@ router.post('/disconnect', authenticate, async (req: Request, res: Response) => 
  */
 router.post('/reinitialize', authenticate, async (req: Request, res: Response) => {
   try {
-    await whatsappService.reinitialize();
+    const activeService = getActiveWhatsAppService();
+    await activeService.reinitialize();
 
     res.json({
       success: true,
@@ -291,7 +308,9 @@ router.post('/reinitialize', authenticate, async (req: Request, res: Response) =
  */
 router.get('/conversations', authenticate, async (req: Request, res: Response) => {
   try {
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
@@ -299,7 +318,7 @@ router.get('/conversations', authenticate, async (req: Request, res: Response) =
     }
 
     const limit = parseInt(req.query.limit as string) || 50;
-    const conversations = await whatsappService.getAllConversations(limit);
+    const conversations = await activeService.getAllConversations(limit);
 
     res.json({
       success: true,
@@ -325,7 +344,9 @@ router.get('/conversations', authenticate, async (req: Request, res: Response) =
  */
 router.get('/conversations/v2', authenticate, async (req: Request, res: Response) => {
   try {
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
@@ -335,7 +356,7 @@ router.get('/conversations/v2', authenticate, async (req: Request, res: Response
     const limit = parseInt(req.query.limit as string) || 50;
 
     // Buscar conversas DIRETO do WPPConnect
-    const conversations = await whatsappService.getAllConversations(limit);
+    const conversations = await activeService.getAllConversations(limit);
 
     res.json({
       success: true,
@@ -348,7 +369,7 @@ router.get('/conversations/v2', authenticate, async (req: Request, res: Response
     logger.error('❌ Erro ao listar conversas (v2):', {
       message: error.message,
       stack: error.stack,
-      isConnected: whatsappService.isWhatsAppConnected(),
+      isConnected: activeService.isWhatsAppConnected(),
     });
     res.status(500).json({
       success: false,
@@ -366,7 +387,9 @@ router.get('/conversations/v2', authenticate, async (req: Request, res: Response
  */
 router.get('/conversations/:phone/messages/v2', authenticate, async (req: Request, res: Response) => {
   try {
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
@@ -377,7 +400,7 @@ router.get('/conversations/:phone/messages/v2', authenticate, async (req: Reques
     const count = parseInt(req.query.count as string) || 100;
 
     // Buscar mensagens DIRETO do WPPConnect
-    const messages = await whatsappService.getChatMessages(phone, count);
+    const messages = await activeService.getChatMessages(phone, count);
 
     res.json({
       success: true,
@@ -415,7 +438,8 @@ router.get('/search', authenticate, async (req: Request, res: Response) => {
     }
 
     // Na arquitetura stateless, buscar todas conversas e filtrar
-    const allConversations = await whatsappService.getAllConversations(100);
+    const activeService = getActiveWhatsAppService();
+    const allConversations = await activeService.getAllConversations(100);
     const conversations = allConversations.filter(conv =>
       conv.name?.toLowerCase().includes(query.toLowerCase()) ||
       conv.phone.includes(query)
@@ -464,14 +488,16 @@ router.post('/send-audio', authenticate, async (req: Request, res: Response) => 
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const messageId = await whatsappService.sendAudio(to, audioPath);
+    const messageId = await activeService.sendAudio(to, audioPath);
 
     res.json({
       success: true,
@@ -512,14 +538,16 @@ router.post('/send-reaction', authenticate, async (req: Request, res: Response) 
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const result = await whatsappService.sendReaction(messageId, emoji);
+    const result = await activeService.sendReaction(messageId, emoji);
 
     res.json({
       success: true,
@@ -560,14 +588,16 @@ router.post('/mark-read', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await whatsappService.markAsRead(chatId);
+    await activeService.markAsRead(chatId);
 
     res.json({
       success: true,
@@ -606,14 +636,16 @@ router.post('/mark-unread', authenticate, async (req: Request, res: Response) =>
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await whatsappService.markAsUnread(chatId);
+    await activeService.markAsUnread(chatId);
 
     res.json({
       success: true,
@@ -654,14 +686,16 @@ router.post('/delete-message', authenticate, async (req: Request, res: Response)
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await whatsappService.deleteMessage(chatId, messageId, forEveryone || false);
+    await activeService.deleteMessage(chatId, messageId, forEveryone || false);
 
     const messageCount = Array.isArray(messageId) ? messageId.length : 1;
     const scope = forEveryone ? 'para todos' : 'localmente';
@@ -712,14 +746,16 @@ router.post('/send-file', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const messageId = await whatsappService.sendFile(to, filePath, filename, caption);
+    const messageId = await activeService.sendFile(to, filePath, filename, caption);
 
     res.json({
       success: true,
@@ -763,14 +799,16 @@ router.post('/send-location', authenticate, async (req: Request, res: Response) 
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const messageId = await whatsappService.sendLocation(to, latitude, longitude, name);
+    const messageId = await activeService.sendLocation(to, latitude, longitude, name);
 
     res.json({
       success: true,
@@ -815,14 +853,16 @@ router.post('/send-contact', authenticate, async (req: Request, res: Response) =
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const messageId = await whatsappService.sendContactVcard(to, contactId, name);
+    const messageId = await activeService.sendContactVcard(to, contactId, name);
 
     res.json({
       success: true,
@@ -865,14 +905,16 @@ router.post('/star-message', authenticate, async (req: Request, res: Response) =
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await whatsappService.starMessage(messageId, star);
+    await activeService.starMessage(messageId, star);
 
     res.json({
       success: true,
@@ -897,14 +939,16 @@ router.post('/star-message', authenticate, async (req: Request, res: Response) =
  */
 router.get('/starred-messages', authenticate, async (req: Request, res: Response) => {
   try {
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const starredMessages = await whatsappService.getStarredMessages();
+    const starredMessages = await activeService.getStarredMessages();
 
     res.json({
       success: true,
@@ -944,14 +988,16 @@ router.post('/archive-chat', authenticate, async (req: Request, res: Response) =
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await whatsappService.archiveChat(chatId, archive);
+    await activeService.archiveChat(chatId, archive);
 
     res.json({
       success: true,
@@ -994,7 +1040,8 @@ router.get('/media/:messageId', authenticate, async (req: Request, res: Response
 
     logger.info(`📥 Servindo mídia inline: ${messageId}`);
 
-    const mediaBuffer = await whatsappService.downloadMedia(messageId);
+    const activeService = getActiveWhatsAppService();
+    const mediaBuffer = await activeService.downloadMedia(messageId);
 
     // Retornar arquivo inline (não como download)
     res.set('Content-Type', 'application/octet-stream');
@@ -1031,7 +1078,8 @@ router.post('/download-media', authenticate, async (req: Request, res: Response)
 
     logger.info(`📥 Download de mídia solicitado: ${messageId}`);
 
-    const mediaBuffer = await whatsappService.downloadMedia(messageId);
+    const activeService = getActiveWhatsAppService();
+    const mediaBuffer = await activeService.downloadMedia(messageId);
 
     // Retornar arquivo binário como download
     res.set('Content-Type', 'application/octet-stream');
@@ -1074,7 +1122,8 @@ router.post('/forward-message', authenticate, async (req: Request, res: Response
 
     logger.info(`📨 Encaminhando mensagem ${messageId} para:`, to);
 
-    await whatsappService.forwardMessage(messageId, to);
+    const activeService = getActiveWhatsAppService();
+    await activeService.forwardMessage(messageId, to);
 
     res.json({
       success: true,
@@ -1110,7 +1159,8 @@ router.post('/pin-chat', authenticate, async (req: Request, res: Response) => {
 
     logger.info(`📌 ${pin ? 'Fixando' : 'Desfixando'} chat: ${chatId}`);
 
-    await whatsappService.pinChat(chatId, pin);
+    const activeService = getActiveWhatsAppService();
+    await activeService.pinChat(chatId, pin);
 
     res.json({
       success: true,
@@ -1135,7 +1185,8 @@ router.get('/contacts', authenticate, async (req: Request, res: Response) => {
   try {
     logger.info('📇 Listando contatos do WhatsApp');
 
-    const contacts = await whatsappService.getContacts();
+    const activeService = getActiveWhatsAppService();
+    const contacts = await activeService.getContacts();
 
     res.json({
       success: true,
@@ -1172,7 +1223,8 @@ router.post('/contacts/check', authenticate, async (req: Request, res: Response)
 
     logger.info('🔍 Verificando números no WhatsApp:', phoneNumbers);
 
-    const results = await whatsappService.checkNumbersOnWhatsApp(phoneNumbers);
+    const activeService = getActiveWhatsAppService();
+    const results = await activeService.checkNumbersOnWhatsApp(phoneNumbers);
 
     res.json({
       success: true,
@@ -1215,7 +1267,8 @@ router.post('/groups', authenticate, async (req: Request, res: Response) => {
 
     logger.info(`👥 Criando grupo: ${name} com ${participants.length} participantes`);
 
-    const group = await whatsappService.createGroup(name, participants);
+    const activeService = getActiveWhatsAppService();
+    const group = await activeService.createGroup(name, participants);
 
     res.json({
       success: true,
@@ -1256,7 +1309,8 @@ router.post('/send-list', authenticate, async (req: Request, res: Response) => {
 
     logger.info(`📋 Enviando lista interativa para: ${to}`);
 
-    const messageId = await whatsappService.sendList(to, title, description || '', buttonText, sections);
+    const activeService = getActiveWhatsAppService();
+    const messageId = await activeService.sendList(to, title, description || '', buttonText, sections);
 
     res.json({
       success: true,
@@ -1293,7 +1347,8 @@ router.post('/send-buttons', authenticate, async (req: Request, res: Response) =
 
     logger.info(`🔘 Enviando mensagem com botões para: ${to}`);
 
-    const messageId = await whatsappService.sendButtons(to, message, buttons);
+    const activeService = getActiveWhatsAppService();
+    const messageId = await activeService.sendButtons(to, message, buttons);
 
     res.json({
       success: true,
@@ -1330,7 +1385,8 @@ router.post('/send-poll', authenticate, async (req: Request, res: Response) => {
 
     logger.info(`📊 Enviando enquete para: ${to}`);
 
-    const messageId = await whatsappService.sendPoll(to, name, options);
+    const activeService = getActiveWhatsAppService();
+    const messageId = await activeService.sendPoll(to, name, options);
 
     res.json({
       success: true,
@@ -1358,7 +1414,8 @@ router.get('/groups/:id/participants', authenticate, async (req: Request, res: R
 
     logger.info(`👥 Listando participantes do grupo: ${id}`);
 
-    const participants = await whatsappService.getGroupParticipants(id);
+    const activeService = getActiveWhatsAppService();
+    const participants = await activeService.getGroupParticipants(id);
 
     res.json({
       success: true,
@@ -1396,7 +1453,8 @@ router.post('/groups/:id/participants', authenticate, async (req: Request, res: 
 
     logger.info(`👤 Adicionando participante ao grupo ${id}: ${participantNumber}`);
 
-    await whatsappService.addParticipantToGroup(id, participantNumber);
+    const activeService = getActiveWhatsAppService();
+    await activeService.addParticipantToGroup(id, participantNumber);
 
     res.json({
       success: true,
@@ -1423,7 +1481,8 @@ router.delete('/groups/:id/participants/:number', authenticate, async (req: Requ
 
     logger.info(`👤 Removendo participante ${number} do grupo ${id}`);
 
-    await whatsappService.removeParticipantFromGroup(id, number);
+    const activeService = getActiveWhatsAppService();
+    await activeService.removeParticipantFromGroup(id, number);
 
     res.json({
       success: true,
@@ -1460,7 +1519,8 @@ router.put('/groups/:id/description', authenticate, async (req: Request, res: Re
 
     logger.info(`📝 Alterando descrição do grupo ${id}`);
 
-    await whatsappService.setGroupDescription(id, description);
+    const activeService = getActiveWhatsAppService();
+    await activeService.setGroupDescription(id, description);
 
     res.json({
       success: true,
@@ -1497,7 +1557,8 @@ router.put('/groups/:id/subject', authenticate, async (req: Request, res: Respon
 
     logger.info(`📝 Alterando nome do grupo ${id} para: ${subject}`);
 
-    await whatsappService.setGroupSubject(id, subject);
+    const activeService = getActiveWhatsAppService();
+    await activeService.setGroupSubject(id, subject);
 
     res.json({
       success: true,
@@ -1534,7 +1595,8 @@ router.post('/groups/:id/promote', authenticate, async (req: Request, res: Respo
 
     logger.info(`👑 Promovendo ${participantNumber} a admin no grupo ${id}`);
 
-    await whatsappService.promoteParticipantToAdmin(id, participantNumber);
+    const activeService = getActiveWhatsAppService();
+    await activeService.promoteParticipantToAdmin(id, participantNumber);
 
     res.json({
       success: true,
@@ -1571,7 +1633,8 @@ router.post('/groups/:id/demote', authenticate, async (req: Request, res: Respon
 
     logger.info(`👤 Removendo admin de ${participantNumber} no grupo ${id}`);
 
-    await whatsappService.demoteParticipantFromAdmin(id, participantNumber);
+    const activeService = getActiveWhatsAppService();
+    await activeService.demoteParticipantFromAdmin(id, participantNumber);
 
     res.json({
       success: true,
@@ -1714,7 +1777,9 @@ router.delete('/upload-media/:filename', authenticate, async (req: Request, res:
  */
 router.get('/debug/explore-apis', authenticate, async (req: Request, res: Response) => {
   try {
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
@@ -1723,7 +1788,7 @@ router.get('/debug/explore-apis', authenticate, async (req: Request, res: Respon
 
     logger.info('🔍 Iniciando exploração de APIs WhatsApp...');
 
-    const exploration = await whatsappService.exploreWhatsAppAPIs();
+    const exploration = await activeService.exploreWhatsAppAPIs();
 
     res.json({
       success: true,
@@ -1758,7 +1823,9 @@ router.post('/debug/test-send-methods', authenticate, async (req: Request, res: 
       });
     }
 
-    if (!whatsappService.isWhatsAppConnected()) {
+    const activeService = getActiveWhatsAppService();
+
+    if (!activeService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado',
@@ -1767,7 +1834,7 @@ router.post('/debug/test-send-methods', authenticate, async (req: Request, res: 
 
     logger.info(`🧪 Testando métodos de envio para: ${to}`);
 
-    const testResults = await whatsappService.testAlternativeSendMethods(to, message);
+    const testResults = await activeService.testAlternativeSendMethods(to, message);
 
     res.json({
       success: true,
