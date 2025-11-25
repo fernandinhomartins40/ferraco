@@ -40,12 +40,21 @@ export default function RecurrenceDashboard() {
 
   // ✅ NOVO: Usar hooks com filtros reais
   const { data: leadStats, isLoading: loadingLeads, error: errorLeads } = useRecurrenceLeadStats({ period: timeRange });
-  const { data: templateStats, isLoading: loadingTemplates } = useRecurrenceTemplateStats();
+  const { data: templateStats, isLoading: loadingTemplates, error: errorTemplates } = useRecurrenceTemplateStats();
   const { data: trends, isLoading: loadingTrends, error: errorTrends } = useCaptureTrends({ period: timeRange });
 
   // Debug: verificar o que está sendo retornado
   if (trends && !Array.isArray(trends)) {
     console.error('❌ Trends não é um array:', trends);
+  }
+
+  if (templateStats) {
+    console.log('📊 Template Stats recebido:', templateStats);
+    console.log('📋 Total de templates:', templateStats.templates?.length || 0);
+  }
+
+  if (errorTemplates) {
+    console.error('❌ Erro ao carregar template stats:', errorTemplates);
   }
 
   if (loadingLeads || loadingTemplates) {
@@ -298,7 +307,19 @@ export default function RecurrenceDashboard() {
           <CardDescription>Estatísticas de uso dos templates de mensagens</CardDescription>
         </CardHeader>
         <CardContent>
-          {templateStats?.templates && templateStats.templates.length > 0 ? (
+          {errorTemplates ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+              <p className="text-destructive font-medium mb-2">Erro ao carregar templates</p>
+              <p className="text-sm text-muted-foreground">
+                {errorTemplates instanceof Error ? errorTemplates.message : 'Erro desconhecido'}
+              </p>
+            </div>
+          ) : loadingTemplates ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : templateStats?.templates && templateStats.templates.length > 0 ? (
             <div className="space-y-6">
               {/* Gráfico de barras */}
               <ResponsiveContainer width="100%" height={250}>
@@ -357,7 +378,10 @@ export default function RecurrenceDashboard() {
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Nenhum template encontrado</p>
+              <p className="text-muted-foreground font-medium mb-2">Nenhum template cadastrado</p>
+              <p className="text-sm text-muted-foreground">
+                Crie templates de mensagens para automatizar a comunicação com leads recorrentes
+              </p>
             </div>
           )}
         </CardContent>
