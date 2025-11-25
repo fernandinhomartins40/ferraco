@@ -102,7 +102,7 @@ export class WhatsAppAntiSpamService {
     }
 
     // 2. Verificar horário comercial
-    const businessHourCheck = this.isBusinessHours();
+    const businessHourCheck = await this.isBusinessHours();
     if (!businessHourCheck.allowed) {
       return businessHourCheck;
     }
@@ -249,21 +249,25 @@ export class WhatsAppAntiSpamService {
   /**
    * Verifica se está dentro do horário comercial
    */
-  private isBusinessHours(): RateLimitResult {
-    // ✅ NOVO: Se horário comercial desabilitado, sempre permitir
-    if (!LIMITS.BUSINESS_HOURS.ENABLED) {
+  private async isBusinessHours(): Promise<RateLimitResult> {
+    // Buscar configurações do banco de dados
+    const settings = await prisma.automationSettings.findFirst();
+
+    // Se não houver configurações ou horário comercial desabilitado, sempre permitir
+    if (!settings || !settings.sendOnlyBusinessHours) {
       return { allowed: true };
     }
 
     const now = new Date();
+    const timezone = settings.timezone || 'America/Sao_Paulo';
 
-    // ✅ Converter para horário do Brasil (UTC-3)
-    const brazilTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-    const hour = brazilTime.getHours();
-    const dayOfWeek = brazilTime.getDay(); // 0 = Domingo, 6 = Sábado
+    // Converter para horário local configurado
+    const localTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+    const hour = localTime.getHours();
+    const dayOfWeek = localTime.getDay(); // 0 = Domingo, 6 = Sábado
 
     // Verificar final de semana
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
+    if (settings.blockWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
       return {
         allowed: false,
         reason: 'Envio pausado durante o final de semana',
@@ -271,11 +275,11 @@ export class WhatsAppAntiSpamService {
       };
     }
 
-    // Verificar horário
-    if (hour < LIMITS.BUSINESS_HOURS.START || hour >= LIMITS.BUSINESS_HOURS.END) {
+    // Verificar horário comercial
+    if (hour < settings.businessHourStart || hour >= settings.businessHourEnd) {
       return {
         allowed: false,
-        reason: `Envio pausado fora do horário comercial (${LIMITS.BUSINESS_HOURS.START}h-${LIMITS.BUSINESS_HOURS.END}h)`,
+        reason: `Envio pausado fora do horário comercial (${settings.businessHourStart}h-${settings.businessHourEnd}h, Timezone: ${timezone})`,
         retryAfter: this.getSecondsUntilBusinessHours()
       };
     }

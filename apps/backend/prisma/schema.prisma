@@ -108,7 +108,8 @@ enum AutomationSendStatus {
   SENT // Enviado com sucesso
   FAILED // Falha no envio
   WHATSAPP_DISCONNECTED // WhatsApp desconectado
-  SCHEDULED // Agendado para data futura
+  RATE_LIMITED // Limite de envios atingido (aguardando próximo ciclo)
+  SCHEDULED // Agendado para data futura (DEPRECATED - usar nextScheduledAt)
 }
 
 enum IntegrationType {
@@ -643,6 +644,10 @@ model AutomationLeadPosition {
   lastError         String? // Última mensagem de erro
   lastAttemptAt     DateTime? // Última tentativa de envio
 
+  // Flags de controle manual
+  bypassBusinessHours Boolean @default(false) // Bypass do horário comercial (retry manual urgente)
+  isManualRetry       Boolean @default(false) // Retry manual (bypass proteção anti-recorrência)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -695,7 +700,11 @@ model AutomationSettings {
   // Horários de envio
   sendOnlyBusinessHours Boolean @default(true)
   businessHourStart     Int     @default(8) // 8h
-  businessHourEnd       Int     @default(18) // 18h
+  businessHourEnd       Int     @default(20) // 20h (padronizado)
+  blockWeekends         Boolean @default(true) // Bloquear envios em finais de semana
+
+  // Timezone configurável
+  timezone String @default("America/Sao_Paulo") // IANA timezone (ex: America/New_York, Europe/London)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

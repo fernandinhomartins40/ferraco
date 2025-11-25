@@ -73,30 +73,43 @@ class AutomationSchedulerService {
 
       // Verificar horário comercial
       if (settings.sendOnlyBusinessHours) {
-        // Converter para horário de São Paulo (UTC-3)
         const now = new Date();
+        const timezone = settings.timezone || 'America/Sao_Paulo';
 
-        // Criar data no timezone de São Paulo
-        const brazilTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-        const currentHourBrazil = brazilTime.getHours();
-        const currentMinuteBrazil = brazilTime.getMinutes();
+        // Criar data no timezone configurado
+        const localTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+        const currentHour = localTime.getHours();
+        const currentMinute = localTime.getMinutes();
+        const dayOfWeek = localTime.getDay();
 
         logger.info(
           `⏰ Verificação de horário comercial:` +
+          `\n  - Timezone: ${timezone}` +
           `\n  - Hora UTC: ${now.getUTCHours()}:${now.getUTCMinutes().toString().padStart(2, '0')}` +
-          `\n  - Hora Brasil: ${currentHourBrazil}:${currentMinuteBrazil.toString().padStart(2, '0')}` +
-          `\n  - Horário comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h`
+          `\n  - Hora Local: ${currentHour}:${currentMinute.toString().padStart(2, '0')}` +
+          `\n  - Dia da semana: ${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][dayOfWeek]}` +
+          `\n  - Horário comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h` +
+          `\n  - Bloquear fins de semana: ${settings.blockWeekends ? 'Sim' : 'Não'}`
         );
 
-        if (currentHourBrazil < settings.businessHourStart || currentHourBrazil >= settings.businessHourEnd) {
+        // Verificar fim de semana
+        if (settings.blockWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
           logger.info(
-            `❌ Fora do horário comercial (Brasil: ${currentHourBrazil}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
+            `❌ Envio bloqueado durante o final de semana (${['Domingo', 'Sábado'][dayOfWeek === 0 ? 0 : 1]})`
+          );
+          return;
+        }
+
+        // Verificar horário comercial
+        if (currentHour < settings.businessHourStart || currentHour >= settings.businessHourEnd) {
+          logger.info(
+            `❌ Fora do horário comercial (Hora local: ${currentHour}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
           );
           return;
         }
 
         logger.info(
-          `✅ Dentro do horário comercial (Brasil: ${currentHourBrazil}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
+          `✅ Dentro do horário comercial (Hora local: ${currentHour}h, Comercial: ${settings.businessHourStart}h-${settings.businessHourEnd}h)`
         );
       }
 
@@ -106,6 +119,7 @@ class AutomationSchedulerService {
           OR: [
             { nextScheduledAt: null }, // Nunca enviado
             { nextScheduledAt: { lte: new Date() } }, // Hora de enviar
+            { bypassBusinessHours: true }, // Bypass de horário comercial
           ],
         },
         include: {
@@ -121,7 +135,13 @@ class AutomationSchedulerService {
         },
       });
 
-      logger.info(`📋 Processando ${positions.length} automações pendentes`);
+      const bypassCount = positions.filter(p => p.bypassBusinessHours).length;
+      const regularCount = positions.length - bypassCount;
+
+      logger.info(
+        `📋 Processando ${positions.length} automações pendentes ` +
+        `(${regularCount} regulares, ${bypassCount} com bypass)`
+      );
 
       for (const position of positions) {
         await this.processPosition(position, settings);
@@ -141,7 +161,8 @@ class AutomationSchedulerService {
       // ========================================
       // PROTEÇÃO ANTI-SPAM: Verificar se já enviou recentemente
       // ========================================
-      if (position.lastSentAt && column.recurrenceType !== 'NONE') {
+      // BYPASS: Permitir retry manual mesmo dentro do período de recorrência
+      if (position.lastSentAt && column.recurrenceType !== 'NONE' && !position.isManualRetry) {
         const isWithinRecurrencePeriod = this.isWithinRecurrencePeriod(
           position.lastSentAt,
           column.recurrenceType,
@@ -155,6 +176,11 @@ class AutomationSchedulerService {
           );
           return;
         }
+      }
+
+      // Se for retry manual, logar e resetar a flag
+      if (position.isManualRetry) {
+        logger.info(`🔄 Retry manual detectado para ${lead.name} - bypass de proteção anti-recorrência`);
       }
 
       // Verificar se WhatsApp está conectado
@@ -175,22 +201,26 @@ class AutomationSchedulerService {
         return;
       }
 
-      // Verificar limites de envio
-      const canSend = await this.checkRateLimits(settings);
-      if (!canSend) {
-        logger.warn('Limite de envios atingido, aguardando...');
+      // Verificar limites de envio (BYPASS se bypassBusinessHours estiver ativo)
+      if (!position.bypassBusinessHours) {
+        const canSend = await this.checkRateLimits(settings);
+        if (!canSend) {
+          logger.warn('Limite de envios atingido, aguardando...');
 
-        // Atualizar status para SCHEDULED
-        await prisma.automationLeadPosition.update({
-          where: { id: position.id },
-          data: {
-            status: 'SCHEDULED',
-            lastAttemptAt: new Date(),
-            lastError: 'Limite de envios atingido. Aguardando próximo ciclo.',
-          },
-        });
+          // Atualizar status para RATE_LIMITED
+          await prisma.automationLeadPosition.update({
+            where: { id: position.id },
+            data: {
+              status: 'RATE_LIMITED',
+              lastAttemptAt: new Date(),
+              lastError: 'Limite de envios atingido. Aguardando próximo ciclo.',
+            },
+          });
 
-        return;
+          return;
+        }
+      } else {
+        logger.info(`⚡ Bypass de rate limit ativado para ${lead.name}`);
       }
 
       // Marcar como SENDING
@@ -280,6 +310,8 @@ class AutomationSchedulerService {
             nextScheduledAt: nextSchedule,
             messagesSentCount: position.messagesSentCount + 1,
             lastError: null, // Limpar erro anterior
+            bypassBusinessHours: false, // Resetar flag de bypass
+            isManualRetry: false, // Resetar flag de retry manual
           },
         });
 
@@ -509,9 +541,16 @@ class AutomationSchedulerService {
   /**
    * Reinicia envio de um lead específico (reseta status para PENDING)
    * IMPORTANTE: Usado para reenvio em caso de falhas ou reagendamento
-   * O retry NÃO bypassa a verificação de período de recorrência
+   *
+   * @param leadId ID do lead
+   * @param options Opções de bypass
+   * @param options.bypassBusinessHours Se true, ignora horário comercial e rate limits
+   * @param options.isManualRetry Se true, ignora proteção anti-recorrência
    */
-  async retryLead(leadId: string): Promise<void> {
+  async retryLead(
+    leadId: string,
+    options?: { bypassBusinessHours?: boolean; isManualRetry?: boolean }
+  ): Promise<void> {
     // Buscar posição atual
     const position = await prisma.automationLeadPosition.findUnique({
       where: { leadId },
@@ -524,13 +563,21 @@ class AutomationSchedulerService {
       throw new Error(error);
     }
 
-    // Permitir retry para status de falha ou agendado
-    const allowedStatuses = ['FAILED', 'WHATSAPP_DISCONNECTED', 'SCHEDULED'];
+    // Permitir retry para status de falha, agendado ou rate limited
+    const allowedStatuses = ['FAILED', 'WHATSAPP_DISCONNECTED', 'SCHEDULED', 'RATE_LIMITED'];
     if (!allowedStatuses.includes(position.status)) {
       const error = `Lead ${position.lead.name} tem status "${position.status}". Retry só é permitido para leads com status: ${allowedStatuses.join(', ')}`;
       logger.warn(error);
       throw new Error(error);
     }
+
+    const bypassBusinessHours = options?.bypassBusinessHours ?? false;
+    const isManualRetry = options?.isManualRetry ?? true; // Default true para retry manual
+
+    logger.info(
+      `🔄 Retry agendado para lead ${position.lead.name} ` +
+      `(bypass horário: ${bypassBusinessHours}, bypass recorrência: ${isManualRetry})`
+    );
 
     await prisma.automationLeadPosition.update({
       where: { leadId },
@@ -538,6 +585,8 @@ class AutomationSchedulerService {
         status: 'PENDING',
         lastError: null,
         nextScheduledAt: new Date(), // Enviar imediatamente
+        bypassBusinessHours,
+        isManualRetry,
       },
     });
 

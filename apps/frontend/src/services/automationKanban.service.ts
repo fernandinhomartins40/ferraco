@@ -88,6 +88,7 @@ export type AutomationSendStatus =
   | 'SENT'
   | 'FAILED'
   | 'WHATSAPP_DISCONNECTED'
+  | 'RATE_LIMITED'
   | 'SCHEDULED';
 
 export interface AutomationLeadPosition {

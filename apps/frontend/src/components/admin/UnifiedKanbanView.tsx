@@ -115,11 +115,17 @@ const getStatusConfig = (status: AutomationSendStatus) => {
       icon: WifiOff,
       description: 'WhatsApp não conectado'
     },
+    RATE_LIMITED: {
+      label: 'Limite Atingido',
+      color: 'bg-yellow-500',
+      icon: Clock,
+      description: 'Limite de envios atingido, aguardando próximo ciclo'
+    },
     SCHEDULED: {
       label: 'Agendado',
       color: 'bg-purple-500',
       icon: Calendar,
-      description: 'Limite de envios atingido'
+      description: 'Agendado para data futura'
     },
   };
   return configs[status] || configs.PENDING;
@@ -284,8 +290,8 @@ const UnifiedKanbanView = ({
                           <StatusIcon className={`h-3 w-3 ${position.status === 'SENDING' ? 'animate-spin' : ''}`} />
                           {statusConfig.label}
                         </Badge>
-                        {/* Botão de Retry para status com falha */}
-                        {(position.status === 'FAILED' || position.status === 'WHATSAPP_DISCONNECTED') && onRetryLead && (
+                        {/* Botão de Retry para status com falha ou limite atingido */}
+                        {(['FAILED', 'WHATSAPP_DISCONNECTED', 'RATE_LIMITED'] as const).includes(position.status) && onRetryLead && (
                           <Button
                             variant="ghost"
                             size="sm"

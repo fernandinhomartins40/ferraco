@@ -297,35 +297,35 @@ export class AutomationKanbanController {
         sendOnlyBusinessHours,
         businessHourStart,
         businessHourEnd,
+        blockWeekends,
+        timezone,
       } = req.body;
 
       let settings = await prisma.automationSettings.findFirst();
 
+      // Preparar dados, removendo undefined
+      const dataToUpdate: any = {};
+      if (columnIntervalSeconds !== undefined) dataToUpdate.columnIntervalSeconds = columnIntervalSeconds;
+      if (maxMessagesPerHour !== undefined) dataToUpdate.maxMessagesPerHour = maxMessagesPerHour;
+      if (maxMessagesPerDay !== undefined) dataToUpdate.maxMessagesPerDay = maxMessagesPerDay;
+      if (sendOnlyBusinessHours !== undefined) dataToUpdate.sendOnlyBusinessHours = sendOnlyBusinessHours;
+      if (businessHourStart !== undefined) dataToUpdate.businessHourStart = businessHourStart;
+      if (businessHourEnd !== undefined) dataToUpdate.businessHourEnd = businessHourEnd;
+      if (blockWeekends !== undefined) dataToUpdate.blockWeekends = blockWeekends;
+      if (timezone !== undefined) dataToUpdate.timezone = timezone;
+
       if (!settings) {
         settings = await prisma.automationSettings.create({
-          data: {
-            columnIntervalSeconds,
-            maxMessagesPerHour,
-            maxMessagesPerDay,
-            sendOnlyBusinessHours,
-            businessHourStart,
-            businessHourEnd,
-          },
+          data: dataToUpdate,
         });
       } else {
         settings = await prisma.automationSettings.update({
           where: { id: settings.id },
-          data: {
-            columnIntervalSeconds,
-            maxMessagesPerHour,
-            maxMessagesPerDay,
-            sendOnlyBusinessHours,
-            businessHourStart,
-            businessHourEnd,
-          },
+          data: dataToUpdate,
         });
       }
 
+      console.log(`[AutomationKanban] Configurações atualizadas:`, settings);
       res.json(settings);
     } catch (error) {
       console.error('Erro ao atualizar configurações:', error);
@@ -337,8 +337,12 @@ export class AutomationKanbanController {
   async retryLead(req: Request, res: Response) {
     try {
       const { leadId } = req.params;
+      const { bypassBusinessHours, isManualRetry } = req.body;
 
-      console.log(`[AutomationKanban] Retry solicitado para lead: ${leadId}`);
+      console.log(
+        `[AutomationKanban] Retry solicitado para lead: ${leadId} ` +
+        `(bypass horário: ${bypassBusinessHours}, manual: ${isManualRetry})`
+      );
 
       // Verificar se lead existe na automação
       const position = await prisma.automationLeadPosition.findUnique({
@@ -354,8 +358,8 @@ export class AutomationKanbanController {
         });
       }
 
-      // Verificar se o status permite retry
-      if (!['FAILED', 'WHATSAPP_DISCONNECTED', 'SCHEDULED'].includes(position.status)) {
+      // Verificar se o status permite retry (incluindo RATE_LIMITED)
+      if (!['FAILED', 'WHATSAPP_DISCONNECTED', 'SCHEDULED', 'RATE_LIMITED'].includes(position.status)) {
         console.warn(`[AutomationKanban] Lead ${leadId} tem status ${position.status}, não é elegível para retry`);
         return res.status(400).json({
           success: false,
@@ -363,7 +367,10 @@ export class AutomationKanbanController {
         });
       }
 
-      await automationSchedulerService.retryLead(leadId);
+      await automationSchedulerService.retryLead(leadId, {
+        bypassBusinessHours: bypassBusinessHours === true,
+        isManualRetry: isManualRetry !== false, // Default true
+      });
 
       console.log(`[AutomationKanban] Retry agendado com sucesso para lead ${position.lead.name}`);
       res.json({ success: true, message: 'Envio reagendado com sucesso' });
