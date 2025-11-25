@@ -1684,8 +1684,9 @@ class WhatsAppService {
       logger.info('📋 Iniciando busca de conversas do WhatsApp...');
 
       // ✅ CORREÇÃO: Usar evaluateAndReturn com filtro seguro para evitar stack overflow
+      // @ts-ignore - page.evaluate executa no contexto do browser onde WAPI está disponível
       const allChats = await this.client!.page.evaluate(() => {
-        return window.WAPI.getAllChats().filter((chat: any) => {
+        return WAPI.getAllChats().filter((chat: any) => {
           // Filtrar APENAS conversas privadas (não grupos) NO BROWSER
           // Evita carregar propriedades circulares que causam stack overflow
           try {
