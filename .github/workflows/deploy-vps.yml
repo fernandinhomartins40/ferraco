@@ -141,20 +141,31 @@ jobs:
           echo "📦 Atualizando sistema..."
           export DEBIAN_FRONTEND=noninteractive
 
-          # Aguardar locks do apt e atualizar
+          # Aguardar locks do apt e atualizar (com timeout de 3 minutos)
           echo "Aguardando locks do apt..."
+          WAIT_COUNT=0
+          MAX_WAIT=60  # 60 iterações * 3 segundos = 3 minutos
+
           while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
                 fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
                 fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
-            echo "  Apt está em uso, aguardando..."
+            WAIT_COUNT=$((WAIT_COUNT + 1))
+            if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
+              echo "  ⚠️  Timeout aguardando apt (3 minutos) - forçando continuação"
+              # Matar processos que estão segurando o lock
+              killall apt-get apt dpkg 2>/dev/null || true
+              sleep 2
+              break
+            fi
+            echo "  Apt está em uso, aguardando... ($WAIT_COUNT/$MAX_WAIT)"
             sleep 3
           done
 
           echo "Atualizando repositórios..."
-          apt-get update -qq || true
+          timeout 60 apt-get update -qq || echo "⚠️  Apt update timeout/error - continuando"
 
           echo "Instalando dependências..."
-          apt-get install -y curl wget ca-certificates lsb-release psmisc >/dev/null 2>&1 || true
+          timeout 60 apt-get install -y curl wget ca-certificates lsb-release psmisc 2>&1 | grep -v "^Setting up\|^Processing" || echo "⚠️  Algumas dependências podem não ter sido instaladas"
 
           echo "✅ Sistema atualizado"
 
