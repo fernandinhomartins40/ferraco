@@ -18,7 +18,7 @@
 
 import { Router, Request, Response } from 'express';
 import { whatsappService } from '../services/whatsappService';
-import whatsappChatService from '../services/whatsappChatService';
+// ✅ REMOVIDO: whatsappChatService está deprecated (arquitetura stateless 2025)
 import { authenticate } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import multer from 'multer';

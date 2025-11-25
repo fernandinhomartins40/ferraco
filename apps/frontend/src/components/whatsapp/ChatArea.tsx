@@ -105,24 +105,50 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       try {
         setIsLoading(true);
 
-        // Extrair phone do conversationId
+        // ✅ CORRIGIDO: Validação e extração robusta de phone do conversationId
+        // Formato esperado: '5511999999999@c.us' ou '5511999999999'
+        console.log('🔍 ChatArea: conversationId recebido:', conversationId);
+
+        if (!conversationId || conversationId.trim() === '') {
+          console.error('❌ ChatArea: conversationId inválido (vazio)');
+          return;
+        }
+
+        // Extrair phone: remover @c.us e qualquer caractere não-numérico
         const phone = conversationId.replace('@c.us', '').replace(/\D/g, '');
-        console.log('🔍 ChatArea: Carregando dados para phone:', phone);
+
+        if (!phone || phone.length < 10) {
+          console.error('❌ ChatArea: Phone inválido após extração:', { conversationId, phone });
+          return;
+        }
+
+        console.log('✅ ChatArea: Phone extraído:', phone);
 
         // Buscar conversas para encontrar a conversa específica
         console.log('📞 ChatArea: Buscando conversas...');
         const convsResponse = await api.get('/whatsapp/conversations/v2');
         console.log('📞 ChatArea: Conversas recebidas:', convsResponse.data.conversations?.length);
 
-        const conversation = convsResponse.data.conversations.find((c: any) =>
-          c.phone === phone || c.id === conversationId
-        );
+        // Tentar encontrar conversa por phone ou id completo
+        const conversation = convsResponse.data.conversations.find((c: any) => {
+          const convPhone = c.phone?.replace(/\D/g, '');
+          const convId = c.id?.replace(/\D/g, '');
+          return convPhone === phone || convId === phone || c.id === conversationId;
+        });
 
         if (conversation) {
-          console.log('✅ ChatArea: Conversa encontrada:', conversation.name || conversation.phone);
+          console.log('✅ ChatArea: Conversa encontrada:', {
+            name: conversation.name,
+            phone: conversation.phone,
+            id: conversation.id,
+          });
           setConversation(conversation);
         } else {
-          console.warn('⚠️ ChatArea: Conversa não encontrada para phone:', phone);
+          console.warn('⚠️ ChatArea: Conversa não encontrada', {
+            buscado: phone,
+            conversationId,
+            totalConversas: convsResponse.data.conversations?.length,
+          });
         }
 
         // Buscar mensagens usando phone
@@ -145,6 +171,7 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
           message: error.message,
           response: error.response?.data,
           status: error.response?.status,
+          conversationId,
         });
       } finally {
         setIsLoading(false);
@@ -265,14 +292,28 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
   const fetchMessages = async () => {
     try {
       if (!conversation?.contact.phone) {
-        console.error('Phone não disponível para buscar mensagens');
+        console.error('❌ fetchMessages: Phone não disponível');
         return;
       }
 
-      const response = await api.get(`/whatsapp/conversations/${conversation.contact.phone}/messages/v2`);
-      setMessages(response.data.messages);
-    } catch (error) {
-      console.error('Erro ao buscar mensagens:', error);
+      // ✅ ADICIONADO: Loading state
+      const phone = conversation.contact.phone.replace(/\D/g, '');
+      console.log('🔄 fetchMessages: Atualizando mensagens para:', phone);
+
+      const response = await api.get(`/whatsapp/conversations/${phone}/messages/v2`);
+
+      if (response.data.messages) {
+        setMessages(response.data.messages);
+        console.log('✅ fetchMessages: Mensagens atualizadas:', response.data.messages.length);
+      } else {
+        console.warn('⚠️ fetchMessages: Nenhuma mensagem retornada');
+      }
+    } catch (error: any) {
+      console.error('❌ fetchMessages: Erro ao buscar mensagens:', {
+        message: error.message,
+        response: error.response?.data,
+      });
+      toast.error('Erro ao atualizar mensagens');
     }
   };
 

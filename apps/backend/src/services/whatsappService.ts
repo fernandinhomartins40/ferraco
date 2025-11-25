@@ -1680,14 +1680,25 @@ class WhatsAppService {
     }
 
     try {
-      // 1. ✅ STATELESS: Buscar TODAS as conversas direto do WhatsApp
-      const allChats = await this.client!.getAllChats();
+      // 1. ✅ STATELESS: Buscar conversas direto do WhatsApp
+      // ✅ CORRIGIDO: Usar listChats() ao invés de getAllChats() (deprecated)
+      // Documentação oficial: https://wppconnect.io/wppconnect/classes/Whatsapp.html
+      const allChats = await Promise.race([
+        this.client!.listChats(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout ao buscar conversas do WhatsApp')), 30000)
+        )
+      ]) as Chat[];
+
+      logger.info(`📞 WPPConnect retornou ${allChats.length} conversas totais`);
 
       // 2. Filtrar apenas conversas privadas (não grupos)
       const privateChats = allChats
         .filter((chat: Chat) => !chat.isGroup)
         .sort((a: Chat, b: Chat) => ((b as any).t || 0) - ((a as any).t || 0))
         .slice(0, limit);
+
+      logger.info(`📞 Filtrando para ${privateChats.length} conversas privadas (limit: ${limit})`);
 
       // 3. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
       const { prisma } = await import('../config/database');
@@ -1775,17 +1786,26 @@ class WhatsAppService {
     }
 
     try {
-      // Formatar chat ID
+      // ✅ CORRIGIDO: Formatar chat ID corretamente
+      // Documentação oficial WPPConnect: formato esperado é '000000000000@c.us' para individuais
+      // Referência: https://wppconnect.io/wppconnect/classes/Whatsapp.html
       const cleanPhone = phone.replace(/\D/g, '');
-      const chatId = cleanPhone.includes('@c.us') ? cleanPhone : `${cleanPhone}@c.us`;
+      const chatId = phone.includes('@c.us')
+        ? phone
+        : `${cleanPhone}@c.us`;
 
       logger.info(`💬 Buscando mensagens para ${chatId.substring(0, 15)}... (count: ${count})`);
 
-      // Buscar mensagens DIRETO do WPPConnect
-      const messages = await this.client!.getMessages(chatId, {
-        count,
-        direction: 'before',
-      });
+      // ✅ CORRIGIDO: Buscar mensagens DIRETO do WPPConnect com timeout
+      const messages = await Promise.race([
+        this.client!.getMessages(chatId, {
+          count,
+          direction: 'before',
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout ao buscar mensagens para ${chatId}`)), 30000)
+        )
+      ]) as any[];
 
       logger.info(`💬 WPPConnect retornou ${messages.length} mensagens para ${chatId.substring(0, 15)}...`);
 
