@@ -115,6 +115,7 @@ class WhatsAppWebJSService {
         // Emitir via Socket.IO
         if (this.io) {
           this.io.emit('whatsapp:qr', { qr });
+          this.io.emit('whatsapp:status', 'INITIALIZING');
           logger.info('✅ QR Code emitido via Socket.IO');
         }
       });
@@ -129,6 +130,8 @@ class WhatsAppWebJSService {
         // Emitir via Socket.IO
         if (this.io) {
           this.io.emit('whatsapp:ready', { connected: true });
+          this.io.emit('whatsapp:status', 'CONNECTED');
+          logger.info('✅ Status CONNECTED emitido via Socket.IO');
         }
       });
 
@@ -142,6 +145,11 @@ class WhatsAppWebJSService {
         logger.error('❌ Falha na autenticação:', msg);
         this.isConnected = false;
         this.isInitializing = false;
+
+        if (this.io) {
+          this.io.emit('whatsapp:status', 'DISCONNECTED');
+          logger.info('✅ Status DISCONNECTED emitido via Socket.IO (auth_failure)');
+        }
       });
 
       // Event: Cliente desconectado
@@ -152,6 +160,8 @@ class WhatsAppWebJSService {
 
         if (this.io) {
           this.io.emit('whatsapp:disconnected', { reason });
+          this.io.emit('whatsapp:status', 'DISCONNECTED');
+          logger.info('✅ Status DISCONNECTED emitido via Socket.IO');
         }
       });
 
