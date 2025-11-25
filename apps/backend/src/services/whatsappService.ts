@@ -1721,41 +1721,41 @@ class WhatsAppService {
               },
             });
 
-          // Extrair preview da última mensagem (tenta diferentes propriedades)
-          let lastMessagePreview = null;
-          const chatAny = chat as any;
-          if (chatAny.lastMessage) {
-            lastMessagePreview =
-              chatAny.lastMessage.body ||
-              chatAny.lastMessage.content ||
-              (chatAny.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
-              (chatAny.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
-              (chatAny.lastMessage.type === 'audio' || chatAny.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
-              (chatAny.lastMessage.type === 'document' ? '📄 Documento' : null) ||
-              (chatAny.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
-              'Nova mensagem';
-          }
+            // Extrair preview da última mensagem (tenta diferentes propriedades)
+            let lastMessagePreview = null;
+            const chatAny = chat as any;
+            if (chatAny.lastMessage) {
+              lastMessagePreview =
+                chatAny.lastMessage.body ||
+                chatAny.lastMessage.content ||
+                (chatAny.lastMessage.type === 'image' ? '📷 Imagem' : null) ||
+                (chatAny.lastMessage.type === 'video' ? '🎥 Vídeo' : null) ||
+                (chatAny.lastMessage.type === 'audio' || chatAny.lastMessage.type === 'ptt' ? '🎤 Áudio' : null) ||
+                (chatAny.lastMessage.type === 'document' ? '📄 Documento' : null) ||
+                (chatAny.lastMessage.type === 'sticker' ? '🎨 Figurinha' : null) ||
+                'Nova mensagem';
+            }
 
-          return {
-            id: chat.id._serialized,
-            phone,
-            name: chat.name || contactMetadata?.name || phone,
-            profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
-            lastMessageAt: chat.t ? new Date(chat.t * 1000) : null,
-            lastMessagePreview,
-            unreadCount: chat.unreadCount || 0,
-            isPinned: chat.pin || false,
-            isArchived: chat.archive || false,
-            // Metadata do CRM
-            lead: contactMetadata?.lead || null,
-            tags: contactMetadata?.tags || [],
-            contact: {
-              id: phone,
+            return {
+              id: chat.id._serialized,
               phone,
               name: chat.name || contactMetadata?.name || phone,
               profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
-            },
-          };
+              lastMessageAt: chat.t ? new Date(chat.t * 1000) : null,
+              lastMessagePreview,
+              unreadCount: chat.unreadCount || 0,
+              isPinned: chat.pin || false,
+              isArchived: chat.archive || false,
+              // Metadata do CRM
+              lead: contactMetadata?.lead || null,
+              tags: contactMetadata?.tags || [],
+              contact: {
+                id: phone,
+                phone,
+                name: chat.name || contactMetadata?.name || phone,
+                profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
+              },
+            };
           } catch (chatError: any) {
             logger.error(`❌ Erro ao processar chat ${chat.id._serialized}:`, chatError);
             // Retorna versão simplificada em caso de erro
