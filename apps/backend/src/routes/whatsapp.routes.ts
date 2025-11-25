@@ -345,11 +345,16 @@ router.get('/conversations/v2', authenticate, async (req: Request, res: Response
     });
 
   } catch (error: any) {
-    logger.error('Erro ao listar conversas (v2):', error);
+    logger.error('❌ Erro ao listar conversas (v2):', {
+      message: error.message,
+      stack: error.stack,
+      isConnected: whatsappService.isWhatsAppConnected(),
+    });
     res.status(500).json({
       success: false,
       error: 'Erro ao listar conversas',
       message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 });

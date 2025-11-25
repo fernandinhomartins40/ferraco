@@ -1681,35 +1681,45 @@ class WhatsAppService {
 
     try {
       // 1. ✅ STATELESS: Buscar TODAS as conversas direto do WhatsApp
+      logger.info('📋 Iniciando busca de conversas do WhatsApp...');
       const allChats = await this.client!.getAllChats();
+      logger.info(`📋 Total de chats encontrados: ${allChats?.length || 0}`);
 
       // 2. Filtrar apenas conversas privadas (não grupos)
+      if (!Array.isArray(allChats)) {
+        logger.error('❌ getAllChats não retornou um array:', typeof allChats);
+        return [];
+      }
+
       const privateChats = allChats
         .filter((chat: Chat) => !chat.isGroup)
         .sort((a: Chat, b: Chat) => ((b as any).t || 0) - ((a as any).t || 0))
         .slice(0, limit);
+
+      logger.info(`📋 Conversas privadas encontradas: ${privateChats.length}`);
 
       // 3. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
       const { prisma } = await import('../config/database');
 
       const enrichedChats = await Promise.all(
         privateChats.map(async (chat: Chat) => {
-          const phone = chat.id._serialized.replace('@c.us', '');
+          try {
+            const phone = chat.id._serialized.replace('@c.us', '');
 
-          // Buscar metadata do contato no PostgreSQL
-          const contactMetadata = await prisma.whatsAppContact.findUnique({
-            where: { phone },
-            include: {
-              lead: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  status: true,
+            // Buscar metadata do contato no PostgreSQL
+            const contactMetadata = await prisma.whatsAppContact.findUnique({
+              where: { phone },
+              include: {
+                lead: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    status: true,
+                  },
                 },
               },
-            },
-          });
+            });
 
           // Extrair preview da última mensagem (tenta diferentes propriedades)
           let lastMessagePreview = null;
@@ -1746,12 +1756,41 @@ class WhatsAppService {
               profilePicUrl: (chat as any).profilePicThumb?.eurl || contactMetadata?.profilePicUrl || null,
             },
           };
+          } catch (chatError: any) {
+            logger.error(`❌ Erro ao processar chat ${chat.id._serialized}:`, chatError);
+            // Retorna versão simplificada em caso de erro
+            return {
+              id: chat.id._serialized,
+              phone: chat.id._serialized.replace('@c.us', ''),
+              name: chat.name || chat.id._serialized.replace('@c.us', ''),
+              profilePicUrl: null,
+              lastMessageAt: chat.t ? new Date(chat.t * 1000) : null,
+              lastMessagePreview: null,
+              unreadCount: chat.unreadCount || 0,
+              isPinned: false,
+              isArchived: false,
+              lead: null,
+              tags: [],
+              contact: {
+                id: chat.id._serialized.replace('@c.us', ''),
+                phone: chat.id._serialized.replace('@c.us', ''),
+                name: chat.name || chat.id._serialized.replace('@c.us', ''),
+                profilePicUrl: null,
+              },
+            };
+          }
         })
       );
 
+      logger.info(`✅ ${enrichedChats.length} conversas processadas com sucesso`);
       return enrichedChats;
     } catch (error: any) {
-      logger.error('Erro ao buscar conversas do WhatsApp:', error);
+      logger.error('❌ Erro ao buscar conversas do WhatsApp:', {
+        message: error.message,
+        stack: error.stack,
+        isConnected: this.isConnected,
+        hasClient: !!this.client,
+      });
       throw error;
     }
   }
