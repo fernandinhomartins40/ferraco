@@ -40,6 +40,7 @@ import {
   Upload,
   Archive,
   RotateCcw,
+  Clock,
 } from 'lucide-react';
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useArchivedLeads, useRestoreArchivedLead } from '@/hooks/api/useLeads';
 import type { Lead, CreateLeadData, UpdateLeadData } from '@/services/leads.service';
@@ -54,6 +55,7 @@ import { VariableInserter, DEFAULT_LEAD_VARIABLES, PRODUCT_VARIABLES } from '@/c
 import { useVariableInsertion } from '@/hooks/useVariableInsertion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileKanban } from '@/components/mobile/MobileKanban';
+import { AutomationSettings } from '@/components/admin/AutomationSettings';
 
 const AdminLeads = () => {
   const { toast } = useToast();
@@ -65,6 +67,7 @@ const AdminLeads = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isArchivedDialogOpen, setIsArchivedDialogOpen] = useState(false);
+  const [isAutomationSettingsOpen, setIsAutomationSettingsOpen] = useState(false);
 
   // Column Management State
   const [isColumnDialogOpen, setIsColumnDialogOpen] = useState(false);
@@ -648,6 +651,18 @@ const AdminLeads = () => {
               <Settings2 className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Gerenciar Colunas</span>
               <span className="md:hidden text-xs">Colunas</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAutomationSettingsOpen(true)}
+              className="min-h-[44px]"
+              title="Configurações de Automação"
+            >
+              <Clock className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Config. Automação</span>
+              <span className="md:hidden text-xs">Config</span>
             </Button>
 
             <Button
@@ -1420,6 +1435,29 @@ const AdminLeads = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsArchivedDialogOpen(false)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog de Configurações de Automação */}
+        <Dialog open={isAutomationSettingsOpen} onOpenChange={setIsAutomationSettingsOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                Configurações de Automação
+              </DialogTitle>
+              <DialogDescription>
+                Configure horário comercial, timezone e limites de envio para as automações do sistema
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <AutomationSettings />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAutomationSettingsOpen(false)}>
                 Fechar
               </Button>
             </DialogFooter>
