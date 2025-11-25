@@ -1681,30 +1681,30 @@ class WhatsAppService {
 
     try {
       // 1. ✅ STATELESS: Buscar conversas direto do WhatsApp
-      // ✅ CORRIGIDO: Usar listChats() ao invés de getAllChats() (deprecated)
+      // ✅ CORRIGIDO: Usar listChats() com parâmetros corretos para evitar stack overflow
       // Documentação oficial: https://wppconnect.io/wppconnect/classes/Whatsapp.html
-      const allChats = await Promise.race([
-        this.client!.listChats(),
+      // Parâmetros: onlyUsers=true (evita serialização de grupos), count=limit (otimização)
+      const privateChats = await Promise.race([
+        this.client!.listChats({
+          count: limit,
+          onlyUsers: true
+        }),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout ao buscar conversas do WhatsApp')), 30000)
         )
       ]) as Chat[];
 
-      logger.info(`📞 WPPConnect retornou ${allChats.length} conversas totais`);
+      logger.info(`📞 WPPConnect retornou ${privateChats.length} conversas privadas (limit: ${limit})`);
 
-      // 2. Filtrar apenas conversas privadas (não grupos)
-      const privateChats = allChats
-        .filter((chat: Chat) => !chat.isGroup)
-        .sort((a: Chat, b: Chat) => ((b as any).t || 0) - ((a as any).t || 0))
-        .slice(0, limit);
-
-      logger.info(`📞 Filtrando para ${privateChats.length} conversas privadas (limit: ${limit})`);
+      // 2. Ordenar por timestamp (mais recentes primeiro)
+      const sortedChats = privateChats
+        .sort((a: Chat, b: Chat) => ((b as any).t || 0) - ((a as any).t || 0));
 
       // 3. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
       const { prisma } = await import('../config/database');
 
       const enrichedChats = await Promise.all(
-        privateChats.map(async (chat: Chat) => {
+        sortedChats.map(async (chat: Chat) => {
           const phone = chat.id._serialized.replace('@c.us', '');
 
           // Buscar metadata do contato no PostgreSQL
