@@ -1688,39 +1688,44 @@ class WhatsAppService {
         (this.client as any).page.evaluate(async (limit: number) => {
           // Chamar WPP.chat.list() direto no browser context
           // @ts-ignore - WPP é global no browser context do WhatsApp Web
-          const chats = await WPP.chat.list({ count: limit * 3 }); // Buscar mais porque vamos filtrar
+          const chats = await WPP.chat.list({ count: limit * 5 }); // Buscar mais para compensar filtro
 
-          // Serializar manualmente APENAS as propriedades essenciais (evita recursão)
-          return chats
-            .filter((chat: any) => !chat.isGroup) // Filtrar grupos manualmente
-            .map((chat: any) => ({
-              id: chat.id._serialized || chat.id,
-              name: chat.name || chat.contact?.name || '',
-              t: chat.t,
-              unreadCount: chat.unreadCount || 0,
-              pin: chat.pin || 0,
-              archive: chat.archive || false,
-              profilePicThumb: chat.contact?.profilePicThumb?.eurl || null,
-              lastMessage: chat.lastMessage ? {
-                body: chat.lastMessage.body || '',
-                type: chat.lastMessage.type || 'chat',
-              } : null,
-            }))
-            .sort((a: any, b: any) => (b.t || 0) - (a.t || 0))
-            .slice(0, limit);
+          // ⚠️ CRÍTICO: NÃO acessar chat.isGroup - causa stack overflow!
+          // Serializar APENAS propriedades que NÃO causam recursão
+          return chats.map((chat: any) => ({
+            id: chat.id._serialized || chat.id,
+            name: chat.name || chat.contact?.name || '',
+            t: chat.t,
+            unreadCount: chat.unreadCount || 0,
+            pin: chat.pin || 0,
+            archive: chat.archive || false,
+            profilePicThumb: chat.contact?.profilePicThumb?.eurl || null,
+            lastMessage: chat.lastMessage ? {
+              body: chat.lastMessage.body || '',
+              type: chat.lastMessage.type || 'chat',
+            } : null,
+          }))
+          .sort((a: any, b: any) => (b.t || 0) - (a.t || 0));
         }, limit),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout ao buscar conversas do WhatsApp')), 30000)
         )
       ]) as any[];
 
-      logger.info(`📞 WPPConnect retornou ${allChats.length} conversas privadas (via page.evaluate, bypass serialization)`);
+      logger.info(`📞 WPPConnect retornou ${allChats.length} conversas totais (via page.evaluate)`);
 
-      // 2. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
+      // 2. Filtrar grupos AQUI no Node.js (padrão: @g.us = grupo, @c.us = individual)
+      const privateChats = allChats
+        .filter((chat: any) => chat.id.includes('@c.us'))
+        .slice(0, limit);
+
+      logger.info(`📞 Filtrando para ${privateChats.length} conversas privadas (limit: ${limit})`);
+
+      // 3. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
       const { prisma } = await import('../config/database');
 
       const enrichedChats = await Promise.all(
-        allChats.map(async (chat: any) => {
+        privateChats.map(async (chat: any) => {
           const phone = chat.id.replace('@c.us', '');
 
           // Buscar metadata do contato no PostgreSQL
