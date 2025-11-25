@@ -393,6 +393,55 @@ class WhatsAppWebJSService {
   }
 
   /**
+   * Enviar vídeo
+   * Compatível com whatsappService (WPPConnect) - mantém mesma assinatura
+   * @param to Número de destino
+   * @param videoUrl URL do vídeo ou caminho local
+   * @param caption Legenda opcional
+   * @param asGif Se true, envia como GIF (não recomendado - aumenta tamanho)
+   * @returns ID da mensagem no WhatsApp
+   */
+  async sendVideo(to: string, videoUrl: string, caption?: string, asGif: boolean = false): Promise<string | undefined> {
+    if (!this.isWhatsAppConnected()) {
+      throw new Error('WhatsApp não está conectado');
+    }
+
+    try {
+      const formatted = await this.formatPhoneNumber(to);
+      logger.info(`🎥 Enviando vídeo para ${formatted}${asGif ? ' (como GIF)' : ''}`);
+
+      let media: MessageMedia;
+
+      if (videoUrl.startsWith('data:')) {
+        // Base64 data URI
+        media = new MessageMedia(
+          asGif ? 'image/gif' : 'video/mp4',
+          videoUrl.split(',')[1],
+          asGif ? 'video.gif' : 'video.mp4'
+        );
+      } else if (videoUrl.startsWith('http')) {
+        // URL remota
+        media = await MessageMedia.fromUrl(videoUrl);
+      } else {
+        // Arquivo local
+        media = MessageMedia.fromFilePath(videoUrl);
+      }
+
+      const sentMsg = await this.client!.sendMessage(formatted, media, {
+        caption: caption || '',
+        sendMediaAsDocument: false, // Enviar como vídeo inline, não como documento
+      });
+
+      logger.info(`✅ Vídeo enviado: ${sentMsg.id._serialized}`);
+
+      return sentMsg.id._serialized;
+    } catch (error: any) {
+      logger.error('❌ Erro ao enviar vídeo:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Listar conversas
    */
   async getAllConversations(limit: number = 50): Promise<FormattedConversation[]> {
