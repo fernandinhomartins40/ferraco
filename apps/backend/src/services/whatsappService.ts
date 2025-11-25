@@ -1690,12 +1690,15 @@ class WhatsAppService {
           // @ts-ignore - WPP é global no browser context do WhatsApp Web
           const chats = await WPP.chat.list({ count: limit * 5 }); // Buscar mais para compensar filtro
 
-          // ⚠️ CRÍTICO: NÃO acessar chat.isGroup - causa stack overflow!
-          // Serializar APENAS propriedades que NÃO causam recursão
-          return chats.map((chat: any) => ({
-            id: chat.id._serialized || chat.id,
+          // ⚠️ SOLUÇÃO DEFINITIVA: JSON.stringify + JSON.parse para quebrar TODAS as referências circulares
+          // Isso serializa o objeto e remove TODOS os getters recursivos
+          const serializedChats = JSON.parse(JSON.stringify(chats));
+
+          // Agora mapear com segurança (sem getters)
+          return serializedChats.map((chat: any) => ({
+            id: chat.id?._serialized || chat.id || '',
             name: chat.name || chat.contact?.name || '',
-            t: chat.t,
+            t: chat.t || 0,
             unreadCount: chat.unreadCount || 0,
             pin: chat.pin || 0,
             archive: chat.archive || false,
