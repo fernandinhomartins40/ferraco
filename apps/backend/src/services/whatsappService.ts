@@ -1681,48 +1681,85 @@ class WhatsAppService {
 
     try {
       // 1. ✅ STATELESS: Buscar conversas direto do WhatsApp
-      // ⚠️ SOLUÇÃO ALTERNATIVA: Usar page.evaluate() para bypassar _serializeChatObj() que causa stack overflow
-      // Motivo: listChats() com qualquer filtro (onlyUsers, onlyGroups) causa loop infinito em getIsUser/getIsGroup
-      // Referência: https://wppconnect.io/wppconnect/classes/Whatsapp.html
+      // ⚠️ SOLUÇÃO 2025: Acessar window.Store.Chat DIRETAMENTE (bypassa wrapper WPP)
+      // Motivo: WPPConnect causa stack overflow em getIsGroup/getIsUser mesmo com JSON.stringify
+      // Referência: Issue #2477 WPPConnect (abril 2025), solução da comunidade
       const allChats = await Promise.race([
         (this.client as any).page.evaluate(async (limit: number) => {
-          // Chamar WPP.chat.list() direto no browser context
-          // @ts-ignore - WPP é global no browser context do WhatsApp Web
-          const chats = await WPP.chat.list({ count: limit * 5 }); // Buscar mais para compensar filtro
+          // ⚠️ ACESSO DIRETO AO STORE NATIVO DO WHATSAPP WEB
+          // Isso bypassa completamente o wrapper WPP e seus getters problemáticos
+          // @ts-ignore - window.Store é injetado pelo WhatsApp Web
+          const Store = window.Store;
 
-          // ⚠️ SOLUÇÃO DEFINITIVA: JSON.stringify + JSON.parse para quebrar TODAS as referências circulares
-          // Isso serializa o objeto e remove TODOS os getters recursivos
-          const serializedChats = JSON.parse(JSON.stringify(chats));
+          if (!Store || !Store.Chat) {
+            throw new Error('Store.Chat não disponível no WhatsApp Web');
+          }
 
-          // Agora mapear com segurança (sem getters)
-          return serializedChats.map((chat: any) => ({
-            id: chat.id?._serialized || chat.id || '',
-            name: chat.name || chat.contact?.name || '',
-            t: chat.t || 0,
-            unreadCount: chat.unreadCount || 0,
-            pin: chat.pin || 0,
-            archive: chat.archive || false,
-            profilePicThumb: chat.contact?.profilePicThumb?.eurl || null,
-            lastMessage: chat.lastMessage ? {
-              body: chat.lastMessage.body || '',
-              type: chat.lastMessage.type || 'chat',
-            } : null,
-          }))
-          .sort((a: any, b: any) => (b.t || 0) - (a.t || 0));
+          // Pegar todos os chats do Store nativo
+          const allChatsModels = Store.Chat.getModelsArray();
+
+          logger.info(`📞 Store.Chat retornou ${allChatsModels.length} chats totais`);
+
+          // Filtrar conversas privadas IMEDIATAMENTE (antes de serializar)
+          // Verificar se id.server contém "c.us" (privado) vs "g.us" (grupo)
+          const privateChatsModels = allChatsModels.filter((chat: any) => {
+            try {
+              const serverId = chat.id?.server || chat.id?._serialized || '';
+              return serverId.includes('c.us');
+            } catch {
+              return false;
+            }
+          });
+
+          logger.info(`📞 Filtrando ${privateChatsModels.length} conversas privadas`);
+
+          // Extrair APENAS os campos necessários (manualmente, sem acessar getters)
+          const simplifiedChats = privateChatsModels
+            .slice(0, limit * 2) // Pegar o dobro para garantir
+            .map((chat: any) => {
+              try {
+                return {
+                  id: chat.id?._serialized || chat.id?.toString() || '',
+                  name: chat.name || chat.contact?.name || chat.formattedTitle || '',
+                  t: chat.t || 0,
+                  unreadCount: chat.unreadCount || 0,
+                  pin: chat.pin || 0,
+                  archive: chat.archive || false,
+                  profilePicThumb: chat.contact?.profilePicThumb?.eurl || null,
+                  lastMessage: chat.lastReceivedKey ? {
+                    body: chat.lastReceivedKey.body || '',
+                    type: 'chat',
+                  } : null,
+                };
+              } catch (error) {
+                // Se falhar em algum chat, retornar mínimo
+                return {
+                  id: '',
+                  name: '',
+                  t: 0,
+                  unreadCount: 0,
+                  pin: 0,
+                  archive: false,
+                  profilePicThumb: null,
+                  lastMessage: null,
+                };
+              }
+            })
+            .filter((chat: any) => chat.id) // Remover chats inválidos
+            .sort((a: any, b: any) => (b.t || 0) - (a.t || 0))
+            .slice(0, limit);
+
+          return simplifiedChats;
         }, limit),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout ao buscar conversas do WhatsApp')), 30000)
         )
       ]) as any[];
 
-      logger.info(`📞 WPPConnect retornou ${allChats.length} conversas totais (via page.evaluate)`);
+      logger.info(`📞 Store.Chat retornou ${allChats.length} conversas privadas (já filtradas no browser)`);
 
-      // 2. Filtrar grupos AQUI no Node.js (padrão: @g.us = grupo, @c.us = individual)
-      const privateChats = allChats
-        .filter((chat: any) => chat.id.includes('@c.us'))
-        .slice(0, limit);
-
-      logger.info(`📞 Filtrando para ${privateChats.length} conversas privadas (limit: ${limit})`);
+      // Os chats já vêm filtrados e limitados do page.evaluate()
+      const privateChats = allChats;
 
       // 3. ✅ STATELESS: Enriquecer com metadata do PostgreSQL (APENAS metadata, não mensagens)
       const { prisma } = await import('../config/database');
