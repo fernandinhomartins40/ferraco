@@ -538,16 +538,15 @@ router.post('/send-reaction', authenticate, async (req: Request, res: Response) 
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // sendReaction disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const result = await activeService.sendReaction(messageId, emoji);
+    const result = await whatsappService.sendReaction(messageId, emoji);
 
     res.json({
       success: true,
@@ -588,16 +587,15 @@ router.post('/mark-read', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // markAsRead disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await activeService.markAsRead(chatId);
+    await whatsappService.markAsRead(chatId);
 
     res.json({
       success: true,
@@ -636,16 +634,15 @@ router.post('/mark-unread', authenticate, async (req: Request, res: Response) =>
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // markAsUnread disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await activeService.markAsUnread(chatId);
+    await whatsappService.markAsUnread(chatId);
 
     res.json({
       success: true,
@@ -686,16 +683,15 @@ router.post('/delete-message', authenticate, async (req: Request, res: Response)
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // deleteMessage disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await activeService.deleteMessage(chatId, messageId, forEveryone || false);
+    await whatsappService.deleteMessage(chatId, messageId, forEveryone || false);
 
     const messageCount = Array.isArray(messageId) ? messageId.length : 1;
     const scope = forEveryone ? 'para todos' : 'localmente';
@@ -746,16 +742,15 @@ router.post('/send-file', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // sendFile disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const messageId = await activeService.sendFile(to, filePath, filename, caption);
+    const messageId = await whatsappService.sendFile(to, filePath, filename, caption);
 
     res.json({
       success: true,
@@ -799,16 +794,15 @@ router.post('/send-location', authenticate, async (req: Request, res: Response) 
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // sendLocation disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const messageId = await activeService.sendLocation(to, latitude, longitude, name);
+    const messageId = await whatsappService.sendLocation(to, latitude, longitude, name);
 
     res.json({
       success: true,
@@ -853,16 +847,15 @@ router.post('/send-contact', authenticate, async (req: Request, res: Response) =
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // sendContactVcard disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const messageId = await activeService.sendContactVcard(to, contactId, name);
+    const messageId = await whatsappService.sendContactVcard(to, contactId, name);
 
     res.json({
       success: true,
@@ -905,16 +898,15 @@ router.post('/star-message', authenticate, async (req: Request, res: Response) =
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // starMessage disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await activeService.starMessage(messageId, star);
+    await whatsappService.starMessage(messageId, star);
 
     res.json({
       success: true,
@@ -939,16 +931,15 @@ router.post('/star-message', authenticate, async (req: Request, res: Response) =
  */
 router.get('/starred-messages', authenticate, async (req: Request, res: Response) => {
   try {
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // getStarredMessages disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    const starredMessages = await activeService.getStarredMessages();
+    const starredMessages = await whatsappService.getStarredMessages();
 
     res.json({
       success: true,
@@ -988,16 +979,15 @@ router.post('/archive-chat', authenticate, async (req: Request, res: Response) =
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // archiveChat disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
         message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
       });
     }
 
-    await activeService.archiveChat(chatId, archive);
+    await whatsappService.archiveChat(chatId, archive);
 
     res.json({
       success: true,
@@ -1040,8 +1030,8 @@ router.get('/media/:messageId', authenticate, async (req: Request, res: Response
 
     logger.info(`📥 Servindo mídia inline: ${messageId}`);
 
-    const activeService = getActiveWhatsAppService();
-    const mediaBuffer = await activeService.downloadMedia(messageId);
+    // downloadMedia disponível apenas no whatsappService (WPPConnect)
+    const mediaBuffer = await whatsappService.downloadMedia(messageId);
 
     // Retornar arquivo inline (não como download)
     res.set('Content-Type', 'application/octet-stream');
@@ -1078,8 +1068,8 @@ router.post('/download-media', authenticate, async (req: Request, res: Response)
 
     logger.info(`📥 Download de mídia solicitado: ${messageId}`);
 
-    const activeService = getActiveWhatsAppService();
-    const mediaBuffer = await activeService.downloadMedia(messageId);
+    // downloadMedia disponível apenas no whatsappService (WPPConnect)
+    const mediaBuffer = await whatsappService.downloadMedia(messageId);
 
     // Retornar arquivo binário como download
     res.set('Content-Type', 'application/octet-stream');
@@ -1122,8 +1112,8 @@ router.post('/forward-message', authenticate, async (req: Request, res: Response
 
     logger.info(`📨 Encaminhando mensagem ${messageId} para:`, to);
 
-    const activeService = getActiveWhatsAppService();
-    await activeService.forwardMessage(messageId, to);
+    // forwardMessage disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.forwardMessage(messageId, to);
 
     res.json({
       success: true,
@@ -1159,8 +1149,8 @@ router.post('/pin-chat', authenticate, async (req: Request, res: Response) => {
 
     logger.info(`📌 ${pin ? 'Fixando' : 'Desfixando'} chat: ${chatId}`);
 
-    const activeService = getActiveWhatsAppService();
-    await activeService.pinChat(chatId, pin);
+    // pinChat disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.pinChat(chatId, pin);
 
     res.json({
       success: true,
@@ -1185,8 +1175,8 @@ router.get('/contacts', authenticate, async (req: Request, res: Response) => {
   try {
     logger.info('📇 Listando contatos do WhatsApp');
 
-    const activeService = getActiveWhatsAppService();
-    const contacts = await activeService.getContacts();
+    // getContacts disponível apenas no whatsappService (WPPConnect)
+    const contacts = await whatsappService.getContacts();
 
     res.json({
       success: true,
@@ -1223,8 +1213,8 @@ router.post('/contacts/check', authenticate, async (req: Request, res: Response)
 
     logger.info('🔍 Verificando números no WhatsApp:', phoneNumbers);
 
-    const activeService = getActiveWhatsAppService();
-    const results = await activeService.checkNumbersOnWhatsApp(phoneNumbers);
+    // checkNumbersOnWhatsApp disponível apenas no whatsappService (WPPConnect)
+    const results = await whatsappService.checkNumbersOnWhatsApp(phoneNumbers);
 
     res.json({
       success: true,
@@ -1267,8 +1257,8 @@ router.post('/groups', authenticate, async (req: Request, res: Response) => {
 
     logger.info(`👥 Criando grupo: ${name} com ${participants.length} participantes`);
 
-    const activeService = getActiveWhatsAppService();
-    const group = await activeService.createGroup(name, participants);
+    // createGroup disponível apenas no whatsappService (WPPConnect)
+    const group = await whatsappService.createGroup(name, participants);
 
     res.json({
       success: true,
@@ -1309,8 +1299,8 @@ router.post('/send-list', authenticate, async (req: Request, res: Response) => {
 
     logger.info(`📋 Enviando lista interativa para: ${to}`);
 
-    const activeService = getActiveWhatsAppService();
-    const messageId = await activeService.sendList(to, title, description || '', buttonText, sections);
+    // sendList disponível apenas no whatsappService (WPPConnect)
+    const messageId = await whatsappService.sendList(to, title, description || '', buttonText, sections);
 
     res.json({
       success: true,
@@ -1347,8 +1337,8 @@ router.post('/send-buttons', authenticate, async (req: Request, res: Response) =
 
     logger.info(`🔘 Enviando mensagem com botões para: ${to}`);
 
-    const activeService = getActiveWhatsAppService();
-    const messageId = await activeService.sendButtons(to, message, buttons);
+    // sendButtons disponível apenas no whatsappService (WPPConnect)
+    const messageId = await whatsappService.sendButtons(to, message, buttons);
 
     res.json({
       success: true,
@@ -1385,8 +1375,8 @@ router.post('/send-poll', authenticate, async (req: Request, res: Response) => {
 
     logger.info(`📊 Enviando enquete para: ${to}`);
 
-    const activeService = getActiveWhatsAppService();
-    const messageId = await activeService.sendPoll(to, name, options);
+    // sendPoll disponível apenas no whatsappService (WPPConnect)
+    const messageId = await whatsappService.sendPoll(to, name, options);
 
     res.json({
       success: true,
@@ -1414,8 +1404,8 @@ router.get('/groups/:id/participants', authenticate, async (req: Request, res: R
 
     logger.info(`👥 Listando participantes do grupo: ${id}`);
 
-    const activeService = getActiveWhatsAppService();
-    const participants = await activeService.getGroupParticipants(id);
+    // getGroupParticipants disponível apenas no whatsappService (WPPConnect)
+    const participants = await whatsappService.getGroupParticipants(id);
 
     res.json({
       success: true,
@@ -1453,8 +1443,8 @@ router.post('/groups/:id/participants', authenticate, async (req: Request, res: 
 
     logger.info(`👤 Adicionando participante ao grupo ${id}: ${participantNumber}`);
 
-    const activeService = getActiveWhatsAppService();
-    await activeService.addParticipantToGroup(id, participantNumber);
+    // addParticipantToGroup disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.addParticipantToGroup(id, participantNumber);
 
     res.json({
       success: true,
@@ -1481,8 +1471,8 @@ router.delete('/groups/:id/participants/:number', authenticate, async (req: Requ
 
     logger.info(`👤 Removendo participante ${number} do grupo ${id}`);
 
-    const activeService = getActiveWhatsAppService();
-    await activeService.removeParticipantFromGroup(id, number);
+    // removeParticipantFromGroup disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.removeParticipantFromGroup(id, number);
 
     res.json({
       success: true,
@@ -1519,8 +1509,8 @@ router.put('/groups/:id/description', authenticate, async (req: Request, res: Re
 
     logger.info(`📝 Alterando descrição do grupo ${id}`);
 
-    const activeService = getActiveWhatsAppService();
-    await activeService.setGroupDescription(id, description);
+    // setGroupDescription disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.setGroupDescription(id, description);
 
     res.json({
       success: true,
@@ -1557,8 +1547,8 @@ router.put('/groups/:id/subject', authenticate, async (req: Request, res: Respon
 
     logger.info(`📝 Alterando nome do grupo ${id} para: ${subject}`);
 
-    const activeService = getActiveWhatsAppService();
-    await activeService.setGroupSubject(id, subject);
+    // setGroupSubject disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.setGroupSubject(id, subject);
 
     res.json({
       success: true,
@@ -1595,8 +1585,8 @@ router.post('/groups/:id/promote', authenticate, async (req: Request, res: Respo
 
     logger.info(`👑 Promovendo ${participantNumber} a admin no grupo ${id}`);
 
-    const activeService = getActiveWhatsAppService();
-    await activeService.promoteParticipantToAdmin(id, participantNumber);
+    // Método disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.promoteParticipantToAdmin(id, participantNumber);
 
     res.json({
       success: true,
@@ -1633,8 +1623,8 @@ router.post('/groups/:id/demote', authenticate, async (req: Request, res: Respon
 
     logger.info(`👤 Removendo admin de ${participantNumber} no grupo ${id}`);
 
-    const activeService = getActiveWhatsAppService();
-    await activeService.demoteParticipantFromAdmin(id, participantNumber);
+    // Método disponível apenas no whatsappService (WPPConnect)
+    await whatsappService.demoteParticipantFromAdmin(id, participantNumber);
 
     res.json({
       success: true,
@@ -1777,18 +1767,17 @@ router.delete('/upload-media/:filename', authenticate, async (req: Request, res:
  */
 router.get('/debug/explore-apis', authenticate, async (req: Request, res: Response) => {
   try {
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // Rota de debug disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
-        message: 'WhatsApp não está conectado',
+        message: 'WhatsApp não está conectado ou usando whatsapp-web.js (rota só funciona com WPPConnect)',
       });
     }
 
     logger.info('🔍 Iniciando exploração de APIs WhatsApp...');
 
-    const exploration = await activeService.exploreWhatsAppAPIs();
+    const exploration = await whatsappService.exploreWhatsAppAPIs();
 
     res.json({
       success: true,
@@ -1823,18 +1812,17 @@ router.post('/debug/test-send-methods', authenticate, async (req: Request, res: 
       });
     }
 
-    const activeService = getActiveWhatsAppService();
-
-    if (!activeService.isWhatsAppConnected()) {
+    // Rota de debug disponível apenas no whatsappService (WPPConnect)
+    if (!whatsappService.isWhatsAppConnected()) {
       return res.status(400).json({
         success: false,
-        message: 'WhatsApp não está conectado',
+        message: 'WhatsApp não está conectado ou usando whatsapp-web.js (rota só funciona com WPPConnect)',
       });
     }
 
     logger.info(`🧪 Testando métodos de envio para: ${to}`);
 
-    const testResults = await activeService.testAlternativeSendMethods(to, message);
+    const testResults = await whatsappService.testAlternativeSendMethods(to, message);
 
     res.json({
       success: true,
