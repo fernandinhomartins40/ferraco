@@ -1851,18 +1851,76 @@ class WhatsAppService {
 
       logger.info(`💬 Buscando mensagens para ${chatId.substring(0, 15)}... (count: ${count})`);
 
-      // ✅ CORRIGIDO: Buscar mensagens DIRETO do WPPConnect com timeout
+      // ⚠️ SOLUÇÃO 2025: Acessar window.Store.Msg DIRETAMENTE (bypassa wrapper WPP)
+      // Motivo: client.getMessages() causa stack overflow em getIsMe (mesmo problema do getIsGroup)
+      // Referência: Issue #2477 WPPConnect (abril 2025)
       const messages = await Promise.race([
-        this.client!.getMessages(chatId, {
-          count,
-          direction: 'before',
-        }),
+        (this.client as any).page.evaluate(async (chatId: string, count: number) => {
+          // @ts-ignore - window.Store é injetado pelo WhatsApp Web
+          const Store = window.Store;
+
+          if (!Store || !Store.Msg) {
+            throw new Error('Store.Msg não disponível no WhatsApp Web');
+          }
+
+          // Buscar chat pelo ID
+          const chat = Store.Chat.get(chatId);
+          if (!chat) {
+            throw new Error(`Chat ${chatId} não encontrado`);
+          }
+
+          // Carregar mensagens do chat (isso dispara o carregamento no WhatsApp)
+          await chat.loadMessages();
+
+          // Pegar mensagens do chat (já carregadas)
+          const messages = chat.msgs.getModelsArray();
+
+          // Pegar apenas as últimas N mensagens e extrair campos necessários
+          const recentMessages = messages.slice(-count);
+
+          // Serializar manualmente para evitar getters recursivos
+          return recentMessages.map((msg: any) => {
+            try {
+              return {
+                id: msg.id?._serialized || msg.id?.toString() || '',
+                body: msg.body || '',
+                type: msg.type || 'chat',
+                timestamp: msg.t || msg.timestamp || 0,
+                from: msg.from?._serialized || msg.from?.toString() || '',
+                to: msg.to?._serialized || msg.to?.toString() || '',
+                fromMe: msg.id?.fromMe || false,
+                hasMedia: msg.hasMedia || false,
+                ack: msg.ack || 0,
+                isForwarded: msg.isForwarded || false,
+                quotedMsg: msg.quotedMsg ? {
+                  id: msg.quotedMsg.id?._serialized || '',
+                  body: msg.quotedMsg.body || '',
+                } : null,
+              };
+            } catch (error) {
+              // Se falhar, retornar mínimo
+              return {
+                id: '',
+                body: '',
+                type: 'chat',
+                timestamp: 0,
+                from: '',
+                to: '',
+                fromMe: false,
+                hasMedia: false,
+                ack: 0,
+                isForwarded: false,
+                quotedMsg: null,
+              };
+            }
+          }).filter((msg: any) => msg.id); // Remover mensagens inválidas
+        }, chatId, count),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Timeout ao buscar mensagens para ${chatId}`)), 30000)
         )
       ]) as any[];
 
-      logger.info(`💬 WPPConnect retornou ${messages.length} mensagens para ${chatId.substring(0, 15)}...`);
+      logger.info(`💬 Store.Msg retornou ${messages.length} mensagens para ${chatId.substring(0, 15)}...`);
 
       // Formatar mensagens para o formato esperado pelo frontend
       const formattedMessages = await Promise.all(messages.map(async (msg: any) => {
