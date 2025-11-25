@@ -52,6 +52,7 @@ services:
 
       # WhatsApp
       WHATSAPP_SESSIONS_PATH: /app/sessions
+      USE_WHATSAPP_WEB_JS: "true"
 
     volumes:
       # Dados persistentes (named volumes - persistem entre deploys)
