@@ -1601,8 +1601,11 @@ class WhatsAppService {
   /**
    * ⭐ Desconectar WhatsApp com cleanup completo
    * Remove a sessão e limpa o estado do cliente
+   * ✅ CORRIGIDO: Agora deleta arquivos de sessão para forçar novo QR Code
    */
   async disconnect(): Promise<void> {
+    logger.info('🔌 Iniciando desconexão completa do WhatsApp...');
+
     // Parar polling
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
@@ -1625,18 +1628,34 @@ class WhatsAppService {
     if (this.client) {
       try {
         await this.client!.close();
-        logger.info('👋 WhatsApp desconectado');
-        this.isConnected = false;
-        this.qrCode = null;
-        this.client = null;
+        logger.info('👋 Cliente WhatsApp fechado');
       } catch (error) {
-        logger.error('Erro ao desconectar WhatsApp:', error);
+        logger.error('Erro ao fechar cliente WhatsApp:', error);
       }
     }
 
+    // ✅ CORREÇÃO CRÍTICA: Deletar arquivos de sessão para forçar novo QR Code
+    try {
+      const sessionPath = path.join(this.sessionsPath, 'ferraco-crm');
+
+      if (fs.existsSync(sessionPath)) {
+        // Deletar recursivamente o diretório de sessão
+        fs.rmSync(sessionPath, { recursive: true, force: true });
+        logger.info('🗑️  Arquivos de sessão deletados:', sessionPath);
+      }
+    } catch (error: any) {
+      logger.error('❌ Erro ao deletar sessão:', error.message);
+    }
+
+    // Resetar estados internos
+    this.isConnected = false;
+    this.qrCode = null;
+    this.client = null;
+    this.isInitializing = false;
+
     // Emitir evento de desconexão via Socket.IO
     this.emitDisconnected('manual_disconnect');
-    logger.info('✅ WhatsApp desconectado completamente');
+    logger.info('✅ WhatsApp desconectado completamente - sessão destruída');
   }
 
   // ============================================================================
@@ -1760,11 +1779,15 @@ class WhatsAppService {
       const cleanPhone = phone.replace(/\D/g, '');
       const chatId = cleanPhone.includes('@c.us') ? cleanPhone : `${cleanPhone}@c.us`;
 
+      logger.info(`💬 Buscando mensagens para ${chatId.substring(0, 15)}... (count: ${count})`);
+
       // Buscar mensagens DIRETO do WPPConnect
       const messages = await this.client!.getMessages(chatId, {
         count,
         direction: 'before',
       });
+
+      logger.info(`💬 WPPConnect retornou ${messages.length} mensagens para ${chatId.substring(0, 15)}...`);
 
       // Formatar mensagens para o formato esperado pelo frontend
       const formattedMessages = await Promise.all(messages.map(async (msg: any) => {
@@ -1843,9 +1866,11 @@ class WhatsAppService {
         };
       }));
 
+      logger.info(`✅ ${formattedMessages.length} mensagens formatadas e retornadas para ${chatId.substring(0, 15)}...`);
+
       return formattedMessages;
     } catch (error: any) {
-      logger.error(`Erro ao buscar mensagens de ${phone}:`, error);
+      logger.error(`❌ Erro ao buscar mensagens de ${phone}:`, error);
       throw error;
     }
   }
@@ -1882,26 +1907,29 @@ class WhatsAppService {
 
   /**
    * Reinicializar conexão WhatsApp (gerar novo QR code)
+   * ✅ CORRIGIDO: Agora garante limpeza completa antes de reinicializar
    */
   async reinitialize(): Promise<void> {
     logger.info('🔄 Reinicializando WhatsApp...');
 
-    // Desconectar sessão atual se existir
+    // ✅ CRÍTICO: Desconectar e destruir sessão atual
     await this.disconnect();
 
-    // Resetar estados
+    // ✅ Garantir que estados estão limpos
     this.isInitializing = false;
     this.isConnected = false;
     this.qrCode = null;
     this.client = null;
 
-    // Aguardar 2 segundos antes de reiniciar
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // ✅ Aguardar 3 segundos para garantir que tudo foi limpo
+    logger.info('⏳ Aguardando limpeza completa...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Inicializar novamente
+    // ✅ Inicializar novamente (vai gerar novo QR Code)
+    logger.info('🚀 Iniciando nova sessão...');
     await this.initialize();
 
-    logger.info('✅ WhatsApp reinicializado');
+    logger.info('✅ WhatsApp reinicializado - novo QR Code será gerado');
   }
 
   /**

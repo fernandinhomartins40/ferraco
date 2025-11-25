@@ -107,22 +107,45 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
 
         // Extrair phone do conversationId
         const phone = conversationId.replace('@c.us', '').replace(/\D/g, '');
+        console.log('🔍 ChatArea: Carregando dados para phone:', phone);
 
         // Buscar conversas para encontrar a conversa específica
+        console.log('📞 ChatArea: Buscando conversas...');
         const convsResponse = await api.get('/whatsapp/conversations/v2');
+        console.log('📞 ChatArea: Conversas recebidas:', convsResponse.data.conversations?.length);
+
         const conversation = convsResponse.data.conversations.find((c: any) =>
           c.phone === phone || c.id === conversationId
         );
 
         if (conversation) {
+          console.log('✅ ChatArea: Conversa encontrada:', conversation.name || conversation.phone);
           setConversation(conversation);
+        } else {
+          console.warn('⚠️ ChatArea: Conversa não encontrada para phone:', phone);
         }
 
         // Buscar mensagens usando phone
+        console.log('💬 ChatArea: Buscando mensagens para:', phone);
         const msgResponse = await api.get(`/whatsapp/conversations/${phone}/messages/v2`);
-        setMessages(msgResponse.data.messages);
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
+        console.log('💬 ChatArea: Mensagens recebidas:', {
+          total: msgResponse.data.messages?.length,
+          source: msgResponse.data.source,
+          sample: msgResponse.data.messages?.slice(0, 3).map((m: any) => ({
+            id: m.id?.substring(0, 20),
+            type: m.type,
+            content: m.content?.substring(0, 30),
+            fromMe: m.fromMe,
+          })),
+        });
+
+        setMessages(msgResponse.data.messages || []);
+      } catch (error: any) {
+        console.error('❌ ChatArea: Erro ao carregar dados:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+        });
       } finally {
         setIsLoading(false);
       }
