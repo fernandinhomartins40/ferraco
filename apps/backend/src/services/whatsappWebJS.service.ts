@@ -288,6 +288,7 @@ class WhatsAppWebJSService {
 
   /**
    * Desconectar (mantém sessão para reconexão automática)
+   * ⚠️ IMPORTANTE: Não usa logout() nem destroy() para preservar sessão LocalAuth
    */
   async disconnect(): Promise<void> {
     if (!this.client) {
@@ -296,24 +297,25 @@ class WhatsAppWebJSService {
     }
 
     try {
-      // ✅ FIX: Apenas fechar cliente, SEM destruir sessão
-      // A sessão LocalAuth permanece no disco para reconexão futura
-      await this.client.logout();
+      // ✅ FIX CRÍTICO: NÃO chamar logout() ou destroy()
+      // Apenas limpar variáveis locais e deixar sessão intacta no disco
+      // whatsapp-web.js vai reconectar automaticamente na próxima inicialização
+
+      logger.info('🔌 Desconectando cliente (mantendo sessão LocalAuth)...');
+
+      // Limpar apenas referências locais
       this.client = null;
       this.isConnected = false;
       this.qrCode = null;
       this.isInitializing = false;
       this.clearQRTimers();
-      logger.info('✅ WhatsApp desconectado (sessão mantida)');
+
+      logger.info('✅ WhatsApp desconectado (sessão LocalAuth preservada no disco)');
     } catch (error: any) {
       logger.error('❌ Erro ao desconectar WhatsApp:', error);
-      // Fallback: destruir cliente se logout falhar
-      try {
-        await this.client.destroy();
-        this.client = null;
-      } catch (destroyError) {
-        logger.error('❌ Erro ao destruir cliente:', destroyError);
-      }
+      this.client = null;
+      this.isConnected = false;
+      this.isInitializing = false;
       throw error;
     }
   }
@@ -609,6 +611,7 @@ class WhatsAppWebJSService {
 
   /**
    * Listar conversas
+   * ✅ OTIMIZADO: Logs de performance
    */
   async getAllConversations(limit: number = 50): Promise<FormattedConversation[]> {
     if (!this.isWhatsAppConnected()) {
@@ -616,37 +619,43 @@ class WhatsAppWebJSService {
     }
 
     try {
+      const startTime = Date.now();
       logger.info(`📞 Buscando ${limit} conversas...`);
 
+      const getChatsStart = Date.now();
       const chats = await this.client!.getChats();
+      const getChatsTime = Date.now() - getChatsStart;
+      logger.info(`⏱️  getChats: ${getChatsTime}ms (${chats.length} total)`);
 
       // Filtrar apenas conversas privadas (não grupos)
       const privateChats = chats.filter((chat: WWebChat) => !chat.isGroup).slice(0, limit);
+      logger.info(`📊 Conversas privadas: ${privateChats.length}/${chats.length}`);
 
-      const conversations: FormattedConversation[] = await Promise.all(
-        privateChats.map(async (chat: WWebChat) => {
-          const lastMessage = chat.lastMessage;
+      const formatStart = Date.now();
+      const conversations: FormattedConversation[] = privateChats.map((chat: WWebChat) => {
+        const lastMessage = chat.lastMessage;
 
-          return {
-            id: chat.id._serialized,
-            name: chat.name || chat.id.user,
-            phone: chat.id.user,
-            isGroup: chat.isGroup,
-            unreadCount: chat.unreadCount || 0,
-            lastMessage: lastMessage
-              ? {
-                  body: lastMessage.body || '',
-                  timestamp: lastMessage.timestamp || 0,
-                  fromMe: lastMessage.fromMe || false,
-                }
-              : null,
-            timestamp: chat.timestamp || 0,
-            // profilePicUrl removido - não está disponível na API do whatsapp-web.js
-          };
-        })
-      );
+        return {
+          id: chat.id._serialized,
+          name: chat.name || chat.id.user,
+          phone: chat.id.user,
+          isGroup: chat.isGroup,
+          unreadCount: chat.unreadCount || 0,
+          lastMessage: lastMessage
+            ? {
+                body: lastMessage.body || '',
+                timestamp: lastMessage.timestamp || 0,
+                fromMe: lastMessage.fromMe || false,
+              }
+            : null,
+          timestamp: chat.timestamp || 0,
+        };
+      });
+      const formatTime = Date.now() - formatStart;
+      logger.info(`⏱️  format: ${formatTime}ms`);
 
-      logger.info(`✅ ${conversations.length} conversas retornadas`);
+      const totalTime = Date.now() - startTime;
+      logger.info(`✅ ${conversations.length} conversas retornadas em ${totalTime}ms`);
 
       return conversations;
     } catch (error: any) {
@@ -657,6 +666,7 @@ class WhatsAppWebJSService {
 
   /**
    * Buscar mensagens de uma conversa
+   * ✅ OTIMIZADO: Logs de performance para identificar lentidão
    */
   async getChatMessages(phone: string, count: number = 100): Promise<FormattedMessage[]> {
     if (!this.isWhatsAppConnected()) {
@@ -664,17 +674,32 @@ class WhatsAppWebJSService {
     }
 
     try {
+      const startTime = Date.now();
       const chatId = await this.formatPhoneNumber(phone);
       logger.info(`💬 Buscando ${count} mensagens de ${chatId}...`);
 
+      // Step 1: Get chat
+      const getChatStart = Date.now();
       const chat = await this.client!.getChatById(chatId);
-      const messages = await chat.fetchMessages({ limit: count });
+      const getChatTime = Date.now() - getChatStart;
+      logger.info(`⏱️  getChatById: ${getChatTime}ms`);
 
+      // Step 2: Fetch messages
+      const fetchStart = Date.now();
+      const messages = await chat.fetchMessages({ limit: count });
+      const fetchTime = Date.now() - fetchStart;
+      logger.info(`⏱️  fetchMessages: ${fetchTime}ms (${messages.length} msgs)`);
+
+      // Step 3: Format messages
+      const formatStart = Date.now();
       const formattedMessages: FormattedMessage[] = await Promise.all(
         messages.map((msg: WWebMessage) => this.formatMessage(msg))
       );
+      const formatTime = Date.now() - formatStart;
+      logger.info(`⏱️  formatMessage: ${formatTime}ms`);
 
-      logger.info(`✅ ${formattedMessages.length} mensagens retornadas`);
+      const totalTime = Date.now() - startTime;
+      logger.info(`✅ ${formattedMessages.length} mensagens retornadas em ${totalTime}ms`);
 
       return formattedMessages;
     } catch (error: any) {

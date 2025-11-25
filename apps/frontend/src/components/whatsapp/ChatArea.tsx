@@ -105,8 +105,7 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
       try {
         setIsLoading(true);
 
-        // ✅ CORRIGIDO: Validação e extração robusta de phone do conversationId
-        // Formato esperado: '5511999999999@c.us' ou '5511999999999'
+        // ✅ OTIMIZADO: Validação e extração de phone
         console.log('🔍 ChatArea: conversationId recebido:', conversationId);
 
         if (!conversationId || conversationId.trim() === '') {
@@ -114,65 +113,60 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
           return;
         }
 
-        // Extrair phone: remover @c.us e qualquer caractere não-numérico
+        // Extrair phone: remover @c.us e caracteres não-numéricos
         const phone = conversationId.replace('@c.us', '').replace(/\D/g, '');
 
         if (!phone || phone.length < 10) {
-          console.error('❌ ChatArea: Phone inválido após extração:', { conversationId, phone });
+          console.error('❌ ChatArea: Phone inválido:', { conversationId, phone });
           return;
         }
 
         console.log('✅ ChatArea: Phone extraído:', phone);
 
-        // Buscar conversas para encontrar a conversa específica
-        console.log('📞 ChatArea: Buscando conversas...');
-        const convsResponse = await api.get('/whatsapp/conversations/v2');
-        console.log('📞 ChatArea: Conversas recebidas:', convsResponse.data.conversations?.length);
+        // ✅ OTIMIZADO: Buscar mensagens DIRETAMENTE (mais rápido)
+        console.log('💬 ChatArea: Buscando mensagens...');
+        const startTime = performance.now();
 
-        // Tentar encontrar conversa por phone ou id completo
-        const conversation = convsResponse.data.conversations.find((c: any) => {
-          const convPhone = c.phone?.replace(/\D/g, '');
-          const convId = c.id?.replace(/\D/g, '');
-          return convPhone === phone || convId === phone || c.id === conversationId;
-        });
-
-        if (conversation) {
-          console.log('✅ ChatArea: Conversa encontrada:', {
-            name: conversation.name,
-            phone: conversation.phone,
-            id: conversation.id,
-          });
-          setConversation(conversation);
-        } else {
-          console.warn('⚠️ ChatArea: Conversa não encontrada', {
-            buscado: phone,
-            conversationId,
-            totalConversas: convsResponse.data.conversations?.length,
-          });
-        }
-
-        // Buscar mensagens usando phone
-        console.log('💬 ChatArea: Buscando mensagens para:', phone);
         const msgResponse = await api.get(`/whatsapp/conversations/${phone}/messages/v2`);
-        console.log('💬 ChatArea: Mensagens recebidas:', {
-          total: msgResponse.data.messages?.length,
-          source: msgResponse.data.source,
-          sample: msgResponse.data.messages?.slice(0, 3).map((m: any) => ({
-            id: m.id?.substring(0, 20),
-            type: m.type,
-            content: m.content?.substring(0, 30),
-            fromMe: m.fromMe,
-          })),
-        });
+
+        const endTime = performance.now();
+        console.log('💬 ChatArea: Mensagens carregadas em', Math.round(endTime - startTime), 'ms');
+        console.log('💬 ChatArea: Total de mensagens:', msgResponse.data.messages?.length);
 
         setMessages(msgResponse.data.messages || []);
+
+        // ✅ OTIMIZADO: Buscar info da conversa PARALELAMENTE (não bloquear mensagens)
+        // Criar conversa temporária a partir do phone
+        setConversation({
+          id: conversationId,
+          phone: phone,
+          name: phone, // Nome temporário
+          isGroup: false,
+          unreadCount: 0,
+          lastMessage: null,
+          timestamp: Date.now(),
+        } as any);
+
+        // Buscar nome real em background (não bloquear UI)
+        api.get('/whatsapp/conversations/v2')
+          .then((convsResponse) => {
+            const conv = convsResponse.data.conversations.find((c: any) => {
+              const convPhone = c.phone?.replace(/\D/g, '');
+              return convPhone === phone || c.id === conversationId;
+            });
+
+            if (conv) {
+              console.log('✅ ChatArea: Nome da conversa atualizado:', conv.name);
+              setConversation(conv);
+            }
+          })
+          .catch((err) => {
+            console.warn('⚠️ Erro ao buscar nome da conversa:', err);
+          });
+
       } catch (error: any) {
-        console.error('❌ ChatArea: Erro ao carregar dados:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          conversationId,
-        });
+        console.error('❌ ChatArea: Erro ao carregar:', error);
+        toast.error('Erro ao carregar mensagens');
       } finally {
         setIsLoading(false);
       }
