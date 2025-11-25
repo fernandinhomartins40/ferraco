@@ -39,9 +39,14 @@ export default function RecurrenceDashboard() {
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
 
   // ✅ NOVO: Usar hooks com filtros reais
-  const { data: leadStats, isLoading: loadingLeads } = useRecurrenceLeadStats({ period: timeRange });
+  const { data: leadStats, isLoading: loadingLeads, error: errorLeads } = useRecurrenceLeadStats({ period: timeRange });
   const { data: templateStats, isLoading: loadingTemplates } = useRecurrenceTemplateStats();
-  const { data: trends, isLoading: loadingTrends } = useCaptureTrends({ period: timeRange });
+  const { data: trends, isLoading: loadingTrends, error: errorTrends } = useCaptureTrends({ period: timeRange });
+
+  // Debug: verificar o que está sendo retornado
+  if (trends && !Array.isArray(trends)) {
+    console.error('❌ Trends não é um array:', trends);
+  }
 
   if (loadingLeads || loadingTemplates) {
     return (
@@ -64,7 +69,7 @@ export default function RecurrenceDashboard() {
       : '0.0';
 
   // ✅ NOVO: Dados reais de tendências da API
-  const trendData = trends?.map(trend => {
+  const trendData = Array.isArray(trends) ? trends.map(trend => {
     // Formatar período para exibição
     let label = trend.period;
     try {
@@ -79,7 +84,7 @@ export default function RecurrenceDashboard() {
       novos: trend.newLeads,
       recorrentes: trend.recurrentLeads,
     };
-  }) || [];
+  }) : [];
 
   // Função para exportar CSV
   const exportToCsv = () => {

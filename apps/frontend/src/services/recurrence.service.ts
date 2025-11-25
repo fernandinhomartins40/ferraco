@@ -104,30 +104,30 @@ class RecurrenceService {
     if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
     if (filters?.trigger) params.append('trigger', filters.trigger);
 
-    const response = await api.get<RecurrenceTemplate[]>(
+    const response = await api.get<{ success: boolean; data: RecurrenceTemplate[] }>(
       `/recurrence/templates?${params.toString()}`
     );
-    return response.data;
+    return response.data.data;
   }
 
   async getTemplate(id: string) {
-    const response = await api.get<RecurrenceTemplate>(`/recurrence/templates/${id}`);
-    return response.data;
+    const response = await api.get<{ success: boolean; data: RecurrenceTemplate }>(`/recurrence/templates/${id}`);
+    return response.data.data;
   }
 
   async createTemplate(data: CreateTemplateData) {
-    const response = await api.post<RecurrenceTemplate>('/recurrence/templates', data);
-    return response.data;
+    const response = await api.post<{ success: boolean; data: RecurrenceTemplate }>('/recurrence/templates', data);
+    return response.data.data;
   }
 
   async updateTemplate(id: string, data: UpdateTemplateData) {
-    const response = await api.put<RecurrenceTemplate>(`/recurrence/templates/${id}`, data);
-    return response.data;
+    const response = await api.put<{ success: boolean; data: RecurrenceTemplate }>(`/recurrence/templates/${id}`, data);
+    return response.data.data;
   }
 
   async deleteTemplate(id: string) {
-    const response = await api.delete(`/recurrence/templates/${id}`);
-    return response.data;
+    const response = await api.delete<{ success: boolean; data: any }>(`/recurrence/templates/${id}`);
+    return response.data.data;
   }
 
   // ============================================================================
@@ -144,15 +144,15 @@ class RecurrenceService {
     if (filters?.source) params.append('source', filters.source);
     if (filters?.interest) params.append('interest', filters.interest);
 
-    const response = await api.get<RecurrenceStats>(
+    const response = await api.get<{ success: boolean; data: RecurrenceStats }>(
       `/recurrence/stats/leads?${params.toString()}`
     );
-    return response.data;
+    return response.data.data;
   }
 
   async getTemplateStats() {
-    const response = await api.get<TemplateUsageStats>('/recurrence/stats/templates');
-    return response.data;
+    const response = await api.get<{ success: boolean; data: TemplateUsageStats }>('/recurrence/stats/templates');
+    return response.data.data;
   }
 
   async getCaptureTrends(filters?: {
@@ -163,10 +163,10 @@ class RecurrenceService {
     if (filters?.period) params.append('period', filters.period);
     if (filters?.groupBy) params.append('groupBy', filters.groupBy);
 
-    const response = await api.get<CaptureTrend[]>(
+    const response = await api.get<{ success: boolean; data: CaptureTrend[] }>(
       `/recurrence/stats/trends?${params.toString()}`
     );
-    return response.data;
+    return response.data.data;
   }
 
   // ============================================================================
@@ -174,8 +174,8 @@ class RecurrenceService {
   // ============================================================================
 
   async getLeadCaptureHistory(leadId: string) {
-    const response = await api.get<LeadCapture[]>(`/recurrence/leads/${leadId}/captures`);
-    return response.data;
+    const response = await api.get<{ success: boolean; data: LeadCapture[] }>(`/recurrence/leads/${leadId}/captures`);
+    return response.data.data;
   }
 }
 
