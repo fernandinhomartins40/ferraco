@@ -12,6 +12,7 @@ import { logger } from '../utils/logger';
 import { Server as SocketIOServer } from 'socket.io';
 import * as fs from 'fs';
 import * as path from 'path';
+import QRCode from 'qrcode';
 
 interface FormattedMessage {
   id: string;
@@ -107,16 +108,34 @@ class WhatsAppWebJSService {
       });
 
       // Event: QR Code gerado
-      this.client.on('qr', (qr: string) => {
+      this.client.on('qr', async (qr: string) => {
         logger.info('📱 QR Code gerado');
-        this.qrCode = qr;
-        this.isConnected = false;
 
-        // Emitir via Socket.IO
-        if (this.io) {
-          this.io.emit('whatsapp:qr', { qr });
-          this.io.emit('whatsapp:status', 'INITIALIZING');
-          logger.info('✅ QR Code emitido via Socket.IO');
+        // Converter QR Code string para Data URI (base64)
+        try {
+          const qrDataUri = await QRCode.toDataURL(qr, {
+            errorCorrectionLevel: 'M',
+            type: 'image/png',
+            width: 300,
+            margin: 1,
+          });
+
+          this.qrCode = qrDataUri;
+          this.isConnected = false;
+
+          // Emitir via Socket.IO (enviar data URI, não string raw)
+          if (this.io) {
+            this.io.emit('whatsapp:qr', { qr: qrDataUri });
+            this.io.emit('whatsapp:status', 'INITIALIZING');
+            logger.info('✅ QR Code emitido via Socket.IO (base64)');
+          }
+        } catch (error) {
+          logger.error('❌ Erro ao gerar QR Code base64:', error);
+          this.qrCode = qr; // Fallback para string raw
+          if (this.io) {
+            this.io.emit('whatsapp:qr', { qr });
+            this.io.emit('whatsapp:status', 'INITIALIZING');
+          }
         }
       });
 
