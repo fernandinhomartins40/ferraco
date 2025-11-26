@@ -17,7 +17,7 @@ import { setupWhatsAppListeners, removeWhatsAppListeners } from './whatsappListe
 
 interface FormattedMessage {
   id: string;
-  body: string;
+  content: string; // ✅ FIX: Renomeado de 'body' para 'content' (compatibilidade com frontend)
   from: string;
   to: string;
   fromMe: boolean;
@@ -43,7 +43,7 @@ interface FormattedConversation {
   isGroup: boolean;
   unreadCount: number;
   lastMessage: {
-    body: string;
+    body: string; // Mantém 'body' aqui pois é estrutura diferente de Message
     timestamp: number;
     fromMe: boolean;
   } | null;
@@ -886,7 +886,7 @@ class WhatsAppWebJSService {
 
     return {
       id: msg.id._serialized,
-      body: msg.body || '',
+      content: msg.body || '', // ✅ FIX: Renomeado de 'body' para 'content'
       from: msg.from,
       to: msg.to || '',
       fromMe: msg.fromMe,
