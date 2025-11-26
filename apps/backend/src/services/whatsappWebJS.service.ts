@@ -493,24 +493,26 @@ class WhatsAppWebJSService {
     }
 
     logger.info(`📨 sendTextMessage - Input: to="${to}"`);
-    const formatted = await this.formatPhoneNumber(to);
-    logger.info(`📨 sendTextMessage - Formatted: "${formatted}"`);
+
+    // ✅ FIX: Buscar o número correto (com ou sem 9º dígito) no WhatsApp
+    const correctNumber = await this.findCorrectPhoneNumber(to);
+    logger.info(`📨 sendTextMessage - Número correto encontrado: "${correctNumber}"`);
 
     return this.executeWithRetry(
       async () => {
-        logger.info(`📨 Enviando mensagem para ${formatted}`);
-        const sentMsg = await this.client!.sendMessage(formatted, message);
+        logger.info(`📨 Enviando mensagem para ${correctNumber}`);
+        const sentMsg = await this.client!.sendMessage(correctNumber, message);
         logger.info(`✅ Mensagem enviada: ${sentMsg.id._serialized}`);
 
         return {
           id: sentMsg.id._serialized,
           ack: sentMsg.ack || 0,
           timestamp: sentMsg.timestamp || Date.now(),
-          from: formatted,
+          from: correctNumber,
           body: message,
         };
       },
-      `sendTextMessage para ${formatted}`,
+      `sendTextMessage para ${correctNumber}`,
       3, // 3 tentativas
       1000 // 1 segundo de delay inicial
     );
@@ -923,6 +925,67 @@ class WhatsAppWebJSService {
         name: contact?.name || contact?.pushname || contact?.id?.user || msg.from,
       },
     };
+  }
+
+  /**
+   * Buscar o número correto no WhatsApp (trata problema do 9º dígito)
+   * ✅ FIX: Resolve problema de criar nova conversa quando número tem 9º dígito
+   */
+  private async findCorrectPhoneNumber(phone: string): Promise<string> {
+    logger.info(`🔍 findCorrectPhoneNumber - Input: "${phone}"`);
+
+    // Formatar número base
+    const formatted = await this.formatPhoneNumber(phone);
+    logger.info(`🔍 findCorrectPhoneNumber - Formatted: "${formatted}"`);
+
+    try {
+      // Extrair só números do número formatado
+      const cleaned = formatted.replace(/\D/g, '');
+
+      // Verificar se o chat existe com esse número
+      const chatExists = await this.client!.getChatById(formatted).then(() => true).catch(() => false);
+
+      if (chatExists) {
+        logger.info(`✅ findCorrectPhoneNumber - Chat encontrado com: "${formatted}"`);
+        return formatted;
+      }
+
+      // Se não encontrou, tentar variações com/sem 9º dígito
+      // Formato: 55 + DDD (2) + número (8 ou 9 dígitos)
+      if (cleaned.length === 13) {
+        // Tem 13 dígitos (com 9º dígito) - tentar sem o 9º
+        // 5542992190000 -> 554292190000 (remove o 9 após DDD)
+        const without9 = cleaned.substring(0, 4) + cleaned.substring(5);
+        const altNumber = `${without9}@c.us`;
+        logger.info(`🔍 findCorrectPhoneNumber - Tentando sem 9º dígito: "${altNumber}"`);
+
+        const altExists = await this.client!.getChatById(altNumber).then(() => true).catch(() => false);
+        if (altExists) {
+          logger.info(`✅ findCorrectPhoneNumber - Chat encontrado SEM 9º dígito: "${altNumber}"`);
+          return altNumber;
+        }
+      } else if (cleaned.length === 12) {
+        // Tem 12 dígitos (sem 9º dígito) - tentar com o 9º
+        // 554292190000 -> 5542992190000 (adiciona 9 após DDD)
+        const with9 = cleaned.substring(0, 4) + '9' + cleaned.substring(4);
+        const altNumber = `${with9}@c.us`;
+        logger.info(`🔍 findCorrectPhoneNumber - Tentando com 9º dígito: "${altNumber}"`);
+
+        const altExists = await this.client!.getChatById(altNumber).then(() => true).catch(() => false);
+        if (altExists) {
+          logger.info(`✅ findCorrectPhoneNumber - Chat encontrado COM 9º dígito: "${altNumber}"`);
+          return altNumber;
+        }
+      }
+
+      // Se não encontrou nenhuma variação, retornar o número formatado original
+      logger.warn(`⚠️  findCorrectPhoneNumber - Nenhum chat existente, usando: "${formatted}"`);
+      return formatted;
+
+    } catch (error: any) {
+      logger.error(`❌ findCorrectPhoneNumber - Erro: ${error.message}`);
+      return formatted;
+    }
   }
 
   /**
