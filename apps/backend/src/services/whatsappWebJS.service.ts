@@ -527,11 +527,12 @@ class WhatsAppWebJSService {
       throw new Error('WhatsApp não está conectado');
     }
 
-    const formatted = await this.formatPhoneNumber(to);
+    // ✅ FIX: Buscar número correto (trata 9º dígito)
+    const correctNumber = await this.findCorrectPhoneNumber(to);
 
     return this.executeWithRetry(
       async () => {
-        logger.info(`🖼️  Enviando imagem para ${formatted}`);
+        logger.info(`🖼️  Enviando imagem para ${correctNumber}`);
 
         // Criar media a partir de base64 ou path
         let media: MessageMedia;
@@ -551,7 +552,7 @@ class WhatsAppWebJSService {
           media = MessageMedia.fromFilePath(pathOrBase64);
         }
 
-        const sentMsg = await this.client!.sendMessage(formatted, media, {
+        const sentMsg = await this.client!.sendMessage(correctNumber, media, {
           caption: caption || '',
         });
 
@@ -563,7 +564,7 @@ class WhatsAppWebJSService {
           timestamp: sentMsg.timestamp || Date.now(),
         };
       },
-      `sendImage para ${formatted}`,
+      `sendImage para ${correctNumber}`,
       3,
       2000 // 2 segundos (mídia é mais pesada)
     );
@@ -578,11 +579,12 @@ class WhatsAppWebJSService {
       throw new Error('WhatsApp não está conectado');
     }
 
-    const formatted = await this.formatPhoneNumber(to);
+    // ✅ FIX: Buscar número correto (trata 9º dígito)
+    const correctNumber = await this.findCorrectPhoneNumber(to);
 
     return this.executeWithRetry(
       async () => {
-        logger.info(`🎤 Enviando áudio para ${formatted}`);
+        logger.info(`🎤 Enviando áudio para ${correctNumber}`);
 
         let media: MessageMedia;
 
@@ -593,7 +595,7 @@ class WhatsAppWebJSService {
         }
 
         // Enviar como PTT (Push-to-Talk)
-        const sentMsg = await this.client!.sendMessage(formatted, media, {
+        const sentMsg = await this.client!.sendMessage(correctNumber, media, {
           sendAudioAsVoice: true,
         });
 
@@ -605,7 +607,7 @@ class WhatsAppWebJSService {
           timestamp: sentMsg.timestamp || Date.now(),
         };
       },
-      `sendAudio para ${formatted}`,
+      `sendAudio para ${correctNumber}`,
       3,
       2000
     );
@@ -626,11 +628,12 @@ class WhatsAppWebJSService {
       throw new Error('WhatsApp não está conectado');
     }
 
-    const formatted = await this.formatPhoneNumber(to);
+    // ✅ FIX: Buscar número correto (trata 9º dígito)
+    const correctNumber = await this.findCorrectPhoneNumber(to);
 
     return this.executeWithRetry(
       async () => {
-        logger.info(`🎥 Enviando vídeo para ${formatted}${asGif ? ' (como GIF)' : ''}`);
+        logger.info(`🎥 Enviando vídeo para ${correctNumber}${asGif ? ' (como GIF)' : ''}`);
 
         let media: MessageMedia;
 
@@ -649,7 +652,7 @@ class WhatsAppWebJSService {
           media = MessageMedia.fromFilePath(videoUrl);
         }
 
-        const sentMsg = await this.client!.sendMessage(formatted, media, {
+        const sentMsg = await this.client!.sendMessage(correctNumber, media, {
           caption: caption || '',
           sendMediaAsDocument: false, // Enviar como vídeo inline, não como documento
         });
@@ -658,7 +661,7 @@ class WhatsAppWebJSService {
 
         return sentMsg.id._serialized;
       },
-      `sendVideo para ${formatted}`,
+      `sendVideo para ${correctNumber}`,
       3,
       3000 // 3 segundos (vídeo é mais pesado)
     );
@@ -678,11 +681,12 @@ class WhatsAppWebJSService {
       throw new Error('WhatsApp não está conectado');
     }
 
-    const formatted = await this.formatPhoneNumber(to);
+    // ✅ FIX: Buscar número correto (trata 9º dígito)
+    const correctNumber = await this.findCorrectPhoneNumber(to);
 
     return this.executeWithRetry(
       async () => {
-        logger.info(`📄 Enviando documento para ${formatted}`);
+        logger.info(`📄 Enviando documento para ${correctNumber}`);
 
         let media: MessageMedia;
 
@@ -709,7 +713,7 @@ class WhatsAppWebJSService {
         }
 
         // Enviar como documento
-        const sentMsg = await this.client!.sendMessage(formatted, media, {
+        const sentMsg = await this.client!.sendMessage(correctNumber, media, {
           caption: caption || '',
           sendMediaAsDocument: true, // Força enviar como documento (não inline)
         });
@@ -718,7 +722,7 @@ class WhatsAppWebJSService {
 
         return sentMsg.id._serialized;
       },
-      `sendFile para ${formatted}`,
+      `sendFile para ${correctNumber}`,
       3,
       2000
     );
