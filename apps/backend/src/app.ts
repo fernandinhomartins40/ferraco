@@ -28,6 +28,7 @@ import kanbanColumnRoutes from './routes/kanbanColumn.routes';
 import uploadRoutes from './routes/upload.routes';
 import landingPageRoutes from './routes/landing-page.routes';
 import whatsappRoutes from './routes/whatsapp.routes';
+import whatsappDebugRoutes from './routes/whatsapp-debug.routes';
 import automationKanbanRoutes from './routes/automationKanban.routes';
 import whatsappMessageTemplateRoutes from './routes/whatsappMessageTemplate.routes';
 import whatsappAutomationRoutes from './modules/whatsapp-automation/whatsapp-automation.routes';
@@ -95,6 +96,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/upload`, uploadRoutes);
   app.use(`${API_PREFIX}/landing-page`, landingPageRoutes);
   app.use(`${API_PREFIX}/whatsapp`, whatsappRoutes);
+  app.use(`${API_PREFIX}/whatsapp/debug`, whatsappDebugRoutes);
   app.use(`${API_PREFIX}/automation-kanban`, automationKanbanRoutes);
   app.use(`${API_PREFIX}/whatsapp-templates`, whatsappMessageTemplateRoutes);
   app.use(`${API_PREFIX}/whatsapp-automations`, whatsappAutomationRoutes);
