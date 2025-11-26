@@ -884,6 +884,24 @@ class WhatsAppWebJSService {
       };
     }
 
+    // ✅ NOVO: Processar mídia se disponível
+    let mediaUrl: string | undefined = undefined;
+    let mediaType: string | undefined = undefined;
+
+    if (msg.hasMedia) {
+      try {
+        const media = await msg.downloadMedia();
+        if (media) {
+          // Converter para Data URI (base64)
+          mediaUrl = `data:${media.mimetype};base64,${media.data}`;
+          mediaType = media.mimetype;
+          logger.info(`📎 Mídia processada: ${msg.type} (${media.mimetype})`);
+        }
+      } catch (error: any) {
+        logger.warn(`⚠️  Não foi possível baixar mídia da mensagem ${msg.id._serialized}: ${error.message}`);
+      }
+    }
+
     return {
       id: msg.id._serialized,
       content: msg.body || '', // ✅ FIX: Renomeado de 'body' para 'content'
@@ -893,6 +911,8 @@ class WhatsAppWebJSService {
       timestamp: msg.timestamp,
       type: msg.type,
       hasMedia: msg.hasMedia,
+      mediaUrl, // ✅ NOVO: URL da mídia em base64
+      mediaType, // ✅ NOVO: Tipo MIME da mídia
       ack: msg.ack || 0,
       status: this.mapAckToStatus(msg.ack),
       contact: {
