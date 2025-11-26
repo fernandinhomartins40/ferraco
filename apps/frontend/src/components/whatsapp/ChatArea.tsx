@@ -145,6 +145,12 @@ const ChatArea = ({ conversationId, onBack }: ChatAreaProps) => {
           unreadCount: 0,
           lastMessage: null,
           timestamp: Date.now(),
+          contact: {
+            id: conversationId,
+            phone: phone,
+            name: phone,
+            profilePicUrl: undefined,
+          },
         } as any);
 
         // Buscar nome real em background (não bloquear UI)
