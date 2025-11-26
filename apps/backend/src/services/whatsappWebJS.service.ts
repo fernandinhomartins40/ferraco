@@ -492,7 +492,9 @@ class WhatsAppWebJSService {
       throw new Error('WhatsApp não está conectado');
     }
 
+    logger.info(`📨 sendTextMessage - Input: to="${to}"`);
     const formatted = await this.formatPhoneNumber(to);
+    logger.info(`📨 sendTextMessage - Formatted: "${formatted}"`);
 
     return this.executeWithRetry(
       async () => {
@@ -925,18 +927,27 @@ class WhatsAppWebJSService {
 
   /**
    * Formatar número de telefone
+   * ✅ FIX: Suporta números com ou sem código do país
    */
   private async formatPhoneNumber(phone: string): Promise<string> {
-    // Remover caracteres não numéricos
+    // Remover caracteres não numéricos e @c.us/@g.us se existir
     let cleaned = phone.replace(/\D/g, '');
 
     // Se não começar com código do país, adicionar 55 (Brasil)
-    if (!cleaned.startsWith('55') && cleaned.length === 11) {
+    // Aceita números com 10 ou 11 dígitos (sem código)
+    if (!cleaned.startsWith('55') && (cleaned.length === 10 || cleaned.length === 11)) {
       cleaned = '55' + cleaned;
     }
 
-    // Adicionar @c.us
-    return `${cleaned}@c.us`;
+    // Se já começa com 55 e tem 12 ou 13 dígitos, está correto
+    // (55 + DDD 2 dígitos + 8-9 dígitos = 12-13 total)
+
+    // Adicionar @c.us se não tiver
+    if (!cleaned.includes('@')) {
+      return `${cleaned}@c.us`;
+    }
+
+    return cleaned;
   }
 
   /**
