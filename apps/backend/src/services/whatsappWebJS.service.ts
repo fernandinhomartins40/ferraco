@@ -930,24 +930,36 @@ class WhatsAppWebJSService {
    * ✅ FIX: Suporta números com ou sem código do país
    */
   private async formatPhoneNumber(phone: string): Promise<string> {
+    logger.info(`🔢 formatPhoneNumber - Input: "${phone}"`);
+
     // Remover caracteres não numéricos e @c.us/@g.us se existir
     let cleaned = phone.replace(/\D/g, '');
+    logger.info(`🔢 formatPhoneNumber - Cleaned (só números): "${cleaned}" (${cleaned.length} dígitos)`);
 
     // Se não começar com código do país, adicionar 55 (Brasil)
     // Aceita números com 10 ou 11 dígitos (sem código)
     if (!cleaned.startsWith('55') && (cleaned.length === 10 || cleaned.length === 11)) {
       cleaned = '55' + cleaned;
+      logger.info(`🔢 formatPhoneNumber - Adicionado código 55: "${cleaned}"`);
     }
 
     // Se já começa com 55 e tem 12 ou 13 dígitos, está correto
     // (55 + DDD 2 dígitos + 8-9 dígitos = 12-13 total)
 
-    // Adicionar @c.us se não tiver
-    if (!cleaned.includes('@')) {
-      return `${cleaned}@c.us`;
+    // Validar formato final
+    if (!cleaned.startsWith('55')) {
+      logger.warn(`⚠️  formatPhoneNumber - Número não começa com 55: "${cleaned}"`);
     }
 
-    return cleaned;
+    if (cleaned.length < 12 || cleaned.length > 13) {
+      logger.warn(`⚠️  formatPhoneNumber - Tamanho inválido: ${cleaned.length} dígitos (esperado 12 ou 13)`);
+    }
+
+    // Adicionar @c.us
+    const result = `${cleaned}@c.us`;
+    logger.info(`🔢 formatPhoneNumber - Result: "${result}"`);
+
+    return result;
   }
 
   /**
