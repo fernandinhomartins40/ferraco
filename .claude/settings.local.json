@@ -132,7 +132,11 @@
       "Bash(sed:*)",
       "Bash(/tmp/whatsapp_working.ts)",
       "Bash(then grep \"USE_WHATSAPP_WEB_JS\" apps/backend/.env)",
-      "Bash(if [ -f apps/backend/.env ])"
+      "Bash(if [ -f apps/backend/.env ])",
+      "Bash(docker run:*)",
+      "Bash(psql:*)",
+      "Bash(PORT=3001 timeout 20s npx tsx:*)",
+      "Bash(npm view:*)"
     ],
     "deny": [],
     "ask": []
