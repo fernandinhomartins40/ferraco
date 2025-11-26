@@ -46,6 +46,30 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Extrai nome amigável de um produto
+ * Formato esperado: TEMPLATE:id:nome ou RECURRENCE_TEMPLATE_id:nome ou nome_produto
+ */
+function extractFriendlyName(product: string): string {
+  // Se contém "TEMPLATE:" ou "RECURRENCE_TEMPLATE_", extrair nome amigável
+  if (product.includes('TEMPLATE:') || product.includes('RECURRENCE_TEMPLATE_')) {
+    const parts = product.split(':');
+    // Se tiver 3 partes (TEMPLATE:id:nome ou RECURRENCE_TEMPLATE_id:nome), retornar a 3ª
+    if (parts.length >= 3) {
+      return parts[2];
+    }
+    // Se tiver 2 partes, tentar detectar se é RECURRENCE_TEMPLATE_id
+    if (parts.length === 2 && parts[0] === 'RECURRENCE_TEMPLATE_id') {
+      return 'Lead Recorrente';
+    }
+    // Fallback: retornar "Template Genérico"
+    return 'Template Genérico';
+  }
+
+  // Produto normal, retornar como está
+  return product;
+}
+
 export default function WhatsAppAutomations() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -450,7 +474,7 @@ export default function WhatsAppAutomations() {
 
                       {/* Products */}
                       <div className="text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">Produtos:</span> {products.join(', ')}
+                        <span className="font-medium text-foreground">Produtos:</span> {products.map(p => extractFriendlyName(p)).join(', ')}
                       </div>
 
                       {/* Progress */}
@@ -541,7 +565,7 @@ export default function WhatsAppAutomations() {
                               <div className="text-sm text-muted-foreground">{automation.lead?.phone}</div>
                             </td>
                             <td className="px-6 py-4">
-                              <div className="text-sm">{products.join(', ')}</div>
+                              <div className="text-sm">{products.map(p => extractFriendlyName(p)).join(', ')}</div>
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
@@ -732,7 +756,7 @@ export default function WhatsAppAutomations() {
                       {JSON.parse(automationDetails.automation.productsToSend || '[]').map((product: string, idx: number) => (
                         <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded-md">
                           <Package className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{product}</span>
+                          <span className="text-sm">{extractFriendlyName(product)}</span>
                         </div>
                       ))}
                     </div>

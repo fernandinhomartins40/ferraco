@@ -206,11 +206,14 @@ export class WhatsAppAutomationService {
       const mediaUrls = template.mediaUrls ? JSON.parse(template.mediaUrls) : [];
       const totalMessages = 1 + mediaUrls.length;
 
+      // ✅ UX: Usar nome amigável ao invés de ID técnico
+      const friendlyProductName = this.getTemplateFriendlyName(template.name, templateTrigger);
+
       const automation = await prisma.whatsAppAutomation.create({
         data: {
           leadId,
           status: 'PENDING',
-          productsToSend: JSON.stringify([`TEMPLATE:${template.id}`]), // ← Flag especial
+          productsToSend: JSON.stringify([`TEMPLATE:${template.id}:${friendlyProductName}`]), // ID técnico + nome amigável
           messagesTotal: totalMessages,
           scheduledFor: null
         }
@@ -370,6 +373,28 @@ export class WhatsAppAutomationService {
       warnings,
       matches
     };
+  }
+
+  /**
+   * Retorna nome amigável para exibir na UI baseado no template
+   */
+  private getTemplateFriendlyName(templateName: string, trigger: string): string {
+    const friendlyNames: Record<string, string> = {
+      'modal_orcamento': 'Solicitação de Orçamento',
+      'human_contact_request': 'Contato com Equipe',
+      'chat_no_interest': 'Reengajamento',
+      'generic_inquiry': 'Consulta Geral',
+    };
+
+    // Se tiver mapeamento, usar
+    if (friendlyNames[trigger]) {
+      return friendlyNames[trigger];
+    }
+
+    // Caso contrário, usar o nome do template formatado
+    return templateName
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
   }
 
   /**
@@ -647,7 +672,9 @@ export class WhatsAppAutomationService {
 
       // ✅ NOVO: Detectar automação com template genérico
       if (productNames.length === 1 && productNames[0].startsWith('TEMPLATE:')) {
-        const templateId = productNames[0].replace('TEMPLATE:', '');
+        // Formato: TEMPLATE:id ou TEMPLATE:id:nome_amigavel
+        const parts = productNames[0].split(':');
+        const templateId = parts[1]; // Pegar só o ID (posição 1)
         return await this.executeGenericTemplateAutomation(automationId, templateId, lead, config);
       }
 
@@ -1298,11 +1325,14 @@ Equipe {{company.name}}`
       );
 
       // 4. Criar automação com mensagem personalizada
+      // ✅ UX: Usar nome amigável ao invés de ID técnico
+      const friendlyName = `Lead Recorrente (${captureNumber}ª vez)`;
+
       const automation = await prisma.whatsAppAutomation.create({
         data: {
           leadId,
           status: 'PENDING',
-          productsToSend: JSON.stringify([`RECURRENCE_TEMPLATE_${template.id}`]),
+          productsToSend: JSON.stringify([`RECURRENCE_TEMPLATE_${template.id}:${friendlyName}`]),
           messagesTotal: 1 + (template.mediaUrls ? JSON.parse(template.mediaUrls).length : 0),
           scheduledFor: null, // Envio imediato
         },
