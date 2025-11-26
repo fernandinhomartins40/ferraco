@@ -726,8 +726,14 @@ export class ChatbotSessionService {
         logger.info(`🤖 Criando automação de recorrência para lead ${lead.id}`);
         whatsappAutomationService.createRecurrenceAutomation(lead.id, recurrence)
           .catch(err => logger.error('❌ Erro ao criar automação de recorrência:', err));
-      } else if (selectedProducts.length > 0) {
-        // Lead novo: usar automação padrão
+      } else {
+        // ✅ CORREÇÃO CRÍTICA: SEMPRE criar automação, mesmo sem produtos
+        // O whatsappAutomation.service detecta automaticamente o cenário e usa template apropriado:
+        // - chat_no_interest (chat sem produtos)
+        // - human_contact_request (quer falar com equipe)
+        // - modal_orcamento (modal)
+        // - generic_inquiry (outros)
+        logger.info(`🤖 Criando automação para lead ${lead.id} (${selectedProducts.length} produto(s))`);
         await this.tryCreateWhatsAppAutomation(lead.id, selectedProducts);
       }
 
@@ -750,15 +756,11 @@ export class ChatbotSessionService {
 
   /**
    * Tenta criar automação WhatsApp para um lead
-   * Inclui validação para evitar duplicações e verifica se há produtos
+   * Inclui validação para evitar duplicações
+   * ✅ ACEITA leads com ou sem produtos - o whatsappAutomation.service detecta o cenário
    */
   private async tryCreateWhatsAppAutomation(leadId: string, selectedProducts: string[]): Promise<void> {
     try {
-      if (selectedProducts.length === 0) {
-        logger.debug(`ℹ️ Automação não criada: lead ${leadId} sem produtos selecionados`);
-        return;
-      }
-
       // Verificar se já existe automação para este lead (prevenção de duplicação)
       const existingAutomation = await prisma.whatsAppAutomation.findFirst({
         where: { leadId }
@@ -769,8 +771,11 @@ export class ChatbotSessionService {
         return;
       }
 
-      // Criar automação
-      logger.info(`🤖 Criando automação WhatsApp para lead ${leadId}`);
+      // ✅ Criar automação SEMPRE - mesmo sem produtos
+      // O whatsappAutomation.service detecta automaticamente:
+      // - Produtos: envia apresentações de produtos
+      // - Sem produtos: usa templates genéricos (chat_no_interest, human_contact_request, etc)
+      logger.info(`🤖 Criando automação WhatsApp para lead ${leadId} (${selectedProducts.length} produto(s))`);
       await whatsappAutomationService.createAutomationFromLead(leadId);
       logger.info(`✅ Automação criada com sucesso para lead ${leadId}`);
 
