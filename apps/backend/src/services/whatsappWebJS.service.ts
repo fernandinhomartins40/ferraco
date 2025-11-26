@@ -110,16 +110,16 @@ class WhatsAppWebJSService {
       });
 
       // Event: QR Code gerado
-      // ✅ FIX: Implementar debounce de 500ms para evitar atualizações muito rápidas
+      // ✅ FIX: Implementar debounce de 100ms para evitar atualizações muito rápidas
       this.client.on('qr', async (qr: string) => {
         // Limpar timer anterior se existir
         if (this.qrDebounceTimer) {
           clearTimeout(this.qrDebounceTimer);
         }
 
-        // Debounce de 500ms
+        // Debounce de 100ms (reduzido de 500ms para melhor UX)
         this.qrDebounceTimer = setTimeout(async () => {
-          logger.info('📱 QR Code gerado (debounced)');
+          logger.info('📱 QR Code gerado (debounced 100ms)');
 
           // Converter QR Code string para Data URI (base64)
           try {
@@ -138,6 +138,8 @@ class WhatsAppWebJSService {
               this.io.emit('whatsapp:qr', { qr: qrDataUri });
               this.io.emit('whatsapp:status', 'INITIALIZING');
               logger.info('✅ QR Code emitido via Socket.IO (base64)');
+            } else {
+              logger.warn('⚠️  Socket.IO não configurado - QR code não será emitido automaticamente');
             }
 
             // ✅ FIX: Iniciar timer de timeout (60 segundos)
@@ -151,7 +153,7 @@ class WhatsAppWebJSService {
               this.io.emit('whatsapp:status', 'INITIALIZING');
             }
           }
-        }, 500); // Aguardar 500ms antes de processar
+        }, 100); // Aguardar apenas 100ms (UX mais responsiva)
       });
 
       // Event: Cliente pronto

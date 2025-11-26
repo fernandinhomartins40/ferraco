@@ -22,18 +22,6 @@ async function startServer(): Promise<void> {
     // Garantir que a configuração do chatbot existe
     await ensureDefaultChatbotConfig();
 
-    // ✅ Inicializar WhatsApp Service (whatsapp-web.js)
-    logger.info('📱 Inicializando WhatsApp Web JS...');
-    await whatsappWebJSService.initialize();
-
-    // ⭐ Inicializar Auto-save Service do Chatbot (verifica a cada 2 minutos)
-    chatbotAutosaveService.start(2);
-    logger.info('💾 Chatbot auto-save service iniciado');
-
-    // ⭐ Inicializar Automation Scheduler Service (processa a cada 30 segundos)
-    automationSchedulerService.start();
-    logger.info('🤖 Automation Scheduler iniciado');
-
     // Create Express app
     const app = createApp();
 
@@ -69,9 +57,23 @@ async function startServer(): Promise<void> {
       });
     });
 
-    // ✅ Pass Socket.io instance to WhatsApp Service and Automation Scheduler
+    // ✅ CRÍTICO: Configurar Socket.IO ANTES de inicializar WhatsApp
+    // (para que eventos QR sejam emitidos imediatamente)
     whatsappWebJSService.setSocketIO(io);
     automationSchedulerService.setSocketIO(io);
+
+    // ✅ Inicializar WhatsApp Service (whatsapp-web.js)
+    // Agora o QR code será emitido via Socket.IO imediatamente
+    logger.info('📱 Inicializando WhatsApp Web JS...');
+    await whatsappWebJSService.initialize();
+
+    // ⭐ Inicializar Auto-save Service do Chatbot (verifica a cada 2 minutos)
+    chatbotAutosaveService.start(2);
+    logger.info('💾 Chatbot auto-save service iniciado');
+
+    // ⭐ Inicializar Automation Scheduler Service (processa a cada 30 segundos)
+    automationSchedulerService.start();
+    logger.info('🤖 Automation Scheduler iniciado');
 
     // Start server
     const server = httpServer.listen(PORT, () => {
