@@ -41,8 +41,51 @@ async function startServer(): Promise<void> {
     io.on('connection', (socket) => {
       logger.info(`🔌 Cliente WebSocket conectado: ${socket.id}`);
 
+      // ✅ NOVO: Enviar status e QR code atual quando cliente conecta
+      const currentStatus = whatsappWebJSService.getStatus();
+      const currentQR = whatsappWebJSService.getQRCode();
+
+      if (currentStatus.connected) {
+        socket.emit('whatsapp:status', 'CONNECTED');
+        logger.info(`✅ Status CONNECTED enviado para cliente ${socket.id}`);
+      } else if (currentQR) {
+        socket.emit('whatsapp:qr', { qr: currentQR });
+        socket.emit('whatsapp:status', 'INITIALIZING');
+        logger.info(`📱 QR Code enviado para cliente ${socket.id}`);
+      } else {
+        socket.emit('whatsapp:status', 'INITIALIZING');
+        logger.info(`⏳ Status INITIALIZING enviado para cliente ${socket.id}`);
+      }
+
       socket.on('disconnect', () => {
         logger.info(`🔌 Cliente WebSocket desconectado: ${socket.id}`);
+      });
+
+      // ✅ NOVO: Cliente solicita status atual
+      socket.on('whatsapp:request-status', () => {
+        logger.info(`📡 Cliente ${socket.id} solicitou status`);
+        const status = whatsappWebJSService.getStatus();
+
+        if (status.connected) {
+          socket.emit('whatsapp:status', 'CONNECTED');
+        } else if (status.hasQR) {
+          socket.emit('whatsapp:status', 'INITIALIZING');
+        } else {
+          socket.emit('whatsapp:status', 'DISCONNECTED');
+        }
+      });
+
+      // ✅ NOVO: Cliente solicita QR code atual
+      socket.on('whatsapp:request-qr', () => {
+        logger.info(`📡 Cliente ${socket.id} solicitou QR Code`);
+        const qr = whatsappWebJSService.getQRCode();
+
+        if (qr) {
+          socket.emit('whatsapp:qr', { qr });
+          socket.emit('whatsapp:status', 'INITIALIZING');
+        } else {
+          socket.emit('whatsapp:status', whatsappWebJSService.isWhatsAppConnected() ? 'CONNECTED' : 'DISCONNECTED');
+        }
       });
 
       // Client pode se inscrever em conversas específicas
