@@ -482,19 +482,9 @@ export class WhatsAppBotService {
       await whatsappWebJSService.sendTextMessage(botSession.phone, locationMessage);
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // ✅ IMPLEMENTADO: Enviar localização GPS real se houver coordenadas configuradas
-      if (chatbotConfig.latitude && chatbotConfig.longitude) {
-        try {
-          await whatsappWebJSService.sendLocation(
-            botSession.phone,
-            parseFloat(chatbotConfig.latitude as any),
-            parseFloat(chatbotConfig.longitude as any)
-          );
-          logger.info(`📍 Localização GPS enviada: ${chatbotConfig.latitude}, ${chatbotConfig.longitude}`);
-        } catch (error) {
-          logger.error('Erro ao enviar localização GPS:', error);
-        }
-      }
+      // TODO: Enviar localização GPS real (quando ChatbotConfig incluir latitude/longitude)
+      // Atualmente ChatbotConfig não possui esses campos no schema
+      // Para implementar: adicionar latitude e longitude como campos opcionais em ChatbotConfig
 
       logger.info(`📍 Localização enviada para ${botSession.phone}`);
 
@@ -529,11 +519,11 @@ export class WhatsAppBotService {
 
       // ✅ IMPLEMENTADO: Notificar equipe de atendimento
       try {
-        // Buscar usuários da equipe de atendimento (role ATENDENTE ou ADMIN)
+        // Buscar usuários da equipe de atendimento (role SUPPORT ou ADMIN)
         const teamUsers = await prisma.user.findMany({
           where: {
             role: {
-              in: ['ATENDENTE', 'ADMIN'],
+              in: ['SUPPORT', 'ADMIN'],
             },
           },
         });
@@ -545,7 +535,7 @@ export class WhatsAppBotService {
               userId: user.id,
               title: '👨‍💼 Novo atendimento humano solicitado',
               message: `${lead.name} (${botSession.phone}) solicitou atendimento humano via chatbot`,
-              channel: 'APP',
+              channel: 'IN_APP',
               data: JSON.stringify({
                 leadId: botSession.leadId,
                 phone: botSession.phone,
@@ -605,7 +595,7 @@ export class WhatsAppBotService {
           leadId: botSession.leadId,
           type: 'WHATSAPP',
           direction: 'OUTBOUND',
-          status: 'SCHEDULED',
+          status: 'PENDING', // Follow-up agendado (timestamp define quando será enviado)
           content: data?.message || 'Follow-up automático do chatbot',
           metadata: JSON.stringify({
             scheduledFor: followupDate.toISOString(),
@@ -622,7 +612,7 @@ export class WhatsAppBotService {
       const teamUsers = await prisma.user.findMany({
         where: {
           role: {
-            in: ['ATENDENTE', 'ADMIN'],
+            in: ['SUPPORT', 'ADMIN'],
           },
         },
       });
@@ -634,7 +624,7 @@ export class WhatsAppBotService {
               userId: user.id,
               title: '📅 Follow-up agendado',
               message: `Follow-up agendado para ${botSession.phone} em ${delay}`,
-              channel: 'APP',
+              channel: 'IN_APP',
               data: JSON.stringify({
                 leadId: botSession.leadId,
                 scheduledFor: followupDate.toISOString(),

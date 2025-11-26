@@ -351,6 +351,21 @@ async function saveCommunicationToDatabase(message: any): Promise<void> {
 
     // Se não existir lead, criar um novo
     if (!lead) {
+      // Buscar usuário do sistema (ou primeiro admin disponível)
+      const systemUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: 'system@ferraco.com' },
+            { role: 'ADMIN' }
+          ]
+        }
+      });
+
+      if (!systemUser) {
+        logger.warn('Nenhum usuário disponível para criar lead via WhatsApp');
+        return;
+      }
+
       lead = await prisma.lead.create({
         data: {
           name: message.contact.name,
@@ -358,6 +373,7 @@ async function saveCommunicationToDatabase(message: any): Promise<void> {
           phone,
           source: 'WHATSAPP',
           status: 'NOVO',
+          createdById: systemUser.id,
         },
       });
     }
