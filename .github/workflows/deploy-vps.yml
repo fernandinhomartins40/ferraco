@@ -256,20 +256,13 @@ jobs:
           [ -f "apps/frontend/package.json" ] || { echo "❌ apps/frontend/package.json não encontrado!"; exit 1; }
           [ -d "apps/backend/prisma" ] || { echo "❌ apps/backend/prisma não encontrado!"; exit 1; }
 
-          # Validar que o código WhatsApp corrigido está presente (commit 5d5cf7e)
-          echo "🔍 Validando fix do WhatsApp (stack overflow)..."
-          WHATSAPP_SERVICE="apps/backend/src/services/whatsappService.ts"
+          # Validar que o código WhatsApp Web JS está presente (migrado do WPPConnect)
+          echo "🔍 Validando integração WhatsApp (whatsapp-web.js)..."
+          WHATSAPP_SERVICE="apps/backend/src/services/whatsappWebJS.service.ts"
           if [ -f "$WHATSAPP_SERVICE" ]; then
-            # Verificar se contém o fix correto (filtro por @c.us no Node.js, não no browser)
-            if grep -q "filter((chat: any) => chat.id.includes('@c.us'))" "$WHATSAPP_SERVICE"; then
-              echo "  ✅ Fix do WhatsApp presente (filtro @c.us no Node.js)"
-            else
-              echo "  ⚠️  AVISO: Fix do WhatsApp pode estar desatualizado!"
-              echo "  Verificando linhas críticas..."
-              grep -n "getAllConversations\|filter.*@c.us\|filter.*isGroup" "$WHATSAPP_SERVICE" | head -5 || true
-            fi
+            echo "  ✅ whatsapp-web.js service presente"
           else
-            echo "  ❌ ERRO: whatsappService.ts não encontrado!"
+            echo "  ❌ ERRO: whatsappWebJS.service.ts não encontrado!"
             exit 1
           fi
 
@@ -506,19 +499,16 @@ jobs:
           docker exec ferraco-crm-vps sh -c "echo \"  Build Timestamp: \$BUILD_TIMESTAMP\"" || echo "  ⚠️  BUILD_TIMESTAMP não encontrado"
           docker exec ferraco-crm-vps sh -c "echo \"  Git Commit: \$GIT_COMMIT\"" || echo "  ⚠️  GIT_COMMIT não encontrado"
 
-          # Verificar se o fix do WhatsApp está no container
+          # Verificar se o whatsapp-web.js está no container
           echo ""
-          echo "🔍 Verificando fix do WhatsApp no container..."
-          if docker exec ferraco-crm-vps grep -q "filter((chat: any) => chat.id.includes('@c.us'))" /app/backend/src/services/whatsappService.ts 2>/dev/null; then
-            echo "  ✅ Fix do WhatsApp PRESENTE no container (filtro @c.us)"
-          elif docker exec ferraco-crm-vps grep -q "filter((chat: any) => chat.id.includes('@c.us'))" /app/backend/dist/services/whatsappService.js 2>/dev/null; then
-            echo "  ✅ Fix do WhatsApp PRESENTE no container (código compilado)"
+          echo "🔍 Verificando whatsapp-web.js no container..."
+          if docker exec ferraco-crm-vps test -f /app/backend/src/services/whatsappWebJS.service.ts 2>/dev/null; then
+            echo "  ✅ whatsapp-web.js service PRESENTE no container (TypeScript)"
+          elif docker exec ferraco-crm-vps test -f /app/backend/dist/services/whatsappWebJS.service.js 2>/dev/null; then
+            echo "  ✅ whatsapp-web.js service PRESENTE no container (compilado)"
           else
-            echo "  ⚠️  AVISO: Fix do WhatsApp pode NÃO estar presente!"
-            echo "  Verificando código no container..."
-            docker exec ferraco-crm-vps sh -c "grep -n 'getAllConversations' /app/backend/src/services/whatsappService.ts | head -3" 2>/dev/null || \
-            docker exec ferraco-crm-vps sh -c "grep -n 'getAllConversations' /app/backend/dist/services/whatsappService.js | head -3" 2>/dev/null || \
-              echo "  ❌ Arquivo não encontrado no container!"
+            echo "  ❌ ERRO: whatsappWebJS.service não encontrado no container!"
+            exit 1
           fi
 
           echo "✅ Verificação de código concluída"
