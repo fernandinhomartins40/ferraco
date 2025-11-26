@@ -12,7 +12,6 @@
  */
 
 import { prisma } from '../config/database';
-import { whatsappService } from './whatsappService';
 import { whatsappWebJSService } from './whatsappWebJS.service';
 import { logger } from '../utils/logger';
 import { whatsappAntiSpamService } from './whatsappAntiSpam.service';
@@ -25,15 +24,6 @@ export class WhatsAppAutomationService {
   private isProcessingQueue = false;
   private readonly MAX_RETRY_COUNT = 3;
   private readonly RETRY_DELAY_MS = 60000; // 1 minuto
-
-  /**
-   * ✅ NOVO: Helper para obter serviço WhatsApp ativo baseado na env var
-   * Permite suporte dinâmico para WPPConnect (legacy) e whatsapp-web.js (2025)
-   */
-  private getActiveWhatsAppService() {
-    const useWhatsAppWebJS = process.env.USE_WHATSAPP_WEB_JS === 'true';
-    return useWhatsAppWebJS ? whatsappWebJSService : whatsappService;
-  }
 
   /**
    * Cria automação WhatsApp a partir de um lead capturado
@@ -1029,7 +1019,7 @@ Até breve!`
   ): Promise<void> {
     let success = false;
     try {
-      const service = this.getActiveWhatsAppService();
+      const service = whatsappWebJSService;
       const result = await service.sendTextMessage(phone, content);
       success = true;
 
@@ -1070,7 +1060,7 @@ Até breve!`
     order: number
   ): Promise<void> {
     try {
-      const service = this.getActiveWhatsAppService();
+      const service = whatsappWebJSService;
       const msgId = await service.sendImage(phone, imageUrl);
 
       await prisma.whatsAppAutomationMessage.create({
@@ -1107,7 +1097,7 @@ Até breve!`
     order: number
   ): Promise<void> {
     try {
-      const service = this.getActiveWhatsAppService();
+      const service = whatsappWebJSService;
       const msgId = await service.sendVideo(phone, videoUrl);
 
       await prisma.whatsAppAutomationMessage.create({

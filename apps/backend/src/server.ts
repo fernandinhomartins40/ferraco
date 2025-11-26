@@ -5,9 +5,7 @@ import { PORT, NODE_ENV } from './config/constants';
 import { logger } from './utils/logger';
 import { ensureDefaultKanbanColumn } from './scripts/ensure-kanban-columns';
 import { ensureDefaultChatbotConfig } from './scripts/ensure-chatbot-config';
-import { whatsappService } from './services/whatsappService';
 import { whatsappWebJSService } from './services/whatsappWebJS.service';
-import whatsappChatService from './services/whatsappChatService';
 import { chatbotAutosaveService } from './modules/chatbot/chatbot-autosave.service';
 import { automationSchedulerService } from './services/automationScheduler.service';
 import { Server as SocketIOServer } from 'socket.io';
@@ -24,18 +22,9 @@ async function startServer(): Promise<void> {
     // Garantir que a configuração do chatbot existe
     await ensureDefaultChatbotConfig();
 
-    // Inicializar WhatsApp Service
-    // USE_WHATSAPP_WEB_JS=true para usar whatsapp-web.js (recomendado)
-    // USE_WHATSAPP_WEB_JS=false para usar WPPConnect (legacy)
-    const useWhatsAppWebJS = process.env.USE_WHATSAPP_WEB_JS === 'true';
-
-    if (useWhatsAppWebJS) {
-      logger.info('📱 Usando whatsapp-web.js (sem stack overflow)');
-      await whatsappWebJSService.initialize();
-    } else {
-      logger.info('📱 Usando WPPConnect (legacy)');
-      await whatsappService.initialize();
-    }
+    // ✅ Inicializar WhatsApp Service (whatsapp-web.js)
+    logger.info('📱 Inicializando WhatsApp Web JS...');
+    await whatsappWebJSService.initialize();
 
     // ⭐ Inicializar Auto-save Service do Chatbot (verifica a cada 2 minutos)
     chatbotAutosaveService.start(2);
@@ -80,15 +69,8 @@ async function startServer(): Promise<void> {
       });
     });
 
-    // Pass Socket.io instance to WhatsAppChatService, WhatsAppService and AutomationScheduler
-    whatsappChatService.setSocketServer(io);
-
-    if (useWhatsAppWebJS) {
-      whatsappWebJSService.setSocketIO(io);
-    } else {
-      whatsappService.setSocketServer(io);
-    }
-
+    // ✅ Pass Socket.io instance to WhatsApp Service and Automation Scheduler
+    whatsappWebJSService.setSocketIO(io);
     automationSchedulerService.setSocketIO(io);
 
     // Start server
@@ -112,12 +94,8 @@ async function startServer(): Promise<void> {
         // Parar automation scheduler
         automationSchedulerService.stop();
 
-        // Desconectar WhatsApp
-        if (useWhatsAppWebJS) {
-          await whatsappWebJSService.disconnect();
-        } else {
-          await whatsappService.disconnect();
-        }
+        // ✅ Desconectar WhatsApp
+        await whatsappWebJSService.disconnect();
 
         await disconnectDatabase();
 

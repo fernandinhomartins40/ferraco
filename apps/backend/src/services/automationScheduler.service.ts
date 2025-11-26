@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
-import { whatsappService } from './whatsappService';
+import { whatsappWebJSService } from './whatsappWebJS.service';
 import { Server as SocketIOServer } from 'socket.io';
 
 const prisma = new PrismaClient();
@@ -184,7 +184,7 @@ class AutomationSchedulerService {
       }
 
       // Verificar se WhatsApp está conectado
-      const isConnected = whatsappService.isWhatsAppConnected();
+      const isConnected = whatsappWebJSService.isWhatsAppConnected();
       if (!isConnected) {
         logger.warn('WhatsApp não conectado, pulando envio');
 
@@ -243,11 +243,11 @@ class AutomationSchedulerService {
       logger.debug(`📝 Conteúdo: ${messageContent.substring(0, 50)}...`);
 
       // ⭐ CRÍTICO: Validar se WhatsApp está conectado ANTES de tentar enviar
-      if (!whatsappService.isWhatsAppConnected()) {
+      if (!whatsappWebJSService.isWhatsAppConnected()) {
         throw new Error('WhatsApp não está conectado. Impossível enviar mensagem.');
       }
 
-      const result = await whatsappService.sendTextMessage(lead.phone, messageContent);
+      const result = await whatsappWebJSService.sendTextMessage(lead.phone, messageContent);
 
       // ⭐ CRÍTICO: Validar se mensagem foi realmente enviada
       if (!result || !result.id) {
@@ -269,9 +269,9 @@ class AutomationSchedulerService {
           let mediaResult;
 
           if (column.messageTemplate.mediaType === 'IMAGE') {
-            mediaResult = await whatsappService.sendImage(lead.phone, mediaUrl);
+            mediaResult = await whatsappWebJSService.sendImage(lead.phone, mediaUrl);
           } else if (column.messageTemplate.mediaType === 'VIDEO') {
-            mediaResult = await whatsappService.sendVideo(lead.phone, mediaUrl);
+            mediaResult = await whatsappWebJSService.sendVideo(lead.phone, mediaUrl);
           }
 
           // ⭐ Validar envio de mídia

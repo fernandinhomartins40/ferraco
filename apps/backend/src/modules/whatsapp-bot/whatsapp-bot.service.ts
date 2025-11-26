@@ -14,7 +14,7 @@
 
 import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
-import { whatsappService } from '../../services/whatsappService';
+import { whatsappWebJSService } from '../../services/whatsappWebJS.service';
 import {
   getWhatsAppBotStepById,
   getNextWhatsAppBotStep,
@@ -217,7 +217,7 @@ export class WhatsAppBotService {
       }
 
       // Enviar mensagem
-      await whatsappService.sendTextMessage(botSession.phone, messageText);
+      await whatsappWebJSService.sendTextMessage(botSession.phone, messageText);
 
       // Salvar mensagem do bot
       await prisma.whatsAppBotMessage.create({
@@ -236,7 +236,7 @@ export class WhatsAppBotService {
           .map(opt => opt.label)
           .join('\n');
 
-        await whatsappService.sendTextMessage(
+        await whatsappWebJSService.sendTextMessage(
           botSession.phone,
           optionsText
         );
@@ -366,7 +366,7 @@ export class WhatsAppBotService {
 
       if (!product) {
         logger.warn('Nenhum produto cadastrado');
-        await whatsappService.sendTextMessage(
+        await whatsappWebJSService.sendTextMessage(
           botSession.phone,
           '📦 Nossos produtos estão sendo atualizados. Um especialista vai te enviar os materiais em breve!'
         );
@@ -377,7 +377,7 @@ export class WhatsAppBotService {
 
       // 1. Enviar descrição do produto
       const descriptionMessage = `📦 **${product.name}**\n\n${product.description || 'Produto de alta qualidade'}`;
-      await whatsappService.sendTextMessage(botSession.phone, descriptionMessage);
+      await whatsappWebJSService.sendTextMessage(botSession.phone, descriptionMessage);
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       // 2. Enviar imagens (se houver)
@@ -386,7 +386,7 @@ export class WhatsAppBotService {
 
         for (const imageUrl of product.images.slice(0, 3)) { // Máximo 3 imagens
           try {
-            await whatsappService.sendImage(
+            await whatsappWebJSService.sendImage(
               botSession.phone,
               imageUrl,
               product.name
@@ -402,14 +402,14 @@ export class WhatsAppBotService {
       // 3. Enviar características/benefícios
       if (product.features && Array.isArray(product.features) && product.features.length > 0) {
         const featuresMessage = `✅ **Características:**\n\n${product.features.map((f: string) => `• ${f}`).join('\n')}`;
-        await whatsappService.sendTextMessage(botSession.phone, featuresMessage);
+        await whatsappWebJSService.sendTextMessage(botSession.phone, featuresMessage);
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
       // 4. Enviar preço (se disponível)
       if (product.price) {
         const priceMessage = `💰 **Valor:** ${product.price}\n\n_Condições especiais disponíveis. Consulte nosso time!_`;
-        await whatsappService.sendTextMessage(botSession.phone, priceMessage);
+        await whatsappWebJSService.sendTextMessage(botSession.phone, priceMessage);
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
@@ -418,9 +418,9 @@ export class WhatsAppBotService {
         try {
           // Nota: WPPConnect tem sendFile para documentos
           logger.info(`📄 PDF disponível: ${product.pdfUrl}`);
-          // await whatsappService.sendFile(botSession.phone, product.pdfUrl, 'document', `${product.name}.pdf`);
+          // await whatsappWebJSService.sendFile(botSession.phone, product.pdfUrl, 'document', `${product.name}.pdf`);
           // Por enquanto, enviar como mensagem de texto com link
-          await whatsappService.sendTextMessage(
+          await whatsappWebJSService.sendTextMessage(
             botSession.phone,
             `📄 Catálogo completo: ${product.pdfUrl}`
           );
@@ -432,7 +432,7 @@ export class WhatsAppBotService {
       // 6. Enviar vídeo (se houver)
       if (product.videoUrl) {
         try {
-          await whatsappService.sendVideo(
+          await whatsappWebJSService.sendVideo(
             botSession.phone,
             product.videoUrl,
             `🎥 Veja ${product.name} em ação!`
@@ -448,7 +448,7 @@ export class WhatsAppBotService {
     } catch (error) {
       logger.error('❌ Erro ao enviar materiais:', error);
       // Enviar mensagem de erro amigável
-      await whatsappService.sendTextMessage(
+      await whatsappWebJSService.sendTextMessage(
         botSession.phone,
         'Ops, tive um problema ao enviar os materiais. Vou te conectar com a equipe! 👨‍💼'
       );
@@ -464,7 +464,7 @@ export class WhatsAppBotService {
 
       if (!chatbotConfig?.companyAddress) {
         logger.warn('Endereço não configurado');
-        await whatsappService.sendTextMessage(
+        await whatsappWebJSService.sendTextMessage(
           botSession.phone,
           `📍 Entre em contato conosco:\n\n${chatbotConfig?.companyPhone || 'Telefone não disponível'}`
         );
@@ -473,12 +473,12 @@ export class WhatsAppBotService {
 
       // Enviar endereço como texto
       const locationMessage = `📍 **Nosso endereço:**\n\n${chatbotConfig.companyAddress}\n\n📞 ${chatbotConfig.companyPhone || ''}`;
-      await whatsappService.sendTextMessage(botSession.phone, locationMessage);
+      await whatsappWebJSService.sendTextMessage(botSession.phone, locationMessage);
 
       // TODO: Se tiver coordenadas GPS configuradas, pode enviar localização real:
       // const latitude = chatbotConfig.latitude || '-23.5505';
       // const longitude = chatbotConfig.longitude || '-46.6333';
-      // await whatsappService.sendLocation(botSession.phone, latitude, longitude);
+      // await whatsappWebJSService.sendLocation(botSession.phone, latitude, longitude);
 
       logger.info(`📍 Localização enviada para ${botSession.phone}`);
 
@@ -537,7 +537,7 @@ export class WhatsAppBotService {
    */
   private async sendClarificationMessage(phone: string, currentStep: WhatsAppBotStep | undefined): Promise<void> {
     const message = `Desculpa, não entendi sua resposta. 🤔\n\nPode escolher uma das opções acima ou digitar sua dúvida?`;
-    await whatsappService.sendTextMessage(phone, message);
+    await whatsappWebJSService.sendTextMessage(phone, message);
   }
 
   /**
