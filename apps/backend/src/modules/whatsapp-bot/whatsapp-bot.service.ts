@@ -416,16 +416,22 @@ export class WhatsAppBotService {
       // 5. Enviar PDF/documentos (se houver)
       if (product.pdfUrl) {
         try {
-          // Nota: WPPConnect tem sendFile para documentos
-          logger.info(`📄 PDF disponível: ${product.pdfUrl}`);
-          // await whatsappWebJSService.sendFile(botSession.phone, product.pdfUrl, 'document', `${product.name}.pdf`);
-          // Por enquanto, enviar como mensagem de texto com link
+          logger.info(`📄 Enviando PDF: ${product.pdfUrl}`);
+          // ✅ IMPLEMENTADO: Enviar PDF como documento usando whatsapp-web.js
+          await whatsappWebJSService.sendFile(
+            botSession.phone,
+            product.pdfUrl,
+            `${product.name}.pdf`,
+            `📄 Catálogo completo: ${product.name}`
+          );
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (error) {
+          logger.error('Erro ao enviar PDF:', error);
+          // Fallback: enviar como link de texto
           await whatsappWebJSService.sendTextMessage(
             botSession.phone,
             `📄 Catálogo completo: ${product.pdfUrl}`
           );
-        } catch (error) {
-          logger.error('Erro ao enviar PDF:', error);
         }
       }
 
@@ -474,11 +480,21 @@ export class WhatsAppBotService {
       // Enviar endereço como texto
       const locationMessage = `📍 **Nosso endereço:**\n\n${chatbotConfig.companyAddress}\n\n📞 ${chatbotConfig.companyPhone || ''}`;
       await whatsappWebJSService.sendTextMessage(botSession.phone, locationMessage);
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // TODO: Se tiver coordenadas GPS configuradas, pode enviar localização real:
-      // const latitude = chatbotConfig.latitude || '-23.5505';
-      // const longitude = chatbotConfig.longitude || '-46.6333';
-      // await whatsappWebJSService.sendLocation(botSession.phone, latitude, longitude);
+      // ✅ IMPLEMENTADO: Enviar localização GPS real se houver coordenadas configuradas
+      if (chatbotConfig.latitude && chatbotConfig.longitude) {
+        try {
+          await whatsappWebJSService.sendLocation(
+            botSession.phone,
+            parseFloat(chatbotConfig.latitude as any),
+            parseFloat(chatbotConfig.longitude as any)
+          );
+          logger.info(`📍 Localização GPS enviada: ${chatbotConfig.latitude}, ${chatbotConfig.longitude}`);
+        } catch (error) {
+          logger.error('Erro ao enviar localização GPS:', error);
+        }
+      }
 
       logger.info(`📍 Localização enviada para ${botSession.phone}`);
 
@@ -504,14 +520,49 @@ export class WhatsAppBotService {
       });
 
       // Atualizar lead
-      await prisma.lead.update({
+      const lead = await prisma.lead.update({
         where: { id: botSession.leadId },
         data: {
           status: 'EM_ATENDIMENTO',
         },
       });
 
-      // TODO: Notificar equipe de atendimento
+      // ✅ IMPLEMENTADO: Notificar equipe de atendimento
+      try {
+        // Buscar usuários da equipe de atendimento (role ATENDENTE ou ADMIN)
+        const teamUsers = await prisma.user.findMany({
+          where: {
+            role: {
+              in: ['ATENDENTE', 'ADMIN'],
+            },
+          },
+        });
+
+        // Criar notificação para cada membro da equipe
+        const notificationPromises = teamUsers.map(user =>
+          prisma.notification.create({
+            data: {
+              userId: user.id,
+              title: '👨‍💼 Novo atendimento humano solicitado',
+              message: `${lead.name} (${botSession.phone}) solicitou atendimento humano via chatbot`,
+              channel: 'APP',
+              data: JSON.stringify({
+                leadId: botSession.leadId,
+                phone: botSession.phone,
+                source: 'WHATSAPP_BOT',
+              }),
+            },
+          })
+        );
+
+        await Promise.all(notificationPromises);
+
+        logger.info(`✅ ${teamUsers.length} notificações enviadas para equipe de atendimento`);
+
+      } catch (error) {
+        logger.error('Erro ao criar notificações:', error);
+      }
+
       logger.info(`✅ Lead ${botSession.leadId} transferido para atendimento humano`);
 
     } catch (error) {
@@ -520,13 +571,82 @@ export class WhatsAppBotService {
   }
 
   /**
-   * Agenda follow-up
+   * ✅ IMPLEMENTADO: Agenda follow-up usando Communication com status SCHEDULED
    */
   private async scheduleFollowup(botSession: any, data: any): Promise<void> {
     try {
       const delay = data?.delay || '1day';
-      // TODO: Implementar agendamento com sistema de tarefas
-      logger.info(`📅 Follow-up agendado para ${botSession.phone} em ${delay}`);
+
+      // Calcular timestamp do follow-up
+      const followupDate = new Date();
+      switch (delay) {
+        case '1hour':
+          followupDate.setHours(followupDate.getHours() + 1);
+          break;
+        case '4hours':
+          followupDate.setHours(followupDate.getHours() + 4);
+          break;
+        case '1day':
+          followupDate.setDate(followupDate.getDate() + 1);
+          break;
+        case '3days':
+          followupDate.setDate(followupDate.getDate() + 3);
+          break;
+        case '1week':
+          followupDate.setDate(followupDate.getDate() + 7);
+          break;
+        default:
+          followupDate.setDate(followupDate.getDate() + 1);
+      }
+
+      // Criar comunicação agendada
+      await prisma.communication.create({
+        data: {
+          leadId: botSession.leadId,
+          type: 'WHATSAPP',
+          direction: 'OUTBOUND',
+          status: 'SCHEDULED',
+          content: data?.message || 'Follow-up automático do chatbot',
+          metadata: JSON.stringify({
+            scheduledFor: followupDate.toISOString(),
+            delay,
+            source: 'WHATSAPP_BOT',
+            botSessionId: botSession.id,
+            phone: botSession.phone,
+          }),
+          timestamp: followupDate, // Data agendada
+        },
+      });
+
+      // Criar notificação para equipe
+      const teamUsers = await prisma.user.findMany({
+        where: {
+          role: {
+            in: ['ATENDENTE', 'ADMIN'],
+          },
+        },
+      });
+
+      await Promise.all(
+        teamUsers.map(user =>
+          prisma.notification.create({
+            data: {
+              userId: user.id,
+              title: '📅 Follow-up agendado',
+              message: `Follow-up agendado para ${botSession.phone} em ${delay}`,
+              channel: 'APP',
+              data: JSON.stringify({
+                leadId: botSession.leadId,
+                scheduledFor: followupDate.toISOString(),
+                delay,
+              }),
+            },
+          })
+        )
+      );
+
+      logger.info(`📅 Follow-up agendado para ${botSession.phone} em ${delay} (${followupDate.toISOString()})`);
+
     } catch (error) {
       logger.error('Erro ao agendar follow-up:', error);
     }

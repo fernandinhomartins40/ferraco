@@ -161,12 +161,18 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/account', authenticate, async (req: Request, res: Response) => {
   try {
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // getAccountInfo não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'getAccountInfo() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    const accountInfo = await whatsappWebJSService.getAccountInfo();
+
+    res.json({
+      success: true,
+      data: accountInfo,
     });
 
   } catch (error: any) {
@@ -530,7 +536,7 @@ router.post('/send-audio', authenticate, async (req: Request, res: Response) => 
  * Body:
  * {
  *   "messageId": "true_5511999999999@c.us_3EB0...",
- *   "emoji": "👍" ou false para remover
+ *   "emoji": "👍" ou "" para remover
  * }
  */
 router.post('/send-reaction', authenticate, async (req: Request, res: Response) => {
@@ -545,12 +551,25 @@ router.post('/send-reaction', authenticate, async (req: Request, res: Response) 
       });
     }
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // sendReaction não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'sendReaction() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    // Enviar ou remover reação
+    if (emoji) {
+      await whatsappWebJSService.sendReaction(messageId, emoji);
+    } else {
+      await whatsappWebJSService.removeReaction(messageId);
+    }
+
+    res.json({
+      success: true,
+      message: emoji ? 'Reação enviada com sucesso' : 'Reação removida com sucesso',
+      messageId,
+      emoji,
     });
 
   } catch (error: any) {
@@ -584,12 +603,19 @@ router.post('/mark-read', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // markAsRead não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'markAsRead() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    await whatsappWebJSService.markChatAsRead(chatId);
+
+    res.json({
+      success: true,
+      message: 'Chat marcado como lido',
+      chatId,
     });
 
   } catch (error: any) {
@@ -623,12 +649,19 @@ router.post('/mark-unread', authenticate, async (req: Request, res: Response) =>
       });
     }
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // markAsUnread não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'markAsUnread() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    await whatsappWebJSService.markChatAsUnread(chatId);
+
+    res.json({
+      success: true,
+      message: 'Chat marcado como não lido',
+      chatId,
     });
 
   } catch (error: any) {
@@ -647,29 +680,40 @@ router.post('/mark-unread', authenticate, async (req: Request, res: Response) =>
  *
  * Body:
  * {
- *   "chatId": "5511999999999@c.us",
- *   "messageId": "true_5511999999999@c.us_3EB0..." ou ["msg1", "msg2"],
+ *   "messageId": "true_5511999999999@c.us_3EB0...",
  *   "forEveryone": true ou false (opcional, padrão: false)
  * }
  */
 router.post('/delete-message', authenticate, async (req: Request, res: Response) => {
   try {
-    const { chatId, messageId, forEveryone } = req.body;
+    const { messageId, forEveryone = false } = req.body;
 
-    if (!chatId || !messageId) {
+    if (!messageId) {
       return res.status(400).json({
         success: false,
         error: 'Parâmetros inválidos',
-        message: 'Os campos "chatId" e "messageId" são obrigatórios',
+        message: 'O campo "messageId" é obrigatório',
       });
     }
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // deleteMessage não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'deleteMessage() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    // Suportar array de messageIds
+    const messageIds = Array.isArray(messageId) ? messageId : [messageId];
+
+    for (const msgId of messageIds) {
+      await whatsappWebJSService.deleteMessage(msgId, forEveryone);
+    }
+
+    res.json({
+      success: true,
+      message: `${messageIds.length} mensagem(ns) deletada(s)`,
+      forEveryone,
     });
 
   } catch (error: any) {
@@ -737,13 +781,12 @@ router.post('/send-file', authenticate, async (req: Request, res: Response) => {
  * {
  *   "to": "5511999999999",
  *   "latitude": -23.5505,
- *   "longitude": -46.6333,
- *   "name": "São Paulo, SP" (opcional)
+ *   "longitude": -46.6333
  * }
  */
 router.post('/send-location', authenticate, async (req: Request, res: Response) => {
   try {
-    const { to, latitude, longitude, name } = req.body;
+    const { to, latitude, longitude } = req.body;
 
     if (!to || latitude === undefined || longitude === undefined) {
       return res.status(400).json({
@@ -753,12 +796,19 @@ router.post('/send-location', authenticate, async (req: Request, res: Response) 
       });
     }
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // sendLocation não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'sendLocation() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    const result = await whatsappWebJSService.sendLocation(to, latitude, longitude);
+
+    res.json({
+      success: true,
+      message: 'Localização enviada com sucesso',
+      data: result,
     });
 
   } catch (error: any) {
@@ -778,13 +828,12 @@ router.post('/send-location', authenticate, async (req: Request, res: Response) 
  * Body:
  * {
  *   "to": "5511999999999",
- *   "contactId": "5511888888888@c.us",
- *   "name": "João Silva" (opcional)
+ *   "contactId": "5511888888888@c.us"
  * }
  */
 router.post('/send-contact', authenticate, async (req: Request, res: Response) => {
   try {
-    const { to, contactId, name } = req.body;
+    const { to, contactId } = req.body;
 
     if (!to || !contactId) {
       return res.status(400).json({
@@ -794,12 +843,19 @@ router.post('/send-contact', authenticate, async (req: Request, res: Response) =
       });
     }
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // sendContactVcard não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'sendContactVcard() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    const result = await whatsappWebJSService.sendContact(to, contactId);
+
+    res.json({
+      success: true,
+      message: 'Contato enviado com sucesso',
+      data: result,
     });
 
   } catch (error: any) {
@@ -888,22 +944,30 @@ router.get('/starred-messages', authenticate, async (req: Request, res: Response
  */
 router.post('/archive-chat', authenticate, async (req: Request, res: Response) => {
   try {
-    const { chatId, archive } = req.body;
+    const { chatId, archive = true } = req.body;
 
-    if (!chatId || archive === undefined) {
+    if (!chatId) {
       return res.status(400).json({
         success: false,
         error: 'Parâmetros inválidos',
-        message: 'Os campos "chatId" e "archive" são obrigatórios',
+        message: 'O campo "chatId" é obrigatório',
       });
     }
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // archiveChat não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'archiveChat() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
+    await whatsappWebJSService.archiveChat(chatId, archive);
+
+    res.json({
+      success: true,
+      message: `Conversa ${archive ? 'arquivada' : 'desarquivada'} com sucesso`,
+      chatId,
+      archive,
     });
 
   } catch (error: any) {
@@ -976,14 +1040,21 @@ router.post('/download-media', authenticate, async (req: Request, res: Response)
       });
     }
 
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
     logger.info(`📥 Download de mídia solicitado: ${messageId}`);
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // downloadMedia não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'downloadMedia() não implementado em whatsapp-web.js',
+    const media = await whatsappWebJSService.downloadMedia(messageId);
+
+    // Retornar mídia como base64
+    res.json({
+      success: true,
+      data: media,
     });
 
   } catch (error: any) {
@@ -1020,14 +1091,22 @@ router.post('/forward-message', authenticate, async (req: Request, res: Response
       });
     }
 
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
     logger.info(`📨 Encaminhando mensagem ${messageId} para:`, to);
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // forwardMessage não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'forwardMessage() não implementado em whatsapp-web.js',
+    await whatsappWebJSService.forwardMessage(messageId, to);
+
+    res.json({
+      success: true,
+      message: 'Mensagem encaminhada com sucesso',
+      messageId,
+      to,
     });
 
   } catch (error: any) {
@@ -1057,14 +1136,22 @@ router.post('/pin-chat', authenticate, async (req: Request, res: Response) => {
       });
     }
 
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
     logger.info(`📌 ${pin ? 'Fixando' : 'Desfixando'} chat: ${chatId}`);
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // pinChat não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'pinChat() não implementado em whatsapp-web.js',
+    await whatsappWebJSService.pinChat(chatId, pin);
+
+    res.json({
+      success: true,
+      message: `Chat ${pin ? 'fixado' : 'desfixado'} com sucesso`,
+      chatId,
+      pin,
     });
 
   } catch (error: any) {
@@ -1083,14 +1170,21 @@ router.post('/pin-chat', authenticate, async (req: Request, res: Response) => {
  */
 router.get('/contacts', authenticate, async (req: Request, res: Response) => {
   try {
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
     logger.info('📇 Listando contatos do WhatsApp');
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // getContacts não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'getContacts() não implementado em whatsapp-web.js',
+    const contacts = await whatsappWebJSService.getAllContacts();
+
+    res.json({
+      success: true,
+      data: contacts,
+      count: contacts.length,
     });
 
   } catch (error: any) {
@@ -1120,14 +1214,21 @@ router.post('/contacts/check', authenticate, async (req: Request, res: Response)
       });
     }
 
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado',
+      });
+    }
+
     logger.info('🔍 Verificando números no WhatsApp:', phoneNumbers);
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // checkNumbersOnWhatsApp não está disponível no whatsappWebJSService
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'checkNumbersOnWhatsApp() não implementado em whatsapp-web.js',
+    const results = await whatsappWebJSService.checkNumbersOnWhatsApp(phoneNumbers);
+
+    res.json({
+      success: true,
+      data: results,
+      count: results.length,
     });
 
   } catch (error: any) {
