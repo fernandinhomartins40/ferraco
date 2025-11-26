@@ -622,32 +622,51 @@ class WhatsAppWebJSService {
       const startTime = Date.now();
       logger.info(`📞 Buscando ${limit} conversas...`);
 
+      // ✅ FIX: Usar método alternativo via Puppeteer direto (contorna bug do getChats)
       const getChatsStart = Date.now();
-      const chats = await this.client!.getChats();
+      const chats = await this.client!.pupPage!.evaluate(() => {
+        // @ts-ignore - Código roda no browser via Puppeteer
+        // Acessar Store do WhatsApp Web diretamente
+        // @ts-ignore
+        const Store = window.Store || window.WWebJS?.getStore?.();
+        if (!Store || !Store.Chat) {
+          throw new Error('WhatsApp Store não disponível');
+        }
+
+        // Buscar todos os chats
+        const allChats = Store.Chat.getModelsArray();
+
+        // Mapear para formato simples (sem objetos complexos do Puppeteer)
+        return allChats.map((chat: any) => ({
+          id: chat.id?._serialized || chat.id,
+          name: chat.name || chat.contact?.name || '',
+          isGroup: chat.isGroup || false,
+          unreadCount: chat.unreadCount || 0,
+          timestamp: chat.t || Date.now() / 1000,
+          lastMessage: chat.lastReceivedKey ? {
+            body: chat.lastReceivedKey.fromMe ? '' : (chat.lastMessage?.body || ''),
+            timestamp: chat.t || 0,
+            fromMe: chat.lastReceivedKey.fromMe || false
+          } : null
+        }));
+      });
+
       const getChatsTime = Date.now() - getChatsStart;
-      logger.info(`⏱️  getChats: ${getChatsTime}ms (${chats.length} total)`);
+      logger.info(`⏱️  getChats (via Puppeteer): ${getChatsTime}ms (${chats.length} total)`);
 
       // Filtrar apenas conversas privadas (não grupos)
-      const privateChats = chats.filter((chat: WWebChat) => !chat.isGroup).slice(0, limit);
+      const privateChats = chats.filter((chat: any) => !chat.isGroup).slice(0, limit);
       logger.info(`📊 Conversas privadas: ${privateChats.length}/${chats.length}`);
 
       const formatStart = Date.now();
-      const conversations: FormattedConversation[] = privateChats.map((chat: WWebChat) => {
-        const lastMessage = chat.lastMessage;
-
+      const conversations: FormattedConversation[] = privateChats.map((chat: any) => {
         return {
-          id: chat.id._serialized,
-          name: chat.name || chat.id.user,
-          phone: chat.id.user,
+          id: chat.id,
+          name: chat.name || chat.id.replace('@c.us', ''),
+          phone: chat.id.replace('@c.us', ''),
           isGroup: chat.isGroup,
           unreadCount: chat.unreadCount || 0,
-          lastMessage: lastMessage
-            ? {
-                body: lastMessage.body || '',
-                timestamp: lastMessage.timestamp || 0,
-                fromMe: lastMessage.fromMe || false,
-              }
-            : null,
+          lastMessage: chat.lastMessage,
           timestamp: chat.timestamp || 0,
         };
       });

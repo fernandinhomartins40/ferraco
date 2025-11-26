@@ -117,7 +117,22 @@
       "Bash(openssl s_client:*)",
       "Bash(openssl:*)",
       "Bash(git -C \"c:\\Projetos Cursor\\ferraco\" status --porcelain)",
-      "Bash(npx shadcn@latest add switch --overwrite)"
+      "Bash(npx shadcn@latest add switch --overwrite)",
+      "Bash(if [ -f \"apps/backend/.env\" ])",
+      "Bash(then grep \"^PORT=\" apps/backend/.env)",
+      "Bash(else echo \"Arquivo .env não existe\")",
+      "Bash(.env)",
+      "Bash(if [ ! -f \"prisma/dev.db\" ])",
+      "Bash(then npx prisma migrate dev --name init)",
+      "Bash(.gitignore)",
+      "Bash(echo:*)",
+      "Bash(if [ -f .env ])",
+      "Bash(then echo \"exists\")",
+      "Bash(else echo \"not found\")",
+      "Bash(sed:*)",
+      "Bash(/tmp/whatsapp_working.ts)",
+      "Bash(then grep \"USE_WHATSAPP_WEB_JS\" apps/backend/.env)",
+      "Bash(if [ -f apps/backend/.env ])"
     ],
     "deny": [],
     "ask": []

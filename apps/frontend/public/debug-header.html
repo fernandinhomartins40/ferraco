@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Header Debug Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui; padding: 20px; }
+    .test-section { margin: 20px 0; padding: 20px; border: 2px solid #ccc; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 16px; }
+    .log { background: #f0f0f0; padding: 10px; margin: 10px 0; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    .overlay-test { position: relative; }
+    .blocking-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,0,0,0.1); z-index: 10; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Header Debug Test</h1>
+
+  <div class="test-section">
+    <h2>Test 1: Basic Button Click</h2>
+    <button id="test1" onclick="logTest('Test 1: Button clicked!')">Click Me</button>
+    <div id="log1" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Button with Arrow Function</h2>
+    <button id="test2">Click Me</button>
+    <div id="log2" class="log"></div>
+  </div>
+
+  <div class="test-section overlay-test">
+    <h2>Test 3: Button with Overlay (should NOT work)</h2>
+    <button id="test3">Click Me (blocked)</button>
+    <div class="blocking-layer" id="blocker"></div>
+    <div id="log3" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Button with pointer-events fix</h2>
+    <div style="position: relative;">
+      <button id="test4">Click Me (with fix)</button>
+      <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,255,0,0.1); z-index: 10; pointer-events: none;"></div>
+    </div>
+    <div id="log4" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Inspect Element at Cursor</h2>
+    <button id="test5">Hover over me and check console</button>
+    <div id="log5" class="log"></div>
+    <p>Open DevTools Console and hover over the button. It will log what element you're hovering.</p>
+  </div>
+
+  <script>
+    function logTest(message, logId = 'log1') {
+      const log = document.getElementById(logId);
+      const time = new Date().toLocaleTimeString();
+      log.innerHTML += `[${time}] ${message}<br>`;
+      console.log(message);
+    }
+
+    // Test 2
+    document.getElementById('test2').addEventListener('click', (e) => {
+      logTest('Test 2: Arrow function click!', 'log2');
+      logTest(`Event target: ${e.target.tagName} id="${e.target.id}"`, 'log2');
+    });
+
+    // Test 3
+    document.getElementById('test3').addEventListener('click', () => {
+      logTest('Test 3: This should NOT fire if blocked!', 'log3');
+    });
+
+    document.getElementById('blocker').addEventListener('click', () => {
+      logTest('Test 3: Blocker layer clicked (this is the problem!)', 'log3');
+    });
+
+    // Test 4
+    document.getElementById('test4').addEventListener('click', () => {
+      logTest('Test 4: Click worked with pointer-events: none!', 'log4');
+    });
+
+    // Test 5 - Hover detection
+    let hoverInterval;
+    document.getElementById('test5').addEventListener('mouseenter', function() {
+      logTest('Test 5: Mouse entered button area', 'log5');
+      hoverInterval = setInterval(() => {
+        const elem = document.elementFromPoint(event.clientX, event.clientY);
+        console.log('🎯 Element at cursor:', elem);
+        logTest(`Element at cursor: ${elem?.tagName} ${elem?.id ? 'id="'+elem.id+'"' : ''} ${elem?.className ? 'class="'+elem.className+'"' : ''}`, 'log5');
+      }, 500);
+    });
+
+    document.getElementById('test5').addEventListener('mouseleave', function() {
+      clearInterval(hoverInterval);
+      logTest('Test 5: Mouse left button area', 'log5');
+    });
+
+    // Global click detector
+    document.addEventListener('click', function(e) {
+      console.log('🖱️ Global click detected:', {
+        target: e.target,
+        tagName: e.target.tagName,
+        id: e.target.id,
+        className: e.target.className,
+        x: e.clientX,
+        y: e.clientY
+      });
+    });
+
+    console.log('✅ Debug script loaded. All tests ready.');
+  </script>
+</body>
+</html>
