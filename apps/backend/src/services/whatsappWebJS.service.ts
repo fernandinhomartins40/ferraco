@@ -733,11 +733,25 @@ class WhatsAppWebJSService {
       const startTime = Date.now();
       logger.info(`📞 Buscando ${limit} conversas...`);
 
-      // ✅ USAR API NATIVA do whatsapp-web.js
-      const getChatsStart = Date.now();
-      const chats = await this.client!.getChats();
-      const getChatsTime = Date.now() - getChatsStart;
-      logger.info(`⏱️  getChats (API nativa): ${getChatsTime}ms (${chats.length} total)`);
+      // ✅ FIX: Tratamento de erro para compatibilidade com WhatsApp Web API changes
+      let chats: WWebChat[] = [];
+
+      try {
+        const getChatsStart = Date.now();
+        chats = await this.client!.getChats();
+        const getChatsTime = Date.now() - getChatsStart;
+        logger.info(`⏱️  getChats (API nativa): ${getChatsTime}ms (${chats.length} total)`);
+      } catch (error: any) {
+        logger.error(`❌ Erro ao buscar chats: ${error.message}`);
+
+        // Se o erro é de incompatibilidade de API, retornar array vazio ao invés de falhar
+        if (error.message?.includes('Evaluation failed') || error.message?.includes('not a function')) {
+          logger.warn('⚠️  WhatsApp Web API mudou. Retornando lista vazia temporariamente.');
+          return [];
+        }
+
+        throw error;
+      }
 
       // Filtrar apenas conversas privadas (não grupos) e ordenar por timestamp
       const privateChats = chats
@@ -751,15 +765,17 @@ class WhatsAppWebJSService {
 
       logger.info(`📊 Conversas privadas: ${privateChats.length}/${chats.length}`);
 
-      // Formatar conversas
+      // Formatar conversas com tratamento de erro individual
       const formatStart = Date.now();
-      const conversations: FormattedConversation[] = await Promise.all(
-        privateChats.map(async (chat: WWebChat) => {
+      const conversations: FormattedConversation[] = [];
+
+      for (const chat of privateChats) {
+        try {
           // Buscar última mensagem
           const messages = await chat.fetchMessages({ limit: 1 });
           const lastMsg = messages.length > 0 ? messages[0] : null;
 
-          return {
+          conversations.push({
             id: chat.id._serialized,
             name: chat.name || chat.id._serialized.replace('@c.us', ''),
             phone: chat.id.user,
@@ -771,9 +787,13 @@ class WhatsAppWebJSService {
               fromMe: lastMsg.fromMe,
             } : null,
             timestamp: chat.timestamp || 0,
-          };
-        })
-      );
+          });
+        } catch (error: any) {
+          logger.warn(`⚠️  Erro ao processar chat ${chat.id._serialized}: ${error.message}`);
+          // Continuar com próximo chat
+        }
+      }
+
       const formatTime = Date.now() - formatStart;
       logger.info(`⏱️  format: ${formatTime}ms`);
 

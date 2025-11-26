@@ -288,8 +288,34 @@ async function handleIncomingMessage(message: WWebMessage, io: SocketIOServer): 
 
   logger.info(`📩 Mensagem recebida de ${message.from}: "${message.body?.substring(0, 50)}..."`);
 
-  const contact = await message.getContact();
-  const chat = await message.getChat();
+  // ✅ FIX: Tratamento de erro para compatibilidade com WhatsApp Web API changes
+  let contact: any = null;
+  let chat: any = null;
+
+  try {
+    contact = await message.getContact();
+  } catch (error) {
+    logger.warn(`⚠️  Não foi possível obter contato: ${error}`);
+    // Fallback: extrair dados básicos do message object
+    contact = {
+      id: { _serialized: message.from },
+      number: message.from.replace('@c.us', '').replace('@g.us', ''),
+      name: null,
+      pushname: null,
+    };
+  }
+
+  try {
+    chat = await message.getChat();
+  } catch (error) {
+    logger.warn(`⚠️  Não foi possível obter chat: ${error}`);
+    // Fallback
+    chat = {
+      id: { _serialized: message.from },
+      name: contact?.name || message.from,
+      isGroup: message.from.includes('@g.us'),
+    };
+  }
 
   // Formatar mensagem
   const formattedMessage = {
@@ -304,14 +330,14 @@ async function handleIncomingMessage(message: WWebMessage, io: SocketIOServer): 
     ack: message.ack || 0,
     status: mapAckToStatus(message.ack),
     contact: {
-      id: contact.id._serialized,
-      phone: contact.number,
-      name: contact.name || contact.pushname || contact.number,
+      id: contact?.id?._serialized || message.from,
+      phone: contact?.number || message.from.replace('@c.us', '').replace('@g.us', ''),
+      name: contact?.name || contact?.pushname || contact?.number || message.from,
     },
     chat: {
-      id: chat.id._serialized,
-      name: chat.name,
-      isGroup: chat.isGroup,
+      id: chat?.id?._serialized || message.from,
+      name: chat?.name || message.from,
+      isGroup: chat?.isGroup || false,
     },
   };
 
