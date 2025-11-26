@@ -286,6 +286,12 @@ async function handleIncomingMessage(message: WWebMessage, io: SocketIOServer): 
     return;
   }
 
+  // ✅ VALIDAÇÃO: Ignorar mensagens inválidas/sistema
+  if (!message.from || !isValidWhatsAppId(message.from)) {
+    logger.debug(`🚫 Mensagem ignorada - ID inválido: ${message.from}`);
+    return;
+  }
+
   logger.info(`📩 Mensagem recebida de ${message.from}: "${message.body?.substring(0, 50)}..."`);
 
   // ✅ FIX: Tratamento de erro para compatibilidade com WhatsApp Web API changes
@@ -424,6 +430,72 @@ async function saveCommunicationToDatabase(message: any): Promise<void> {
   } catch (error) {
     logger.error('❌ Erro ao salvar comunicação:', error);
   }
+}
+
+/**
+ * Valida se o ID do WhatsApp é válido para criar lead
+ * Filtra: broadcasts, status, grupos, números temporários, IDs inválidos
+ */
+function isValidWhatsAppId(fromId: string): boolean {
+  if (!fromId || typeof fromId !== 'string') {
+    return false;
+  }
+
+  // ❌ REJEITAR: Status do WhatsApp
+  if (fromId.includes('status@broadcast')) {
+    logger.debug('🚫 Ignorado: Status do WhatsApp');
+    return false;
+  }
+
+  // ❌ REJEITAR: Broadcasts
+  if (fromId.includes('@broadcast')) {
+    logger.debug('🚫 Ignorado: Broadcast');
+    return false;
+  }
+
+  // ❌ REJEITAR: Números temporários/inválidos
+  if (fromId.includes('@whatsapp.temp')) {
+    logger.debug('🚫 Ignorado: Número temporário');
+    return false;
+  }
+
+  // ❌ REJEITAR: Grupos (só queremos conversas individuais para leads)
+  if (fromId.includes('@g.us')) {
+    logger.debug('🚫 Ignorado: Grupo');
+    return false;
+  }
+
+  // ✅ ACEITAR: Apenas números @c.us (conversas individuais)
+  if (!fromId.includes('@c.us')) {
+    logger.debug(`🚫 Ignorado: Formato inválido (${fromId})`);
+    return false;
+  }
+
+  // Extrair número sem @c.us
+  const phoneNumber = fromId.replace('@c.us', '');
+
+  // ❌ REJEITAR: IDs muito longos (não são telefones reais)
+  // Telefones brasileiros: +55 + DDD (2) + número (8-9) = 12-13 dígitos
+  // Máximo aceitável: 15 dígitos (formato internacional)
+  if (phoneNumber.length > 15) {
+    logger.debug(`🚫 Ignorado: Número muito longo (${phoneNumber.length} dígitos)`);
+    return false;
+  }
+
+  // ❌ REJEITAR: Números muito curtos (mínimo 8 dígitos)
+  if (phoneNumber.length < 8) {
+    logger.debug(`🚫 Ignorado: Número muito curto (${phoneNumber.length} dígitos)`);
+    return false;
+  }
+
+  // ❌ REJEITAR: Contém caracteres não numéricos
+  if (!/^\d+$/.test(phoneNumber)) {
+    logger.debug(`🚫 Ignorado: Contém caracteres não numéricos (${phoneNumber})`);
+    return false;
+  }
+
+  // ✅ ACEITAR: Número válido
+  return true;
 }
 
 /**
