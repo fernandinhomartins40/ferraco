@@ -754,13 +754,21 @@ router.post('/send-file', authenticate, async (req: Request, res: Response) => {
       });
     }
 
-    // ⚠️ TODO: Implementar com whatsapp-web.js ou remover
-    // sendFile não está disponível no whatsappWebJSService
-    // Nota: whatsapp-web.js tem sendImage que pode ser adaptado
-    return res.status(501).json({
-      success: false,
-      error: 'Funcionalidade não disponível',
-      message: 'sendFile() não implementado em whatsapp-web.js',
+    if (!whatsappWebJSService.isWhatsAppConnected()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp não está conectado. Escaneie o QR Code primeiro.',
+      });
+    }
+
+    // ✅ FIX: Implementado usando whatsappWebJSService.sendFile()
+    const messageId = await whatsappWebJSService.sendFile(to, filePath, filename, caption);
+
+    res.json({
+      success: true,
+      message: 'Arquivo enviado com sucesso',
+      messageId,
+      to,
     });
 
   } catch (error: any) {

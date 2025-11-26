@@ -1237,6 +1237,7 @@ class WhatsAppWebJSService {
 
   /**
    * ✅ NOVO: Enviar localização GPS
+   * ✅ FIX: Usa findCorrectPhoneNumber para resolver problema do 9º dígito
    */
   async sendLocation(to: string, latitude: number, longitude: number): Promise<any> {
     if (!this.isWhatsAppConnected()) {
@@ -1244,11 +1245,12 @@ class WhatsAppWebJSService {
     }
 
     try {
-      const formatted = await this.formatPhoneNumber(to);
+      // ✅ FIX: Buscar número correto (trata 9º dígito)
+      const correctNumber = await this.findCorrectPhoneNumber(to);
 
       // Criar localização com a API correta
       const location = new Location(latitude, longitude);
-      const sentMsg = await this.client!.sendMessage(formatted, location);
+      const sentMsg = await this.client!.sendMessage(correctNumber, location);
 
       logger.info(`✅ Localização enviada: ${sentMsg.id._serialized}`);
 
@@ -1265,6 +1267,7 @@ class WhatsAppWebJSService {
 
   /**
    * ✅ NOVO: Enviar contato vCard
+   * ✅ FIX: Usa findCorrectPhoneNumber para resolver problema do 9º dígito
    */
   async sendContact(to: string, contactId: string): Promise<any> {
     if (!this.isWhatsAppConnected()) {
@@ -1272,9 +1275,10 @@ class WhatsAppWebJSService {
     }
 
     try {
-      const formatted = await this.formatPhoneNumber(to);
+      // ✅ FIX: Buscar número correto (trata 9º dígito)
+      const correctNumber = await this.findCorrectPhoneNumber(to);
       const contact = await this.client!.getContactById(contactId);
-      const sentMsg = await this.client!.sendMessage(formatted, contact);
+      const sentMsg = await this.client!.sendMessage(correctNumber, contact);
 
       logger.info(`✅ Contato enviado: ${sentMsg.id._serialized}`);
 
