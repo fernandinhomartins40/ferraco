@@ -356,7 +356,23 @@ router.get('/conversations/v2', authenticate, async (req: Request, res: Response
     const limit = parseInt(req.query.limit as string) || 50;
 
     // Buscar conversas DIRETO do WPPConnect
-    const conversations = await activeService.getAllConversations(limit);
+    const rawConversations = await activeService.getAllConversations(limit);
+
+    // ✅ FIX: Transformar para formato esperado pelo frontend
+    const conversations = rawConversations.map((conv: any) => ({
+      id: conv.id,
+      contactId: conv.phone,
+      lastMessageAt: new Date(conv.timestamp * 1000).toISOString(),
+      lastMessagePreview: conv.lastMessage?.body || null,
+      unreadCount: conv.unreadCount || 0,
+      isPinned: false,
+      contact: {
+        id: conv.phone,
+        phone: conv.phone,
+        name: conv.name,
+        profilePicUrl: null, // whatsapp-web.js não retorna foto de perfil facilmente
+      },
+    }));
 
     res.json({
       success: true,
