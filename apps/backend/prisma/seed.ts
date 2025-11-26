@@ -547,6 +547,143 @@ Até breve!`,
     }
   });
 
+  // ============================================================================
+  // 📝 TEMPLATES DE AUTOMAÇÃO WHATSAPP
+  // ============================================================================
+  console.log('\n📝 Creating WhatsApp automation templates...');
+
+  await prisma.recurrenceMessageTemplate.upsert({
+    where: { id: 'tpl_modal_orcamento_001' },
+    update: {},
+    create: {
+      id: 'tpl_modal_orcamento_001',
+      name: 'Confirmação de Orçamento - Modal',
+      description: 'Mensagem automática enviada quando lead solicita orçamento via modal',
+      trigger: 'modal_orcamento',
+      minCaptures: 1,
+      maxCaptures: 1,
+      daysSinceLastCapture: null,
+      conditions: '{}',
+      content: `Olá {{lead.name}}! 👋
+
+Recebemos sua solicitação de orçamento através do nosso site.
+
+Nossa equipe comercial da {{company.name}} entrará em contato com você em até *2 horas úteis* pelo WhatsApp ou telefone.
+
+Enquanto isso, fique à vontade para:
+📞 Ligar para {{company.phone}}
+📧 Enviar email para {{company.email}}
+🌐 Acessar nosso site: {{company.website}}
+
+Obrigado pelo interesse!
+Equipe {{company.name}}`,
+      mediaUrls: null,
+      mediaType: null,
+      priority: 10,
+      isActive: true,
+      usageCount: 0
+    }
+  });
+
+  await prisma.recurrenceMessageTemplate.upsert({
+    where: { id: 'tpl_human_contact_001' },
+    update: {},
+    create: {
+      id: 'tpl_human_contact_001',
+      name: 'Solicitação de Atendimento Humano',
+      description: 'Mensagem enviada quando lead solicita falar com consultor',
+      trigger: 'human_contact_request',
+      minCaptures: 1,
+      maxCaptures: null,
+      daysSinceLastCapture: null,
+      conditions: '{}',
+      content: `Olá {{lead.name}}! 👋
+
+Entendemos que você gostaria de falar com um de nossos consultores.
+
+Um especialista da {{company.name}} entrará em contato em breve para atendê-lo pessoalmente.
+
+*Horário de atendimento:* {{company.workingHours}}
+
+Obrigado pela confiança!
+Equipe {{company.name}}`,
+      mediaUrls: null,
+      mediaType: null,
+      priority: 8,
+      isActive: true,
+      usageCount: 0
+    }
+  });
+
+  await prisma.recurrenceMessageTemplate.upsert({
+    where: { id: 'tpl_generic_inquiry_001' },
+    update: {},
+    create: {
+      id: 'tpl_generic_inquiry_001',
+      name: 'Contato Genérico - Landing Page',
+      description: 'Mensagem padrão para leads sem interesse específico',
+      trigger: 'generic_inquiry',
+      minCaptures: 1,
+      maxCaptures: null,
+      daysSinceLastCapture: null,
+      conditions: '{}',
+      content: `Olá {{lead.name}}! 👋
+
+Obrigado por entrar em contato com a {{company.name}}.
+
+Nossa equipe entrará em contato em breve para entender melhor como podemos ajudá-lo.
+
+📞 {{company.phone}}
+📧 {{company.email}}
+
+Até breve!`,
+      mediaUrls: null,
+      mediaType: null,
+      priority: 5,
+      isActive: true,
+      usageCount: 0
+    }
+  });
+
+  await prisma.recurrenceMessageTemplate.upsert({
+    where: { id: 'tpl_chat_no_product_001' },
+    update: {},
+    create: {
+      id: 'tpl_chat_no_product_001',
+      name: 'Chat sem Interesse em Produtos',
+      description: 'Mensagem para leads do chat que não selecionaram produtos',
+      trigger: 'chat_no_interest',
+      minCaptures: 1,
+      maxCaptures: null,
+      daysSinceLastCapture: null,
+      conditions: '{}',
+      content: `Olá {{lead.name}}! 👋
+
+Vi que você iniciou uma conversa conosco pelo chat, mas não conseguimos finalizar.
+
+Gostaria de conhecer nossos produtos?
+
+*Principais soluções da {{company.name}}:*
+🐄 Bebedouros para gado
+🏗️ Freestalls
+🌾 Equipamentos para fazendas
+
+Um consultor da nossa equipe pode te ajudar a escolher a melhor solução para sua propriedade.
+
+📞 {{company.phone}}
+
+Estou à disposição!
+Equipe {{company.name}}`,
+      mediaUrls: null,
+      mediaType: null,
+      priority: 6,
+      isActive: true,
+      usageCount: 0
+    }
+  });
+
+  console.log('✅ 4 automation templates created/updated');
+
   console.log('\n🔐 Login credentials:');
   console.log('  Admin:      admin@ferraco.com / Admin@123456');
   console.log('  Manager:    manager@ferraco.com / User@123456');

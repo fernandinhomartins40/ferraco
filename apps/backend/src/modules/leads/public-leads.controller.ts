@@ -122,11 +122,11 @@ export class PublicLeadsController {
       } else {
         logger.info(`✨ Novo lead criado: ${lead.name}`);
 
-        // Lead novo: criar automação padrão se houver interesse
-        if (req.body.interest) {
-          whatsappAutomationService.createAutomationFromLead(lead.id)
-            .catch(err => logger.error('❌ Erro ao criar automação padrão:', err));
-        }
+        // ✅ CORREÇÃO CRÍTICA: SEMPRE criar automação, independente de interesse
+        // O serviço detecta automaticamente o tipo de template baseado no source e metadata
+        // Suporta: produtos, modal_orcamento, human_contact_request, generic_inquiry
+        whatsappAutomationService.createAutomationFromLead(lead.id)
+          .catch(err => logger.error('❌ Erro ao criar automação padrão:', err));
       }
 
       // Return minimal data (don't expose internal IDs or sensitive info)

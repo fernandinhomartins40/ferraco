@@ -52,18 +52,28 @@ export class WhatsAppAutomationService {
       if (!interest || (Array.isArray(interest) && interest.length === 0)) {
         logger.info(`ℹ️  Lead ${leadId} (${lead.name}) não manifestou interesse em produtos`);
 
-        // ✅ NOVO: Detectar cenário e criar automação apropriada
+        // ✅ CORREÇÃO: Detectar cenário e criar automação apropriada
         let templateTrigger = null;
 
+        // 1. Modal de orçamento
         if (leadSource === 'modal-orcamento') {
           templateTrigger = 'modal_orcamento';
           logger.info(`   📝 Detectado lead do modal de orçamento - enviando mensagem de boas-vindas`);
-        } else if (metadata.wantsHumanContact || metadata.requiresHumanAttendance) {
+        }
+        // 2. Chat: "Falar com a equipe" (vários formatos possíveis)
+        else if (metadata.wantsHumanContact || metadata.requiresHumanAttendance || metadata.wants_human) {
           templateTrigger = 'human_contact_request';
-          logger.info(`   👨‍💼 Lead solicitou atendimento humano`);
-        } else {
+          logger.info(`   👨‍💼 Lead solicitou atendimento humano no chat`);
+        }
+        // 3. Chat: "Só quero conhecer produtos" ou abandono
+        else if (leadSource === 'chatbot-web' || leadSource === 'whatsapp-bot') {
+          templateTrigger = 'chat_no_interest';
+          logger.info(`   💬 Lead do chat sem interesse em produtos - enviando reengajamento`);
+        }
+        // 4. Landing page ou outros
+        else {
           templateTrigger = 'generic_inquiry';
-          logger.info(`   ℹ️  Lead sem interesse específico - enviando mensagem genérica`);
+          logger.info(`   ℹ️  Lead sem interesse específico (${leadSource}) - enviando mensagem genérica`);
         }
 
         return await this.createGenericAutomation(leadId, lead, templateTrigger);
@@ -952,7 +962,25 @@ Nossa equipe entrará em contato em breve para entender melhor como podemos ajud
 📞 {{company.phone}}
 📧 {{company.email}}
 
-Até breve!`
+Até breve!`,
+
+        chat_no_interest: `Olá {{lead.name}}! 👋
+
+Vi que você iniciou uma conversa conosco pelo chat, mas não conseguimos finalizar.
+
+Gostaria de conhecer nossos produtos?
+
+*Principais soluções da {{company.name}}:*
+🐄 Bebedouros para gado
+🏗️ Freestalls
+🌾 Equipamentos para fazendas
+
+Um consultor da nossa equipe pode te ajudar a escolher a melhor solução para sua propriedade.
+
+📞 {{company.phone}}
+
+Estou à disposição!
+Equipe {{company.name}}`
       };
 
       const messageTemplate = fallbackMessages[templateTrigger] || fallbackMessages.generic_inquiry;
