@@ -377,6 +377,14 @@ async function saveCommunicationToDatabase(message: any): Promise<void> {
     // Buscar ou criar lead baseado no telefone
     const phone = message.contact.phone.replace(/\D/g, '');
 
+    // ✅ VALIDAÇÃO: Verificar se o número é válido antes de criar lead
+    // Usar mesma validação do início do listener
+    const fromId = `${phone}@c.us`;
+    if (!isValidWhatsAppId(fromId)) {
+      logger.debug(`🚫 Lead não criado - número inválido: ${phone}`);
+      return;
+    }
+
     let lead = await prisma.lead.findFirst({
       where: { phone },
     });
@@ -398,16 +406,23 @@ async function saveCommunicationToDatabase(message: any): Promise<void> {
         return;
       }
 
+      // ✅ CORREÇÃO: Usar email formatado sem @whatsapp.temp
+      // Formato: contato+whatsapp@ferraco.com.br (email válido)
+      const sanitizedPhone = phone.replace(/[^0-9]/g, '');
+      const leadEmail = `contato+${sanitizedPhone}@ferraco.com.br`;
+
       lead = await prisma.lead.create({
         data: {
           name: message.contact.name,
-          email: `${phone}@whatsapp.temp`,
+          email: leadEmail,
           phone,
           source: 'WHATSAPP',
           status: 'NOVO',
           createdById: systemUser.id,
         },
       });
+
+      logger.info(`✅ Lead criado do WhatsApp: ${lead.name} (${phone})`);
     }
 
     // Salvar comunicação
