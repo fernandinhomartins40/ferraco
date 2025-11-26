@@ -862,9 +862,27 @@ class WhatsAppWebJSService {
 
   /**
    * Formatar mensagem
+   * ✅ FIX: Tratamento de erro para compatibilidade com WhatsApp Web API changes
    */
   private async formatMessage(msg: WWebMessage): Promise<FormattedMessage> {
-    const contact = await msg.getContact();
+    // ✅ FIX: Tratamento de erro para getContact() devido a incompatibilidade da API
+    let contact: any = null;
+
+    try {
+      contact = await msg.getContact();
+    } catch (error: any) {
+      logger.warn(`⚠️  Não foi possível obter contato para mensagem ${msg.id._serialized}: ${error.message}`);
+
+      // Fallback: extrair dados básicos do message object
+      contact = {
+        id: {
+          _serialized: msg.from,
+          user: msg.from.replace('@c.us', '').replace('@g.us', ''),
+        },
+        name: null,
+        pushname: null,
+      };
+    }
 
     return {
       id: msg.id._serialized,
@@ -878,9 +896,9 @@ class WhatsAppWebJSService {
       ack: msg.ack || 0,
       status: this.mapAckToStatus(msg.ack),
       contact: {
-        id: contact.id._serialized,
-        phone: contact.id.user,
-        name: contact.name || contact.pushname || contact.id.user,
+        id: contact?.id?._serialized || msg.from,
+        phone: contact?.id?.user || msg.from.replace('@c.us', '').replace('@g.us', ''),
+        name: contact?.name || contact?.pushname || contact?.id?.user || msg.from,
       },
     };
   }
