@@ -138,19 +138,65 @@ export const useLandingPageConfig = () => {
           const backendResponse = await apiClient.get('/landing-page/config');
 
           if (backendResponse.data.success && backendResponse.data.data) {
+            const defaults = getDefaultConfig();
+            const data = backendResponse.data.data;
+
+            // Merge profundo com defaults para garantir que arrays sempre existam
             const backendConfig: LandingPageConfig = {
               version: '1.0.0',
-              lastModified: backendResponse.data.data.updatedAt,
-              meta: getDefaultConfig().meta, // Meta vem sempre do default
-              theme: getDefaultConfig().theme, // Theme vem sempre do default
-              header: backendResponse.data.data.header,
-              hero: backendResponse.data.data.hero,
-              marquee: backendResponse.data.data.marquee,
-              about: backendResponse.data.data.about,
-              products: backendResponse.data.data.products,
-              experience: backendResponse.data.data.experience,
-              contact: backendResponse.data.data.contact,
-              footer: backendResponse.data.data.footer,
+              lastModified: data.updatedAt,
+              meta: defaults.meta,
+              theme: defaults.theme,
+              header: {
+                ...defaults.header,
+                ...data.header,
+                menu: {
+                  ...defaults.header.menu,
+                  ...data.header?.menu,
+                  items: data.header?.menu?.items || defaults.header.menu.items,
+                },
+              },
+              hero: {
+                ...defaults.hero,
+                ...data.hero,
+                slides: data.hero?.slides || defaults.hero.slides || [],
+              },
+              marquee: {
+                ...defaults.marquee,
+                ...data.marquee,
+                items: data.marquee?.items || defaults.marquee.items || [],
+              },
+              about: {
+                ...defaults.about,
+                ...data.about,
+                features: data.about?.features || defaults.about.features || [],
+                stats: data.about?.stats || defaults.about.stats || [],
+              },
+              products: {
+                ...defaults.products,
+                ...data.products,
+                products: data.products?.products || defaults.products.products || [],
+              },
+              experience: {
+                ...defaults.experience,
+                ...data.experience,
+                highlights: data.experience?.highlights || defaults.experience.highlights || [],
+              },
+              contact: {
+                ...defaults.contact,
+                ...data.contact,
+                methods: data.contact?.methods || defaults.contact.methods || [],
+              },
+              footer: {
+                ...defaults.footer,
+                ...data.footer,
+                sections: data.footer?.sections || defaults.footer.sections || [],
+                social: data.footer?.social ? {
+                  ...defaults.footer.social,
+                  ...data.footer.social,
+                  links: data.footer.social.links || defaults.footer.social.links || [],
+                } : defaults.footer.social,
+              },
             };
 
             logConfigChange('✅ Configuração carregada do BACKEND', {
