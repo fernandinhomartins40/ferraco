@@ -53,8 +53,8 @@ export class TemplateLibraryController {
    */
   async create(req: Request, res: Response) {
     try {
-      const data = createTemplateSchema.parse(req.body);
-      const template = await templateLibraryService.create(data);
+      const validatedData = createTemplateSchema.parse(req.body);
+      const template = await templateLibraryService.create(validatedData as any);
       res.status(201).json(template);
     } catch (error) {
       if (error instanceof ZodError) {
