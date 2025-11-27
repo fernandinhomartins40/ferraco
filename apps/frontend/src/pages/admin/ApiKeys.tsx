@@ -219,7 +219,10 @@ const ApiKeys = () => {
           <Button
             variant="outline"
             className="w-full sm:w-auto"
-            onClick={() => window.open('/api-docs/', '_blank')}
+            onClick={() => {
+              const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+              window.open(`${apiUrl}/api-docs/`, '_blank');
+            }}
           >
             <ExternalLink className="w-4 h-4 mr-2" />
             Documentação Swagger
