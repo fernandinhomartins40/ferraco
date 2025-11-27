@@ -171,31 +171,60 @@ export const useLandingPageConfig = () => {
                 ...data.about,
                 features: data.about?.features || defaults.about.features || [],
                 stats: data.about?.stats || defaults.about.stats || [],
+                experience: data.about?.experience || defaults.about.experience,
+                differentialsCard: data.about?.differentialsCard ? {
+                  ...defaults.about.differentialsCard,
+                  ...data.about.differentialsCard,
+                  differentials: data.about.differentialsCard.differentials || defaults.about.differentialsCard?.differentials || [],
+                } : defaults.about.differentialsCard,
               },
               products: {
                 ...defaults.products,
                 ...data.products,
-                products: data.products?.products || defaults.products.products || [],
+                products: (data.products?.products || defaults.products.products || []).map(product => ({
+                  ...product,
+                  benefits: product.benefits || [], // Garante que benefits dentro de products seja sempre um array
+                })),
               },
               experience: {
                 ...defaults.experience,
                 ...data.experience,
                 highlights: data.experience?.highlights || defaults.experience.highlights || [],
+                testimonials: data.experience?.testimonials ? {
+                  ...defaults.experience.testimonials,
+                  ...data.experience.testimonials,
+                  items: data.experience.testimonials.items || defaults.experience.testimonials?.items || [],
+                } : defaults.experience.testimonials,
+                cta: data.experience?.cta || defaults.experience.cta,
               },
               contact: {
                 ...defaults.contact,
                 ...data.contact,
                 methods: data.contact?.methods || defaults.contact.methods || [],
+                whatsappCta: data.contact?.whatsappCta || defaults.contact.whatsappCta,
+                benefits: data.contact?.benefits ? {
+                  ...defaults.contact.benefits,
+                  ...data.contact.benefits,
+                  items: data.contact.benefits.items || defaults.contact.benefits?.items || [],
+                } : defaults.contact.benefits,
               },
               footer: {
                 ...defaults.footer,
                 ...data.footer,
-                sections: data.footer?.sections || defaults.footer.sections || [],
+                sections: (data.footer?.sections || defaults.footer.sections || []).map(section => ({
+                  ...section,
+                  links: section.links || [], // Garante que links dentro de sections seja sempre um array
+                })),
                 social: data.footer?.social ? {
                   ...defaults.footer.social,
                   ...data.footer.social,
                   links: data.footer.social.links || defaults.footer.social.links || [],
                 } : defaults.footer.social,
+                bottom: {
+                  ...defaults.footer.bottom,
+                  ...data.footer?.bottom,
+                  links: data.footer?.bottom?.links || defaults.footer.bottom?.links || [],
+                },
               },
             };
 
