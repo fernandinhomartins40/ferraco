@@ -219,13 +219,7 @@ const ApiKeys = () => {
           <Button
             variant="outline"
             className="w-full sm:w-auto"
-            onClick={() => {
-              // Em desenvolvimento: apontar diretamente para o backend na porta 3001
-              // Em produção: usar caminho relativo (mesmo servidor)
-              const isDev = import.meta.env.DEV;
-              const url = isDev ? 'http://localhost:3001/api-docs' : '/api-docs';
-              window.open(url, '_blank');
-            }}
+            onClick={() => window.open('/api-docs', '_blank')}
           >
             <ExternalLink className="w-4 h-4 mr-2" />
             Documentação Swagger
