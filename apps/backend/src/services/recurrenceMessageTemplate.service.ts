@@ -352,6 +352,7 @@ export class RecurrenceMessageTemplateService {
         id: true,
         name: true,
         trigger: true,
+        content: true, // ADICIONADO para preview
         usageCount: true,
         isActive: true,
       },

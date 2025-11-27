@@ -81,6 +81,7 @@ export interface TemplateUsageStats {
     id: string;
     name: string;
     trigger: string;
+    content: string; // ADICIONADO para preview
     usageCount: number;
     isActive: boolean;
     usagePercentage: number;
