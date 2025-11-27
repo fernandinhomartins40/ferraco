@@ -159,6 +159,30 @@ export const useLandingPageConfig = () => {
               hero: {
                 ...defaults.hero,
                 ...data.hero,
+                title: data.hero?.title ? {
+                  ...defaults.hero.title,
+                  ...data.hero.title,
+                  style: {
+                    ...defaults.hero.title?.style,
+                    ...data.hero.title.style,
+                  },
+                } : defaults.hero.title,
+                subtitle: data.hero?.subtitle ? {
+                  ...defaults.hero.subtitle,
+                  ...data.hero.subtitle,
+                  style: {
+                    ...defaults.hero.subtitle?.style,
+                    ...data.hero.subtitle.style,
+                  },
+                } : defaults.hero.subtitle,
+                description: data.hero?.description ? {
+                  ...defaults.hero.description,
+                  ...data.hero.description,
+                  style: {
+                    ...defaults.hero.description?.style,
+                    ...data.hero.description.style,
+                  },
+                } : defaults.hero.description,
                 slides: data.hero?.slides || defaults.hero.slides || [],
               },
               marquee: {
@@ -169,6 +193,30 @@ export const useLandingPageConfig = () => {
               about: {
                 ...defaults.about,
                 ...data.about,
+                title: {
+                  ...defaults.about.title,
+                  ...data.about?.title,
+                  style: {
+                    ...defaults.about.title?.style,
+                    ...data.about?.title?.style,
+                  },
+                },
+                subtitle: data.about?.subtitle ? {
+                  ...defaults.about.subtitle,
+                  ...data.about.subtitle,
+                  style: {
+                    ...defaults.about.subtitle?.style,
+                    ...data.about.subtitle.style,
+                  },
+                } : defaults.about.subtitle,
+                description: {
+                  ...defaults.about.description,
+                  ...data.about?.description,
+                  style: {
+                    ...defaults.about.description?.style,
+                    ...data.about?.description?.style,
+                  },
+                },
                 features: data.about?.features || defaults.about.features || [],
                 stats: data.about?.stats || defaults.about.stats || [],
                 experience: data.about?.experience || defaults.about.experience,
@@ -181,6 +229,26 @@ export const useLandingPageConfig = () => {
               products: {
                 ...defaults.products,
                 ...data.products,
+                title: {
+                  ...defaults.products.title,
+                  ...data.products?.title,
+                  style: {
+                    ...defaults.products.title.style,
+                    ...data.products?.title?.style,
+                  },
+                },
+                subtitle: data.products?.subtitle ? {
+                  ...defaults.products.subtitle,
+                  ...data.products.subtitle,
+                  style: {
+                    ...defaults.products.subtitle?.style,
+                    ...data.products.subtitle.style,
+                  },
+                } : defaults.products.subtitle,
+                style: {
+                  ...defaults.products.style,
+                  ...data.products?.style,
+                },
                 products: (data.products?.products || defaults.products.products || []).map(product => ({
                   ...product,
                   benefits: product.benefits || [], // Garante que benefits dentro de products seja sempre um array
@@ -191,6 +259,30 @@ export const useLandingPageConfig = () => {
               experience: {
                 ...defaults.experience,
                 ...data.experience,
+                title: {
+                  ...defaults.experience.title,
+                  ...data.experience?.title,
+                  style: {
+                    ...defaults.experience.title?.style,
+                    ...data.experience?.title?.style,
+                  },
+                },
+                subtitle: data.experience?.subtitle ? {
+                  ...defaults.experience.subtitle,
+                  ...data.experience.subtitle,
+                  style: {
+                    ...defaults.experience.subtitle?.style,
+                    ...data.experience.subtitle.style,
+                  },
+                } : defaults.experience.subtitle,
+                description: {
+                  ...defaults.experience.description,
+                  ...data.experience?.description,
+                  style: {
+                    ...defaults.experience.description?.style,
+                    ...data.experience?.description?.style,
+                  },
+                },
                 highlights: data.experience?.highlights || defaults.experience.highlights || [],
                 testimonials: data.experience?.testimonials ? {
                   ...defaults.experience.testimonials,
@@ -202,6 +294,22 @@ export const useLandingPageConfig = () => {
               contact: {
                 ...defaults.contact,
                 ...data.contact,
+                title: {
+                  ...defaults.contact.title,
+                  ...data.contact?.title,
+                  style: {
+                    ...defaults.contact.title?.style,
+                    ...data.contact?.title?.style,
+                  },
+                },
+                subtitle: data.contact?.subtitle ? {
+                  ...defaults.contact.subtitle,
+                  ...data.contact.subtitle,
+                  style: {
+                    ...defaults.contact.subtitle?.style,
+                    ...data.contact.subtitle.style,
+                  },
+                } : defaults.contact.subtitle,
                 methods: data.contact?.methods || defaults.contact.methods || [],
                 whatsappCta: data.contact?.whatsappCta || defaults.contact.whatsappCta,
                 benefits: data.contact?.benefits ? {
