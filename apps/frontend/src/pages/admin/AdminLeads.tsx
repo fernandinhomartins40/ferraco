@@ -50,6 +50,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useKanbanColumns } from '@/hooks/useKanbanColumns';
 import { useAutomationKanban } from '@/hooks/useAutomationKanban';
 import { useWhatsAppTemplates } from '@/hooks/useWhatsAppTemplates';
+import { useTemplateLibrary } from '@/hooks/useTemplateLibrary';
 import type { KanbanColumn, CreateKanbanColumnDto, UpdateKanbanColumnDto } from '@/services/kanbanColumns.service';
 import { VariableInserter, DEFAULT_LEAD_VARIABLES, PRODUCT_VARIABLES } from '@/components/ui/variable-inserter';
 import { useVariableInsertion } from '@/hooks/useVariableInsertion';
@@ -98,7 +99,8 @@ const AdminLeads = () => {
     // Campos antigos (manter para backward compatibility)
     isRecurring: false,
     recurringDay: undefined as number | undefined,
-    messageTemplateId: '',
+    messageTemplateId: '', // DEPRECATED - manter para backward compatibility
+    templateLibraryId: '', // NOVO - usar biblioteca centralizada
     productIds: [] as string[],
   });
 
@@ -169,8 +171,11 @@ const AdminLeads = () => {
     retryAllFailed,
   } = useAutomationKanban();
 
-  // WhatsApp Templates Hooks
+  // WhatsApp Templates Hooks (DEPRECATED - usar templateLibrary)
   const { templates, createTemplate, updateTemplate, deleteTemplate } = useWhatsAppTemplates();
+
+  // Template Library Hooks (NOVO)
+  const { templates: libraryTemplates, isLoading: isLoadingLibraryTemplates } = useTemplateLibrary();
 
   const leads = leadsData?.data || [];
 
@@ -1147,11 +1152,11 @@ const AdminLeads = () => {
               <div>
                 <Label htmlFor="template-select">Template de Mensagem</Label>
                 <Select
-                  value={automationColumnFormData.messageTemplateId || 'none'}
+                  value={automationColumnFormData.templateLibraryId || 'none'}
                   onValueChange={(value) =>
                     setAutomationColumnFormData({
                       ...automationColumnFormData,
-                      messageTemplateId: value === 'none' ? '' : value
+                      templateLibraryId: value === 'none' ? '' : value
                     })
                   }
                 >
@@ -1159,22 +1164,21 @@ const AdminLeads = () => {
                     <SelectValue placeholder="Selecione um template" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="none">Nenhum template</SelectItem>
+                    {isLoadingLibraryTemplates ? (
+                      <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                    ) : (
+                      libraryTemplates?.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name} ({template.category})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="p-0 h-auto mt-1"
-                  onClick={() => setIsTemplateDialogOpen(true)}
-                >
-                  + Criar novo template
-                </Button>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {libraryTemplates?.length || 0} templates disponíveis na biblioteca
+                </p>
               </div>
 
               {/* ✅ NOVO: Sistema de Recorrência Avançado */}

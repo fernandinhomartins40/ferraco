@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import type { MessageTemplateLibrary } from './templateLibrary.service';
 
 const API_URL = '/api/automation-kanban';
 
@@ -61,8 +62,13 @@ export interface AutomationKanbanColumn {
   isRecurring: boolean;
   recurringDay?: number;
 
-  messageTemplateId?: string;
-  messageTemplate?: WhatsAppMessageTemplate;
+  messageTemplateId?: string; // DEPRECATED
+  messageTemplate?: WhatsAppMessageTemplate; // DEPRECATED
+
+  // NOVO - Biblioteca Centralizada
+  templateLibraryId?: string;
+  templateLibrary?: MessageTemplateLibrary;
+
   productIds?: string;
   createdAt: string;
   updatedAt: string;
@@ -127,8 +133,15 @@ export interface CreateAutomationColumnDto {
   scheduledDate?: string;
   isRecurring?: boolean;
   recurringDay?: number;
-  messageTemplateId?: string;
+  messageTemplateId?: string; // DEPRECATED
+  templateLibraryId?: string; // NOVO - Biblioteca Centralizada
   productIds?: string[];
+  // Sistema de Recorrência Avançado
+  recurrenceType?: RecurrenceType;
+  weekDays?: string;
+  monthDay?: number;
+  customDates?: string;
+  daysFromNow?: number;
 }
 
 export interface UpdateAutomationColumnDto extends Partial<CreateAutomationColumnDto> {}

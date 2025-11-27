@@ -130,10 +130,12 @@ const AutomationKanbanView = ({
                           <span>Recorrente: Dia {column.recurringDay}</span>
                         </div>
                       )}
-                      {column.messageTemplate && (
+                      {(column.templateLibrary || column.messageTemplate) && (
                         <div className="flex items-center gap-2">
                           <MessageSquare className="h-3 w-3" />
-                          <span className="truncate">Template: {column.messageTemplate.name}</span>
+                          <span className="truncate">
+                            Template: {column.templateLibrary?.name || column.messageTemplate?.name}
+                          </span>
                         </div>
                       )}
                     </div>
