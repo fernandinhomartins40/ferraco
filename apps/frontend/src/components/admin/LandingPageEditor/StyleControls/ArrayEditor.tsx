@@ -36,6 +36,9 @@ export function ArrayEditor<T extends { id: string }>({
 }: ArrayEditorProps<T>) {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
+  // Proteção contra undefined - garantir que items seja sempre um array
+  const safeItems = items || [];
+
   const toggleExpanded = (id: string) => {
     setExpandedItems((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -43,32 +46,32 @@ export function ArrayEditor<T extends { id: string }>({
   };
 
   const addItem = () => {
-    if (maxItems && items.length >= maxItems) {
+    if (maxItems && safeItems.length >= maxItems) {
       alert(`Máximo de ${maxItems} itens permitidos`);
       return;
     }
 
     const newItem = createNew();
-    onChange([...items, newItem]);
+    onChange([...safeItems, newItem]);
     setExpandedItems((prev) => [...prev, newItem.id]);
   };
 
   const removeItem = (index: number) => {
-    const newItems = items.filter((_, i) => i !== index);
+    const newItems = safeItems.filter((_, i) => i !== index);
     onChange(newItems);
   };
 
   const updateItem = (index: number, updates: Partial<T>) => {
-    const newItems = [...items];
+    const newItems = [...safeItems];
     newItems[index] = { ...newItems[index], ...updates };
     onChange(newItems);
   };
 
   const moveItem = (index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= items.length) return;
+    if (newIndex < 0 || newIndex >= safeItems.length) return;
 
-    const newItems = [...items];
+    const newItems = [...safeItems];
     [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
     onChange(newItems);
   };
@@ -80,14 +83,14 @@ export function ArrayEditor<T extends { id: string }>({
           <Label>{label}</Label>
           {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
         </div>
-        <Button onClick={addItem} size="sm" disabled={maxItems ? items.length >= maxItems : false}>
+        <Button onClick={addItem} size="sm" disabled={maxItems ? safeItems.length >= maxItems : false}>
           <Plus className="h-4 w-4 mr-1" />
           Adicionar
         </Button>
       </div>
 
       <div className="space-y-2">
-        {items.length === 0 ? (
+        {safeItems.length === 0 ? (
           <Card className="p-8 text-center">
             <p className="text-sm text-muted-foreground">Nenhum item adicionado</p>
             <Button onClick={addItem} variant="outline" size="sm" className="mt-4">
@@ -96,7 +99,7 @@ export function ArrayEditor<T extends { id: string }>({
             </Button>
           </Card>
         ) : (
-          items.map((item, index) => {
+          safeItems.map((item, index) => {
             const isExpanded = expandedItems.includes(item.id);
 
             return (
@@ -131,7 +134,7 @@ export function ArrayEditor<T extends { id: string }>({
                         size="icon"
                         variant="ghost"
                         onClick={() => moveItem(index, 'down')}
-                        disabled={index === items.length - 1}
+                        disabled={index === safeItems.length - 1}
                         className="h-8 w-8"
                       >
                         <ChevronDown className="h-4 w-4" />
@@ -166,7 +169,7 @@ export function ArrayEditor<T extends { id: string }>({
 
       {maxItems && (
         <p className="text-xs text-muted-foreground text-right">
-          {items.length} / {maxItems} itens
+          {safeItems.length} / {maxItems} itens
         </p>
       )}
     </div>
