@@ -104,8 +104,8 @@ export const ProductsEditor = ({ config, onChange }: ProductsEditorProps) => {
         <CardContent>
           <ArrayEditor
             label="Lista de Produtos"
-            items={config.products}
-            onChange={(products) => onChange({ products })}
+            items={config.products.products}
+            onChange={(products) => onChange({ products: { ...config.products, products } })}
             getItemLabel={(item) => item.name}
             createNew={() =>
               ({

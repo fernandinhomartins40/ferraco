@@ -184,6 +184,8 @@ export const useLandingPageConfig = () => {
                 products: (data.products?.products || defaults.products.products || []).map(product => ({
                   ...product,
                   benefits: product.benefits || [], // Garante que benefits dentro de products seja sempre um array
+                  image: product.image || { url: '', alt: '' },
+                  cta: product.cta || undefined,
                 })),
               },
               experience: {
