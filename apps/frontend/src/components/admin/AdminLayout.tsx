@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell,
   MessageCircle, FileText, Bot, KeyRound, Palette, Send,
-  Repeat, LogOut, User, ChevronRight, Clock, Menu
+  Repeat, LogOut, User, ChevronRight, Clock, Menu, Library
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -113,6 +113,12 @@ const AdminLayoutContent = ({ children }: AdminLayoutProps) => {
       href: '/admin/whatsapp-automations',
       label: 'Automações WA',
       icon: Send,
+      show: true
+    },
+    {
+      href: '/admin/template-library',
+      label: 'Templates',
+      icon: Library,
       show: true
     },
     {
