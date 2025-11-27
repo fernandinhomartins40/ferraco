@@ -20,11 +20,26 @@ interface ProductsEditorProps {
 
 export const ProductsEditor = ({ config, onChange }: ProductsEditorProps) => {
   const updateTitle = (updates: Partial<ProductsConfig['title']>) => {
-    onChange({ title: { ...config.title, ...updates } });
+    onChange({
+      title: {
+        text: config.title?.text || 'Nossos Produtos',
+        style: { ...(config.title?.style || {}), ...updates.style },
+        ...config.title,
+        ...updates
+      }
+    });
   };
 
   const updateSubtitle = (updates: Partial<ProductsConfig['subtitle']>) => {
-    onChange({ subtitle: config.subtitle ? { ...config.subtitle, ...updates } : undefined });
+    if (!config.subtitle && !updates) return;
+    onChange({
+      subtitle: config.subtitle ? {
+        text: config.subtitle.text,
+        style: { ...(config.subtitle.style || {}), ...updates.style },
+        ...config.subtitle,
+        ...updates
+      } : undefined
+    });
   };
 
   return (
@@ -104,8 +119,8 @@ export const ProductsEditor = ({ config, onChange }: ProductsEditorProps) => {
         <CardContent>
           <ArrayEditor
             label="Lista de Produtos"
-            items={config.products.products}
-            onChange={(products) => onChange({ products: { ...config.products, products } })}
+            items={config.products || []}
+            onChange={(products) => onChange({ products })}
             getItemLabel={(item) => item.name}
             createNew={() =>
               ({
@@ -297,22 +312,22 @@ export const ProductsEditor = ({ config, onChange }: ProductsEditorProps) => {
         <CardContent className="space-y-4">
           <FontSelector
             label="Tamanho do Título"
-            value={config.title.style.fontSize || '2.25rem'}
-            onChange={(fontSize) => updateTitle({ style: { ...config.title.style, fontSize } })}
+            value={config.title?.style?.fontSize || '2.25rem'}
+            onChange={(fontSize) => updateTitle({ style: { ...(config.title?.style || {}), fontSize } })}
             type="size"
           />
 
           <ColorPicker
             label="Cor do Título"
-            value={config.title.style.textColor || '#000000'}
-            onChange={(textColor) => updateTitle({ style: { ...config.title.style, textColor } })}
+            value={config.title?.style?.textColor || '#000000'}
+            onChange={(textColor) => updateTitle({ style: { ...(config.title?.style || {}), textColor } })}
           />
 
           <ColorPicker
             label="Cor de Fundo da Seção"
-            value={config.style.backgroundColor || '#ffffff'}
+            value={config.style?.backgroundColor || '#ffffff'}
             onChange={(backgroundColor) =>
-              onChange({ style: { ...config.style, backgroundColor } })
+              onChange({ style: { ...(config.style || {}), backgroundColor } })
             }
           />
         </CardContent>
