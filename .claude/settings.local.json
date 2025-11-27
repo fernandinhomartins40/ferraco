@@ -136,7 +136,14 @@
       "Bash(docker run:*)",
       "Bash(psql:*)",
       "Bash(PORT=3001 timeout 20s npx tsx:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(then grep \"DATABASE_URL\" .env)",
+      "Bash(else echo \"No .env file\")",
+      "Bash(git revert:*)",
+      "Bash(PORT=3001 timeout 10s npm run dev:*)",
+      "Bash(PORT=3000 timeout 15s npm run dev:*)",
+      "Bash(xargs -I {} sh -c 'head -c 500 {} && echo \"\"\"\"\"\"\"\"')",
+      "Bash(bash:*)"
     ],
     "deny": [],
     "ask": []
