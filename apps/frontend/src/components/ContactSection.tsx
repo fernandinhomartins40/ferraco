@@ -1,4 +1,4 @@
-import { MapPin, Phone, Mail, Clock, MessageCircle } from "lucide-react";
+import { MessageCircle, Phone } from "lucide-react";
 import * as LucideIcons from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,7 @@ interface ContactSectionProps {
   config?: ContactConfig;
 }
 
-const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
+const ContactSection = ({ config }: ContactSectionProps) => {
   // Renderizar ícone dinamicamente
   const renderIcon = (iconName: string) => {
     const IconComponent = (LucideIcons as any)[iconName] || Phone;
@@ -52,6 +52,19 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
   // Usar config ou fallback
   const displayContactInfo = config?.methods && config.methods.length > 0 ? config.methods : defaultContactInfo;
 
+  // Gerar href automaticamente para endereços (Google Maps)
+  const getContactHref = (contact: typeof displayContactInfo[0]) => {
+    if (contact.href) return contact.href;
+
+    // Se for endereço e não tiver href, gerar link do Google Maps
+    if (contact.type === 'address' && contact.value) {
+      const encodedAddress = encodeURIComponent(contact.value);
+      return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    }
+
+    return undefined;
+  };
+
   return (
     <section id="contact" className="py-20 bg-background scroll-mt-24">
       <div className="container mx-auto px-4">
@@ -93,15 +106,23 @@ const ContactSection = ({ onLeadModalOpen, config }: ContactSectionProps) => {
                   </Card>
                 );
 
+                // Obter href (pode ser explícito ou gerado automaticamente)
+                const href = getContactHref(contact);
+
                 // Se tiver href, tornar clicável
-                if (contact.href) {
+                if (href) {
+                  // Para email e telefone, não usar target (comportamento padrão do navegador)
+                  // Para outros links (incluindo endereço/maps), abrir em nova aba
+                  const linkProps = contact.type === 'email' || contact.type === 'phone'
+                    ? {}
+                    : { target: '_blank', rel: 'noopener noreferrer' };
+
                   return (
                     <a
                       key={contact.id}
-                      href={contact.href}
-                      target={contact.type === 'email' ? '_self' : '_blank'}
-                      rel="noopener noreferrer"
-                      className="block hover:opacity-80 transition-opacity"
+                      href={href}
+                      {...linkProps}
+                      className="block hover:opacity-80 transition-opacity cursor-pointer"
                     >
                       {content}
                     </a>
