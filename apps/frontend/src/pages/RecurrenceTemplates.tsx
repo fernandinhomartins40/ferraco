@@ -76,6 +76,11 @@ export default function RecurrenceTemplates() {
   };
 
   const previewTemplateContent = (template: RecurrenceTemplate) => {
+    // Verificar se template e content existem
+    if (!template || !template.content) {
+      return 'Template sem conteúdo disponível';
+    }
+
     const exampleData = {
       'lead.name': 'João Silva',
       'captureNumber': '3',
