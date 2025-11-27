@@ -690,6 +690,145 @@ Equipe {{company.name}}`,
   console.log('  Vendedor:   vendedor@ferraco.com / User@123456');
   console.log('  Consultor:  consultor@ferraco.com / User@123456');
   console.log('  Suporte:    suporte@ferraco.com / User@123456');
+
+  // ============================================================================
+  // 📚 Template Library - Biblioteca Centralizada de Templates
+  // ============================================================================
+  console.log('📚 Creating template library...');
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Boas-vindas Inicial',
+      description: 'Mensagem de boas-vindas para novos leads',
+      category: 'GENERIC',
+      content: 'Olá {{lead.name}}! 👋\n\nSeja bem-vindo(a) à Metalúrgica Ferraco!\n\nSomos especialistas em equipamentos agropecuários de alta qualidade.\n\nComo podemos ajudá-lo(a) hoje?',
+      priority: 100,
+      isActive: true,
+      isSystem: true,
+      isFavorite: true,
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Apresentação da Empresa',
+      description: 'Template para apresentar a empresa',
+      category: 'GENERIC',
+      content: 'A *{{company.name}}* é líder em soluções agropecuárias há mais de 30 anos.\n\n✅ Produtos de alta qualidade\n✅ Entrega em todo o Brasil\n✅ Garantia e suporte especializado\n\nConheça nossos principais produtos:\n- Bebedouros\n- Comedouros\n- Sistemas de contenção\n- Free stall',
+      priority: 90,
+      isActive: true,
+      isSystem: true,
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Solicitação de Orçamento',
+      description: 'Template para leads que solicitam orçamento',
+      category: 'AUTOMATION',
+      content: 'Olá {{lead.name}}!\n\nObrigado pelo interesse em nossos produtos! 📋\n\nPara elaborar um orçamento personalizado, preciso de algumas informações:\n\n1️⃣ Qual produto você tem interesse?\n2️⃣ Quantidade desejada\n3️⃣ Cidade/Estado para cálculo do frete\n\nAguardo seu retorno!',
+      priority: 95,
+      isActive: true,
+      isSystem: false,
+      triggerType: 'modal_orcamento',
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Atendimento Humano Solicitado',
+      description: 'Template quando o cliente solicita falar com atendente',
+      category: 'AUTOMATION',
+      content: '{{lead.name}}, entendo! 👨‍💼\n\nVou transferir você para um de nossos consultores especializados.\n\nEm breve alguém da nossa equipe entrará em contato.\n\nObrigado pela preferência!',
+      priority: 98,
+      isActive: true,
+      isSystem: false,
+      triggerType: 'human_contact_request',
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Follow-up 1 Captura',
+      description: 'Primeira mensagem de recorrência após captura',
+      category: 'RECURRENCE',
+      content: 'Oi {{lead.name}}! 😊\n\nNotei que você demonstrou interesse em nossos produtos.\n\nGostaria de saber mais sobre:\n\n🐄 Bebedouros para gado\n🌾 Comedouros automáticos\n🔒 Sistemas de contenção\n\nQual te interessa mais?',
+      priority: 80,
+      isActive: true,
+      isSystem: false,
+      minCaptures: 1,
+      maxCaptures: 1,
+      daysSinceCapture: 1,
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Follow-up 2-3 Capturas',
+      description: 'Mensagem para leads com 2-3 capturas',
+      category: 'RECURRENCE',
+      content: 'Olá {{lead.name}}!\n\nVejo que você já nos visitou algumas vezes. 🌟\n\n*Oferta Especial:*\nPeça um orçamento hoje e ganhe *10% de desconto* em sua primeira compra!\n\nQuer aproveitar?',
+      priority: 75,
+      isActive: true,
+      isSystem: false,
+      minCaptures: 2,
+      maxCaptures: 3,
+      daysSinceCapture: 3,
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Follow-up 4+ Capturas',
+      description: 'Mensagem para leads engajados (4+ capturas)',
+      category: 'RECURRENCE',
+      content: 'Oi {{lead.name}}! 🎯\n\nPercebo que você é um lead super engajado com a Ferraco!\n\nQue tal agendar uma *consulta gratuita* com nosso especialista?\n\nPodemos encontrar a solução perfeita para sua necessidade.\n\nInteresse?',
+      priority: 85,
+      isActive: true,
+      isSystem: false,
+      minCaptures: 4,
+      daysSinceCapture: 5,
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Reativação Lead Frio',
+      description: 'Mensagem para reativar leads inativos',
+      category: 'RECURRENCE',
+      content: '{{lead.name}}, sentimos sua falta! 💙\n\nHá um tempo você demonstrou interesse em nossos produtos.\n\n*Novidades:*\n✨ Novos modelos de bebedouros\n✨ Linha premium de comedouros\n✨ Condições especiais de pagamento\n\nVamos conversar?',
+      priority: 60,
+      isActive: true,
+      isSystem: false,
+      daysSinceCapture: 15,
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Agradecimento Pós-Contato',
+      description: 'Template de agradecimento após interação',
+      category: 'GENERIC',
+      content: 'Obrigado pelo contato, {{lead.name}}! 🙏\n\nFoi um prazer atendê-lo(a).\n\nEstamos sempre à disposição para ajudar.\n\nAté breve!\n\n*{{company.name}}*\n📞 WhatsApp: {{company.phone}}',
+      priority: 70,
+      isActive: true,
+      isSystem: false,
+    },
+  });
+
+  await prisma.messageTemplateLibrary.create({
+    data: {
+      name: 'Informações de Entrega',
+      description: 'Template com informações sobre entrega',
+      category: 'GENERIC',
+      content: 'Informações sobre Entrega - {{company.name}}\n\n📦 *Frete:*\nRealizamos entregas para todo o Brasil via transportadora\n\n⏱️ *Prazo:*\n- Sul/Sudeste: 5-7 dias úteis\n- Norte/Nordeste: 10-15 dias úteis\n\n💰 *Pagamento:*\nAceitamos PIX, cartão e boleto\n\nPrecisa de um orçamento, {{lead.name}}?',
+      priority: 65,
+      isActive: true,
+      isSystem: false,
+    },
+  });
+
+  console.log('✅ 10 templates criados na biblioteca');
 }
 
 main()
