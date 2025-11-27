@@ -43,6 +43,7 @@ const WhatsAppAutomations = lazy(() => import("./pages/admin/WhatsAppAutomations
 const RecurrenceDashboard = lazy(() => import("./pages/RecurrenceDashboard"));
 const RecurrenceTemplates = lazy(() => import("./pages/RecurrenceTemplates"));
 const ApiKeys = lazy(() => import("./pages/admin/ApiKeys"));
+const TemplateLibrary = lazy(() => import("./pages/TemplateLibrary"));
 
 // Import ProtectedRoute
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -190,6 +191,16 @@ const App = () => {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <WhatsAppAutomations />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/template-library"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <TemplateLibrary />
                 </Suspense>
               </ProtectedRoute>
             }

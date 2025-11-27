@@ -168,6 +168,14 @@ enum MessageTemplateCategory {
   CUSTOM
 }
 
+enum TemplateLibraryCategory {
+  AUTOMATION // Templates para colunas de automação
+  RECURRENCE // Templates para leads recorrentes
+  GENERIC // Templates genéricos reutilizáveis
+  CUSTOM // Templates customizados pelo usuário
+  SYSTEM // Templates do sistema (pré-definidos)
+}
+
 enum AISentiment {
   POSITIVE
   NEUTRAL
@@ -241,26 +249,26 @@ model User {
   lastLogin DateTime?
 
   // Relações
-  permissions                  UserPermission[]
-  teamMemberships              TeamMember[]
-  preferences                  UserPreferences?
-  refreshTokens                RefreshToken[]
-  assignedLeads                Lead[]                       @relation("AssignedTo")
-  createdLeads                 Lead[]                       @relation("CreatedBy")
-  notes                        Note[]
-  interactions                 Interaction[]
-  opportunitiesCreated         Opportunity[]                @relation("OpportunityCreatedBy")
-  opportunitiesAssigned        Opportunity[]                @relation("OpportunityAssignedTo")
-  automationsCreated           Automation[]                 @relation("AutomationCreatedBy")
-  pipelinesCreated             Pipeline[]                   @relation("PipelineCreatedBy")
-  integrationsCreated          Integration[]                @relation("IntegrationCreatedBy")
+  permissions                     UserPermission[]
+  teamMemberships                 TeamMember[]
+  preferences                     UserPreferences?
+  refreshTokens                   RefreshToken[]
+  assignedLeads                   Lead[]                     @relation("AssignedTo")
+  createdLeads                    Lead[]                     @relation("CreatedBy")
+  notes                           Note[]
+  interactions                    Interaction[]
+  opportunitiesCreated            Opportunity[]              @relation("OpportunityCreatedBy")
+  opportunitiesAssigned           Opportunity[]              @relation("OpportunityAssignedTo")
+  automationsCreated              Automation[]               @relation("AutomationCreatedBy")
+  pipelinesCreated                Pipeline[]                 @relation("PipelineCreatedBy")
+  integrationsCreated             Integration[]              @relation("IntegrationCreatedBy")
   landingPageConfigHistoryChanges LandingPageConfigHistory[]
-  reportsCreated        Report[]           @relation("ReportCreatedBy")
-  auditLogs             AuditLog[]
-  signatures            DigitalSignature[]
-  dashboardConfigs      DashboardConfig[]
-  notifications         Notification[]
-  apiKeys               ApiKey[]
+  reportsCreated                  Report[]                   @relation("ReportCreatedBy")
+  auditLogs                       AuditLog[]
+  signatures                      DigitalSignature[]
+  dashboardConfigs                DashboardConfig[]
+  notifications                   Notification[]
+  apiKeys                         ApiKey[]
 
   @@index([email])
   @@index([username])
@@ -477,7 +485,7 @@ model Lead {
 // ============================================================================
 
 model LeadCapture {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid())
   leadId        String
   source        String // 'landing-page', 'chatbot-web', 'whatsapp', 'manual'
   interest      String? // JSON array com produtos de interesse
@@ -510,16 +518,16 @@ model RecurrenceMessageTemplate {
   description String?
 
   // Trigger conditions
-  trigger          String // 'second_capture', 'third_capture', 'high_value_return', 'same_interest', 'new_interest'
-  minCaptures      Int // Número mínimo de capturas para disparar
-  maxCaptures      Int? // Número máximo de capturas (null = sem limite)
+  trigger              String // 'second_capture', 'third_capture', 'high_value_return', 'same_interest', 'new_interest'
+  minCaptures          Int // Número mínimo de capturas para disparar
+  maxCaptures          Int? // Número máximo de capturas (null = sem limite)
   daysSinceLastCapture Int? // Dias desde última captura (null = qualquer)
 
   // Condições adicionais (JSON)
   conditions String @default("{}") // Ex: { "sameInterest": true, "minScore": 50 }
 
   // Template
-  content   String @db.Text // Conteúdo com variáveis {{lead.name}}, {{captureNumber}}, etc
+  content   String  @db.Text // Conteúdo com variáveis {{lead.name}}, {{captureNumber}}, etc
   mediaUrls String? // JSON array de URLs de mídia
   mediaType String? // IMAGE, VIDEO, DOCUMENT
 
@@ -605,7 +613,11 @@ model AutomationKanbanColumn {
   isRecurring  Boolean @default(false)
   recurringDay Int?
 
-  // Template de Mensagem
+  // Template de Mensagem (NOVO - Biblioteca Centralizada)
+  templateLibraryId String?
+  templateLibrary   MessageTemplateLibrary? @relation(fields: [templateLibraryId], references: [id], onDelete: SetNull)
+
+  // Template de Mensagem (DEPRECATED - manter compatibilidade)
   messageTemplateId String?
   messageTemplate   WhatsAppMessageTemplate? @relation(fields: [messageTemplateId], references: [id], onDelete: SetNull)
 
@@ -741,25 +753,25 @@ model LandingPageConfig {
 // ============================================================================
 
 model LandingPageConfigHistory {
-  id        String   @id @default(cuid())
-  configId  String?  @map("config_id")
-  header    String   @db.Text // JSON
-  hero      String   @db.Text // JSON
-  marquee   String   @db.Text // JSON
-  about     String   @db.Text // JSON
-  products  String   @db.Text // JSON
+  id         String  @id @default(cuid())
+  configId   String? @map("config_id")
+  header     String  @db.Text // JSON
+  hero       String  @db.Text // JSON
+  marquee    String  @db.Text // JSON
+  about      String  @db.Text // JSON
+  products   String  @db.Text // JSON
   experience String  @db.Text // JSON
-  contact   String   @db.Text // JSON
-  footer    String   @db.Text // JSON
+  contact    String  @db.Text // JSON
+  footer     String  @db.Text // JSON
 
   // Metadados
-  changeType      String  @default("manual_save") @map("change_type") // 'manual_save', 'auto_save', 'import', 'reset'
-  changedByUserId String? @map("changed_by_user_id")
+  changeType      String   @default("manual_save") @map("change_type") // 'manual_save', 'auto_save', 'import', 'reset'
+  changedByUserId String?  @map("changed_by_user_id")
   createdAt       DateTime @default(now()) @map("created_at")
 
   // Relações
-  config      LandingPageConfig? @relation(fields: [configId], references: [id], onDelete: SetNull)
-  changedByUser User?            @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+  config        LandingPageConfig? @relation(fields: [configId], references: [id], onDelete: SetNull)
+  changedByUser User?              @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
 
   @@index([configId])
   @@index([createdAt(sort: Desc)])
@@ -1922,15 +1934,15 @@ enum ApiKeyStatus {
 }
 
 model ApiKey {
-  id             String       @id @default(cuid())
-  name           String // Nome descritivo: "Zapier Integration", "Mobile App"
-  key            String       @unique // Chave pública: pk_live_abc123...
-  secretHash     String // Hash bcrypt do secret: sk_live_xyz789...
-  type           ApiKeyType   @default(WRITE)
-  status         ApiKeyStatus @default(ACTIVE)
+  id         String       @id @default(cuid())
+  name       String // Nome descritivo: "Zapier Integration", "Mobile App"
+  key        String       @unique // Chave pública: pk_live_abc123...
+  secretHash String // Hash bcrypt do secret: sk_live_xyz789...
+  type       ApiKeyType   @default(WRITE)
+  status     ApiKeyStatus @default(ACTIVE)
 
   // Scopes e permissões
-  scopes         String // JSON array: ["leads:read", "leads:write", "communications:write"]
+  scopes String // JSON array: ["leads:read", "leads:write", "communications:write"]
 
   // Rate limiting
   rateLimitPerHour Int @default(1000)
@@ -1941,23 +1953,23 @@ model ApiKey {
   allowedOrigins String? // JSON array de origins permitidos (CORS)
 
   // Metadata
-  userId         String // Usuário que criou a API key
-  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String // Usuário que criou a API key
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Rastreamento
-  lastUsedAt     DateTime?
-  usageCount     Int       @default(0)
+  lastUsedAt DateTime?
+  usageCount Int       @default(0)
 
   // Expiração
-  expiresAt      DateTime?
+  expiresAt DateTime?
 
   // Timestamps
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relações
-  usageLogs      ApiUsageLog[]
-  webhooks       Webhook[]
+  usageLogs ApiUsageLog[]
+  webhooks  Webhook[]
 
   @@index([key])
   @@index([userId])
@@ -1971,27 +1983,27 @@ model ApiKey {
 // ============================================================================
 
 model ApiUsageLog {
-  id            String   @id @default(cuid())
-  apiKeyId      String
-  apiKey        ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  apiKeyId String
+  apiKey   ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
 
   // Request info
-  method        String // GET, POST, PUT, DELETE
-  endpoint      String // /api/v1/external/leads
-  statusCode    Int // 200, 404, 500
+  method     String // GET, POST, PUT, DELETE
+  endpoint   String // /api/v1/external/leads
+  statusCode Int // 200, 404, 500
 
   // Performance
-  responseTime  Int // Milissegundos
+  responseTime Int // Milissegundos
 
   // Metadata
-  ipAddress     String
-  userAgent     String?
-  requestBody   String? @db.Text // JSON (sanitizado)
-  responseBody  String? @db.Text // JSON (sanitizado)
-  errorMessage  String?
+  ipAddress    String
+  userAgent    String?
+  requestBody  String? @db.Text // JSON (sanitizado)
+  responseBody String? @db.Text // JSON (sanitizado)
+  errorMessage String?
 
   // Timestamps
-  timestamp     DateTime @default(now())
+  timestamp DateTime @default(now())
 
   @@index([apiKeyId])
   @@index([timestamp])
@@ -2010,23 +2022,23 @@ enum WebhookStatus {
 }
 
 model Webhook {
-  id            String        @id @default(cuid())
-  apiKeyId      String
-  apiKey        ApiKey        @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  apiKeyId String
+  apiKey   ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
 
   // Configuração
-  url           String // URL de destino
-  events        String // JSON array: ["lead.created", "lead.updated", "communication.sent"]
-  secret        String // Secret para HMAC signature
-  status        WebhookStatus @default(ACTIVE)
+  url    String // URL de destino
+  events String // JSON array: ["lead.created", "lead.updated", "communication.sent"]
+  secret String // Secret para HMAC signature
+  status WebhookStatus @default(ACTIVE)
 
   // Metadata
-  name          String?
-  description   String?
+  name        String?
+  description String?
 
   // Retry config
-  maxRetries    Int           @default(3)
-  retryDelay    Int           @default(60000) // Milissegundos
+  maxRetries Int @default(3)
+  retryDelay Int @default(60000) // Milissegundos
 
   // Rastreamento
   lastTriggeredAt DateTime?
@@ -2034,11 +2046,11 @@ model Webhook {
   successCount    Int       @default(0)
 
   // Timestamps
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relações
-  deliveries    WebhookDelivery[]
+  deliveries WebhookDelivery[]
 
   @@index([apiKeyId])
   @@index([status])
@@ -2057,29 +2069,29 @@ enum WebhookDeliveryStatus {
 }
 
 model WebhookDelivery {
-  id            String                 @id @default(cuid())
-  webhookId     String
-  webhook       Webhook                @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  webhookId String
+  webhook   Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
   // Event info
-  event         String // "lead.created", "communication.sent"
-  payload       String @db.Text // JSON
+  event   String // "lead.created", "communication.sent"
+  payload String @db.Text // JSON
 
   // Delivery info
-  status        WebhookDeliveryStatus @default(PENDING)
-  attempts      Int                   @default(0)
-  maxAttempts   Int                   @default(3)
+  status      WebhookDeliveryStatus @default(PENDING)
+  attempts    Int                   @default(0)
+  maxAttempts Int                   @default(3)
 
   // Response info
-  statusCode    Int?
-  responseBody  String? @db.Text
-  errorMessage  String?
+  statusCode   Int?
+  responseBody String? @db.Text
+  errorMessage String?
 
   // Performance
-  responseTime  Int? // Milissegundos
+  responseTime Int? // Milissegundos
 
   // Timestamps
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
   lastAttemptAt DateTime?
   nextAttemptAt DateTime?
   completedAt   DateTime?
@@ -2113,23 +2125,23 @@ enum EventType {
 }
 
 model EventLog {
-  id            String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // Event info
-  eventType     EventType
-  eventName     String // Nome descritivo do evento
+  eventType EventType
+  eventName String // Nome descritivo do evento
 
   // Resource info
-  resourceType  String // "Lead", "Communication", "Automation"
-  resourceId    String
+  resourceType String // "Lead", "Communication", "Automation"
+  resourceId   String
 
   // Metadata
-  userId        String?
-  apiKeyId      String?
-  payload       String  @db.Text // JSON com dados do evento
+  userId   String?
+  apiKeyId String?
+  payload  String  @db.Text // JSON com dados do evento
 
   // Timestamps
-  timestamp     DateTime @default(now())
+  timestamp DateTime @default(now())
 
   @@index([eventType])
   @@index([resourceType])
@@ -2138,6 +2150,54 @@ model EventLog {
   @@index([userId])
   @@index([apiKeyId])
   @@map("event_logs")
+}
+
+// ============================================================================
+// TABELA: MessageTemplateLibrary (Biblioteca Centralizada de Templates)
+// ============================================================================
+
+model MessageTemplateLibrary {
+  id          String                  @id @default(cuid())
+  name        String
+  description String?
+  category    TemplateLibraryCategory
+
+  // Conteúdo
+  content   String  @db.Text
+  mediaUrls String? // JSON array de URLs
+  mediaType String? // IMAGE, VIDEO, DOCUMENT, AUDIO
+
+  // Variáveis disponíveis (documentação)
+  availableVariables String @default("[]") // JSON: ["lead.name", "company.name"]
+
+  // Metadados
+  isActive   Boolean @default(true)
+  isSystem   Boolean @default(false) // Templates do sistema (não podem ser deletados)
+  isFavorite Boolean @default(false)
+  usageCount Int     @default(0)
+
+  // Configurações de Trigger (para templates de recorrência)
+  triggerType       String? // modal_orcamento, human_contact_request, generic_inquiry, chat_no_interest
+  minCaptures       Int?
+  maxCaptures       Int?
+  daysSinceCapture  Int?
+  triggerConditions String? @default("{}") // JSON
+  priority          Int     @default(0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  automationColumns AutomationKanbanColumn[]
+
+  @@index([category])
+  @@index([isActive])
+  @@index([isSystem])
+  @@index([triggerType])
+  @@index([priority])
+  @@index([usageCount])
+  @@map("message_template_library")
 }
 
 // ============================================================================

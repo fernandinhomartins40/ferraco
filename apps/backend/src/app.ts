@@ -33,6 +33,7 @@ import automationKanbanRoutes from './routes/automationKanban.routes';
 import whatsappMessageTemplateRoutes from './routes/whatsappMessageTemplate.routes';
 import whatsappAutomationRoutes from './modules/whatsapp-automation/whatsapp-automation.routes';
 import recurrenceRoutes from './modules/recurrence/recurrence.routes';
+import templateLibraryRoutes from './modules/template-library/template-library.routes';
 import { tokenCleanupService } from './services/token-cleanup.service';
 
 // Import External API routes
@@ -101,6 +102,7 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/whatsapp-templates`, whatsappMessageTemplateRoutes);
   app.use(`${API_PREFIX}/whatsapp-automations`, whatsappAutomationRoutes);
   app.use(`${API_PREFIX}/recurrence`, recurrenceRoutes);
+  app.use(`${API_PREFIX}/template-library`, templateLibraryRoutes);
 
   // External API routes (v1)
   app.use(`${API_PREFIX}/api-keys`, apiKeyRoutes);
