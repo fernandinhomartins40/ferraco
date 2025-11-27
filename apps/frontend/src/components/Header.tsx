@@ -12,14 +12,29 @@ interface HeaderProps {
 const Header = ({ onLeadModalOpen, config }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Fallback para valores padrão
-  const menuItems = config?.menu?.items || [
+  // Mapeamento de hrefs para garantir IDs em inglês (padrão da indústria)
+  const normalizeHref = (href: string): string => {
+    const hrefMap: Record<string, string> = {
+      '#inicio': '#hero',
+      '#sobre': '#about',
+      '#produtos': '#products',
+      '#experiencia': '#experience',
+      '#contato': '#contact',
+    };
+    return hrefMap[href.toLowerCase()] || href;
+  };
+
+  // Fallback para valores padrão com normalização de hrefs
+  const menuItems = (config?.menu?.items || [
     { label: "Início", href: "#hero" },
     { label: "Sobre", href: "#about" },
     { label: "Produtos", href: "#products" },
     { label: "Experiência", href: "#experience" },
     { label: "Contato", href: "#contact" },
-  ];
+  ]).map(item => ({
+    ...item,
+    href: normalizeHref(item.href), // Garantir que hrefs sempre estejam em inglês
+  }));
 
   const logoSrc = config?.logo?.image?.url || logoFerraco;
   const logoAlt = config?.logo?.image?.alt || config?.logo?.alt || "Ferraco Equipamentos";

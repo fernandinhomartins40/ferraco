@@ -10,6 +10,18 @@ interface FooterProps {
 const Footer = ({ config }: FooterProps) => {
   const { isAuthenticated, user } = useAuth();
 
+  // Mapeamento de hrefs para garantir IDs em inglês (padrão da indústria)
+  const normalizeHref = (href: string): string => {
+    const hrefMap: Record<string, string> = {
+      '#inicio': '#hero',
+      '#sobre': '#about',
+      '#produtos': '#products',
+      '#experiencia': '#experience',
+      '#contato': '#contact',
+    };
+    return hrefMap[href.toLowerCase()] || href;
+  };
+
   const quickLinks = [
     { label: "Início", href: "#hero" },
     { label: "Sobre", href: "#about" },
@@ -33,7 +45,9 @@ const Footer = ({ config }: FooterProps) => {
   ];
 
   const scrollToSection = (href: string) => {
-    const element = document.querySelector(href);
+    // Normalizar href antes de fazer scroll (garante compatibilidade)
+    const normalizedHref = normalizeHref(href);
+    const element = document.querySelector(normalizedHref);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
     }
