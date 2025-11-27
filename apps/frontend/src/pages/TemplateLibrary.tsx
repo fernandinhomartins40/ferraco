@@ -41,7 +41,7 @@ import {
   TemplateLibraryCategory,
 } from '@/services/templateLibrary.service';
 
-export function TemplateLibrary() {
+export default function TemplateLibrary() {
   const [templates, setTemplates] = useState<MessageTemplateLibrary[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<MessageTemplateLibrary[]>([]);
   const [loading, setLoading] = useState(false);
