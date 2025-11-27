@@ -49,7 +49,12 @@ export function createApp(): Application {
   app.set('trust proxy', true);
 
   // Security middlewares
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: false, // Desabilita CSP para permitir Swagger UI
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
+  }));
   app.use(cors(CORS_OPTIONS));
 
   // Body parsing (aumentado para 50MB para suportar uploads de imagens)
