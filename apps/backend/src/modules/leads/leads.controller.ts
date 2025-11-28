@@ -43,7 +43,16 @@ export class LeadsController {
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const validatedData = CreateLeadSchema.parse(req.body) as CreateLeadDTO;
-      const lead = await this.service.create(validatedData, req.user!.userId);
+
+      // Suporta autenticação via JWT (req.user) ou API Key (req.apiKey)
+      const userId = (req as any).user?.userId || (req as any).apiKey?.userId;
+
+      if (!userId) {
+        badRequestResponse(res, 'Autenticação necessária', [{ field: 'auth', message: 'User ID not found', code: 'AUTHENTICATION_REQUIRED' }]);
+        return;
+      }
+
+      const lead = await this.service.create(validatedData, userId);
 
       createdResponse(res, lead, 'Lead criado com sucesso');
     } catch (error) {
