@@ -682,7 +682,49 @@ Equipe {{company.name}}`,
     }
   });
 
-  console.log('✅ 4 automation templates created/updated');
+  await prisma.recurrenceMessageTemplate.upsert({
+    where: { id: 'tpl_product_interest_001' },
+    update: {},
+    create: {
+      id: 'tpl_product_interest_001',
+      name: 'Interesse em Produto - Landing Page',
+      description: 'Mensagem automática quando lead demonstra interesse em produto específico',
+      trigger: 'modal-produto',
+      minCaptures: 1,
+      maxCaptures: 1,
+      daysSinceLastCapture: null,
+      conditions: '{}',
+      content: `Olá {{lead.name}}! 👋
+
+Obrigado pelo interesse em nosso produto **{{interest}}**! 🎯
+
+Vi que você solicitou orçamento para:
+📦 {{interest}}
+
+Nossa equipe está preparando uma proposta personalizada para você.
+
+Posso te ajudar com:
+✅ Especificações técnicas do {{interest}}
+✅ Orçamento sem compromisso
+✅ Prazo de entrega
+✅ Formas de pagamento
+
+Qual informação te interessa mais?
+
+📞 {{company.phone}}
+📧 {{company.email}}
+
+Aguardo seu retorno!
+Equipe {{company.name}}`,
+      mediaUrls: null,
+      mediaType: null,
+      priority: 12, // Alta prioridade - mais específico que orçamento genérico
+      isActive: true,
+      usageCount: 0
+    }
+  });
+
+  console.log('✅ 5 automation templates created/updated');
 
   console.log('\n🔐 Login credentials:');
   console.log('  Admin:      admin@ferraco.com / Admin@123456');

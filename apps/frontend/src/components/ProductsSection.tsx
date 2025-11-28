@@ -10,7 +10,7 @@ import contencaoImage from "@/assets/contencao-product.jpg";
 import bebedouroImage from "@/assets/bebedouro-product.jpg";
 
 interface ProductsSectionProps {
-  onLeadModalOpen: () => void;
+  onLeadModalOpen: (productName?: string, productId?: string) => void;
   config?: ProductsConfig;
 }
 
@@ -119,7 +119,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
                     ))}
                   </ul>
                   <Button
-                    onClick={onLeadModalOpen}
+                    onClick={() => onLeadModalOpen(product.name, product.id)}
                     className="w-full font-semibold transition-smooth hover:scale-105 mt-auto"
                     variant="default"
                     style={product.cta?.href ? {} : undefined}

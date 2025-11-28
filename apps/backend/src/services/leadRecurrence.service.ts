@@ -188,7 +188,7 @@ export class LeadRecurrenceService {
       'chatbot-web',
       'whatsapp-bot',
       'modal-orcamento',
-    ].includes(data.source);
+    ].includes(data.source) || data.source?.startsWith('modal-produto-');
 
     return await prisma.lead.create({
       data: {

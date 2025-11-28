@@ -67,7 +67,17 @@ export class WhatsAppAutomationService {
       const leadSource = lead.source || metadata.source;
 
       // ⭐ PRIORIZAR selectedProducts (IDs) sobre interest (nomes com emoji)
+      // ✅ NOVO: Buscar também no campo 'interest' do metadata (vindo do modal de produtos)
       let interest = metadata.selectedProducts || metadata.interest;
+
+      // ✅ NOVO: Detectar modal de produto específico (source = "modal-produto-*")
+      if (leadSource?.startsWith('modal-produto-') && metadata.interest) {
+        logger.info(`🎯 Lead ${leadId} (${lead.name}) demonstrou interesse em produto: ${metadata.interest}`);
+        logger.info(`   Source: ${leadSource}`);
+
+        // Criar automação com template de interesse em produto
+        return await this.createProductInterestAutomation(leadId, lead, metadata.interest);
+      }
 
       if (!interest || (Array.isArray(interest) && interest.length === 0)) {
         logger.info(`ℹ️  Lead ${leadId} (${lead.name}) não manifestou interesse em produtos`);
@@ -247,6 +257,56 @@ export class WhatsAppAutomationService {
       return automation.id;
     } catch (error) {
       logger.error('❌ Erro ao criar automação genérica:', error);
+      return null;
+    }
+  }
+
+  /**
+   * ✅ NOVO: Cria automação para leads com interesse em produto específico (landing page)
+   */
+  private async createProductInterestAutomation(
+    leadId: string,
+    lead: any,
+    productName: string
+  ): Promise<string | null> {
+    try {
+      // Buscar template de interesse em produto
+      const template = await prisma.recurrenceMessageTemplate.findFirst({
+        where: {
+          trigger: { startsWith: 'modal-produto' }, // Aceita "modal-produto" ou "modal-produto-*"
+          isActive: true
+        },
+        orderBy: { priority: 'desc' }
+      });
+
+      if (!template) {
+        logger.warn(`⚠️  Template de produto não encontrado, usando fallback genérico`);
+        return await this.createGenericAutomation(leadId, lead, 'modal_orcamento');
+      }
+
+      // Calcular total de mensagens (texto + mídias se houver)
+      const mediaUrls = template.mediaUrls ? JSON.parse(template.mediaUrls) : [];
+      const totalMessages = 1 + mediaUrls.length;
+
+      const automation = await prisma.whatsAppAutomation.create({
+        data: {
+          leadId,
+          status: 'PENDING',
+          productsToSend: JSON.stringify([`TEMPLATE:${template.id}:${productName}`]),
+          messagesTotal: totalMessages,
+          scheduledFor: null
+        }
+      });
+
+      logger.info(`✅ Automação de interesse em produto criada: ${automation.id}`);
+      logger.info(`   Lead: ${lead.name} | Produto: ${productName}`);
+      logger.info(`   Template: ${template.name} (${totalMessages} mensagens)`);
+
+      this.addToQueue(automation.id, 3); // Prioridade 3 (altíssima - interesse específico)
+
+      return automation.id;
+    } catch (error) {
+      logger.error('❌ Erro ao criar automação de interesse em produto:', error);
       return null;
     }
   }

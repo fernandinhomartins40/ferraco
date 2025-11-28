@@ -27,6 +27,7 @@ export interface PublicLeadData {
   phone: string;
   email?: string;
   source?: string;
+  interest?: string; // Produto de interesse
 }
 
 export interface PublicLeadResponse {
@@ -57,6 +58,7 @@ export const publicLeadService = {
         phone: data.phone,
         email: data.email || '',
         source: data.source || 'landing-page',
+        interest: data.interest, // Produto de interesse
       });
 
       logger.info('✅ Lead público criado com sucesso', {

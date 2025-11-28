@@ -9,9 +9,11 @@ import { publicLeadService } from "@/services/publicLeadService";
 interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  productName?: string;
+  productId?: string;
 }
 
-const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
+const LeadModal = ({ isOpen, onClose, productName, productId }: LeadModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: ""
@@ -46,12 +48,17 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
       await publicLeadService.create({
         name: formData.name,
         phone: formData.phone,
-        source: 'modal-orcamento',
+        source: productName ? `modal-produto-${productId || 'generico'}` : 'modal-orcamento',
+        interest: productName, // Produto de interesse
       });
 
       // 2. Salvar também no localStorage como fallback/cache
       const { leadStorage } = await import('@/utils/leadStorage');
-      leadStorage.addLead(formData.name, formData.phone, 'modal-orcamento');
+      leadStorage.addLead(
+        formData.name,
+        formData.phone,
+        productName ? `modal-produto-${productId || 'generico'}` : 'modal-orcamento'
+      );
 
       toast({
         title: "Sucesso!",
@@ -66,7 +73,11 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
       // Se falhar a API, tentar salvar apenas no localStorage
       try {
         const { leadStorage } = await import('@/utils/leadStorage');
-        leadStorage.addLead(formData.name, formData.phone, 'modal-orcamento');
+        leadStorage.addLead(
+          formData.name,
+          formData.phone,
+          productName ? `modal-produto-${productId || 'generico'}` : 'modal-orcamento'
+        );
 
         toast({
           title: "Dados salvos localmente",
@@ -113,10 +124,13 @@ const LeadModal = ({ isOpen, onClose }: LeadModalProps) => {
         {/* Header */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-foreground mb-2">
-            Solicitar Orçamento
+            {productName ? `Solicitar Orçamento - ${productName}` : 'Solicitar Orçamento'}
           </h2>
           <p className="text-muted-foreground">
-            Deixe seus dados e nossa equipe entrará em contato em até 2 horas úteis
+            {productName
+              ? `Deixe seus dados para receber uma proposta personalizada de ${productName}`
+              : 'Deixe seus dados e nossa equipe entrará em contato em até 2 horas úteis'
+            }
           </p>
         </div>
 
