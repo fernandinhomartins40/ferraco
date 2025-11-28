@@ -435,6 +435,11 @@ model Lead {
   firstCapturedAt DateTime @default(now()) // Primeira vez que demonstrou interesse
   lastCapturedAt  DateTime @default(now()) // Última vez que demonstrou interesse
 
+  // WhatsApp Opt-in (consentimento para contato)
+  whatsappOptIn     Boolean   @default(false) // Lead autorizou contato via WhatsApp
+  whatsappOptInDate DateTime? // Data de autorização de contato via WhatsApp
+  needsVerification Boolean   @default(false) // Lead precisa de verificação manual
+
   // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -477,6 +482,8 @@ model Lead {
   @@index([leadScore])
   @@index([captureCount])
   @@index([lastCapturedAt])
+  @@index([whatsappOptIn])
+  @@index([needsVerification])
   @@map("leads")
 }
 

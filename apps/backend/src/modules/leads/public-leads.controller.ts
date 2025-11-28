@@ -6,6 +6,7 @@ import { createdResponse, badRequestResponse } from '../../utils/response';
 import { prisma } from '../../config/database';
 import { leadRecurrenceService } from '../../services/leadRecurrence.service';
 import { whatsappAutomationService } from '../../services/whatsappAutomation.service';
+import { isValidWhatsAppNumber } from '../../utils/whatsappValidation';
 
 // ============================================================================
 // Public Lead Schema (simplified for landing page)
@@ -122,11 +123,19 @@ export class PublicLeadsController {
       } else {
         logger.info(`✨ Novo lead criado: ${lead.name}`);
 
-        // ✅ CORREÇÃO CRÍTICA: SEMPRE criar automação, independente de interesse
-        // O serviço detecta automaticamente o tipo de template baseado no source e metadata
-        // Suporta: produtos, modal_orcamento, human_contact_request, generic_inquiry
-        whatsappAutomationService.createAutomationFromLead(lead.id)
-          .catch(err => logger.error('❌ Erro ao criar automação padrão:', err));
+        // ✅ CORREÇÃO CRÍTICA: Verificar se telefone é WhatsApp válido antes de criar automação
+        if (isValidWhatsAppNumber(lead.phone)) {
+          logger.info(`📱 Telefone validado como WhatsApp - criando automação`);
+          // O serviço detecta automaticamente o tipo de template baseado no source e metadata
+          // Suporta: produtos, modal_orcamento, human_contact_request, generic_inquiry
+          whatsappAutomationService.createAutomationFromLead(lead.id)
+            .catch(err => logger.error('❌ Erro ao criar automação padrão:', err));
+        } else {
+          logger.warn(
+            `⚠️  Lead ${lead.id} (${lead.name}) possui telefone inválido para WhatsApp: ${lead.phone}\n` +
+            `   Automação WhatsApp não será criada. Lead receberá acompanhamento manual.`
+          );
+        }
       }
 
       // Return minimal data (don't expose internal IDs or sensitive info)

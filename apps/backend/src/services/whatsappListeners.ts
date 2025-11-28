@@ -371,61 +371,43 @@ async function handleIncomingMessage(message: WWebMessage, io: SocketIOServer): 
 
 /**
  * Salva comunicação no banco de dados
+ *
+ * ⚠️ IMPORTANTE: Este listener NÃO cria leads automaticamente.
+ * Leads devem ser criados apenas através de:
+ * - Formulários públicos (landing page)
+ * - Chatbot (web ou WhatsApp)
+ * - Criação manual pela equipe
+ * - API externa com autenticação
  */
 async function saveCommunicationToDatabase(message: any): Promise<void> {
   try {
-    // Buscar ou criar lead baseado no telefone
+    // Buscar lead existente baseado no telefone
     const phone = message.contact.phone.replace(/\D/g, '');
 
-    // ✅ VALIDAÇÃO: Verificar se o número é válido antes de criar lead
-    // Usar mesma validação do início do listener
+    // ✅ VALIDAÇÃO: Verificar se o número é válido
     const fromId = `${phone}@c.us`;
     if (!isValidWhatsAppId(fromId)) {
-      logger.debug(`🚫 Lead não criado - número inválido: ${phone}`);
+      logger.debug(`🚫 Comunicação ignorada - número inválido: ${phone}`);
       return;
     }
 
-    let lead = await prisma.lead.findFirst({
+    // Buscar lead existente (NÃO criar automaticamente)
+    const lead = await prisma.lead.findFirst({
       where: { phone },
     });
 
-    // Se não existir lead, criar um novo
+    // ❌ CORREÇÃO CRÍTICA: NÃO criar lead automaticamente
+    // Se o lead não existe, apenas registrar no log e ignorar
     if (!lead) {
-      // Buscar usuário do sistema (ou primeiro admin disponível)
-      const systemUser = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { email: 'system@ferraco.com' },
-            { role: 'ADMIN' }
-          ]
-        }
-      });
-
-      if (!systemUser) {
-        logger.warn('Nenhum usuário disponível para criar lead via WhatsApp');
-        return;
-      }
-
-      // ✅ CORREÇÃO: Usar email formatado sem @whatsapp.temp
-      // Formato: contato+whatsapp@ferraco.com.br (email válido)
-      const sanitizedPhone = phone.replace(/[^0-9]/g, '');
-      const leadEmail = `contato+${sanitizedPhone}@ferraco.com.br`;
-
-      lead = await prisma.lead.create({
-        data: {
-          name: message.contact.name,
-          email: leadEmail,
-          phone,
-          source: 'WHATSAPP',
-          status: 'NOVO',
-          createdById: systemUser.id,
-        },
-      });
-
-      logger.info(`✅ Lead criado do WhatsApp: ${lead.name} (${phone})`);
+      logger.info(
+        `📥 Mensagem WhatsApp recebida de número não cadastrado: ${phone} (${message.contact.name})\n` +
+        `   Conteúdo: "${message.body?.substring(0, 100)}..."\n` +
+        `   ⚠️  Lead NÃO foi criado automaticamente. Use formulário/chatbot para capturar leads.`
+      );
+      return;
     }
 
-    // Salvar comunicação
+    // ✅ Lead existe - Salvar comunicação normalmente
     await prisma.communication.create({
       data: {
         leadId: lead.id,
@@ -441,7 +423,7 @@ async function saveCommunicationToDatabase(message: any): Promise<void> {
       },
     });
 
-    logger.debug(`✅ Comunicação salva para lead ${lead.id}`);
+    logger.debug(`✅ Comunicação salva para lead ${lead.id} (${lead.name})`);
   } catch (error) {
     logger.error('❌ Erro ao salvar comunicação:', error);
   }

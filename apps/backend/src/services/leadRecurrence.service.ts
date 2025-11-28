@@ -182,6 +182,14 @@ export class LeadRecurrenceService {
       ],
     };
 
+    // ✅ CORREÇÃO: Adicionar opt-in automático para leads de formulários/chatbot
+    const isOptInSource = [
+      'landing-page',
+      'chatbot-web',
+      'whatsapp-bot',
+      'modal-orcamento',
+    ].includes(data.source);
+
     return await prisma.lead.create({
       data: {
         name: data.name,
@@ -195,6 +203,10 @@ export class LeadRecurrenceService {
         firstCapturedAt: new Date(),
         lastCapturedAt: new Date(),
         createdById: systemUser.id,
+        // ✅ WhatsApp opt-in automático para fontes legítimas
+        whatsappOptIn: isOptInSource,
+        whatsappOptInDate: isOptInSource ? new Date() : null,
+        needsVerification: false,
       },
     });
   }

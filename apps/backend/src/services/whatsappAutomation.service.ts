@@ -18,6 +18,7 @@ import { whatsappAntiSpamService } from './whatsappAntiSpam.service';
 import type { ProductMatch, ValidationResult } from '../modules/whatsapp-automation/whatsapp-automation.types';
 import type { RecurrenceResult } from './leadRecurrence.service';
 import { recurrenceMessageTemplateService } from './recurrenceMessageTemplate.service';
+import { isValidWhatsAppNumber, hasWhatsAppOptIn } from '../utils/whatsappValidation';
 
 export class WhatsAppAutomationService {
   private queue: Map<string, { priority: number; retryCount: number }> = new Map();
@@ -41,6 +42,25 @@ export class WhatsAppAutomationService {
         logger.warn(`⚠️  Lead ${leadId} não encontrado`);
         return null;
       }
+
+      // ✅ VALIDAÇÃO CRÍTICA: Verificar se telefone é WhatsApp válido
+      if (!isValidWhatsAppNumber(lead.phone)) {
+        logger.warn(
+          `⚠️  Lead ${leadId} (${lead.name}) possui telefone inválido para WhatsApp: ${lead.phone}\n` +
+          `   Automação não será criada. Telefone fixo ou formato inválido detectado.`
+        );
+        return null;
+      }
+
+      // ✅ VALIDAÇÃO: Verificar opt-in (opcional - pode ser comentado se muito restritivo)
+      // Descomente as linhas abaixo para exigir opt-in explícito
+      // if (!lead.whatsappOptIn) {
+      //   logger.warn(
+      //     `⚠️  Lead ${leadId} (${lead.name}) não autorizou contato via WhatsApp\n` +
+      //     `   Automação não será criada. Necessário opt-in explícito.`
+      //   );
+      //   return null;
+      // }
 
       // Extrair interesse do metadata
       const metadata = JSON.parse(lead.metadata || '{}');
