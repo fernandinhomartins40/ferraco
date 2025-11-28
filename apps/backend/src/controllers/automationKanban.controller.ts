@@ -12,7 +12,8 @@ export class AutomationKanbanController {
         where: { isActive: true },
         orderBy: { order: 'asc' },
         include: {
-          messageTemplate: true,
+          messageTemplate: true, // DEPRECATED - manter compatibilidade
+          templateLibrary: true, // ✅ ADICIONAR - Sistema novo
           _count: {
             select: { leads: true },
           },
@@ -37,8 +38,15 @@ export class AutomationKanbanController {
         scheduledDate,
         isRecurring,
         recurringDay,
-        messageTemplateId,
+        messageTemplateId, // DEPRECATED - manter para compatibilidade
+        templateLibraryId, // ✅ ADICIONAR - Sistema novo
         productIds,
+        // ✅ Sistema de Recorrência Avançado
+        recurrenceType,
+        weekDays,
+        monthDay,
+        customDates,
+        daysFromNow,
       } = req.body;
 
       if (!name || !color) {
@@ -60,13 +68,22 @@ export class AutomationKanbanController {
           order: newOrder,
           sendIntervalSeconds: sendIntervalSeconds || 60,
           scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+          // Sistema de Recorrência
+          recurrenceType: recurrenceType || 'NONE', // ✅ ADICIONAR
+          weekDays, // ✅ ADICIONAR
+          monthDay, // ✅ ADICIONAR
+          customDates, // ✅ ADICIONAR
+          daysFromNow, // ✅ ADICIONAR
+          // Campos antigos (backward compatibility)
           isRecurring: isRecurring || false,
           recurringDay,
-          messageTemplateId,
+          messageTemplateId, // DEPRECATED
+          templateLibraryId, // ✅ ADICIONAR - Sistema novo
           productIds: productIds ? JSON.stringify(productIds) : null,
         },
         include: {
-          messageTemplate: true,
+          messageTemplate: true, // DEPRECATED - manter compatibilidade
+          templateLibrary: true, // ✅ ADICIONAR - Sistema novo
         },
       });
 
@@ -89,8 +106,15 @@ export class AutomationKanbanController {
         scheduledDate,
         isRecurring,
         recurringDay,
-        messageTemplateId,
+        messageTemplateId, // DEPRECATED - manter para compatibilidade
+        templateLibraryId, // ✅ ADICIONAR - Sistema novo
         productIds,
+        // ✅ Sistema de Recorrência Avançado
+        recurrenceType,
+        weekDays,
+        monthDay,
+        customDates,
+        daysFromNow,
       } = req.body;
 
       const column = await prisma.automationKanbanColumn.update({
@@ -101,13 +125,22 @@ export class AutomationKanbanController {
           description,
           sendIntervalSeconds,
           scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+          // Sistema de Recorrência
+          recurrenceType, // ✅ ADICIONAR
+          weekDays, // ✅ ADICIONAR
+          monthDay, // ✅ ADICIONAR
+          customDates, // ✅ ADICIONAR
+          daysFromNow, // ✅ ADICIONAR
+          // Campos antigos (backward compatibility)
           isRecurring,
           recurringDay,
-          messageTemplateId,
+          messageTemplateId, // DEPRECATED
+          templateLibraryId, // ✅ ADICIONAR - Sistema novo
           productIds: productIds ? JSON.stringify(productIds) : null,
         },
         include: {
-          messageTemplate: true,
+          messageTemplate: true, // DEPRECATED - manter compatibilidade
+          templateLibrary: true, // ✅ ADICIONAR - Sistema novo
         },
       });
 
@@ -158,7 +191,8 @@ export class AutomationKanbanController {
         where: { isActive: true },
         orderBy: { order: 'asc' },
         include: {
-          messageTemplate: true,
+          messageTemplate: true, // DEPRECATED
+          templateLibrary: true, // ✅ ADICIONAR
         },
       });
 
@@ -196,7 +230,8 @@ export class AutomationKanbanController {
             lead: true,
             column: {
               include: {
-                messageTemplate: true,
+                messageTemplate: true, // DEPRECATED
+                templateLibrary: true, // ✅ ADICIONAR
               },
             },
           },
@@ -214,7 +249,8 @@ export class AutomationKanbanController {
             lead: true,
             column: {
               include: {
-                messageTemplate: true,
+                messageTemplate: true, // DEPRECATED
+                templateLibrary: true, // ✅ ADICIONAR
               },
             },
           },
@@ -236,7 +272,8 @@ export class AutomationKanbanController {
           lead: true,
           column: {
             include: {
-              messageTemplate: true,
+              messageTemplate: true, // DEPRECATED
+              templateLibrary: true, // ✅ ADICIONAR
             },
           },
         },

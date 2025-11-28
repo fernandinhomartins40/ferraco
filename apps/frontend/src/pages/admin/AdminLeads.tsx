@@ -475,6 +475,7 @@ const AdminLeads = () => {
       isRecurring: column.isRecurring,
       recurringDay: column.recurringDay,
       messageTemplateId: column.messageTemplateId || '',
+      templateLibraryId: column.templateLibraryId || '', // ✅ ADICIONAR ESTA LINHA
       productIds: column.productIds ? JSON.parse(column.productIds) : [],
     });
     setIsEditAutomationColumnMode(true);
@@ -498,6 +499,7 @@ const AdminLeads = () => {
       isRecurring: false,
       recurringDay: undefined,
       messageTemplateId: '',
+      templateLibraryId: '', // ✅ ADICIONAR ESTA LINHA
       productIds: [],
     });
   };
