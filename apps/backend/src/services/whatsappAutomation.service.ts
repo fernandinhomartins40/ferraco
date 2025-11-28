@@ -945,6 +945,10 @@ export class WhatsAppAutomationService {
 
       const phone = lead.phone;
 
+      // ✅ Extrair interesse do metadata do lead
+      const metadata = JSON.parse(lead.metadata || '{}');
+      const interest = metadata.interest;
+
       // Processar template com variáveis
       const message = this.processTemplate(template.content, {
         lead: {
@@ -958,6 +962,9 @@ export class WhatsAppAutomationService {
           email: config.companyEmail || '',
           website: config.companyWebsite || '',
           workingHours: config.workingHours || 'Segunda a Sexta, 8h às 18h'
+        },
+        capture: {
+          currentInterest: interest ? (Array.isArray(interest) ? interest : [interest]) : []
         }
       });
 

@@ -61,6 +61,7 @@ export class TemplateProcessorService {
     // Legacy Lead Variables (compatibilidade)
     { key: 'nome', description: 'Nome do lead (legacy)', category: 'lead', example: 'João Silva' },
     { key: 'produto', description: 'Produto de interesse (legacy)', category: 'lead', example: 'Bebedouro' },
+    { key: 'interest', description: 'Produto de interesse (landing page)', category: 'capture', example: 'Bebedouros' },
 
     // Company Variables
     { key: 'company.name', description: 'Nome da empresa', category: 'company', example: 'Ferraco Equipamentos' },
@@ -133,8 +134,9 @@ export class TemplateProcessorService {
         if (context.capture.currentInterest) {
           const currentStr = context.capture.currentInterest.join(', ') || 'nossos produtos';
           processed = processed.replace(/\{\{currentInterest\}\}/g, currentStr);
-          // Legacy variable
+          // Legacy variables
           processed = processed.replace(/\{\{produto\}\}/g, currentStr);
+          processed = processed.replace(/\{\{interest\}\}/g, currentStr); // ✅ NOVO: Variável de produto da landing page
         }
       }
 
