@@ -126,7 +126,8 @@ class AutomationSchedulerService {
           lead: true,
           column: {
             include: {
-              messageTemplate: true,
+              messageTemplate: true,      // DEPRECATED - manter para backward compatibility
+              templateLibrary: true,      // ✅ NOVO - Sistema de biblioteca de templates
             },
           },
         },
@@ -157,6 +158,13 @@ class AutomationSchedulerService {
   private async processPosition(position: any, settings: any) {
     try {
       const { lead, column } = position;
+
+      // ✅ Buscar configuração do chatbot para variáveis da empresa
+      const config = await prisma.chatbotConfig.findFirst();
+      const companyName = config?.companyName || 'Ferraco';
+      const companyPhone = config?.companyPhone || '';
+      const companyEmail = config?.companyEmail || '';
+      const companyWebsite = config?.companyWebsite || '';
 
       // ========================================
       // PROTEÇÃO ANTI-SPAM: Verificar se já enviou recentemente
@@ -232,11 +240,30 @@ class AutomationSchedulerService {
         },
       });
 
-      // Preparar mensagem
-      let messageContent = column.messageTemplate?.content || 'Olá {{nome}}!';
+      // ✅ PRIORIZAR templateLibrary sobre messageTemplate (sistema antigo)
+      const templateSource = column.templateLibrary || column.messageTemplate;
 
-      // Substituir variáveis
-      messageContent = this.replaceVariables(messageContent, lead);
+      if (!templateSource) {
+        logger.warn(`⚠️ Coluna "${column.name}" não possui template configurado (nem templateLibrary nem messageTemplate)`);
+      }
+
+      // Preparar mensagem - prioriza templateLibrary
+      let messageContent = templateSource?.content || 'Olá {{nome}}!';
+
+      // Substituir variáveis (passa config da empresa também)
+      messageContent = this.replaceVariables(messageContent, lead, {
+        companyName,
+        companyPhone,
+        companyEmail,
+        companyWebsite,
+      });
+
+      // Log do template utilizado
+      if (column.templateLibrary) {
+        logger.info(`📝 Usando template da biblioteca: "${column.templateLibrary.name}" (ID: ${column.templateLibrary.id})`);
+      } else if (column.messageTemplate) {
+        logger.warn(`⚠️ Usando messageTemplate DEPRECATED (ID: ${column.messageTemplate.id}) - migre para templateLibrary`);
+      }
 
       // Enviar mensagem
       logger.info(`📤 Enviando mensagem para ${lead.name} (${lead.phone})`);
@@ -262,21 +289,30 @@ class AutomationSchedulerService {
         logger.debug(`📡 Socket.IO: conversation:update emitido para ${lead.phone}`);
       }
 
-      // Enviar mídias se houver
-      if (column.messageTemplate?.mediaUrls) {
-        const mediaUrls = JSON.parse(column.messageTemplate.mediaUrls);
-        for (const mediaUrl of mediaUrls) {
-          let mediaResult;
+      // ✅ ENVIAR MÍDIAS - Priorizar templateLibrary sobre messageTemplate
+      if (templateSource?.mediaUrls) {
+        const mediaUrls = JSON.parse(templateSource.mediaUrls);
+        const mediaType = templateSource.mediaType || 'IMAGE'; // Default: IMAGE
 
-          if (column.messageTemplate.mediaType === 'IMAGE') {
+        logger.info(`🖼️ Enviando ${mediaUrls.length} mídia(s) do tipo ${mediaType}`);
+
+        for (const mediaUrl of mediaUrls) {
+          let mediaResult: any;
+
+          if (mediaType === 'IMAGE') {
             mediaResult = await whatsappWebJSService.sendImage(lead.phone, mediaUrl);
-          } else if (column.messageTemplate.mediaType === 'VIDEO') {
+          } else if (mediaType === 'VIDEO') {
             mediaResult = await whatsappWebJSService.sendVideo(lead.phone, mediaUrl);
+          } else {
+            logger.warn(`⚠️ Tipo de mídia desconhecido: ${mediaType}, pulando ${mediaUrl}`);
+            continue;
           }
 
           // ⭐ Validar envio de mídia
           if (!mediaResult) {
             logger.warn(`⚠️ Mídia pode não ter sido enviada: ${mediaUrl}`);
+          } else {
+            logger.info(`✅ Mídia enviada: ${mediaUrl.substring(0, 50)}...`);
           }
 
           // ✅ Emitir evento Socket.IO após cada mídia
@@ -340,13 +376,46 @@ class AutomationSchedulerService {
 
   /**
    * Substitui variáveis no template
+   * Suporta dois formatos:
+   * - Antigo (messageTemplate): {{nome}}, {{telefone}}, {{email}}, {{empresa}}
+   * - Novo (templateLibrary): {{lead.name}}, {{lead.phone}}, {{lead.email}}, {{company.name}}, {{company.phone}}
    */
-  private replaceVariables(content: string, lead: any): string {
-    return content
+  private replaceVariables(
+    content: string,
+    lead: any,
+    companyData?: {
+      companyName: string;
+      companyPhone: string;
+      companyEmail: string;
+      companyWebsite: string;
+    }
+  ): string {
+    let processed = content;
+
+    // ✅ NOVO: Formato templateLibrary - variáveis do lead
+    processed = processed
+      .replace(/\{\{lead\.name\}\}/g, lead.name || '')
+      .replace(/\{\{lead\.phone\}\}/g, lead.phone || '')
+      .replace(/\{\{lead\.email\}\}/g, lead.email || '')
+      .replace(/\{\{lead\.company\}\}/g, lead.company || '');
+
+    // ✅ NOVO: Formato templateLibrary - variáveis da empresa
+    if (companyData) {
+      processed = processed
+        .replace(/\{\{company\.name\}\}/g, companyData.companyName || '')
+        .replace(/\{\{company\.phone\}\}/g, companyData.companyPhone || '')
+        .replace(/\{\{company\.email\}\}/g, companyData.companyEmail || '')
+        .replace(/\{\{company\.website\}\}/g, companyData.companyWebsite || '');
+    }
+
+    // ✅ BACKWARD COMPATIBILITY: Formato antigo {{nome}}, {{telefone}}, etc
+    processed = processed
       .replace(/\{\{nome\}\}/g, lead.name || '')
       .replace(/\{\{telefone\}\}/g, lead.phone || '')
       .replace(/\{\{email\}\}/g, lead.email || '')
-      .replace(/\{\{empresa\}\}/g, lead.company || '');
+      .replace(/\{\{empresa\}\}/g, lead.company || companyData?.companyName || '');
+
+    return processed;
   }
 
   /**
