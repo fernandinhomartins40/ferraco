@@ -8,12 +8,14 @@ import ExperienceSection from "@/components/ExperienceSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import LeadModal from "@/components/LeadModal";
+import WhatsAppFloatingButton from "@/components/WhatsAppFloatingButton";
 import api from "@/lib/apiClient";
 import type { LandingPageConfig } from "@/types/landingPage";
 
 const Index = () => {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<{ name?: string; id?: string }>({});
+  const [customWhatsAppMessage, setCustomWhatsAppMessage] = useState<string | undefined>(undefined);
   const [config, setConfig] = useState<LandingPageConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,12 +41,20 @@ const Index = () => {
 
   const openLeadModal = (productName?: string, productId?: string) => {
     setSelectedProduct({ name: productName, id: productId });
+    setCustomWhatsAppMessage(undefined);
+    setIsLeadModalOpen(true);
+  };
+
+  const openWhatsAppModal = () => {
+    setSelectedProduct({});
+    setCustomWhatsAppMessage("Olá! Vim pelo site e gostaria de mais informações");
     setIsLeadModalOpen(true);
   };
 
   const closeLeadModal = () => {
     setIsLeadModalOpen(false);
     setSelectedProduct({});
+    setCustomWhatsAppMessage(undefined);
   };
 
   // Se config ainda está carregando, mostra loading
@@ -88,11 +98,16 @@ const Index = () => {
       <ExperienceSection onLeadModalOpen={openLeadModal} config={config.experience} />
       <ContactSection onLeadModalOpen={openLeadModal} config={config.contact} />
       <Footer config={config.footer} />
+
+      {/* Botão flutuante do WhatsApp */}
+      <WhatsAppFloatingButton onClick={openWhatsAppModal} />
+
       <LeadModal
         isOpen={isLeadModalOpen}
         onClose={closeLeadModal}
         productName={selectedProduct.name}
         productId={selectedProduct.id}
+        customWhatsAppMessage={customWhatsAppMessage}
       />
     </div>
   );

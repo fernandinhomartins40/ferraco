@@ -1,25 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, User, Phone, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { publicLeadService } from "@/services/publicLeadService";
+import api from "@/lib/apiClient";
 
 interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   productName?: string;
   productId?: string;
+  customWhatsAppMessage?: string; // Mensagem customizada para WhatsApp
 }
 
-const LeadModal = ({ isOpen, onClose, productName, productId }: LeadModalProps) => {
+const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMessage }: LeadModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState<string>('');
   const { toast } = useToast();
+
+  // Buscar número de WhatsApp da configuração quando houver customWhatsAppMessage
+  useEffect(() => {
+    if (customWhatsAppMessage && isOpen) {
+      const fetchWhatsAppConfig = async () => {
+        try {
+          const response = await api.get("/landing-page/config");
+          const config = response.data.data;
+          // Tentar pegar o número do WhatsApp da configuração geral ou do contato
+          const number = config.contact?.whatsapp || config.contact?.phone || '';
+          setWhatsappNumber(number.replace(/\D/g, '')); // Remove caracteres não numéricos
+        } catch (error) {
+          console.error("Erro ao buscar configuração do WhatsApp:", error);
+        }
+      };
+      fetchWhatsAppConfig();
+    }
+  }, [customWhatsAppMessage, isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -60,8 +81,8 @@ const LeadModal = ({ isOpen, onClose, productName, productId }: LeadModalProps) 
         productName ? `modal-produto-${productId || 'generico'}` : 'modal-orcamento'
       );
 
-      // 3. Se houver whatsappUrl, redirecionar para WhatsApp
-      if (response.whatsappUrl) {
+      // 3. Se houver whatsappUrl OU customWhatsAppMessage, redirecionar para WhatsApp
+      if (response.whatsappUrl || customWhatsAppMessage) {
         toast({
           title: "Redirecionando...",
           description: "Você será redirecionado para o WhatsApp para enviar sua mensagem.",
@@ -70,7 +91,14 @@ const LeadModal = ({ isOpen, onClose, productName, productId }: LeadModalProps) 
 
         // Aguardar 1 segundo e redirecionar
         setTimeout(() => {
-          window.open(response.whatsappUrl, '_blank');
+          if (customWhatsAppMessage && whatsappNumber) {
+            // Usar mensagem customizada (para botão flutuante) com número da empresa
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(customWhatsAppMessage)}`;
+            window.open(whatsappUrl, '_blank');
+          } else if (response.whatsappUrl) {
+            // Usar URL retornada do backend (modo whatsapp_only)
+            window.open(response.whatsappUrl, '_blank');
+          }
         }, 1000);
       } else {
         toast({
