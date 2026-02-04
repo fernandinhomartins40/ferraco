@@ -37,10 +37,9 @@ export function InstallPWABanner() {
   // Verificar se está em rota pública (landing page ou chat público)
   const isPublicRoute = location.pathname === '/' || location.pathname === '/chat';
 
-  // Não mostrar banner em rotas públicas
-  if (isPublicRoute) return null;
-
   useEffect(() => {
+    // Não mostrar banner em rotas públicas
+    if (isPublicRoute) return;
     // Check if already installed (standalone mode)
     const isInStandalone = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone ||
@@ -82,7 +81,7 @@ export function InstallPWABanner() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [isPublicRoute]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -103,7 +102,8 @@ export function InstallPWABanner() {
     setShowBanner(false);
   };
 
-  if (!showBanner || isStandalone) return null;
+  // Não mostrar banner em rotas públicas ou se não deve ser exibido
+  if (!showBanner || isStandalone || isPublicRoute) return null;
 
   // Android/Desktop Banner (with install button)
   if ((platform === 'android' || platform === 'desktop') && deferredPrompt) {
