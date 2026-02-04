@@ -5,7 +5,7 @@
  * da landing page via API
  */
 
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/lib/apiClient';
 import { logger } from '@/lib/logger';
 
 // ============================================================================

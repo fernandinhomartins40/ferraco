@@ -4,7 +4,7 @@
  * Serviço para gerenciar leads capturados no modo "whatsapp_only"
  */
 
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/lib/apiClient';
 import { logger } from '@/lib/logger';
 
 // ============================================================================
