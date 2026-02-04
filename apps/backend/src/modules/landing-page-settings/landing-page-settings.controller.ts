@@ -68,9 +68,35 @@ export class LandingPageSettingsController {
 
       const parsedConfig = JSON.parse(config.value) as LandingPageLeadSettings;
 
+      // 🔄 AUTO-MIGRAÇÃO: Detectar e atualizar template antigo (formato de notificação interna)
+      const oldTemplatePattern = /🎯\s*\*Novo Lead Capturado!\*/;
+      if (parsedConfig.messageTemplate && oldTemplatePattern.test(parsedConfig.messageTemplate)) {
+        logger.warn('⚠️  Template antigo detectado, migrando automaticamente...');
+
+        // Atualizar para o novo template (mensagem do cliente)
+        const newTemplate = 'Olá! Me chamo *{{name}}* e tenho interesse em *{{interest}}*.\n\n📱 Meu telefone: {{phone}}\n📧 Email: {{email}}\n\nGostaria de saber mais informações sobre este produto.\n\nObrigado!';
+        parsedConfig.messageTemplate = newTemplate;
+
+        // Salvar a migração no banco
+        try {
+          await prisma.systemConfig.update({
+            where: { key: 'landing_page_lead_handling' },
+            data: {
+              value: JSON.stringify(parsedConfig),
+              updatedAt: new Date(),
+            },
+          });
+          logger.info('✅ Template migrado automaticamente para o novo formato');
+        } catch (migrationError: any) {
+          logger.error('❌ Erro ao migrar template', { error: migrationError.message });
+          // Continuar mesmo se falhar a migração automática
+        }
+      }
+
       logger.info('✅ Configuração carregada', {
         mode: parsedConfig.mode,
         hasWhatsAppNumber: !!parsedConfig.whatsappNumber,
+        templateMigrated: oldTemplatePattern.test(config.value),
       });
 
       successResponse(res, parsedConfig, 'Configuração carregada com sucesso');
