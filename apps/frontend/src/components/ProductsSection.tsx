@@ -128,7 +128,13 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
                         ))}
                       </ul>
                       <Button
-                        onClick={() => onLeadModalOpen(product.name, product.id)}
+                        onClick={() => {
+                          // Extrair string do nome do produto (pode ser string ou objeto com .text)
+                          const productNameStr = typeof product.name === 'string'
+                            ? product.name
+                            : product.name?.text || defaultProduct?.name || 'Produto';
+                          onLeadModalOpen(productNameStr, product.id);
+                        }}
                         className="w-full font-semibold transition-smooth hover:scale-105 mt-auto text-sm"
                         variant="default"
                         size="sm"
