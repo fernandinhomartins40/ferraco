@@ -1,6 +1,7 @@
 import { Fence, Home, Grid3x3, Settings, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import type { ProductsConfig } from "@/types/landingPage";
 import * as LucideIcons from 'lucide-react';
 import canzilImage from "@/assets/canzil-product.jpg";
@@ -84,53 +85,66 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {products.map((product, index) => {
-            const defaultProduct = defaultProducts[index];
-            return (
-              <Card key={product.id || index} className="shadow-elegant hover:shadow-glow transition-smooth group hover:scale-105 overflow-hidden flex flex-col p-0">
-                {/* Image with Icon Tag */}
-                <div className="relative aspect-square overflow-hidden">
-                  <img
-                    src={product.image?.url || product.image || defaultProduct?.image}
-                    alt={product.image?.alt || product.name || defaultProduct?.name}
-                    className="w-full h-full object-contain group-hover:scale-110 transition-smooth"
-                  />
-                  <div className="absolute top-4 right-4 w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-lg">
-                    {renderIcon(product.icon, defaultProduct?.icon)}
-                  </div>
-                </div>
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          className="w-full max-w-7xl mx-auto px-12"
+        >
+          <CarouselContent className="-ml-2 md:-ml-4">
+            {products.map((product, index) => {
+              const defaultProduct = defaultProducts[index];
+              return (
+                <CarouselItem key={product.id || index} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                  <Card className="shadow-elegant hover:shadow-glow transition-smooth group hover:scale-105 overflow-hidden flex flex-col p-0 h-full">
+                    {/* Image with Icon Tag - Reduzido */}
+                    <div className="relative h-48 overflow-hidden">
+                      <img
+                        src={product.image?.url || product.image || defaultProduct?.image}
+                        alt={product.image?.alt || product.name || defaultProduct?.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-smooth"
+                      />
+                      <div className="absolute top-3 right-3 w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg">
+                        {renderIcon(product.icon, defaultProduct?.icon)}
+                      </div>
+                    </div>
 
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl font-bold text-foreground mb-2">
-                    {product.name}
-                  </CardTitle>
-                  <CardDescription className="text-muted-foreground text-lg">
-                    {product.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col flex-1">
-                  <ul className="space-y-2 mb-6 flex-1">
-                    {(product.benefits || defaultProduct?.features || []).map((item, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-muted-foreground">
-                        <span className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></span>
-                        <span className="leading-relaxed">{typeof item === 'string' ? item : item.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    onClick={() => onLeadModalOpen(product.name, product.id)}
-                    className="w-full font-semibold transition-smooth hover:scale-105 mt-auto"
-                    variant="default"
-                    style={product.cta?.href ? {} : undefined}
-                  >
-                    {product.cta?.text || "Quero Saber Mais"}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                    <CardHeader className="text-center pb-3 pt-4">
+                      <CardTitle className="text-xl font-bold text-foreground mb-1">
+                        {product.name}
+                      </CardTitle>
+                      <CardDescription className="text-muted-foreground text-sm line-clamp-2">
+                        {product.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col flex-1 pt-0">
+                      <ul className="space-y-1.5 mb-4 flex-1">
+                        {(product.benefits || defaultProduct?.features || []).slice(0, 3).map((item, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-muted-foreground text-sm">
+                            <span className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0"></span>
+                            <span className="leading-snug">{typeof item === 'string' ? item : item.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        onClick={() => onLeadModalOpen(product.name, product.id)}
+                        className="w-full font-semibold transition-smooth hover:scale-105 mt-auto text-sm"
+                        variant="default"
+                        size="sm"
+                        style={product.cta?.href ? {} : undefined}
+                      >
+                        {product.cta?.text || "Quero Saber Mais"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              );
+            })}
+          </CarouselContent>
+          <CarouselPrevious className="hidden md:flex" />
+          <CarouselNext className="hidden md:flex" />
+        </Carousel>
 
         {/* CTA Section */}
         {config?.ctaSection?.enabled !== false && (
