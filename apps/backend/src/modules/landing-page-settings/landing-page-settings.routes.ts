@@ -6,7 +6,7 @@
 
 import { Router } from 'express';
 import { LandingPageSettingsController } from './landing-page-settings.controller';
-import { authenticate, requirePermission } from '../../middleware/auth';
+import { authenticate, requireRole } from '../../middleware/auth';
 
 // ============================================================================
 // Initialize Controller
@@ -28,7 +28,7 @@ router.use(authenticate);
  */
 router.get(
   '/',
-  requirePermission('settings', 'read'),
+  requireRole('ADMIN'),
   controller.get
 );
 
@@ -38,7 +38,7 @@ router.get(
  */
 router.put(
   '/',
-  requirePermission('settings', 'update'),
+  requireRole('ADMIN'),
   controller.update
 );
 
@@ -48,7 +48,7 @@ router.put(
  */
 router.post(
   '/test',
-  requirePermission('settings', 'update'),
+  requireRole('ADMIN'),
   controller.test
 );
 
