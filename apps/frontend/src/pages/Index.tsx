@@ -83,8 +83,8 @@ const Index = () => {
       <Header onLeadModalOpen={openLeadModal} config={config.header} />
       <HeroSection onLeadModalOpen={openLeadModal} config={config.hero} />
       <MarqueeSection config={config.marquee} />
-      <AboutSection onLeadModalOpen={openLeadModal} config={config.about} />
       <ProductsSection onLeadModalOpen={openLeadModal} config={config.products} />
+      <AboutSection onLeadModalOpen={openLeadModal} config={config.about} />
       <ExperienceSection onLeadModalOpen={openLeadModal} config={config.experience} />
       <ContactSection onLeadModalOpen={openLeadModal} config={config.contact} />
       <Footer config={config.footer} />
