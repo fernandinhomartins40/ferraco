@@ -22,7 +22,6 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  Send,
   Database,
   MessageSquare,
   HelpCircle,
@@ -45,7 +44,6 @@ const AdminLandingPageSettings = () => {
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
   const [settings, setSettings] = useState<LandingPageSettings>({
     mode: 'create_lead',
     whatsappNumber: '',
@@ -104,47 +102,6 @@ const AdminLandingPageSettings = () => {
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleTest = async () => {
-    try {
-      // Validar
-      const errors = landingPageSettingsService.validate(settings);
-      if (errors.length > 0) {
-        toast({
-          title: 'Validação falhou',
-          description: errors.join('\n'),
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setIsTesting(true);
-
-      const success = await landingPageSettingsService.test(settings);
-
-      if (success) {
-        toast({
-          title: 'Teste bem-sucedido! ✅',
-          description: 'Mensagem de teste enviada para o WhatsApp.',
-          variant: 'default',
-        });
-      } else {
-        toast({
-          title: 'Teste falhou',
-          description: 'Não foi possível enviar a mensagem. Verifique o número e a conexão WhatsApp.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Erro no teste',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsTesting(false);
     }
   };
 
@@ -249,15 +206,15 @@ const AdminLandingPageSettings = () => {
                       className="text-base font-semibold cursor-pointer flex items-center gap-2"
                     >
                       <MessageSquare className="w-4 h-4" />
-                      Apenas Enviar WhatsApp com Dados
+                      Redirecionar Cliente para WhatsApp
                     </Label>
                     <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                      ✓ Dados são enviados via WhatsApp instantaneamente
+                      ✓ Cliente preenche o formulário na landing page
                       <br />
-                      ✓ Não cria lead no CRM (ou cria silenciosamente)
+                      ✓ Cliente é redirecionado para enviar mensagem via wa.me
                       <br />
-                      ✓ Ideal para captura rápida sem processo formal
-                      <br />✓ Resposta imediata e flexível
+                      ✓ Mensagem pré-preenchida com os dados capturados
+                      <br />✓ Não cria lead no CRM (ou cria silenciosamente para histórico)
                     </p>
                   </div>
                 </div>
@@ -279,8 +236,8 @@ const AdminLandingPageSettings = () => {
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p>
-                          Configure o número que receberá as notificações e o template da
-                          mensagem.
+                          Configure o número da sua empresa e a mensagem que o cliente enviará.
+                          O sistema irá redirecionar o cliente para o WhatsApp (wa.me) com a mensagem pré-preenchida.
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -290,25 +247,25 @@ const AdminLandingPageSettings = () => {
                 {/* WhatsApp Number */}
                 <div className="space-y-2">
                   <Label htmlFor="whatsappNumber">
-                    Número do WhatsApp para Receber *
+                    Número do WhatsApp da Empresa *
                   </Label>
                   <Input
                     id="whatsappNumber"
-                    placeholder="+55 11 99999-9999"
+                    placeholder="5511999999999"
                     value={settings.whatsappNumber || ''}
                     onChange={(e) =>
                       setSettings({ ...settings, whatsappNumber: e.target.value })
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Número que receberá as notificações de novos leads (com código do país)
+                    Número da sua empresa (com código do país) para onde o CLIENTE será redirecionado via wa.me
                   </p>
                 </div>
 
                 {/* Message Template */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="messageTemplate">Template da Mensagem *</Label>
+                    <Label htmlFor="messageTemplate">Template da Mensagem que o Cliente Enviará *</Label>
                     <Button
                       variant="outline"
                       size="sm"
@@ -331,7 +288,11 @@ const AdminLandingPageSettings = () => {
                       setSettings({ ...settings, messageTemplate: e.target.value })
                     }
                     className="font-mono text-sm"
+                    placeholder="Olá! Me chamo {{name}} e tenho interesse em {{interest}}..."
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Esta mensagem será pré-preenchida no WhatsApp do cliente quando ele for redirecionado
+                  </p>
                   <div className="flex flex-wrap gap-2 mt-2">
                     <p className="text-xs text-muted-foreground w-full mb-1">
                       Variáveis disponíveis (clique para inserir):
@@ -374,25 +335,15 @@ const AdminLandingPageSettings = () => {
                   </Label>
                 </div>
 
-                {/* Test Button */}
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={handleTest}
-                  disabled={isTesting || !settings.whatsappNumber}
-                >
-                  {isTesting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Testando...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Enviar Mensagem de Teste
-                    </>
-                  )}
-                </Button>
+                {/* Info sobre funcionamento */}
+                <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                  <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
+                    <strong>Como funciona:</strong> Quando um cliente preencher o formulário na landing page,
+                    ele será automaticamente redirecionado para enviar uma mensagem via WhatsApp Web/App
+                    (wa.me) com o texto pré-preenchido. Não é necessário ter WhatsApp conectado no sistema.
+                  </AlertDescription>
+                </Alert>
               </div>
             )}
 
@@ -407,9 +358,10 @@ const AdminLandingPageSettings = () => {
                   </>
                 ) : (
                   <>
-                    <strong>Modo WhatsApp Only Selecionado:</strong> Uma notificação será
-                    enviada imediatamente para o WhatsApp configurado. O lead pode ser criado
-                    silenciosamente para histórico se a opção estiver marcada.
+                    <strong>Modo Redirecionamento WhatsApp Selecionado:</strong> O cliente será
+                    redirecionado para enviar uma mensagem via wa.me com os dados pré-preenchidos.
+                    Não usa o WhatsApp conectado do sistema. O lead pode ser criado silenciosamente
+                    para histórico se a opção estiver marcada.
                   </>
                 )}
               </AlertDescription>

@@ -57,7 +57,7 @@ export class LandingPageSettingsController {
         const defaultConfig: LandingPageLeadSettings = {
           mode: 'create_lead',
           whatsappNumber: '',
-          messageTemplate: '🎯 *Novo Lead Capturado!*\n\n👤 *Nome:* {{name}}\n📱 *Telefone:* {{phone}}\n📧 *Email:* {{email}}\n🎨 *Produto de Interesse:* {{interest}}\n🔗 *Origem:* {{source}}\n\n📅 Capturado em: {{timestamp}}',
+          messageTemplate: 'Olá! Me chamo *{{name}}* e tenho interesse em *{{interest}}*.\n\n📱 Meu telefone: {{phone}}\n📧 Email: {{email}}\n\nGostaria de saber mais informações sobre este produto.\n\nObrigado!',
           createLeadAnyway: true,
         };
 

@@ -164,17 +164,17 @@ export const landingPageSettingsService = {
   },
 
   /**
-   * Template padrão para mensagens
+   * Template padrão para mensagens (usado no modo WhatsApp Only)
+   * Esta mensagem será enviada PELO CLIENTE via wa.me
    */
   getDefaultTemplate(): string {
-    return `🎯 *Novo Lead Capturado!*
+    return `Olá! Me chamo *{{name}}* e tenho interesse em *{{interest}}*.
 
-👤 *Nome:* {{name}}
-📱 *Telefone:* {{phone}}
-📧 *Email:* {{email}}
-🎨 *Produto de Interesse:* {{interest}}
-🔗 *Origem:* {{source}}
+📱 Meu telefone: {{phone}}
+📧 Email: {{email}}
 
-📅 Capturado em: {{timestamp}}`;
+Gostaria de saber mais informações sobre este produto.
+
+Obrigado!`;
   },
 };
