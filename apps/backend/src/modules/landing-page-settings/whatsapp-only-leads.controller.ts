@@ -153,14 +153,30 @@ export class WhatsAppOnlyLeadsController {
    */
   exportToExcel = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      logger.info('📊 Exportando leads WhatsApp Only para Excel');
+      logger.info('📊 Exportando leads WhatsApp Only para Excel', {
+        query: req.query,
+      });
 
-      // Validar filtros (sem paginação)
-      const filters = WhatsAppOnlyLeadsFiltersSchema.parse({
+      // Validar filtros (sem paginação) - usar safeParse para melhor tratamento de erro
+      const parseResult = WhatsAppOnlyLeadsFiltersSchema.safeParse({
         ...req.query,
         page: 1,
         limit: 10000, // Exportar até 10k leads
       });
+
+      if (!parseResult.success) {
+        logger.error('❌ Erro de validação nos filtros', {
+          errors: parseResult.error.errors,
+        });
+        res.status(400).json({
+          success: false,
+          message: 'Parâmetros de filtro inválidos',
+          errors: parseResult.error.errors,
+        });
+        return;
+      }
+
+      const filters = parseResult.data;
 
       // Construir where clause (mesma lógica do list)
       const where: any = {
@@ -203,7 +219,17 @@ export class WhatsAppOnlyLeadsController {
         },
       });
 
-      logger.info(`📊 Exportando ${leads.length} leads para Excel`);
+      logger.info(`📊 Encontrados ${leads.length} leads para exportar`);
+
+      // Se não houver leads, retornar erro amigável
+      if (leads.length === 0) {
+        logger.warn('⚠️  Nenhum lead WhatsApp Only encontrado para exportar');
+        res.status(400).json({
+          success: false,
+          message: 'Nenhum lead encontrado para exportar. Certifique-se de que há leads capturados no modo WhatsApp Only.',
+        });
+        return;
+      }
 
       // Criar workbook Excel
       const workbook = new ExcelJS.Workbook();
