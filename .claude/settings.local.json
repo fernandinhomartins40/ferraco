@@ -143,7 +143,8 @@
       "Bash(PORT=3001 timeout 10s npm run dev:*)",
       "Bash(PORT=3000 timeout 15s npm run dev:*)",
       "Bash(xargs -I {} sh -c 'head -c 500 {} && echo \"\"\"\"\"\"\"\"')",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []

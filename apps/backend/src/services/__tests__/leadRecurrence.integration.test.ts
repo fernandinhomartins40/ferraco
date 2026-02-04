@@ -33,6 +33,7 @@ describe('Lead Recurrence Integration Tests', () => {
       const created = await prisma.user.create({
         data: {
           name: 'Test Admin',
+          username: 'test-admin',
           email: 'test-admin@test.com',
           password: 'hashed-password',
           role: 'ADMIN',

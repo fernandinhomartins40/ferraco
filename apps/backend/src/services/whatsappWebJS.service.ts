@@ -520,6 +520,14 @@ class WhatsAppWebJSService {
   }
 
   /**
+   * ✅ NOVO: Método público sendMessage (wrapper para sendTextMessage)
+   * Usado por whatsappDirectNotification.service.ts
+   */
+  async sendMessage(to: string, message: string): Promise<any> {
+    return this.sendTextMessage(to, message);
+  }
+
+  /**
    * Enviar imagem
    * ✅ OTIMIZADO: Usa retry automático com circuit breaker
    */

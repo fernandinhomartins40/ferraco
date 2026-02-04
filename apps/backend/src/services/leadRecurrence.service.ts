@@ -203,10 +203,6 @@ export class LeadRecurrenceService {
         firstCapturedAt: new Date(),
         lastCapturedAt: new Date(),
         createdById: systemUser.id,
-        // ✅ WhatsApp opt-in automático para fontes legítimas
-        whatsappOptIn: isOptInSource,
-        whatsappOptInDate: isOptInSource ? new Date() : null,
-        needsVerification: false,
       },
     });
   }

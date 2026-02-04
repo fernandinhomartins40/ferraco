@@ -37,6 +37,8 @@ const AdminWhatsApp = lazy(() => import("./pages/admin/AdminWhatsApp"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminLandingPageEditor = lazy(() => import("./pages/admin/AdminLandingPageEditor"));
+const AdminLandingPageSettings = lazy(() => import("./pages/admin/AdminLandingPageSettings"));
+const AdminWhatsAppOnlyLeads = lazy(() => import("./pages/admin/AdminWhatsAppOnlyLeads"));
 const AdminChatbotConfig = lazy(() => import("./pages/admin/AdminChatbotConfig"));
 const WhatsAppContacts = lazy(() => import("./pages/WhatsAppContacts"));
 const WhatsAppAutomations = lazy(() => import("./pages/admin/WhatsAppAutomations"));
@@ -161,6 +163,26 @@ const App = () => {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <AdminLandingPageEditor />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/landing-page-settings"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminLandingPageSettings />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/whatsapp-only-leads"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminWhatsAppOnlyLeads />
                 </Suspense>
               </ProtectedRoute>
             }

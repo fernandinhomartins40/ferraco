@@ -34,6 +34,8 @@ import whatsappMessageTemplateRoutes from './routes/whatsappMessageTemplate.rout
 import whatsappAutomationRoutes from './modules/whatsapp-automation/whatsapp-automation.routes';
 import recurrenceRoutes from './modules/recurrence/recurrence.routes';
 import templateLibraryRoutes from './modules/template-library/template-library.routes';
+import landingPageSettingsRoutes from './modules/landing-page-settings/landing-page-settings.routes';
+import whatsappOnlyLeadsRoutes from './modules/landing-page-settings/whatsapp-only-leads.routes';
 import { tokenCleanupService } from './services/token-cleanup.service';
 
 // Import External API routes
@@ -108,6 +110,8 @@ export function createApp(): Application {
   app.use(`${API_PREFIX}/whatsapp-automations`, whatsappAutomationRoutes);
   app.use(`${API_PREFIX}/recurrence`, recurrenceRoutes);
   app.use(`${API_PREFIX}/template-library`, templateLibraryRoutes);
+  app.use(`${API_PREFIX}/admin/landing-page-settings`, landingPageSettingsRoutes);
+  app.use(`${API_PREFIX}/admin/whatsapp-only-leads`, whatsappOnlyLeadsRoutes);
 
   // External API routes (v1)
   app.use(`${API_PREFIX}/api-keys`, apiKeyRoutes);

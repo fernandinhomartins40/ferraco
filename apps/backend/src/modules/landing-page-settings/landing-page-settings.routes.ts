@@ -1,0 +1,59 @@
+/**
+ * Landing Page Settings Routes
+ *
+ * Rotas para gerenciar configurações de captação de leads da landing page
+ */
+
+import { Router } from 'express';
+import { LandingPageSettingsController } from './landing-page-settings.controller';
+import { authenticate, requirePermission } from '../../middleware/auth';
+
+// ============================================================================
+// Initialize Controller
+// ============================================================================
+
+const router = Router();
+const controller = new LandingPageSettingsController();
+
+// ============================================================================
+// Protected Routes - Require authentication and admin permission
+// ============================================================================
+
+// Todas as rotas requerem autenticação
+router.use(authenticate);
+
+/**
+ * GET /api/admin/landing-page-settings
+ * Buscar configuração atual
+ */
+router.get(
+  '/',
+  requirePermission('settings', 'read'),
+  controller.get
+);
+
+/**
+ * PUT /api/admin/landing-page-settings
+ * Atualizar configuração
+ */
+router.put(
+  '/',
+  requirePermission('settings', 'update'),
+  controller.update
+);
+
+/**
+ * POST /api/admin/landing-page-settings/test
+ * Testar conexão WhatsApp (enviar mensagem de teste)
+ */
+router.post(
+  '/test',
+  requirePermission('settings', 'update'),
+  controller.test
+);
+
+// ============================================================================
+// Export Router
+// ============================================================================
+
+export default router;

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, Users, BarChart3, ArrowLeft, Moon, Sun, Bell,
   MessageCircle, FileText, Bot, KeyRound, Palette, Send,
-  Repeat, LogOut, User, ChevronRight, Clock, Menu, Library
+  Repeat, LogOut, User, ChevronRight, Clock, Menu, Library, Settings2, ListChecks
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -131,6 +131,18 @@ const AdminLayoutContent = ({ children }: AdminLayoutProps) => {
       href: '/admin/landing-page',
       label: 'Landing Page',
       icon: Palette,
+      show: true
+    },
+    {
+      href: '/admin/landing-page-settings',
+      label: 'Config. Leads LP',
+      icon: Settings2,
+      show: true
+    },
+    {
+      href: '/admin/whatsapp-only-leads',
+      label: 'Leads WA Only',
+      icon: ListChecks,
       show: true
     },
     {

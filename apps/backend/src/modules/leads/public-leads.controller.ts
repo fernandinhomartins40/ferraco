@@ -7,6 +7,7 @@ import { prisma } from '../../config/database';
 import { leadRecurrenceService } from '../../services/leadRecurrence.service';
 import { whatsappAutomationService } from '../../services/whatsappAutomation.service';
 import { isValidWhatsAppNumber } from '../../utils/whatsappValidation';
+import { whatsappDirectNotificationService, type LandingPageLeadSettings } from '../../services/whatsappDirectNotification.service';
 
 // ============================================================================
 // Public Lead Schema (simplified for landing page)
@@ -55,6 +56,45 @@ export class PublicLeadsController {
   constructor(private service: LeadsService) {}
 
   /**
+   * Buscar configuração de captação de leads da landing page
+   */
+  private async getLeadHandlingConfig(): Promise<LandingPageLeadSettings> {
+    try {
+      const config = await prisma.systemConfig.findUnique({
+        where: { key: 'landing_page_lead_handling' },
+      });
+
+      if (!config) {
+        // Retornar configuração padrão se não existir
+        logger.info('⚙️  Configuração de landing page não encontrada, usando padrão (create_lead)');
+        return {
+          mode: 'create_lead',
+          whatsappNumber: '',
+          messageTemplate: '',
+          createLeadAnyway: true,
+        };
+      }
+
+      const parsedConfig = JSON.parse(config.value) as LandingPageLeadSettings;
+      logger.info('⚙️  Configuração de landing page carregada', {
+        mode: parsedConfig.mode,
+        hasWhatsAppNumber: !!parsedConfig.whatsappNumber,
+      });
+
+      return parsedConfig;
+    } catch (error) {
+      logger.error('❌ Erro ao buscar configuração de landing page', { error });
+      // Retornar padrão em caso de erro
+      return {
+        mode: 'create_lead',
+        whatsappNumber: '',
+        messageTemplate: '',
+        createLeadAnyway: true,
+      };
+    }
+  }
+
+  /**
    * POST /api/public/leads
    * Create a new lead from public form (no authentication required)
    */
@@ -77,6 +117,71 @@ export class PublicLeadsController {
       if (!formattedPhone.startsWith('+')) {
         phoneWithCountryCode = `+55${formattedPhone}`;
       }
+
+      // ============================================================================
+      // 🆕 BUSCAR CONFIGURAÇÃO DO SISTEMA
+      // ============================================================================
+      const config = await this.getLeadHandlingConfig();
+
+      // ============================================================================
+      // 🆕 MODO WHATSAPP_ONLY: Enviar apenas mensagem WhatsApp
+      // ============================================================================
+      if (config.mode === 'whatsapp_only') {
+        logger.info('📲 Modo WhatsApp Only ativado - enviando notificação direta');
+
+        // Preparar dados com telefone formatado
+        const leadDataWithFormattedPhone: PublicCreateLeadInput = {
+          ...validatedData,
+          phone: phoneWithCountryCode,
+        };
+
+        // Enviar WhatsApp
+        const whatsappSent = await whatsappDirectNotificationService.sendLeadNotification(
+          leadDataWithFormattedPhone,
+          config
+        );
+
+        // Opcional: criar lead silenciosamente para histórico
+        let leadId: string | null = null;
+        if (config.createLeadAnyway) {
+          try {
+            logger.info('💾 Criando lead silenciosamente para histórico');
+            const recurrence = await leadRecurrenceService.handleLeadCapture({
+              phone: phoneWithCountryCode,
+              name: validatedData.name,
+              email: validatedData.email,
+              source: validatedData.source,
+              interest: req.body.interest,
+              metadata: {
+                userAgent: req.headers['user-agent'],
+                referer: req.headers['referer'],
+                mode: 'whatsapp_only',
+              },
+              userAgent: req.headers['user-agent'],
+              ipAddress: req.ip,
+            });
+            leadId = recurrence.lead.id;
+            logger.info('✅ Lead criado silenciosamente', { leadId });
+          } catch (error) {
+            logger.error('❌ Erro ao criar lead silencioso', { error });
+          }
+        }
+
+        // Retornar resposta
+        createdResponse(res, {
+          id: leadId || 'whatsapp_only',
+          message: whatsappSent
+            ? 'Seus dados foram enviados com sucesso! Nossa equipe entrará em contato em breve.'
+            : 'Seus dados foram recebidos! Nossa equipe entrará em contato em breve.',
+        }, 'Mensagem enviada via WhatsApp');
+
+        return;
+      }
+
+      // ============================================================================
+      // MODO CREATE_LEAD (PADRÃO): Criar lead + automação
+      // ============================================================================
+      logger.info('💾 Modo Create Lead ativado - criando lead no CRM');
 
       // ============================================================================
       // 🔄 DETECÇÃO DE RECORRÊNCIA - Novo sistema
