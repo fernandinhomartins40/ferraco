@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { X, Download, Share, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -27,10 +28,17 @@ const STORAGE_KEY = 'pwa-install-banner-dismissed';
 const SHOW_DELAY = 30000; // 30 seconds
 
 export function InstallPWABanner() {
+  const location = useLocation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [platform, setPlatform] = useState<'android' | 'ios' | 'desktop' | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
+
+  // Verificar se está em rota pública (landing page ou chat público)
+  const isPublicRoute = location.pathname === '/' || location.pathname === '/chat';
+
+  // Não mostrar banner em rotas públicas
+  if (isPublicRoute) return null;
 
   useEffect(() => {
     // Check if already installed (standalone mode)
