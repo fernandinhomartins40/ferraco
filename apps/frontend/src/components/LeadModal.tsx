@@ -24,15 +24,16 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
   const [whatsappNumber, setWhatsappNumber] = useState<string>('');
   const { toast } = useToast();
 
-  // Buscar número de WhatsApp da configuração quando houver customWhatsAppMessage
+  // Buscar número de WhatsApp da configuração WhatsApp Only quando houver customWhatsAppMessage
   useEffect(() => {
     if (customWhatsAppMessage && isOpen) {
       const fetchWhatsAppConfig = async () => {
         try {
-          const response = await api.get("/landing-page/config");
-          const config = response.data.data;
-          // Tentar pegar o número do WhatsApp da configuração geral ou do contato
-          const number = config.contact?.whatsapp || config.contact?.phone || '';
+          // Buscar o número do mesmo lugar que o modo WhatsApp Only usa
+          const response = await api.get("/admin/landing-page-settings");
+          const settings = response.data.data;
+          // Usar o número configurado no modo WhatsApp Only
+          const number = settings.whatsappNumber || '';
           setWhatsappNumber(number.replace(/\D/g, '')); // Remove caracteres não numéricos
         } catch (error) {
           console.error("Erro ao buscar configuração do WhatsApp:", error);
