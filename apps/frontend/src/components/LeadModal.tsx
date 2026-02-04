@@ -44,8 +44,8 @@ const LeadModal = ({ isOpen, onClose, productName, productId }: LeadModalProps) 
     setIsSubmitting(true);
 
     try {
-      // 1. Criar lead no backend (PostgreSQL)
-      await publicLeadService.create({
+      // 1. Criar lead no backend (PostgreSQL) e obter resposta
+      const response = await publicLeadService.create({
         name: formData.name,
         phone: formData.phone,
         source: productName ? `modal-produto-${productId || 'generico'}` : 'modal-orcamento',
@@ -60,11 +60,25 @@ const LeadModal = ({ isOpen, onClose, productName, productId }: LeadModalProps) 
         productName ? `modal-produto-${productId || 'generico'}` : 'modal-orcamento'
       );
 
-      toast({
-        title: "Sucesso!",
-        description: "Seus dados foram enviados. Nossa equipe entrará em contato em breve.",
-        variant: "default"
-      });
+      // 3. Se houver whatsappUrl, redirecionar para WhatsApp
+      if (response.whatsappUrl) {
+        toast({
+          title: "Redirecionando...",
+          description: "Você será redirecionado para o WhatsApp para enviar sua mensagem.",
+          variant: "default"
+        });
+
+        // Aguardar 1 segundo e redirecionar
+        setTimeout(() => {
+          window.open(response.whatsappUrl, '_blank');
+        }, 1000);
+      } else {
+        toast({
+          title: "Sucesso!",
+          description: response.message || "Seus dados foram enviados. Nossa equipe entrará em contato em breve.",
+          variant: "default"
+        });
+      }
 
       // Reset form and close modal
       setFormData({ name: "", phone: "" });

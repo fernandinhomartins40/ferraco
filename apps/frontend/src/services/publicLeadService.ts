@@ -33,6 +33,7 @@ export interface PublicLeadData {
 export interface PublicLeadResponse {
   id: string;
   message: string;
+  whatsappUrl?: string; // URL para redirecionar para WhatsApp (modo whatsapp_only)
 }
 
 // ============================================
@@ -62,12 +63,14 @@ export const publicLeadService = {
       });
 
       logger.info('✅ Lead público criado com sucesso', {
-        leadId: response.data.data.id
+        leadId: response.data.data.id,
+        hasWhatsappUrl: !!response.data.data.whatsappUrl
       });
 
       return {
         id: response.data.data.id,
         message: response.data.data.message || 'Lead criado com sucesso',
+        whatsappUrl: response.data.data.whatsappUrl, // URL para redirecionar (modo whatsapp_only)
       };
     } catch (error: any) {
       // Log de erro detalhado

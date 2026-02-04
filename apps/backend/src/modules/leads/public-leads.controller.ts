@@ -124,22 +124,34 @@ export class PublicLeadsController {
       const config = await this.getLeadHandlingConfig();
 
       // ============================================================================
-      // 🆕 MODO WHATSAPP_ONLY: Enviar apenas mensagem WhatsApp
+      // 🆕 MODO WHATSAPP_ONLY: Redirecionar cliente para WhatsApp via URL (wa.me)
       // ============================================================================
       if (config.mode === 'whatsapp_only') {
-        logger.info('📲 Modo WhatsApp Only ativado - enviando notificação direta');
+        logger.info('📲 Modo WhatsApp Only ativado - gerando URL de redirecionamento');
 
-        // Preparar dados com telefone formatado
-        const leadDataWithFormattedPhone: PublicCreateLeadInput = {
-          ...validatedData,
-          phone: phoneWithCountryCode,
-        };
+        // Formatar mensagem com dados do lead
+        const interestStr = req.body.interest
+          ? (Array.isArray(req.body.interest) ? req.body.interest.join(', ') : req.body.interest)
+          : 'Não especificado';
 
-        // Enviar WhatsApp
-        const whatsappSent = await whatsappDirectNotificationService.sendLeadNotification(
-          leadDataWithFormattedPhone,
-          config
-        );
+        const message = config.messageTemplate
+          ?.replace(/\{\{name\}\}/g, validatedData.name)
+          .replace(/\{\{phone\}\}/g, phoneWithCountryCode)
+          .replace(/\{\{email\}\}/g, validatedData.email || 'Não informado')
+          .replace(/\{\{interest\}\}/g, interestStr)
+          .replace(/\{\{source\}\}/g, validatedData.source)
+          .replace(/\{\{timestamp\}\}/g, new Date().toLocaleString('pt-BR'))
+          || `Olá! Me chamo ${validatedData.name} e tenho interesse em ${interestStr}. Telefone: ${phoneWithCountryCode}`;
+
+        // Gerar URL do WhatsApp (wa.me) - número da empresa
+        const whatsappNumber = config.whatsappNumber?.replace(/\D/g, '') || '';
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+
+        logger.info('🔗 URL do WhatsApp gerada', {
+          whatsappNumber: config.whatsappNumber,
+          url: whatsappUrl.substring(0, 100) + '...'
+        });
 
         // Opcional: criar lead silenciosamente para histórico
         let leadId: string | null = null;
@@ -156,6 +168,7 @@ export class PublicLeadsController {
                 userAgent: req.headers['user-agent'],
                 referer: req.headers['referer'],
                 mode: 'whatsapp_only',
+                whatsappUrl,
               },
               userAgent: req.headers['user-agent'],
               ipAddress: req.ip,
@@ -167,13 +180,12 @@ export class PublicLeadsController {
           }
         }
 
-        // Retornar resposta
+        // Retornar resposta com URL do WhatsApp para redirecionamento
         createdResponse(res, {
           id: leadId || 'whatsapp_only',
-          message: whatsappSent
-            ? 'Seus dados foram enviados com sucesso! Nossa equipe entrará em contato em breve.'
-            : 'Seus dados foram recebidos! Nossa equipe entrará em contato em breve.',
-        }, 'Mensagem enviada via WhatsApp');
+          whatsappUrl,
+          message: 'Você será redirecionado para o WhatsApp para enviar sua mensagem.',
+        }, 'URL do WhatsApp gerada com sucesso');
 
         return;
       }
