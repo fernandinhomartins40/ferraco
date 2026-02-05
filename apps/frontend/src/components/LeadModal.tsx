@@ -90,8 +90,9 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
         // Aguardar 1 segundo e redirecionar
         setTimeout(() => {
           if (customWhatsAppMessage && whatsappNumber) {
-            // Usar mensagem customizada (para botão flutuante) com número da empresa
-            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(customWhatsAppMessage)}`;
+            // Usar mensagem customizada com dados do formulário
+            const message = `${customWhatsAppMessage}\n\nMeu nome: ${formData.name}\nTelefone: ${formData.phone}`;
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
           } else if (response.whatsappUrl) {
             // Usar URL retornada do backend (modo whatsapp_only)

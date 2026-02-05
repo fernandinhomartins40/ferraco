@@ -41,7 +41,14 @@ const Index = () => {
 
   const openLeadModal = (productName?: string, productId?: string) => {
     setSelectedProduct({ name: productName, id: productId });
-    setCustomWhatsAppMessage(undefined);
+
+    // Se não houver produto específico, é um orçamento geral - usar mensagem customizada
+    if (!productName) {
+      setCustomWhatsAppMessage("Olá! Gostaria de solicitar um orçamento.");
+    } else {
+      setCustomWhatsAppMessage(undefined);
+    }
+
     setIsLeadModalOpen(true);
   };
 
