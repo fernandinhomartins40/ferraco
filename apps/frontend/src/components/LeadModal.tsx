@@ -24,24 +24,22 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
   const [whatsappNumber, setWhatsappNumber] = useState<string>('');
   const { toast } = useToast();
 
-  // Buscar número de WhatsApp da configuração WhatsApp Only quando houver customWhatsAppMessage
+  // Buscar número de WhatsApp sempre que o modal abrir
   useEffect(() => {
-    if (customWhatsAppMessage && isOpen) {
+    if (isOpen) {
       const fetchWhatsAppConfig = async () => {
         try {
-          // Buscar o número do mesmo lugar que o modo WhatsApp Only usa
           const response = await api.get("/admin/landing-page-settings");
           const settings = response.data.data;
-          // Usar o número configurado no modo WhatsApp Only
           const number = settings.whatsappNumber || '';
-          setWhatsappNumber(number.replace(/\D/g, '')); // Remove caracteres não numéricos
+          setWhatsappNumber(number.replace(/\D/g, ''));
         } catch (error) {
           console.error("Erro ao buscar configuração do WhatsApp:", error);
         }
       };
       fetchWhatsAppConfig();
     }
-  }, [customWhatsAppMessage, isOpen]);
+  }, [isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -74,8 +72,6 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
         interest: productName || 'Orçamento geral', // Produto de interesse ou orçamento geral
       });
 
-      console.log('📱 Resposta do backend:', response);
-
       // 2. Salvar também no localStorage como fallback/cache
       const { leadStorage } = await import('@/utils/leadStorage');
       leadStorage.addLead(
@@ -85,15 +81,7 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
       );
 
       // 3. Se houver whatsappUrl OU customWhatsAppMessage, redirecionar para WhatsApp
-      console.log('🔍 Verificando redirecionamento WhatsApp:', {
-        hasWhatsappUrl: !!response.whatsappUrl,
-        hasCustomMessage: !!customWhatsAppMessage,
-        whatsappUrl: response.whatsappUrl,
-        whatsappNumber
-      });
-
       if (response.whatsappUrl || customWhatsAppMessage) {
-        console.log('✅ Redirecionando para WhatsApp...');
         toast({
           title: "Redirecionando...",
           description: "Você será redirecionado para o WhatsApp para enviar sua mensagem.",
@@ -105,11 +93,9 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
           if (customWhatsAppMessage && whatsappNumber) {
             // Usar mensagem customizada (para botão flutuante) com número da empresa
             const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(customWhatsAppMessage)}`;
-            console.log('📱 Abrindo WhatsApp (mensagem customizada):', whatsappUrl);
             window.open(whatsappUrl, '_blank');
           } else if (response.whatsappUrl) {
             // Usar URL retornada do backend (modo whatsapp_only)
-            console.log('📱 Abrindo WhatsApp (backend URL):', response.whatsappUrl);
             window.open(response.whatsappUrl, '_blank');
           }
         }, 1000);
