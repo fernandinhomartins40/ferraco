@@ -279,4 +279,24 @@ export class PublicLeadsController {
       next(error);
     }
   };
+
+  /**
+   * GET /api/public/leads/whatsapp-config
+   * Buscar número de WhatsApp para a landing page (público - sem auth)
+   */
+  getWhatsAppConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const config = await this.getLeadHandlingConfig();
+
+      res.json({
+        success: true,
+        data: {
+          whatsappNumber: config.whatsappNumber || '',
+        }
+      });
+    } catch (error) {
+      logger.error('Error fetching WhatsApp config', { error });
+      next(error);
+    }
+  };
 }

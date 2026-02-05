@@ -144,7 +144,11 @@
       "Bash(PORT=3000 timeout 15s npm run dev:*)",
       "Bash(xargs -I {} sh -c 'head -c 500 {} && echo \"\"\"\"\"\"\"\"')",
       "Bash(bash:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(📱 Meu telefone: {{phone}})",
+      "Bash(📧 Email: {{email}})",
+      "Bash(Gostaria de saber mais informações sobre este produto.)",
+      "Bash(Obrigado!\"\n\nA migração acontece automaticamente quando a página de configurações\né carregada, sem necessidade de intervenção manual.\n\nArquivo modificado:\n- apps/backend/src/modules/landing-page-settings/landing-page-settings.controller.ts\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []

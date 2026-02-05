@@ -35,6 +35,12 @@ const publicLeadLimiter = rateLimit({
  */
 router.post('/', publicLeadLimiter, controller.create);
 
+/**
+ * GET /api/public/leads/whatsapp-config
+ * Get WhatsApp number for landing page (public - no auth required)
+ */
+router.get('/whatsapp-config', controller.getWhatsAppConfig);
+
 // ============================================================================
 // Export Router
 // ============================================================================

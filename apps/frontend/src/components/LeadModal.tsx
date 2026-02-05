@@ -29,9 +29,8 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
     if (isOpen) {
       const fetchWhatsAppConfig = async () => {
         try {
-          const response = await api.get("/admin/landing-page-settings");
-          const settings = response.data.data;
-          const number = settings.whatsappNumber || '';
+          const response = await api.get("/public/leads/whatsapp-config");
+          const number = response.data.data.whatsappNumber || '';
           setWhatsappNumber(number.replace(/\D/g, ''));
         } catch (error) {
           console.error("Erro ao buscar configuração do WhatsApp:", error);
