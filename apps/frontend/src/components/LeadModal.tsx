@@ -80,6 +80,10 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
       );
 
       // 3. Se houver whatsappUrl OU customWhatsAppMessage, redirecionar para WhatsApp
+      console.log('DEBUG - response:', response);
+      console.log('DEBUG - customWhatsAppMessage:', customWhatsAppMessage);
+      console.log('DEBUG - whatsappNumber:', whatsappNumber);
+
       if (response.whatsappUrl || customWhatsAppMessage) {
         toast({
           title: "Redirecionando...",
@@ -93,9 +97,11 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
             // Usar mensagem customizada com dados do formulário
             const message = `${customWhatsAppMessage}\n\nMeu nome: ${formData.name}\nTelefone: ${formData.phone}`;
             const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+            console.log('DEBUG - Abrindo WhatsApp com mensagem customizada:', whatsappUrl);
             window.open(whatsappUrl, '_blank');
           } else if (response.whatsappUrl) {
             // Usar URL retornada do backend (modo whatsapp_only)
+            console.log('DEBUG - Abrindo WhatsApp com URL do backend:', response.whatsappUrl);
             window.open(response.whatsappUrl, '_blank');
           }
         }, 1000);
