@@ -71,8 +71,10 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
         name: formData.name,
         phone: formData.phone,
         source: productName ? `modal-produto-${productId || 'generico'}` : 'modal-orcamento',
-        interest: productName, // Produto de interesse
+        interest: productName || 'Orçamento geral', // Produto de interesse ou orçamento geral
       });
+
+      console.log('📱 Resposta do backend:', response);
 
       // 2. Salvar também no localStorage como fallback/cache
       const { leadStorage } = await import('@/utils/leadStorage');
