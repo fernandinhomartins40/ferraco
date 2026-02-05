@@ -28,6 +28,10 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
+# Cache busting: usar BUILD_TIMESTAMP para forçar rebuild
+RUN echo "Build timestamp: ${BUILD_TIMESTAMP}" && \
+    echo "Git commit: ${GIT_COMMIT}"
+
 # Copiar arquivos de configuração do monorepo
 COPY package*.json tsconfig.base.json ./
 
@@ -35,11 +39,17 @@ COPY package*.json tsconfig.base.json ./
 COPY packages ./packages
 COPY apps ./apps
 
-# Instalar todas as dependências (workspaces)
-RUN npm ci
+# Instalar todas as dependências (workspaces) - sempre limpo
+RUN npm ci --prefer-offline=false --no-audit --no-fund
 
 # Gerar Prisma Client ANTES do build (tipos necessários para TypeScript)
 RUN npm run prisma:generate
+
+# Limpar builds anteriores (garantir build limpo)
+RUN rm -rf apps/backend/dist apps/frontend/dist
+
+# Cache busting: invalidar cache antes dos builds
+RUN echo "Starting builds at: ${BUILD_TIMESTAMP}"
 
 # Build do backend (deve ser executado da raiz do monorepo)
 RUN npm run build:backend || { echo "❌ ERRO: Build do backend falhou!"; cat apps/backend/typescript-errors.txt 2>/dev/null || true; exit 1; }
