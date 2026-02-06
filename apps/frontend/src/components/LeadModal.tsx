@@ -79,10 +79,37 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
       });
     }
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    // Aplicar máscara de telefone se o campo for "phone"
+    if (name === 'phone') {
+      // Remover tudo que não é número
+      let numbers = value.replace(/\D/g, '');
+
+      // Limitar a 11 dígitos (DDD + 9 dígitos)
+      numbers = numbers.slice(0, 11);
+
+      // Aplicar máscara (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+      let formatted = numbers;
+      if (numbers.length > 0) {
+        if (numbers.length <= 2) {
+          formatted = `(${numbers}`;
+        } else if (numbers.length <= 7) {
+          formatted = `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+        } else if (numbers.length <= 11) {
+          // Formato com 9 dígitos: (XX) XXXXX-XXXX
+          formatted = `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: formatted
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -311,6 +338,7 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
                 onChange={handleInputChange}
                 className="pl-10"
                 placeholder="(11) 99999-9999"
+                maxLength={15}
               />
             </div>
           </div>
