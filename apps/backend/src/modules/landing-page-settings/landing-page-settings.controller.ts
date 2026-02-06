@@ -23,8 +23,25 @@ const LandingPageSettingsSchema = z.object({
   whatsappNumber: z.string()
     .optional()
     .refine(
-      (val) => !val || /^[\d\s\-\(\)\+]+$/.test(val),
-      { message: 'Número de WhatsApp inválido' }
+      (val) => {
+        if (!val) return true; // Opcional quando não é whatsapp_only
+
+        // Deve começar com + e ter apenas números após o +
+        if (!/^\+\d{10,15}$/.test(val)) {
+          return false;
+        }
+
+        // Se for número brasileiro (+55), deve ter exatamente 14 caracteres
+        // +55 (2) + DDD (2) + número (9 dígitos incluindo o nono)
+        if (val.startsWith('+55') && val.length !== 14) {
+          return false;
+        }
+
+        return true;
+      },
+      {
+        message: 'Número de WhatsApp inválido. Use o formato internacional: +[código do país][DDD][número]. Exemplo para Brasil: +5511999999999 (14 dígitos)'
+      }
     ),
   messageTemplate: z.string()
     .optional(),

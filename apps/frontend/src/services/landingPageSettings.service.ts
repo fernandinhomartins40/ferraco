@@ -141,6 +141,21 @@ export const landingPageSettingsService = {
     if (settings.mode === 'whatsapp_only') {
       if (!settings.whatsappNumber || settings.whatsappNumber.trim() === '') {
         errors.push('Número de WhatsApp é obrigatório para modo WhatsApp Only');
+      } else {
+        // Validar formato do número WhatsApp (deve começar com + e ter apenas números)
+        const whatsappNumber = settings.whatsappNumber.trim();
+        const whatsappRegex = /^\+\d{10,15}$/;
+
+        if (!whatsappRegex.test(whatsappNumber)) {
+          errors.push(
+            'Número de WhatsApp inválido. Use o formato: +[código do país][DDD][número]. Exemplo: +5511999999999'
+          );
+        } else if (whatsappNumber.startsWith('+55') && whatsappNumber.length !== 14) {
+          // Validação específica para Brasil: +55 (2) + DDD (2) + número (9) = 14 caracteres
+          errors.push(
+            'Número brasileiro inválido. Deve ter 14 caracteres: +55 + DDD (2 dígitos) + número (9 dígitos com nono dígito)'
+          );
+        }
       }
 
       if (!settings.messageTemplate || settings.messageTemplate.trim() === '') {

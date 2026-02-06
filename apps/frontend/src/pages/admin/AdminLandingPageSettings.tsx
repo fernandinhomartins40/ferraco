@@ -251,14 +251,34 @@ const AdminLandingPageSettings = () => {
                   </Label>
                   <Input
                     id="whatsappNumber"
-                    placeholder="5511999999999"
+                    placeholder="+5511999999999"
                     value={settings.whatsappNumber || ''}
-                    onChange={(e) =>
-                      setSettings({ ...settings, whatsappNumber: e.target.value })
-                    }
+                    onChange={(e) => {
+                      // Permitir apenas + e números
+                      let value = e.target.value.replace(/[^\d+]/g, '');
+
+                      // Garantir que + só apareça no início
+                      if (value.includes('+')) {
+                        const plusCount = (value.match(/\+/g) || []).length;
+                        if (plusCount > 1 || value.indexOf('+') !== 0) {
+                          value = value.replace(/\+/g, '');
+                          if (e.target.value.startsWith('+')) {
+                            value = '+' + value;
+                          }
+                        }
+                      }
+
+                      // Adicionar + automaticamente se usuário digitar apenas números
+                      if (value.length > 0 && !value.startsWith('+')) {
+                        value = '+' + value;
+                      }
+
+                      setSettings({ ...settings, whatsappNumber: value });
+                    }}
+                    maxLength={15}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Número da sua empresa (com código do país) para onde o CLIENTE será redirecionado via wa.me
+                    Formato: +[código do país][DDD][número]. Exemplo para Brasil: +5511999999999 (código 55 + DDD 11 + 9 dígitos)
                   </p>
                 </div>
 

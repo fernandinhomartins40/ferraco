@@ -85,12 +85,69 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
           </p>
         </div>
 
+        {/* Grid para Mobile (sem carrossel) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
+          {products.map((product, index) => {
+            const defaultProduct = defaultProducts[index];
+            return (
+              <Card key={product.id || index} className="shadow-elegant hover:shadow-glow transition-smooth group hover:scale-105 overflow-hidden flex flex-col p-0 h-full">
+                {/* Image with Icon Tag */}
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={product.image?.url || product.image || defaultProduct?.image}
+                    alt={product.image?.alt || product.name || defaultProduct?.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-smooth"
+                  />
+                  <div className="absolute top-3 right-3 w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg">
+                    {renderIcon(product.icon, defaultProduct?.icon)}
+                  </div>
+                </div>
+
+                <CardHeader className="text-center pb-3 pt-4">
+                  <CardTitle className="text-xl font-bold text-foreground mb-1">
+                    {product.name}
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground text-sm line-clamp-2">
+                    {product.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col flex-1 pt-0">
+                  <ul className="space-y-1.5 mb-4 flex-1">
+                    {(product.benefits || defaultProduct?.features || []).slice(0, 3).map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-muted-foreground text-sm">
+                        <span className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span className="leading-snug">{typeof item === 'string' ? item : item.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    onClick={() => {
+                      // Extrair string do nome do produto (pode ser string ou objeto com .text)
+                      const productNameStr = typeof product.name === 'string'
+                        ? product.name
+                        : product.name?.text || defaultProduct?.name || 'Produto';
+                      onLeadModalOpen(productNameStr, product.id);
+                    }}
+                    className="w-full font-semibold transition-smooth hover:scale-105 mt-auto text-sm"
+                    variant="default"
+                    size="sm"
+                    style={product.cta?.href ? {} : undefined}
+                  >
+                    {product.cta?.text || "Quero Saber Mais"}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Carrossel para Tablets e Desktop */}
         <Carousel
           opts={{
             align: "start",
             loop: true,
           }}
-          className="w-full max-w-7xl mx-auto px-12"
+          className="hidden md:block w-full max-w-7xl mx-auto px-12"
         >
           <CarouselContent className="-ml-2 md:-ml-4">
             {products.map((product, index) => {
@@ -98,7 +155,7 @@ const ProductsSection = ({ onLeadModalOpen, config }: ProductsSectionProps) => {
               return (
                 <CarouselItem key={product.id || index} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
                   <Card className="shadow-elegant hover:shadow-glow transition-smooth group hover:scale-105 overflow-hidden flex flex-col p-0 h-full">
-                    {/* Image with Icon Tag - Reduzido */}
+                    {/* Image with Icon Tag */}
                     <div className="relative h-48 overflow-hidden">
                       <img
                         src={product.image?.url || product.image || defaultProduct?.image}
