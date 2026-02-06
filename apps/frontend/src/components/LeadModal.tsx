@@ -7,6 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import { publicLeadService } from "@/services/publicLeadService";
 import api from "@/lib/apiClient";
 
+// Declaração para dataLayer do Google Tag Manager
+declare global {
+  interface Window {
+    dataLayer: any[];
+  }
+}
+
 interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,6 +34,16 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
   // Buscar número de WhatsApp sempre que o modal abrir
   useEffect(() => {
     if (isOpen) {
+      // Push evento de abertura do modal para o dataLayer (GA4)
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'form_start',
+        form_name: 'lead_modal',
+        form_type: customWhatsAppMessage ? 'whatsapp_redirect' : 'lead_capture',
+        product_name: productName || 'Orçamento Geral',
+        product_id: productId || null,
+      });
+
       const fetchWhatsAppConfig = async () => {
         try {
           const response = await api.get("/public/leads/whatsapp-config");
@@ -38,10 +55,22 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
       };
       fetchWhatsAppConfig();
     }
-  }, [isOpen]);
+  }, [isOpen, customWhatsAppMessage, productName, productId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
+    // Push evento de interação com campo para o dataLayer (GA4)
+    if (value && !formData[name as keyof typeof formData]) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'form_field_interaction',
+        form_name: 'lead_modal',
+        field_name: name,
+        product_name: productName || 'Orçamento Geral',
+      });
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -61,6 +90,17 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
     }
 
     setIsSubmitting(true);
+
+    // Push evento de submit do formulário para o dataLayer (GA4)
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'form_submit',
+      form_name: 'lead_modal',
+      product_name: productName || 'Orçamento Geral',
+      product_id: productId || null,
+      lead_name: formData.name,
+      lead_phone: formData.phone,
+    });
 
     try {
       // 1. Criar lead no backend (PostgreSQL) e obter resposta
@@ -83,6 +123,17 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
       console.log('DEBUG - response:', response);
       console.log('DEBUG - customWhatsAppMessage:', customWhatsAppMessage);
       console.log('DEBUG - whatsappNumber:', whatsappNumber);
+
+      // Push evento de sucesso para o dataLayer (GA4)
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'form_success',
+        form_name: 'lead_modal',
+        conversion_type: response.whatsappUrl || customWhatsAppMessage ? 'whatsapp_redirect' : 'lead_created',
+        product_name: productName || 'Orçamento Geral',
+        product_id: productId || null,
+        lead_id: response.leadId || null,
+      });
 
       if (response.whatsappUrl || customWhatsAppMessage) {
         toast({
@@ -125,6 +176,15 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
       setFormData({ name: "", phone: "" });
       onClose();
     } catch (error: any) {
+      // Push evento de erro para o dataLayer (GA4)
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'form_error',
+        form_name: 'lead_modal',
+        error_message: error.message || 'Erro desconhecido',
+        product_name: productName || 'Orçamento Geral',
+      });
+
       // Se falhar a API, tentar salvar apenas no localStorage
       try {
         const { leadStorage } = await import('@/utils/leadStorage');
