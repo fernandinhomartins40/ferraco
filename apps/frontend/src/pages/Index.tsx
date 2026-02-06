@@ -51,6 +51,12 @@ const Index = () => {
     setIsLeadModalOpen(true);
   };
 
+  const openQuoteModal = () => {
+    setSelectedProduct({});
+    setCustomWhatsAppMessage("Olá! Gostaria de solicitar um orçamento");
+    setIsLeadModalOpen(true);
+  };
+
   const closeLeadModal = () => {
     setIsLeadModalOpen(false);
     setSelectedProduct({});
@@ -90,7 +96,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
-      <Header onLeadModalOpen={openLeadModal} config={config.header} />
+      <Header onLeadModalOpen={openQuoteModal} config={config.header} />
       <HeroSection onLeadModalOpen={openLeadModal} config={config.hero} />
       <MarqueeSection config={config.marquee} />
       <ProductsSection onLeadModalOpen={openLeadModal} config={config.products} />
