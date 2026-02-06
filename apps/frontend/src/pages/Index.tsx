@@ -96,7 +96,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
-      <Header onLeadModalOpen={openQuoteModal} config={config.header} />
+      <Header onLeadModalOpen={() => openLeadModal()} config={config.header} />
       <HeroSection onLeadModalOpen={openLeadModal} config={config.hero} />
       <MarqueeSection config={config.marquee} />
       <ProductsSection onLeadModalOpen={openLeadModal} config={config.products} />

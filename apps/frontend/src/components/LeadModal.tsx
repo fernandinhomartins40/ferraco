@@ -46,11 +46,19 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
 
       const fetchWhatsAppConfig = async () => {
         try {
+          console.log('🔍 Buscando configuração do WhatsApp...');
           const response = await api.get("/public/leads/whatsapp-config");
+          console.log('📥 Resposta da API:', response.data);
           const number = response.data.data.whatsappNumber || '';
-          setWhatsappNumber(number.replace(/\D/g, ''));
+          const cleanNumber = number.replace(/\D/g, '');
+          setWhatsappNumber(cleanNumber);
+          console.log('📱 Número WhatsApp configurado:', {
+            original: number,
+            limpo: cleanNumber,
+            temNumero: !!cleanNumber
+          });
         } catch (error) {
-          console.error("Erro ao buscar configuração do WhatsApp:", error);
+          console.error("❌ Erro ao buscar configuração do WhatsApp:", error);
         }
       };
       fetchWhatsAppConfig();
@@ -120,9 +128,16 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
       );
 
       // 3. Se houver whatsappUrl OU customWhatsAppMessage, redirecionar para WhatsApp
-      console.log('DEBUG - response:', response);
-      console.log('DEBUG - customWhatsAppMessage:', customWhatsAppMessage);
-      console.log('DEBUG - whatsappNumber:', whatsappNumber);
+      console.log('🔍 DEBUG - response:', response);
+      console.log('🔍 DEBUG - customWhatsAppMessage:', customWhatsAppMessage);
+      console.log('🔍 DEBUG - whatsappNumber:', whatsappNumber);
+      console.log('🔍 DEBUG - response.whatsappUrl:', response.whatsappUrl);
+      console.log('🔍 DEBUG - Condição WhatsApp:', {
+        temCustomMessage: !!customWhatsAppMessage,
+        temNumero: !!whatsappNumber,
+        temResponseUrl: !!response.whatsappUrl,
+        vaiRedirecionar: !!(response.whatsappUrl || (customWhatsAppMessage && whatsappNumber))
+      });
 
       // Push evento de sucesso para o dataLayer (GA4)
       window.dataLayer = window.dataLayer || [];
@@ -136,6 +151,17 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
       });
 
       if (response.whatsappUrl || customWhatsAppMessage) {
+        // Verificar se há número configurado quando usa mensagem customizada
+        if (customWhatsAppMessage && !whatsappNumber) {
+          console.error('❌ ERRO: Mensagem customizada configurada mas número do WhatsApp não encontrado!');
+          toast({
+            title: "Erro de Configuração",
+            description: "Número do WhatsApp não configurado. Entre em contato pelo telefone ou email.",
+            variant: "destructive"
+          });
+          return;
+        }
+
         toast({
           title: "Redirecionando...",
           description: "Você será redirecionado para o WhatsApp para enviar sua mensagem.",
@@ -156,11 +182,11 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
             }
 
             const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-            console.log('DEBUG - Abrindo WhatsApp com mensagem customizada:', whatsappUrl);
+            console.log('✅ Abrindo WhatsApp com mensagem customizada:', whatsappUrl);
             window.open(whatsappUrl, '_blank');
           } else if (response.whatsappUrl) {
             // Usar URL retornada do backend (modo whatsapp_only)
-            console.log('DEBUG - Abrindo WhatsApp com URL do backend:', response.whatsappUrl);
+            console.log('✅ Abrindo WhatsApp com URL do backend:', response.whatsappUrl);
             window.open(response.whatsappUrl, '_blank');
           }
         }, 1000);
