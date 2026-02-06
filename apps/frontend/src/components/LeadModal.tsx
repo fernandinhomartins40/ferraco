@@ -94,8 +94,16 @@ const LeadModal = ({ isOpen, onClose, productName, productId, customWhatsAppMess
         // Aguardar 1 segundo e redirecionar
         setTimeout(() => {
           if (customWhatsAppMessage && whatsappNumber) {
-            // Usar mensagem customizada com dados do formulário
-            const message = `${customWhatsAppMessage}\n\nMeu nome: ${formData.name}\nTelefone: ${formData.phone}`;
+            // Substituir placeholders na mensagem customizada (case-insensitive)
+            let message = customWhatsAppMessage
+              .replace(/\[nome\]/gi, formData.name)
+              .replace(/\[telefone\]/gi, formData.phone);
+
+            // Se não houver placeholders, adicionar dados no final
+            if (!message.includes(formData.name)) {
+              message = `${customWhatsAppMessage}\n\nMeu nome: ${formData.name}\nTelefone: ${formData.phone}`;
+            }
+
             const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
             console.log('DEBUG - Abrindo WhatsApp com mensagem customizada:', whatsappUrl);
             window.open(whatsappUrl, '_blank');

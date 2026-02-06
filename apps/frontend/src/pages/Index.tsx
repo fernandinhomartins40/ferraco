@@ -47,13 +47,13 @@ const Index = () => {
 
   const openWhatsAppModal = () => {
     setSelectedProduct({});
-    setCustomWhatsAppMessage("Olá! Vim pelo site e gostaria de mais informações");
+    setCustomWhatsAppMessage("Olá! Me chamo [nome] e vim pelo site. Gostaria de mais informações");
     setIsLeadModalOpen(true);
   };
 
   const openQuoteModal = () => {
     setSelectedProduct({});
-    setCustomWhatsAppMessage("Olá! Gostaria de solicitar um orçamento");
+    setCustomWhatsAppMessage("Olá! Me chamo [nome] e gostaria de solicitar um orçamento");
     setIsLeadModalOpen(true);
   };
 
