@@ -96,8 +96,25 @@ if [ -n "$DATABASE_URL" ]; then
   # T-14: verificar que nenhuma migration ficou incompleta ou revertida.
   # `migrate deploy` pode retornar 0 e ainda assim haver registro problemático.
   if command -v psql >/dev/null 2>&1; then
+    # A consulta conta migrations SEM NENHUMA aplicação bem-sucedida.
+    #
+    # A versão anterior contava qualquer linha com `rolled_back_at`, o que
+    # produzia falso positivo: o Prisma NÃO apaga a tentativa falha ao
+    # reaplicar uma migration — ele grava uma linha nova. Uma migration que
+    # falhou, foi marcada como revertida e depois aplicou com sucesso deixa
+    # DUAS linhas, e a antiga fazia o boot abortar com o schema correto.
+    #
+    # Isso aconteceu de verdade ao restaurar o dump de 07/09, que trazia o
+    # histórico da falha da F-100. Agrupar por nome e exigir que exista ao
+    # menos um `finished_at` distingue "nunca aplicou" de "aplicou depois".
     MIGR_RUIM=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A \
-      -c "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NULL OR rolled_back_at IS NOT NULL;" 2>/dev/null | tr -d ' ')
+      -c "SELECT COUNT(*) FROM (
+            SELECT migration_name
+            FROM _prisma_migrations
+            GROUP BY migration_name
+            HAVING COUNT(*) FILTER (WHERE finished_at IS NOT NULL
+                                      AND rolled_back_at IS NULL) = 0
+          ) AS sem_aplicacao_valida;" 2>/dev/null | tr -d ' ')
     case "$MIGR_RUIM" in
       ''|*[!0-9]*)
         echo "⚠️  Não foi possível verificar _prisma_migrations — seguindo."
