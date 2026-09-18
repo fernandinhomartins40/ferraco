@@ -34,12 +34,14 @@ services:
 
   ferraco-crm-vps:
     container_name: ferraco-crm-vps
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-0}
-        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    # T-12: a secao `build:` foi REMOVIDA de proposito.
+    # A imagem e construida no runner do GitHub e publicada no GHCR; o deploy
+    # faz `docker pull` e a marca como `ferraco-crm:latest`. Se `build:`
+    # continuasse aqui, `docker compose up` reconstruiria na VPS ao menor
+    # sinal de divergencia — justamente o que esta tarefa elimina.
+    #
+    # Para construir localmente (desenvolvimento), use o docker-compose.yml
+    # da raiz, que mantem a secao `build:`.
     image: ferraco-crm:latest
     ports:
       - "3050:3050"

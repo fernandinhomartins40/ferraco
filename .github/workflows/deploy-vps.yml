@@ -18,12 +18,82 @@ env:
   APP_PORT: '3050'
   COMPOSE_PROJECT: 'ferraco'
   DOMAIN: 'metalurgicaferraco.com'
+  # T-12 (F-03/F-27/F-66/F-67/F-68): a imagem passa a ser construida no runner
+  # e publicada no GHCR. O nome precisa ser minusculo — o Docker rejeita tags
+  # com maiuscula, e o owner do repositorio as tem.
+  IMAGE_NAME: 'ghcr.io/fernandinhomartins40/ferraco-crm'
 
 jobs:
+  # ===========================================================================
+  # T-12 · BUILD NO RUNNER (F-03, F-27, F-66, F-67, F-68, F-31, F-32)
+  # ===========================================================================
+  # Antes: a imagem era construida DENTRO da VPS, a cada deploy, com --no-cache.
+  # Consequencias medidas: ~16 min de deploy, CPU e RAM do host disputadas com
+  # as aplicacoes vizinhas (o host e compartilhado), e — o mais grave — NENHUM
+  # rollback possivel, porque so existia a tag `latest` local. Uma imagem ruim
+  # substituia a boa sem deixar copia.
+  #
+  # Agora: o runner do GitHub constroi e publica no GHCR com tag pelo SHA do
+  # commit. A VPS apenas faz `docker pull`. O deploy deixa de competir por CPU
+  # com os vizinhos, e cada commit vira uma imagem endereçavel — rollback passa
+  # a ser `docker pull <sha-anterior>`.
+  # ===========================================================================
+  build:
+    name: 🏗️ Build e push para GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write    # necessario para publicar no GHCR
+
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+
+    - name: 🔧 Setup Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🔐 Login no GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}   # token automatico do Actions
+
+    - name: 🏗️ Build e push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        # Duas tags: o SHA identifica a versao exata (base do rollback) e
+        # `latest` e a conveniencia para quem so quer a mais recente.
+        tags: |
+          ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          ${{ env.IMAGE_NAME }}:latest
+        build-args: |
+          BUILD_TIMESTAMP=${{ github.run_number }}
+          GIT_COMMIT=${{ github.sha }}
+        # Cache no proprio registry: o build da VPS usava --no-cache por nao ter
+        # onde guardar camadas. Aqui as camadas persistem entre execucoes, o que
+        # reduz builds seguintes sem comprometer a reprodutibilidade (o SHA do
+        # commit continua determinando o conteudo).
+        cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+        cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+    - name: 📋 Resumo
+      run: |
+        echo "✅ Imagem publicada no GHCR"
+        echo "   ${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        echo "   ${{ env.IMAGE_NAME }}:latest"
+        echo ""
+        echo "Rollback: docker pull ${{ env.IMAGE_NAME }}:<sha-anterior>"
+
   deploy:
     name: 🚀 Deploy Full Stack para VPS
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    needs: build          # T-12: so implanta se a imagem foi publicada
 
     steps:
     - name: 📥 Checkout
@@ -205,16 +275,24 @@ jobs:
           sleep 2
 
           # Limpar TUDO do Docker relacionado ao Ferraco (REBUILD COMPLETO ZERO)
-          echo "🧹 Limpando COMPLETAMENTE Docker para rebuild zero..."
+          echo "🧹 Limpeza leve (T-12)..."
 
-          # Remover imagens do Ferraco (todas as tags e layers)
-          docker images --filter "reference=*ferraco*" -q | xargs -r docker rmi -f 2>/dev/null || true
-          docker images | grep ferraco | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || true
+          # T-12: a limpeza AGRESSIVA foi removida. Ela existia porque o build
+          # acontecia aqui e o cache local podia servir camadas velhas.
+          #
+          # Mantê-la agora seria ATIVAMENTE DANOSO por duas razoes:
+          #  1. `docker rmi` de tudo que casa com "*ferraco*" apagaria a imagem
+          #     recem-baixada do GHCR — inclusive as tags por SHA, que sao a
+          #     base do rollback.
+          #  2. `docker builder prune -a` limpa um cache que esta VPS nao usa
+          #     mais (o build migrou para o runner) e que e COMPARTILHADO com
+          #     as aplicacoes vizinhas deste host — apagá-lo forca rebuild
+          #     completo nos deploys DELAS.
+          #
+          # Imagens antigas do Ferraco sao removidas de forma seletiva no fim
+          # do deploy, preservando as ultimas tags para rollback.
 
-          # Limpar cache de build (layers intermediárias) - AGRESSIVO
-          docker builder prune -a -f 2>/dev/null || true
-
-          # Limpar networks órfãs
+          # Limpar networks órfãs (seguro: nao afeta imagens nem cache)
           docker network prune -f 2>/dev/null || true
 
           # IMPORTANTE: NÃO limpar volumes (preserva banco de dados PostgreSQL)
@@ -394,26 +472,40 @@ jobs:
           # Build da imagem
           echo ""
           echo "========================================="
-          echo "🏗️  BUILDING IMAGEM DOCKER"
+          echo "📥 BAIXANDO IMAGEM DO GHCR"
           echo "========================================="
-          echo "🏗️  Building imagem Docker (isso pode levar alguns minutos)..."
-          echo "   Build timestamp: $BUILD_TIMESTAMP"
-          echo "   Git commit: $GIT_COMMIT"
 
-          # T-11 (F-72): `--build-arg DATABASE_URL` foi REMOVIDO.
-          # O Dockerfile não declara `ARG DATABASE_URL`, então o valor era
-          # silenciosamente ignorado — o build nunca precisou dele. Pior: se
-          # alguém adicionasse o ARG, a credencial do banco ficaria gravada
-          # numa camada da imagem, legível por `docker history`.
-          # A aplicação recebe DATABASE_URL em RUNTIME, via environment do
-          # compose, que é o lugar correto.
-          DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
-            --no-cache \
-            --pull \
-            --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
-            --build-arg GIT_COMMIT=$GIT_COMMIT
+          # T-12: a imagem JA foi construida no runner (job `build`). Aqui a VPS
+          # so baixa. O build local foi removido — era ele que consumia ~16 min
+          # e disputava CPU com as aplicacoes vizinhas deste host compartilhado.
+          #
+          # T-11 (F-72) continua valendo: nenhuma credencial entra como
+          # build-arg. DATABASE_URL chega em RUNTIME, pelo environment do
+          # compose — gravar num ARG a deixaria legivel por `docker history`.
 
-          echo "✅ Imagem Docker construída com sucesso!"
+          echo "🔐 Autenticando no GHCR..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          IMAGE_SHA="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "📥 Baixando $IMAGE_SHA ..."
+
+          if ! docker pull "$IMAGE_SHA"; then
+            echo "❌ Falha ao baixar a imagem do GHCR."
+            echo "   O job de build publicou? Veja o job 'build' desta execucao."
+            exit 1
+          fi
+
+          # O compose referencia `ferraco-crm:latest`. Em vez de mudar o compose
+          # para uma tag dinamica (que exigiria interpolacao a cada deploy),
+          # marcamos a imagem baixada com o nome que ele espera.
+          docker tag "$IMAGE_SHA" ferraco-crm:latest
+          echo "✅ Imagem pronta: $IMAGE_SHA -> ferraco-crm:latest"
+
+          # T-12: guarda o SHA implantado. Sem isto, "voltar a versao anterior"
+          # dependeria de alguem lembrar qual era — que era exatamente o
+          # problema de so existir a tag `latest`.
+          echo "${{ github.sha }}" > /root/ferraco-secrets/.last-deployed-sha
+          echo "📌 SHA registrado para rollback: ${{ github.sha }}"
 
           # Iniciar aplicação
           echo "🚀 Iniciando aplicação..."
