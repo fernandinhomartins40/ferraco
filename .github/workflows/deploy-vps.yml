@@ -195,6 +195,19 @@ jobs:
           ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << "DEPLOY_SCRIPT"
           set -e
 
+          # T-35: carregado LOGO NO INICIO porque o `docker compose down` mais
+          # abaixo ja precisa interpolar ${POSTGRES_PASSWORD:?}. Carregar so
+          # antes do build (como estava) deixava o `down` falhar primeiro.
+          if [ ! -f /root/ferraco-secrets/.env ]; then
+            echo "❌ /root/ferraco-secrets/.env nao existe."
+            echo "   Crie-o na VPS com POSTGRES_PASSWORD e JWT_SECRET."
+            echo "   Modelo: .env.vps.example (na raiz do repositorio)"
+            exit 1
+          fi
+          set -a; . /root/ferraco-secrets/.env; set +a
+          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD ausente em /root/ferraco-secrets/.env}"
+          : "${JWT_SECRET:?JWT_SECRET ausente em /root/ferraco-secrets/.env}"
+
           echo "========================================="
           echo "🚀 FERRACO CRM - Deploy Full Stack"
           echo "========================================="
@@ -368,18 +381,7 @@ jobs:
           # podia forjar token de qualquer usuario, inclusive ADMIN.
           # Agora os segredos vem de /root/ferraco-secrets/.env, que fica FORA
           # de $APP_DIR — este diretorio e apagado com `rm -rf` a cada deploy.
-          if [ ! -f /root/ferraco-secrets/.env ]; then
-            echo "❌ /root/ferraco-secrets/.env nao existe."
-            echo "   Crie-o na VPS com POSTGRES_PASSWORD e JWT_SECRET."
-            echo "   Modelo: .env.vps.example (na raiz do repositorio)"
-            exit 1
-          fi
-          set -a; . /root/ferraco-secrets/.env; set +a
-
-          # Falha cedo e com mensagem clara, em vez de deixar o compose abortar
-          # com um erro de interpolacao dificil de interpretar nos logs.
-          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD ausente em /root/ferraco-secrets/.env}"
-          : "${JWT_SECRET:?JWT_SECRET ausente em /root/ferraco-secrets/.env}"
+          # Segredos ja carregados no inicio deste script (T-35).
           echo "✅ Segredos carregados de /root/ferraco-secrets/.env"
 
           export CORS_ORIGIN="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
@@ -525,6 +527,12 @@ jobs:
           ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << "VERIFY_DEPLOY_SCRIPT"
           set -e
           cd ${{ env.APP_DIR }}
+
+          # T-35: cada step do Actions abre uma sessao SSH NOVA — variaveis
+          # exportadas no step anterior nao sobrevivem. Como o compose usa
+          # ${VAR:?}, qualquer `docker compose` aqui aborta sem os segredos.
+          # Carregar de novo e obrigatorio, nao redundante.
+          set -a; . /root/ferraco-secrets/.env; set +a
 
           # Aguardar container iniciar
           echo "⏳ Aguardando container iniciar (30 segundos)..."
@@ -825,6 +833,9 @@ jobs:
           ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << "VERIFY_SCRIPT"
           set -e
           cd ${{ env.APP_DIR }}
+
+          # T-35: sessao SSH nova — ver comentario no step anterior.
+          set -a; . /root/ferraco-secrets/.env; set +a
 
           echo ""
           echo "🔍 1. Verificando Containers Docker..."
