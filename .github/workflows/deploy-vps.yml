@@ -285,7 +285,25 @@ jobs:
           export BUILD_TIMESTAMP=$(date +%s)
           export GIT_COMMIT="${{ github.sha }}"
           export GIT_BRANCH="${{ github.ref_name }}"
-          export JWT_SECRET="ferraco-vps-jwt-production-secret-2025"
+          # T-35 (F-103): o JWT_SECRET era literal neste arquivo versionado
+          # ("ferraco-vps-jwt-production-secret-2025"). Quem lesse o repositorio
+          # podia forjar token de qualquer usuario, inclusive ADMIN.
+          # Agora os segredos vem de /root/ferraco-secrets/.env, que fica FORA
+          # de $APP_DIR — este diretorio e apagado com `rm -rf` a cada deploy.
+          if [ ! -f /root/ferraco-secrets/.env ]; then
+            echo "❌ /root/ferraco-secrets/.env nao existe."
+            echo "   Crie-o na VPS com POSTGRES_PASSWORD e JWT_SECRET."
+            echo "   Modelo: .env.vps.example (na raiz do repositorio)"
+            exit 1
+          fi
+          set -a; . /root/ferraco-secrets/.env; set +a
+
+          # Falha cedo e com mensagem clara, em vez de deixar o compose abortar
+          # com um erro de interpolacao dificil de interpretar nos logs.
+          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD ausente em /root/ferraco-secrets/.env}"
+          : "${JWT_SECRET:?JWT_SECRET ausente em /root/ferraco-secrets/.env}"
+          echo "✅ Segredos carregados de /root/ferraco-secrets/.env"
+
           export CORS_ORIGIN="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export ALLOWED_ORIGINS="https://${{ env.DOMAIN }},http://${{ env.VPS_HOST }}:${{ env.APP_PORT }}"
           export LOG_LEVEL=info
@@ -296,13 +314,12 @@ jobs:
           echo "   Branch: $GIT_BRANCH"
           echo "   Timestamp: $BUILD_TIMESTAMP"
 
-          # DATABASE_URL (do secret ou do .env na VPS)
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            echo "✅ Usando DATABASE_URL do GitHub Secret"
-          else
-            echo "⚠️  DATABASE_URL não definido - aplicação usará .env na VPS"
-          fi
+          # T-35: o DATABASE_URL NAO e mais exportado aqui.
+          # O docker-compose.vps.yml o monta a partir de POSTGRES_PASSWORD, que
+          # acabou de ser carregado do .env. Exportar um valor concorrente aqui
+          # criaria duas fontes de verdade para a MESMA senha: se o secret
+          # DATABASE_URL ficasse defasado, a aplicacao apontaria para uma senha
+          # que o Postgres nao tem — e o erro so apareceria no runtime.
 
           # VERIFICAÇÃO DE VOLUMES CRÍTICOS (Solução 2 - Proteção contra perda de dados)
           echo ""
