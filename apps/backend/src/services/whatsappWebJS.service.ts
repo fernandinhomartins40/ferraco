@@ -239,8 +239,11 @@ class WhatsAppWebJSService {
 
           const formattedMessage = await this.formatMessage(message);
 
+          // T-03: era broadcast global com o payload completo da mensagem
+          // (telefone, nome do contato e corpo). Agora só para quem está
+          // inscrito na conversa.
           if (this.io) {
-            this.io.emit('whatsapp:message', formattedMessage);
+            this.io.to(`conversation:${message.from}`).emit('whatsapp:message', formattedMessage);
           }
         } catch (error: any) {
           logger.error('❌ Erro ao processar mensagem recebida:', error);

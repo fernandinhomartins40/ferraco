@@ -2,7 +2,7 @@
 // Reports Module - Service
 // ============================================================================
 
-import { PrismaClient, Report, ReportType } from '@prisma/client';
+import { Report, ReportType } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import {
@@ -19,6 +19,11 @@ import {
   ScheduleReportDTO,
   IReportsService,
 } from './reports.types';
+// T-19 (F-01): o singleton substitui o `new PrismaClient()` que era
+// passado ao construtor. `PrismaClient` permanece importado apenas
+// como TIPO do parâmetro — nenhuma instância nova é criada aqui.
+import type { PrismaClient } from '@prisma/client';
+import { prisma } from '../../config/database';
 
 export class ReportsService implements IReportsService {
   constructor(private prisma: PrismaClient) {}
@@ -494,4 +499,4 @@ export class ReportsService implements IReportsService {
   }
 }
 
-export const reportsService = new ReportsService(new PrismaClient());
+export const reportsService = new ReportsService(prisma);

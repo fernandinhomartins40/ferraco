@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 import { webhookService } from '../modules/webhooks';
-import { PrismaClient, EventType } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { EventType } from '@prisma/client';
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../config/database';
 
 class WebhookEventEmitter extends EventEmitter {
   constructor() {

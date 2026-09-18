@@ -1,4 +1,4 @@
-import { PrismaClient, ApiKeyStatus, ApiKeyType } from '@prisma/client';
+import { ApiKeyStatus, ApiKeyType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import {
@@ -8,8 +8,8 @@ import {
   ApiKeyUsageStats,
   ValidateApiKeyResult,
 } from './apiKey.types';
-
-const prisma = new PrismaClient();
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../../config/database';
 
 export class ApiKeyService {
   /**

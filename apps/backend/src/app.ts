@@ -6,6 +6,8 @@ import { CORS_OPTIONS, API_PREFIX } from './config/constants';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit';
 import { auditLogger } from './middleware/audit';
+import { authenticate } from './middleware/auth';
+import { prisma } from './config/database';
 import { logger } from './utils/logger';
 
 // Import routes
@@ -37,6 +39,7 @@ import templateLibraryRoutes from './modules/template-library/template-library.r
 import landingPageSettingsRoutes from './modules/landing-page-settings/landing-page-settings.routes';
 import whatsappOnlyLeadsRoutes from './modules/landing-page-settings/whatsapp-only-leads.routes';
 import { tokenCleanupService } from './services/token-cleanup.service';
+import { webhookRetryService } from './services/webhook-retry.service';
 
 // Import External API routes
 import { apiKeyRoutes } from './modules/api-keys';
@@ -67,7 +70,44 @@ export function createApp(): Application {
   const uploadsPath = process.env.NODE_ENV === 'production'
     ? '/app/uploads'
     : path.join(__dirname, '../uploads');
-  app.use('/uploads', express.static(uploadsPath));
+
+  // T-06 (F-07): separação entre mídia pública e privada.
+  //
+  // `/uploads/` (raiz) contém imagens da landing page, que é pública: um
+  // <img src> de visitante anônimo não envia header Authorization, então
+  // exigir token ali quebraria o site.
+  //
+  // `/uploads/whatsapp/` contém mídia trocada em conversas com leads —
+  // documentos, fotos e áudios privados. O frontend nunca busca esses
+  // arquivos por URL direta (a mídia é servida pelo próprio WhatsApp), então
+  // exigir autenticação aqui não quebra fluxo algum.
+  app.use('/uploads/whatsapp', authenticate);
+
+  // T-06 (F-59/F-60): defesa em profundidade para conteúdo enviado por usuários.
+  // O filtro de MIME no upload é a primeira barreira; estes cabeçalhos garantem
+  // que um arquivo que escape dela não seja interpretado como HTML/script.
+  app.use(
+    '/uploads',
+    express.static(uploadsPath, {
+      setHeaders: (res, filePath) => {
+        // Impede o navegador de adivinhar o tipo (ex.: tratar .png como HTML).
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+
+        // SVG e HTML residuais (uploads anteriores à correção) são forçados a
+        // download em vez de renderizados, o que neutraliza script embutido.
+        const ext = path.extname(filePath).toLowerCase();
+        if (['.svg', '.html', '.htm', '.xhtml', '.xml'].includes(ext)) {
+          res.setHeader('Content-Disposition', 'attachment');
+          res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+        }
+
+        // T-06 (F-60): era `expires 1y` + `immutable` no nginx, aplicado a
+        // conteúdo NÃO versionado — um arquivo substituído ficaria cacheado por
+        // um ano. Cache curto e privado, com revalidação por ETag.
+        res.setHeader('Cache-Control', 'private, max-age=300, must-revalidate');
+      },
+    })
+  );
 
   // Rate limiting
   app.use(apiLimiter);
@@ -76,12 +116,27 @@ export function createApp(): Application {
   app.use(auditLogger);
 
   // Health check
-  app.get('/health', (req, res) => {
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-    });
+  // T-14 (F-51): `/health` respondia sempre 200 sem tocar o banco — um deploy
+  // com Postgres inacessível era reportado como saudável. Agora faz uma
+  // consulta real; o healthcheck do container só aprova se o banco responder.
+  app.get('/health', async (req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({
+        status: 'ok',
+        database: 'connected',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    } catch (error) {
+      logger.error('Health check falhou — banco inacessível:', error);
+      res.status(503).json({
+        status: 'error',
+        database: 'unreachable',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    }
   });
 
   // API routes
@@ -271,6 +326,11 @@ export function createApp(): Application {
   // Iniciar limpeza automática de tokens
   tokenCleanupService.start();
   logger.info('✅ Token cleanup service started');
+
+  // T-16 (F-84): consumidor da fila de retry de webhooks. Sem ele,
+  // `processPendingDeliveries()` nunca era invocado e entregas falhas a
+  // consumidores externos ficavam pendentes no banco indefinidamente.
+  webhookRetryService.start();
 
   // 404 handler
   app.use(notFoundHandler);

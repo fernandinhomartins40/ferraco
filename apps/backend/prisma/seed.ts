@@ -3,8 +3,68 @@ import { hashPassword } from '../src/utils/password';
 
 const prisma = new PrismaClient();
 
+/**
+ * T-01 — Guarda contra seed destrutivo.
+ *
+ * Este seed apaga 14 tabelas antes de popular. Rodar contra um banco com dados
+ * reais causa perda total. A guarda aborta nesse caso, a menos que o operador
+ * declare a intenção com ALLOW_DESTRUCTIVE_SEED=true.
+ *
+ * Em produção a variável sozinha não basta: exige também CONFIRM_DESTRUCTIVE_SEED
+ * com o nome do banco, para que a confirmação não seja transferível entre ambientes.
+ */
+async function assertSafeToSeed() {
+  const [userCount, leadCount, teamCount] = await Promise.all([
+    prisma.user.count(),
+    prisma.lead.count(),
+    prisma.team.count(),
+  ]);
+
+  const total = userCount + leadCount + teamCount;
+
+  if (total === 0) {
+    console.log('✅ Banco vazio — seed pode prosseguir com segurança.');
+    return;
+  }
+
+  const allowed = process.env.ALLOW_DESTRUCTIVE_SEED === 'true';
+
+  console.error('');
+  console.error('=========================================');
+  console.error('⛔ SEED ABORTADO — BANCO JÁ CONTÉM DADOS');
+  console.error('=========================================');
+  console.error(`   users: ${userCount} · leads: ${leadCount} · teams: ${teamCount}`);
+  console.error('   Este seed executa deleteMany() em 14 tabelas.');
+  console.error('   Prosseguir apagaria esses registros de forma irrecuperável.');
+
+  if (!allowed) {
+    console.error('');
+    console.error('   Para rodar mesmo assim (ambiente descartável):');
+    console.error('     ALLOW_DESTRUCTIVE_SEED=true npx prisma db seed');
+    console.error('=========================================');
+    process.exit(1);
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    const dbName = new URL(process.env.DATABASE_URL ?? '').pathname.replace(/^\//, '');
+    if (!dbName || process.env.CONFIRM_DESTRUCTIVE_SEED !== dbName) {
+      console.error('');
+      console.error('   NODE_ENV=production: ALLOW_DESTRUCTIVE_SEED não é suficiente.');
+      console.error(`   Exige também CONFIRM_DESTRUCTIVE_SEED=${dbName || '<nome-do-banco>'}`);
+      console.error('=========================================');
+      process.exit(1);
+    }
+  }
+
+  console.error('');
+  console.error('   ⚠️  ALLOW_DESTRUCTIVE_SEED=true — prosseguindo sob responsabilidade do operador.');
+  console.error('=========================================');
+}
+
 async function main() {
   console.log('🌱 Starting database seed...');
+
+  await assertSafeToSeed();
 
   // Clean existing data (optional - comment out if you want to keep existing data)
   console.log('🧹 Cleaning existing data...');

@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import sharp from 'sharp';
 
 // Criar diretório de uploads se não existir
@@ -22,19 +23,25 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+    // T-06 (F-57): era `Date.now() + Math.round(Math.random() * 1e9)`.
+    // Math.random() não é criptográfico e o timestamp é adivinhável, então
+    // nomes de arquivos de outros usuários podiam ser derivados por força
+    // bruta — e /uploads é servido sem autenticação.
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${file.fieldname}-${crypto.randomUUID()}${ext}`);
   },
 });
 
+// T-06 (F-59): SVG removido da allowlist. Um SVG pode conter <script>, e com
+// CSP desabilitada (app.ts) o arquivo executaria JavaScript no domínio da
+// aplicação — XSS armazenado. Formatos raster não têm esse problema.
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  // Aceitar apenas imagens
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
-  if (allowedTypes.includes(file.mimetype)) {
+  if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Tipo de arquivo não permitido. Use JPG, PNG, WebP ou SVG.'));
+    cb(new Error('Tipo de arquivo não permitido. Use JPG, PNG ou WebP.'));
   }
 };
 
@@ -146,8 +153,11 @@ export class UploadController {
 
       const images = files
         .filter((file) => {
+          // T-06 (F-59): '.svg' removido — alinhado com ALLOWED_IMAGE_TYPES.
+          // SVGs residuais de uploads anteriores deixam de ser oferecidos
+          // como imagem selecionável.
           const ext = path.extname(file).toLowerCase();
-          return ['.jpg', '.jpeg', '.png', '.webp', '.svg'].includes(ext);
+          return ['.jpg', '.jpeg', '.png', '.webp'].includes(ext);
         })
         .map((file) => {
           const filePath = path.join(uploadsDir, file);
@@ -202,8 +212,9 @@ export class UploadController {
       const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
 
-      // Gerar nome único
-      const filename = `cropped-${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+      // T-06 (F-57): nome criptográfico, pelo mesmo motivo do upload direto —
+      // `Date.now() + Math.random()` era derivável por força bruta.
+      const filename = `cropped-${crypto.randomUUID()}.jpg`;
       const filePath = path.join(uploadsDir, filename);
 
       console.log('🔧 Processando imagem com Sharp:', {

@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { automationSchedulerService } from '../services/automationScheduler.service';
 
-const prisma = new PrismaClient();
+import { automationSchedulerService } from '../services/automationScheduler.service';
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../config/database';
 
 export class AutomationKanbanController {
   // GET /api/automation-kanban/columns - Listar todas as colunas de automação

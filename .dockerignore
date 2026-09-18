@@ -61,3 +61,9 @@ apps/frontend/.vite
 .pnpm-store
 .yarn
 bun.lockb
+
+# T-11 (F-39/F-65): tarballs de deploy manual não pertencem ao contexto de
+# build — são enviados ao daemon a cada `docker build` sem serem usados.
+*.tar.gz
+*.tgz
+*.zip

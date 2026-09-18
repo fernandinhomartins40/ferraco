@@ -4,13 +4,28 @@ services:
     container_name: ferraco-postgres
     environment:
       POSTGRES_USER: ferraco
-      POSTGRES_PASSWORD: ferraco123
+      # T-35 (F-103): a senha era `ferraco123` fixa no arquivo versionado.
+      # A VPS e compartilhada com ~30 aplicacoes de clientes; uma credencial
+      # em repositorio publico e um acesso ao banco, nao um detalhe de config.
+      # Sem default: `${VAR:?msg}` ABORTA o `docker compose up` se faltar,
+      # em vez de subir silenciosamente com um valor conhecido.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env da VPS}
       POSTGRES_DB: ferraco_crm
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - ferraco-network
     restart: unless-stopped
+
+    # T-09 (F-04): sem `logging:` e sem /etc/docker/daemon.json no host, o
+    # driver json-file cresce SEM LIMITE. As 4 aplicações vizinhas declaram
+    # rotação por serviço; o Ferraco era o único que não declarava.
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ferraco -d ferraco_crm"]
       interval: 10s
@@ -33,16 +48,31 @@ services:
       PORT: 3000
 
       # Database (conecta ao container postgres)
-      DATABASE_URL: postgresql://ferraco:ferraco123@postgres:5432/ferraco_crm
+      # T-19 (F-24/F-49): pool explícito.
+      # Antes: 13 serviços instanciavam `new PrismaClient()` próprio, cada um
+      # com pool default `num_cpus*2+1` = 9 (o Node vê 4 CPUs sob qualquer
+      # cota) — demanda de ~117 conexões contra `max_connections=100` medido.
+      # Agora há UM cliente (singleton); `connection_limit` fixa o teto para
+      # não variar com a CPU visível, e `pool_timeout` falha rápido em vez de
+      # esperar indefinidamente por conexão livre.
+      DATABASE_URL: postgresql://ferraco:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env da VPS}@postgres:5432/ferraco_crm?connection_limit=15&pool_timeout=20
 
       # JWT
-      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      # T-35 (F-103): o default `change-this-secret-in-production` e publico.
+      # Quem o conhecesse poderia forjar um token de qualquer usuario, inclusive
+      # ADMIN. O proprio backend ja exige >=32 chars em producao (config/jwt.ts),
+      # entao o default so servia para adiar a falha ate o runtime.
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET (min 32 chars) no .env da VPS}
       JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-15m}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
 
       # CORS
-      CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      # T-35 (F-104): o default `*` liberava qualquer origem. Com credenciais
+      # habilitadas no CORS isso permitiria a um site de terceiros chamar a API
+      # com o cookie/token do usuario logado. Os dominios reais sao conhecidos,
+      # entao o default passa a ser eles — nao o curinga.
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://www.metalurgicaferraco.com.br}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://www.metalurgicaferraco.com.br,https://metalurgicaferraco.com.br,https://www.metalurgicaferraco.com,https://metalurgicaferraco.com}
 
       # Logs
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -67,11 +97,31 @@ services:
 
     restart: unless-stopped
 
+    # T-28 (F-26): sem `init`, o processo 1 do container e o Node, que nao faz
+    # reaping de filhos. O Chromium do whatsapp-web.js gera dezenas de processos
+    # (zygote, gpu, renderer, utility) — cada crash vira um zumbi ocupando PID.
+    # A evidencia de que isso ja acontece esta no proprio docker/startup.sh, que
+    # apaga `SingletonLock`/`SingletonSocket` a cada boot: esses arquivos so
+    # sobrevivem quando o Chromium NAO encerrou limpo.
+    # `init: true` poe o tini como PID 1, que adota e enterra os orfaos.
+    init: true
+
+    # T-09 (F-04): rotação do log do container. Este serviço roda Chromium e
+    # é o mais verboso dos dois — sem teto, o json-file cresceria indefinidamente.
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
     networks:
       - ferraco-network
 
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3050/health"]
+      # T-14 (F-51): era `:3050/health` — o nginx responde mesmo com o Node
+      # morto ou o banco fora, então o container passava como saudável.
+      # Agora aponta direto para o Node, cujo /health consulta o banco.
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

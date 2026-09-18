@@ -2,23 +2,27 @@
 -- Descrição: Adiciona template de interesse em produto específico para landing page
 
 -- Inserir template de interesse em produto (usar UPSERT para evitar duplicatas)
+-- NOTA: a tabela recurrence_message_templates usa colunas em camelCase
+-- (o modelo Prisma não declara @map), portanto os identificadores precisam
+-- ser citados. A versão anterior usava snake_case e falhava em banco limpo
+-- com: column "min_captures" of relation ... does not exist.
 INSERT INTO recurrence_message_templates (
-  id,
-  name,
-  description,
-  trigger,
-  min_captures,
-  max_captures,
-  days_since_last_capture,
-  conditions,
-  content,
-  media_urls,
-  media_type,
-  priority,
-  is_active,
-  usage_count,
-  created_at,
-  updated_at
+  "id",
+  "name",
+  "description",
+  "trigger",
+  "minCaptures",
+  "maxCaptures",
+  "daysSinceLastCapture",
+  "conditions",
+  "content",
+  "mediaUrls",
+  "mediaType",
+  "priority",
+  "isActive",
+  "usageCount",
+  "createdAt",
+  "updatedAt"
 ) VALUES (
   'tpl_product_interest_001',
   'Interesse em Produto - Landing Page',
@@ -58,10 +62,10 @@ Equipe {{company.name}}',
   NOW(),
   NOW()
 )
-ON CONFLICT (id) DO UPDATE SET
-  name = EXCLUDED.name,
-  description = EXCLUDED.description,
-  trigger = EXCLUDED.trigger,
-  content = EXCLUDED.content,
-  priority = EXCLUDED.priority,
-  updated_at = NOW();
+ON CONFLICT ("id") DO UPDATE SET
+  "name" = EXCLUDED."name",
+  "description" = EXCLUDED."description",
+  "trigger" = EXCLUDED."trigger",
+  "content" = EXCLUDED."content",
+  "priority" = EXCLUDED."priority",
+  "updatedAt" = NOW();

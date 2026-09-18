@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../config/database';
 
 export class KanbanColumnController {
   // GET /api/kanban-columns - Listar todas as colunas ativas
@@ -161,24 +160,29 @@ export class KanbanColumnController {
         orderBy: { order: 'asc' },
       });
 
-      // Para cada coluna, contar quantos leads têm aquele status
-      const statsPromises = columns.map(async (column) => {
-        const count = await prisma.lead.count({
-          where: {
-            status: column.status,
-          },
-        });
-
-        return {
-          columnId: column.id,
-          name: column.name,
-          color: column.color,
-          status: column.status,
-          count,
-        };
+      // T-17 (F-45): era `columns.map(async → prisma.lead.count())` com
+      // `Promise.all` — N consultas SIMULTÂNEAS no mesmo pool. Com N colunas
+      // maior que o tamanho do pool, as consultas enfileiravam e a latência
+      // crescia. Agora são 2 consultas, independentemente do número de colunas.
+      const grouped = await prisma.lead.groupBy({
+        by: ['status'],
+        _count: { _all: true },
       });
 
-      const stats = await Promise.all(statsPromises);
+      // `groupBy` só retorna status COM leads. Colunas vazias precisam
+      // continuar aparecendo com count 0 — a resposta tem que ser idêntica
+      // à anterior, inclusive nesse caso.
+      const countByStatus = new Map(
+        grouped.map((g) => [g.status, g._count._all])
+      );
+
+      const stats = columns.map((column) => ({
+        columnId: column.id,
+        name: column.name,
+        color: column.color,
+        status: column.status,
+        count: countByStatus.get(column.status) ?? 0,
+      }));
 
       res.json(stats);
     } catch (error) {

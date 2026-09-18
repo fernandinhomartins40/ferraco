@@ -32,6 +32,12 @@ services:
       retries: 3
       start_period: 40s
 
+  # T-11 (F-15): ATENÇÃO — `apps/frontend/Dockerfile` NÃO EXISTE no repositório.
+  # Este serviço falha em `docker compose up`. O fluxo de desenvolvimento
+  # suportado é `npm run dev` (Vite na porta 3000), não container.
+  # Para usar este serviço, crie o Dockerfile com um stage `dev`.
+  # Mantido declarado, e não removido, porque remover um serviço por suposição
+  # poderia quebrar o fluxo de quem tenha o arquivo localmente.
   frontend:
     build:
       context: ./apps/frontend

@@ -14,6 +14,7 @@ import {
   getConnectionStatus,
 } from '@/types/whatsapp.types';
 import { whatsappReducer, initialWhatsAppState, mapSocketStatusToAction } from '@/reducers/whatsapp.reducer';
+import { getToken } from '@/lib/apiClient';
 
 // ✅ FIX: Garantir URL correta em produção
 const BACKEND_URL = import.meta.env.VITE_API_URL || window.location.origin;
@@ -61,6 +62,15 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
     // Transitar para initializing
     dispatch({ type: 'INITIALIZE' });
 
+    // T-02: o servidor exige JWT no handshake. Sem token não há conexão,
+    // então nem tentamos — evita um laço de reconexão que sempre falha.
+    const token = getToken();
+    if (!token) {
+      console.warn('🔒 [Socket.IO] Sem token de autenticação — conexão não iniciada');
+      dispatch({ type: 'ERROR', error: 'Não autenticado', recoverable: false });
+      return;
+    }
+
     const socket = io(BACKEND_URL, {
       path: '/socket.io/',
       transports: ['polling', 'websocket'], // ✅ FIX: polling primeiro (mais compatível)
@@ -71,6 +81,7 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
       withCredentials: true, // ✅ FIX: Enviar cookies para autenticação
       autoConnect: true,
       forceNew: false,
+      auth: { token }, // T-02: canal recomendado — não vai para a query string
     });
 
     socketRef.current = socket;
@@ -89,6 +100,20 @@ export const useWhatsAppSocket = (events?: WhatsAppSocketEvents) => {
       console.error('❌ [Socket.IO] Erro de conexão:', error);
       console.error('❌ [Socket.IO] Erro detalhe:', error.message);
       console.error('❌ [Socket.IO] Tentando URL:', BACKEND_URL);
+
+      // T-02: o access token vive ~15 min. Numa reconexão após expirar, o
+      // handshake falha e o Socket.IO retentaria com o MESMO token — laço
+      // garantido. Relemos o token a cada tentativa: o interceptor do
+      // apiClient o renova, então normalmente já haverá um token novo.
+      const freshToken = getToken();
+      if (freshToken) {
+        socket.auth = { token: freshToken };
+      } else {
+        // Sem token não há o que retentar — para de bater no servidor.
+        console.warn('🔒 [Socket.IO] Sem token válido — interrompendo reconexão');
+        socket.disconnect();
+        dispatch({ type: 'ERROR', error: 'Sessão expirada', recoverable: false });
+      }
     });
 
     socket.io.on('error', (error) => {

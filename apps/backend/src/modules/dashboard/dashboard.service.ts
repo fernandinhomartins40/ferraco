@@ -2,7 +2,7 @@
 // Dashboard Module - Service
 // ============================================================================
 
-import { PrismaClient, DashboardConfig } from '@prisma/client';
+import { DashboardConfig } from '@prisma/client';
 import {
   DashboardMetrics,
   LeadsByStatus,
@@ -15,6 +15,11 @@ import {
   WidgetConfig,
   IDashboardService,
 } from './dashboard.types';
+// T-19 (F-01): o singleton substitui o `new PrismaClient()` que era
+// passado ao construtor. `PrismaClient` permanece importado apenas
+// como TIPO do parâmetro — nenhuma instância nova é criada aqui.
+import type { PrismaClient } from '@prisma/client';
+import { prisma } from '../../config/database';
 
 export class DashboardService implements IDashboardService {
   constructor(private prisma: PrismaClient) {}
@@ -380,4 +385,4 @@ export class DashboardService implements IDashboardService {
   }
 }
 
-export const dashboardService = new DashboardService(new PrismaClient());
+export const dashboardService = new DashboardService(prisma);

@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+
 import { logger } from '../utils/logger';
 import { whatsappWebJSService } from './whatsappWebJS.service';
 import { Server as SocketIOServer } from 'socket.io';
-
-const prisma = new PrismaClient();
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../config/database';
 
 /**
  * Serviço de Automação de Envios
@@ -13,6 +13,12 @@ class AutomationSchedulerService {
   private isRunning = false;
   private intervalId: NodeJS.Timeout | null = null;
   private io: SocketIOServer | null = null;
+
+  // T-23 (F-86): `isRunning` protege apenas contra START duplicado — não
+  // impede que o tick de 30 s comece um ciclo enquanto o anterior ainda roda.
+  // `processAutomations()` envia mensagens via Puppeteer e pode facilmente
+  // exceder 30 s, produzindo ciclos concorrentes sobre os mesmos registros.
+  private isProcessing = false;
 
   /**
    * Configura Socket.IO para emitir eventos em tempo real
@@ -56,6 +62,9 @@ class AutomationSchedulerService {
       this.intervalId = null;
     }
     this.isRunning = false;
+    // T-23: zera a guarda para que um start() posterior não herde um ciclo
+    // marcado como em andamento.
+    this.isProcessing = false;
     logger.info('🛑 Automation Scheduler parado');
   }
 
@@ -63,6 +72,15 @@ class AutomationSchedulerService {
    * Processa todas as automações pendentes
    */
   async processAutomations() {
+    // T-23 (F-86): impede ciclos sobrepostos. Se o ciclo anterior ainda roda,
+    // este tick é descartado — o próximo (30 s depois) tenta de novo.
+    if (this.isProcessing) {
+      logger.warn('⏭️  Ciclo de automações ainda em execução — tick ignorado');
+      return;
+    }
+
+    this.isProcessing = true;
+
     try {
       // Buscar configurações globais
       const settings = await prisma.automationSettings.findFirst();
@@ -149,6 +167,12 @@ class AutomationSchedulerService {
       }
     } catch (error) {
       logger.error('Erro ao processar automações:', error);
+    } finally {
+      // T-23: liberar SEMPRE — inclusive nos `return` antecipados (sem
+      // settings, fora do horário comercial) e em caso de exceção. Sem o
+      // `finally`, um erro deixaria a flag presa e o scheduler morreria em
+      // silêncio, sem nunca mais processar nada.
+      this.isProcessing = false;
     }
   }
 

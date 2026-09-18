@@ -1,7 +1,16 @@
 import winston from 'winston';
+import path from 'path';
 import { NODE_ENV } from '../config/constants';
 
 const logLevel = process.env.LOG_LEVEL || 'info';
+
+// T-09 (F-56): o destino era relativo ('logs/error.log'), resolvido contra o
+// CWD do processo — /app/backend em produção. O volume Docker monta /app/logs,
+// então os arquivos caíam FORA do volume e sumiam a cada recreate, deixando o
+// volume vazio. Caminho absoluto, configurável para desenvolvimento.
+const LOG_DIR = process.env.LOG_DIR || (NODE_ENV === 'production'
+  ? '/app/logs'
+  : path.join(__dirname, '../../logs'));
 
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -39,7 +48,7 @@ export const logger = winston.createLogger({
 if (NODE_ENV === 'production') {
   logger.add(
     new winston.transports.File({
-      filename: 'logs/error.log',
+      filename: path.join(LOG_DIR, 'error.log'),
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
@@ -48,7 +57,7 @@ if (NODE_ENV === 'production') {
 
   logger.add(
     new winston.transports.File({
-      filename: 'logs/combined.log',
+      filename: path.join(LOG_DIR, 'combined.log'),
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     })

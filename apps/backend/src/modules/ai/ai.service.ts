@@ -2,7 +2,7 @@
 // AI Module - Service
 // ============================================================================
 
-import { PrismaClient, AISentiment, AIUrgencyLevel, ConversionPrediction } from '@prisma/client';
+import { AISentiment, AIUrgencyLevel, ConversionPrediction } from '@prisma/client';
 import {
   AnalyzeSentimentDTO,
   SentimentAnalysisResult,
@@ -24,6 +24,11 @@ import {
   AIAnalysisWithRecommendations,
   IAIService,
 } from './ai.types';
+// T-19 (F-01): o singleton substitui o `new PrismaClient()` que era
+// passado ao construtor. `PrismaClient` permanece importado apenas
+// como TIPO do parâmetro — nenhuma instância nova é criada aqui.
+import type { PrismaClient } from '@prisma/client';
+import { prisma } from '../../config/database';
 
 export class AIService implements IAIService {
   constructor(private prisma: PrismaClient) {}
@@ -630,4 +635,4 @@ export class AIService implements IAIService {
   }
 }
 
-export const aiService = new AIService(new PrismaClient());
+export const aiService = new AIService(prisma);

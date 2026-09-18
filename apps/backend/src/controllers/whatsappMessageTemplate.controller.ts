@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../config/database';
 
 export class WhatsAppMessageTemplateController {
   // GET /api/whatsapp-templates - Listar todos os templates

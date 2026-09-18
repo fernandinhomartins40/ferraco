@@ -12,21 +12,16 @@ WORKDIR /app
 LABEL build.timestamp="${BUILD_TIMESTAMP}"
 LABEL git.commit="${GIT_COMMIT}"
 
-# Instalar bash e dependências do Puppeteer/Chromium (necessário para WPPConnect)
-RUN apk add --no-cache \
-    bash \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    font-noto-emoji
+# T-10 (F-29/F-10): o Chromium e suas dependências foram REMOVIDOS deste stage.
+# Nada os executa durante o build — apenas `npm ci` e compilação TypeScript/Vite.
+# Medido: 130,5 MB -> 897,2 MB, ou ~767 MB de camada desperdiçada por build.
+# O Chromium continua instalado no stage de runtime, onde o Puppeteer o usa.
+# `bash` é mantido: scripts de build podem depender dele.
+RUN apk add --no-cache bash
 
-# Variáveis de ambiente para Puppeteer
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# PUPPETEER_SKIP_CHROMIUM_DOWNLOAD permanece OBRIGATÓRIO aqui: sem ele o
+# `npm ci` baixaria o Chromium do próprio Puppeteer (~170 MB), anulando o ganho.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Cache busting: usar BUILD_TIMESTAMP para forçar rebuild
 RUN echo "Build timestamp: ${BUILD_TIMESTAMP}" && \
@@ -44,6 +39,20 @@ RUN npm ci --prefer-offline=false --no-audit --no-fund
 
 # Gerar Prisma Client ANTES do build (tipos necessários para TypeScript)
 RUN npm run prisma:generate
+
+# F-102 (achado em T-14, ao testar a imagem construída): o postinstall do
+# `@prisma/engines` baixa apenas os engines da plataforma NATIVA do builder
+# (linux-musl). A imagem roda OpenSSL 3.x, então o CLI procura os engines
+# `linux-musl-openssl-3.0.x` em node_modules/@prisma/engines/ — não encontra, e
+# tenta BAIXAR de binaries.prisma.sh EM RUNTIME. Sem internet no container, as
+# migrations falham a TODO boot (verificado: o fallback `db push` também falhava,
+# e o seed em seguida).
+#
+# `prisma generate` com PRISMA_CLI_BINARY_TARGETS baixa a variante correta para
+# @prisma/engines/ em build-time, eliminando a dependência de rede no runtime.
+RUN PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x npm run prisma:generate \
+    && echo "=== engines disponíveis para o CLI ===" \
+    && ls node_modules/@prisma/engines/ | grep -iE "engine"
 
 # Limpar builds anteriores (garantir build limpo)
 RUN rm -rf apps/backend/dist apps/frontend/dist
@@ -113,11 +122,18 @@ RUN mkdir -p /run/nginx /var/log/nginx /var/lib/nginx/tmp/client_body /app/data 
     chown -R node:node /app
 
 # Expor porta
+# T-11 (F-37): as duas portas são intencionais e NÃO devem ser unificadas.
+#   3050 = nginx dentro do container, é o que o compose publica (3050:3050)
+#   3000 = Node atrás do nginx (ENV PORT), acessível só internamente
+# A divergência aparente entre EXPOSE e PORT é a arquitetura, não um defeito.
 EXPOSE 3050
 
 # Healthcheck
+# T-14 (F-51): aponta para o Node (3000), não para o nginx (3050). O nginx
+# responde mesmo com o backend morto ou o banco fora — o healthcheck precisa
+# exercitar a cadeia inteira, e /health agora consulta o banco.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3050/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 # Rodar como root (Nginx precisa de root para iniciar)
 # O startup.sh vai dropar privilégios para o backend Node.js

@@ -383,20 +383,18 @@ jobs:
           echo "   Build timestamp: $BUILD_TIMESTAMP"
           echo "   Git commit: $GIT_COMMIT"
 
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
-              --no-cache \
-              --pull \
-              --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
-              --build-arg GIT_COMMIT=$GIT_COMMIT \
-              --build-arg DATABASE_URL="${{ secrets.DATABASE_URL }}"
-          else
-            DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
-              --no-cache \
-              --pull \
-              --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
-              --build-arg GIT_COMMIT=$GIT_COMMIT
-          fi
+          # T-11 (F-72): `--build-arg DATABASE_URL` foi REMOVIDO.
+          # O Dockerfile não declara `ARG DATABASE_URL`, então o valor era
+          # silenciosamente ignorado — o build nunca precisou dele. Pior: se
+          # alguém adicionasse o ARG, a credencial do banco ficaria gravada
+          # numa camada da imagem, legível por `docker history`.
+          # A aplicação recebe DATABASE_URL em RUNTIME, via environment do
+          # compose, que é o lugar correto.
+          DOCKER_BUILDKIT=1 docker compose -f docker-compose.vps.yml -p ${{ env.COMPOSE_PROJECT }} build \
+            --no-cache \
+            --pull \
+            --build-arg BUILD_TIMESTAMP=$BUILD_TIMESTAMP \
+            --build-arg GIT_COMMIT=$GIT_COMMIT
 
           echo "✅ Imagem Docker construída com sucesso!"
 

@@ -1,4 +1,4 @@
-import { PrismaClient, WebhookStatus, WebhookDeliveryStatus } from '@prisma/client';
+import { WebhookStatus, WebhookDeliveryStatus } from '@prisma/client';
 import crypto from 'crypto';
 import axios from 'axios';
 import {
@@ -8,8 +8,8 @@ import {
   WebhookDeliveryResponse,
   WebhookPayload,
 } from './webhook.types';
-
-const prisma = new PrismaClient();
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../../config/database';
 
 export class WebhookService {
   /**

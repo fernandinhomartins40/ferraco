@@ -1,3 +1,28 @@
+# =============================================================================
+# ⚠️  ARQUIVO OBSOLETO — NAO E USADO POR NENHUM BUILD (T-31 / F-38)
+# =============================================================================
+# Verificado em 2026-09-18: nenhum docker-compose, workflow do GitHub Actions
+# ou script referencia este Dockerfile. O build de producao usa o `Dockerfile`
+# da RAIZ do repositorio, que constroi frontend + backend na mesma imagem.
+#
+# Por que nao foi apagado: manter o arquivo preserva o historico e permite
+# retomar um build isolado do backend, se um dia for necessario. O risco dele
+# nao e ocupar espaco — e alguem edita-lo achando que afeta producao.
+#
+# DIVERGENCIA CONHECIDA: este arquivo fixa node:18-alpine, enquanto o Dockerfile
+# da raiz usa node:20-alpine. Se voltar a ser usado, alinhe a versao ANTES —
+# o Prisma 5.22 e o whatsapp-web.js sao validados no Node 20 neste projeto.
+#
+# ATENCAO ao `engines`: os package.json (raiz e backend) declaram
+# `"node": ">=18.0.0"`, entao o Node 18 daqui NAO viola a restricao declarada.
+# A divergencia real e entre o que o `engines` PERMITE (>=18) e o que de fato
+# roda em producao (20). O `engines` nao serve como garantia de compatibilidade
+# aqui — verifique contra o Dockerfile da raiz, nao contra o package.json.
+#
+# Antes de usar este arquivo, confira tambem: binaryTargets do Prisma e as
+# libs do Chromium exigidas pelo whatsapp-web.js.
+# =============================================================================
+
 # Multi-stage build for production
 FROM node:18-alpine AS base
 

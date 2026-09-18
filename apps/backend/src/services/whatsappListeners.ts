@@ -37,8 +37,10 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
    */
   client.on('message_create', async (message: WWebMessage) => {
     try {
-      // Emitir via Socket.IO para atualização em tempo real
-      io.emit('whatsapp:message_create', {
+      // T-03: segmentado por conversa — o payload inclui o corpo da mensagem.
+      // Mensagens enviadas por nós pertencem à conversa do destinatário (`to`).
+      const chatId = message.fromMe ? (message.to || message.from) : message.from;
+      io.to(`conversation:${chatId}`).emit('whatsapp:message_create', {
         id: message.id._serialized,
         from: message.from,
         to: message.to,
@@ -60,8 +62,9 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.debug(`📬 ACK recebido: ${message.id._serialized} - ACK: ${ack}`);
 
-      // Emitir via Socket.IO
-      io.emit('whatsapp:message_ack', {
+      // T-03: segmentado por conversa.
+      const ackChatId = message.fromMe ? (message.to || message.from) : message.from;
+      io.to(`conversation:${ackChatId}`).emit('whatsapp:message_ack', {
         messageId: message.id._serialized,
         ack,
         status: mapAckToStatus(ack),
@@ -78,8 +81,8 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.info(`🗑️  Mensagem revogada: ${message.id._serialized}`);
 
-      // Emitir via Socket.IO
-      io.emit('whatsapp:message_revoked', {
+      // T-03: segmentado por conversa.
+      io.to(`conversation:${message.from}`).emit('whatsapp:message_revoked', {
         messageId: message.id._serialized,
         chatId: message.from,
       });
@@ -106,12 +109,17 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.info(`❤️  Reação recebida: ${reaction.reaction} em ${reaction.msgId._serialized}`);
 
-      // Emitir via Socket.IO
-      io.emit('whatsapp:message_reaction', {
-        messageId: reaction.msgId._serialized,
-        reaction: reaction.reaction,
-        timestamp: Date.now(),
-      });
+      // T-03: segmentado pela conversa em que a reação ocorreu.
+      const reactionChatId = reaction.msgId?.remote || reaction.id?.remote;
+      if (reactionChatId) {
+        io.to(`conversation:${reactionChatId}`).emit('whatsapp:message_reaction', {
+          messageId: reaction.msgId._serialized,
+          reaction: reaction.reaction,
+          timestamp: Date.now(),
+        });
+      } else {
+        logger.debug('Reação sem chat identificável — evento não emitido');
+      }
     } catch (error) {
       logger.error('❌ Erro ao processar message_reaction:', error);
     }
@@ -128,7 +136,8 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.info(`📦 Chat ${archived ? 'arquivado' : 'desarquivado'}: ${chat.id._serialized}`);
 
-      io.emit('whatsapp:chat_archived', {
+      // T-03: segmentado por conversa.
+      io.to(`conversation:${chat.id._serialized}`).emit('whatsapp:chat_archived', {
         chatId: chat.id._serialized,
         archived,
       });
@@ -144,7 +153,8 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.info(`🗑️  Chat removido: ${chat.id._serialized}`);
 
-      io.emit('whatsapp:chat_removed', {
+      // T-03: segmentado por conversa.
+      io.to(`conversation:${chat.id._serialized}`).emit('whatsapp:chat_removed', {
         chatId: chat.id._serialized,
       });
     } catch (error) {
@@ -163,7 +173,8 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.info(`👥 Novo participante no grupo: ${notification.chatId}`);
 
-      io.emit('whatsapp:group_join', {
+      // T-03: segmentado pela conversa do grupo.
+      io.to(`conversation:${notification.chatId}`).emit('whatsapp:group_join', {
         groupId: notification.chatId,
         participants: notification.recipientIds,
         author: notification.author,
@@ -180,7 +191,8 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.info(`👋 Participante saiu do grupo: ${notification.chatId}`);
 
-      io.emit('whatsapp:group_leave', {
+      // T-03: segmentado pela conversa do grupo.
+      io.to(`conversation:${notification.chatId}`).emit('whatsapp:group_leave', {
         groupId: notification.chatId,
         participants: notification.recipientIds,
         author: notification.author,
@@ -197,7 +209,8 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.info(`📝 Grupo atualizado: ${notification.chatId}`);
 
-      io.emit('whatsapp:group_update', {
+      // T-03: segmentado pela conversa do grupo.
+      io.to(`conversation:${notification.chatId}`).emit('whatsapp:group_update', {
         groupId: notification.chatId,
         type: notification.type,
         author: notification.author,
@@ -259,8 +272,8 @@ export function setupWhatsAppListeners(client: Client, io: SocketIOServer): void
     try {
       logger.info(`📞 Ligação recebida de: ${call.from}`);
 
-      // Emitir via Socket.IO
-      io.emit('whatsapp:call', {
+      // T-03: segmentado — `call.from` identifica o contato que ligou.
+      io.to(`conversation:${call.from}`).emit('whatsapp:call', {
         from: call.from,
         timestamp: call.timestamp,
         isVideo: call.isVideo,
@@ -350,8 +363,10 @@ async function handleIncomingMessage(message: WWebMessage, io: SocketIOServer): 
   // Emitir via Socket.IO para room específica
   io.to(`conversation:${message.from}`).emit('whatsapp:message', formattedMessage);
 
-  // Emitir broadcast geral
-  io.emit('whatsapp:new_message', formattedMessage);
+  // T-03: era `io.emit('whatsapp:new_message', ...)` — broadcast global com
+  // telefone, nome e corpo da mensagem para TODOS os clientes conectados.
+  // Agora vai só para quem está inscrito na conversa.
+  io.to(`conversation:${message.from}`).emit('whatsapp:new_message', formattedMessage);
 
   // Processar com bot do WhatsApp (se houver sessão ativa)
   try {

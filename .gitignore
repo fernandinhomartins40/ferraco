@@ -70,3 +70,9 @@ ssl/
 *.key
 *.crt
 .claude/settings.local.json
+
+# Dumps restaurados da VPS — contem dados pessoais e hashes de senha
+backups-vps/
+
+# Cache da ferramenta Serena (MCP) — nao pertence ao repositorio
+.serena/

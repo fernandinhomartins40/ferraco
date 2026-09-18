@@ -10,6 +10,8 @@ import { chatbotAutosaveService } from './modules/chatbot/chatbot-autosave.servi
 import { automationSchedulerService } from './services/automationScheduler.service';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
+import { registerSocketAuth } from './middleware/socketAuth';
+import { webhookRetryService } from './services/webhook-retry.service';
 
 async function startServer(): Promise<void> {
   try {
@@ -37,9 +39,14 @@ async function startServer(): Promise<void> {
       },
     });
 
+    // T-02: autenticar o handshake ANTES de qualquer emissão.
+    // Sem isso o servidor entregava `whatsapp:qr` a qualquer conexão anônima.
+    registerSocketAuth(io);
+
     // Configure WebSocket events
     io.on('connection', (socket) => {
-      logger.info(`🔌 Cliente WebSocket conectado: ${socket.id}`);
+      const userId = socket.data.user?.userId;
+      logger.info(`🔌 Cliente WebSocket conectado: ${socket.id} (usuário ${userId})`);
 
       // ✅ NOVO: Enviar status e QR code atual quando cliente conecta
       const currentStatus = whatsappWebJSService.getStatus();
@@ -138,6 +145,10 @@ async function startServer(): Promise<void> {
 
         // Parar automation scheduler
         automationSchedulerService.stop();
+
+        // T-16: parar o cron de retry de webhooks — sem isso o CronJob
+        // segue ativo e impede o encerramento limpo do processo.
+        webhookRetryService.stop();
 
         // ✅ Desconectar WhatsApp
         await whatsappWebJSService.disconnect();

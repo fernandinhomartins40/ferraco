@@ -2,7 +2,7 @@
 // Integrations Module - Service
 // ============================================================================
 
-import { PrismaClient, Integration, IntegrationSyncLog, IntegrationType as PrismaIntegrationType } from '@prisma/client';
+import { Integration, IntegrationSyncLog, IntegrationType as PrismaIntegrationType } from '@prisma/client';
 import axios from 'axios';
 import {
   CreateIntegrationDTO,
@@ -15,6 +15,11 @@ import {
   PipedriveConfig,
   IIntegrationsService,
 } from './integrations.types';
+// T-19 (F-01): o singleton substitui o `new PrismaClient()` que era
+// passado ao construtor. `PrismaClient` permanece importado apenas
+// como TIPO do parâmetro — nenhuma instância nova é criada aqui.
+import type { PrismaClient } from '@prisma/client';
+import { prisma } from '../../config/database';
 
 export class IntegrationsService implements IIntegrationsService {
   constructor(private prisma: PrismaClient) {}
@@ -359,4 +364,4 @@ export class IntegrationsService implements IIntegrationsService {
   }
 }
 
-export const integrationsService = new IntegrationsService(new PrismaClient());
+export const integrationsService = new IntegrationsService(prisma);

@@ -11,31 +11,40 @@ echo "========================================="
 # Criar diretórios necessários com permissões corretas
 echo "📁 Criando diretórios necessários..."
 mkdir -p /app/data /app/logs
-chmod 755 /app/data /app/logs
+# T-09 (F-56): o backend roda como `node` e passou a escrever em /app/logs
+# (antes gravava em ./logs relativo ao CWD, fora do volume). Sem este chown,
+# o diretório ficaria de root com 755 e o winston falharia ao abrir os arquivos.
+chown -R node:node /app/data /app/logs
+chmod 750 /app/data /app/logs
 
 # VOLUMES DOCKER (montados automaticamente pelo Docker)
 # Apenas garantir permissões se já existirem
 echo "🔍 Verificando volumes Docker..."
+# T-06 (F-61): era `chmod 777` — permissão de escrita para qualquer processo
+# do container. O backend roda como `node`, então 750 (dono node, grupo node)
+# é suficiente: o dono escreve, o grupo lê, e mais ninguém acessa.
 if [ -d "/app/uploads" ]; then
   echo "  ✅ /app/uploads detectado (volume Docker)"
-  chmod 777 /app/uploads
   chown -R node:node /app/uploads
+  chmod 750 /app/uploads
 else
   echo "  ⚠️  /app/uploads NÃO encontrado - criando diretório temporário"
   mkdir -p /app/uploads
-  chmod 777 /app/uploads
   chown -R node:node /app/uploads
+  chmod 750 /app/uploads
 fi
 
+# T-06 (F-61): sessions guarda as credenciais da sessão de WhatsApp — quem lê
+# esse diretório assume a conta. 750 em vez de 777.
 if [ -d "/app/sessions" ]; then
   echo "  ✅ /app/sessions detectado (volume Docker)"
-  chmod 777 /app/sessions
   chown -R node:node /app/sessions
+  chmod 750 /app/sessions
 else
   echo "  ⚠️  /app/sessions NÃO encontrado - criando diretório temporário"
   mkdir -p /app/sessions
-  chmod 777 /app/sessions
   chown -R node:node /app/sessions
+  chmod 750 /app/sessions
 fi
 echo "✅ Diretórios e volumes configurados"
 
@@ -51,49 +60,114 @@ if [ -n "$DATABASE_URL" ]; then
   echo "📊 Criando/Atualizando estrutura do banco de dados..."
   cd /app/backend
 
-  # Executar migrations pendentes (SEGURO - não perde dados)
-  echo "📊 Aplicando migrations pendentes..."
-  npx prisma migrate deploy 2>&1 || {
-    echo "⚠️  Aviso: Erro ao aplicar migrations"
-    echo "ℹ️  Se o banco está vazio, executando db push..."
-    npx prisma db push --skip-generate 2>&1 || echo "⚠️  Aviso: Falha ao criar tabelas"
-  }
-
-  # Seed do banco (apenas se estiver vazio)
-  echo "🌱 Verificando se precisa popular banco de dados..."
-  # Extrai host, porta, user, password e database do DATABASE_URL
+  # Extrai host, porta, user, password e database do DATABASE_URL.
+  # T-14: movido para ANTES das migrations — a verificação de integridade de
+  # `_prisma_migrations` precisa dessas variáveis, e antes elas só eram
+  # definidas mais adiante, no bloco do seed.
   DB_USER=$(echo "$DATABASE_URL" | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
   DB_PASS=$(echo "$DATABASE_URL" | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
   DB_HOST=$(echo "$DATABASE_URL" | sed -n 's/.*@\([^:]*\):.*/\1/p')
   DB_PORT=$(echo "$DATABASE_URL" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
   DB_NAME=$(echo "$DATABASE_URL" | sed -n 's/.*\/\([^?]*\).*/\1/p')
 
-  # Verifica se já existe algum usuário antes de fazer seed
-  USER_COUNT=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM users;" 2>/dev/null | tr -d ' ' || echo "0")
-  echo "ℹ️  Usuários encontrados no banco: $USER_COUNT"
+  # Executar migrations pendentes (SEGURO - não perde dados)
+  echo "📊 Aplicando migrations pendentes..."
+  # T-14 (F-75): o fallback `db push` foi REMOVIDO.
+  #
+  # Antes, uma migration falha caía em `db push --skip-generate` e o boot
+  # continuava — o deploy era reportado como sucesso com o schema divergente
+  # do histórico de migrations. Foi exatamente isso que mascarou F-100
+  # (migration inserindo em colunas inexistentes) por tempo indeterminado.
+  #
+  # Agora migration falha ABORTA o boot. Um deploy quebrado deve falhar, não
+  # passar silenciosamente.
+  if ! npx prisma migrate deploy 2>&1; then
+    echo ""
+    echo "========================================="
+    echo "❌ ERRO: falha ao aplicar migrations"
+    echo "========================================="
+    echo "   O boot foi abortado de propósito."
+    echo "   Um schema divergente causa falhas difíceis de diagnosticar."
+    echo "   Verifique '_prisma_migrations' e resolva antes de novo deploy."
+    echo "========================================="
+    exit 1
+  fi
 
-  if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
+  # T-14: verificar que nenhuma migration ficou incompleta ou revertida.
+  # `migrate deploy` pode retornar 0 e ainda assim haver registro problemático.
+  if command -v psql >/dev/null 2>&1; then
+    MIGR_RUIM=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A \
+      -c "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NULL OR rolled_back_at IS NOT NULL;" 2>/dev/null | tr -d ' ')
+    case "$MIGR_RUIM" in
+      ''|*[!0-9]*)
+        echo "⚠️  Não foi possível verificar _prisma_migrations — seguindo."
+        ;;
+      0)
+        echo "✅ Migrations íntegras (nenhuma incompleta ou revertida)"
+        ;;
+      *)
+        echo "❌ ERRO: $MIGR_RUIM migration(s) incompleta(s) ou revertida(s)."
+        echo "⚠️  Abortando: o schema não corresponde ao histórico."
+        exit 1
+        ;;
+    esac
+  fi
+
+  # Seed do banco (apenas se estiver vazio)
+  echo "🌱 Verificando se precisa popular banco de dados..."
+
+  # T-01: verificação de banco vazio antes do seed.
+  # O fallback anterior era `|| echo "0"` — falha ABERTA: qualquer erro do psql
+  # (indisponível, rede, credencial) virava "banco vazio" e disparava um seed
+  # destrutivo. Agora a dúvida faz PULAR o seed, nunca executá-lo. O boot segue
+  # normalmente: pular o seed é seguro tanto com banco vazio quanto populado.
+  SEED_SAFE="no"
+  USER_COUNT=""
+
+  if ! command -v psql >/dev/null 2>&1; then
+    echo "⚠️  psql indisponível — impossível confirmar se o banco está vazio."
+    echo "ℹ️  Seed será PULADO (comportamento seguro)."
+  elif ! PSQL_OUT=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A -c "SELECT COUNT(*) FROM users;" 2>&1); then
+    # Tabela ausente é estado legítimo de banco recém-criado.
+    if echo "$PSQL_OUT" | grep -qi 'relation .* does not exist'; then
+      echo "ℹ️  Tabela 'users' ainda não existe — banco novo."
+      SEED_SAFE="yes"
+      USER_COUNT="0"
+    else
+      echo "⚠️  Falha ao consultar o banco: $PSQL_OUT"
+      echo "ℹ️  Seed será PULADO (comportamento seguro)."
+    fi
+  else
+    USER_COUNT=$(echo "$PSQL_OUT" | tr -d ' ')
+    case "$USER_COUNT" in
+      ''|*[!0-9]*)
+        echo "⚠️  Contagem inconclusiva ('$USER_COUNT') — seed será PULADO."
+        ;;
+      *)
+        echo "ℹ️  Usuários encontrados no banco: $USER_COUNT"
+        SEED_SAFE="yes"
+        ;;
+    esac
+  fi
+
+  if [ "$SEED_SAFE" = "yes" ] && [ "$USER_COUNT" = "0" ]; then
     echo "📝 Banco vazio - executando seed..."
     if npx prisma db seed 2>&1; then
+      # T-01: credenciais NÃO são mais impressas no log do container.
+      # Ficavam legíveis para qualquer um com `docker logs` e persistiam no
+      # json-file. Os usuários e senhas padrão estão em prisma/seed.ts.
       echo "✅ Seed executado com sucesso!"
-      echo ""
-      echo "========================================="
-      echo "🔑 CREDENCIAIS DE ACESSO CRIADAS:"
-      echo "========================================="
-      echo "👨‍💼 Admin:      admin@ferraco.com / Admin@123456"
-      echo "👨‍💼 Manager:    manager@ferraco.com / User@123456"
-      echo "👨‍💼 Vendedor:   vendedor@ferraco.com / User@123456"
-      echo "👨‍💼 Consultor:  consultor@ferraco.com / User@123456"
-      echo "👨‍💼 Suporte:    suporte@ferraco.com / User@123456"
-      echo "========================================="
-      echo ""
+      echo "🔑 Usuários padrão criados — consulte prisma/seed.ts."
+      echo "⚠️  Troque as senhas padrão no primeiro acesso."
     else
       echo "❌ ERRO: Falha ao executar seed!"
       echo "⚠️  O sistema pode não ter usuários criados!"
       exit 1
     fi
-  else
+  elif [ "$SEED_SAFE" = "yes" ]; then
     echo "✅ Banco já populado ($USER_COUNT usuários) - pulando seed"
+  else
+    echo "⏭️  Seed pulado — estado do banco não pôde ser confirmado."
   fi
 else
   echo "⚠️  DATABASE_URL não configurado - pulando migrações"

@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
-import { logger } from '../../utils/logger';
 
-const prisma = new PrismaClient();
+import { logger } from '../../utils/logger';
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../../config/database';
 
 export interface ChatbotConfigData {
   // Behavior

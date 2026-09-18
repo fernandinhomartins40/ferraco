@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+
 import { BatchOperation, BatchOperationResult, BatchRequest, BatchResponse } from './batch.types';
 import { LeadsService } from '../leads/leads.service';
 import { LeadsExportService } from '../leads/leads.export.service';
-
-const prisma = new PrismaClient();
+// T-19 (F-01): usa o singleton em vez de instanciar um PrismaClient proprio.
+import { prisma } from '../../config/database';
 
 export class BatchService {
   private leadsService: LeadsService;

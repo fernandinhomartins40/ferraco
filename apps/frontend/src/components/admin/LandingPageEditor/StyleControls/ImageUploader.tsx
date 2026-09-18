@@ -37,7 +37,10 @@ export const ImageUploader = ({
   value,
   onChange,
   description,
-  acceptedFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'],
+  // T-06 (F-59): SVG removido — o backend passou a rejeitá-lo (pode conter
+  // <script> e, com CSP desabilitada, executaria no domínio da aplicação).
+  // Mantido alinhado para o usuário não ver uma opção que resulta em erro.
+  acceptedFormats = ['image/jpeg', 'image/png', 'image/webp'],
   enableCrop = false,
   cropAspectRatio = 16 / 9,
   cropTargetWidth = 1200,

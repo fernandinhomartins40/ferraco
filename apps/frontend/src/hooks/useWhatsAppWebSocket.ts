@@ -4,6 +4,7 @@
 
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getToken } from '@/lib/apiClient';
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -39,11 +40,19 @@ export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
   }, [events]);
 
   useEffect(() => {
+    // T-02: o servidor exige JWT no handshake. Sem token não há conexão.
+    const token = getToken();
+    if (!token) {
+      console.warn('🔒 WebSocket: sem token de autenticação — conexão não iniciada');
+      return;
+    }
+
     const socket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      auth: { token }, // T-02
     });
 
     socketRef.current = socket;
@@ -58,6 +67,16 @@ export const useWhatsAppWebSocket = (events: WebSocketEvents) => {
 
     socket.on('connect_error', (error) => {
       console.error('❌ Erro de conexão WebSocket:', error);
+
+      // T-02: relê o token a cada tentativa para não reconectar em laço
+      // com um access token já expirado (~15 min de vida).
+      const freshToken = getToken();
+      if (freshToken) {
+        socket.auth = { token: freshToken };
+      } else {
+        console.warn('🔒 WebSocket: sem token válido — interrompendo reconexão');
+        socket.disconnect();
+      }
     });
 
     socket.on('message:new', (data) => {

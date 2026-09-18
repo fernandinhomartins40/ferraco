@@ -23,6 +23,7 @@ import { logger } from '../utils/logger';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -46,18 +47,22 @@ const whatsappStorage = multer.diskStorage({
     cb(null, whatsappUploadsDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
-    cb(null, `${baseName}-${uniqueSuffix}${ext}`);
+    // T-06 (F-57): identificador criptográfico no lugar de
+    // `Date.now() + Math.random()`, que era derivável por força bruta.
+    // O nome original é preservado apenas como prefixo legível, sanitizado.
+    const ext = path.extname(file.originalname).toLowerCase();
+    const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40);
+    cb(null, `${baseName}-${crypto.randomUUID()}${ext}`);
   },
 });
 
 const whatsappFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   // Aceitar TODOS os tipos de arquivo (imagem, áudio, vídeo, documento, etc.)
   const allowedTypes = [
-    // Imagens
-    'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
+    // Imagens — T-06 (F-59): 'image/svg+xml' removido. O arquivo é gravado no
+    // nosso disco e fica acessível via /uploads antes de seguir ao WhatsApp;
+    // um SVG com <script> executaria no domínio da aplicação.
+    'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
     // Áudios
     'audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/m4a',
     // Vídeos
@@ -74,8 +79,11 @@ const whatsappFileFilter = (req: any, file: Express.Multer.File, cb: multer.File
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    logger.warn(`⚠️  Tipo de arquivo não permitido: ${file.mimetype}`);
-    cb(null, true); // Aceitar mesmo assim (WhatsApp valida depois)
+    // T-06 (F-58): o `else` fazia `cb(null, true)` — aceitava QUALQUER tipo,
+    // tornando a allowlist decorativa. Arquivos executáveis chegavam ao disco
+    // do servidor, que é servido publicamente em /uploads.
+    logger.warn(`⚠️  Upload rejeitado — tipo não permitido: ${file.mimetype}`);
+    cb(new Error(`Tipo de arquivo não permitido: ${file.mimetype}`));
   }
 };
 
@@ -83,7 +91,11 @@ const uploadWhatsappMedia = multer({
   storage: whatsappStorage,
   fileFilter: whatsappFileFilter,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB (limite do WhatsApp)
+    // T-11 (F-9): era 100 MB, mas o nginx corta em `client_max_body_size 50M`.
+    // O usuário transferia o arquivo inteiro e só então recebia 413 — falha
+    // tardia e cara. Alinhado com o nginx para rejeitar cedo.
+    // Para elevar o teto, aumentar NOS DOIS lugares.
+    fileSize: 50 * 1024 * 1024, // 50MB (alinhado com nginx client_max_body_size)
   },
 });
 
