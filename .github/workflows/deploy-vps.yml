@@ -272,6 +272,30 @@ jobs:
           fi
           docker compose version
 
+          # T-12: a imagem e BAIXADA ANTES de derrubar a aplicacao.
+          # Ordem anterior: down -> pull (~3,5 GB) -> up. Isso deixava o site
+          # fora durante toda a transferencia e, se o pull falhasse, fora de
+          # vez — foi o que aconteceu com "connection reset by peer".
+          # Baixando primeiro, a janela de indisponibilidade cai para o tempo
+          # de reiniciar o container, e um pull falho nao tira o site do ar.
+          echo "📥 Pre-baixando a imagem antes de parar a aplicacao..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          PRE_IMAGE="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          PRE_OK=0
+          for attempt in 1 2 3; do
+            echo "   tentativa $attempt de 3..."
+            if docker pull "$PRE_IMAGE"; then PRE_OK=1; break; fi
+            [ $attempt -lt 3 ] && { echo "   falhou — nova tentativa em 15s"; sleep 15; }
+          done
+
+          if [ "$PRE_OK" != "1" ]; then
+            echo "❌ Nao foi possivel baixar $PRE_IMAGE apos 3 tentativas."
+            echo "   A aplicacao atual NAO foi tocada e segue no ar."
+            exit 1
+          fi
+          echo "✅ Imagem baixada — seguro parar a aplicacao agora."
+
           # Parar containers anteriores (SEM remover volumes - preserva banco de dados!)
           echo "⏹️  Parando containers anteriores..."
           # CORREÇÃO: Usar caminho absoluto para garantir que o docker-compose.vps.yml seja encontrado
@@ -485,17 +509,10 @@ jobs:
           # build-arg. DATABASE_URL chega em RUNTIME, pelo environment do
           # compose — gravar num ARG a deixaria legivel por `docker history`.
 
-          echo "🔐 Autenticando no GHCR..."
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
+          # A imagem ja foi baixada no inicio deste script, ANTES do
+          # `compose down` — ver o bloco "Pre-baixando a imagem".
           IMAGE_SHA="${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          echo "📥 Baixando $IMAGE_SHA ..."
-
-          if ! docker pull "$IMAGE_SHA"; then
-            echo "❌ Falha ao baixar a imagem do GHCR."
-            echo "   O job de build publicou? Veja o job 'build' desta execucao."
-            exit 1
-          fi
+          echo "✅ Imagem ja presente localmente: $IMAGE_SHA"
 
           # O compose referencia `ferraco-crm:latest`. Em vez de mudar o compose
           # para uma tag dinamica (que exigiria interpolacao a cada deploy),
