@@ -296,6 +296,42 @@ jobs:
           fi
           echo "✅ Imagem baixada — seguro parar a aplicacao agora."
 
+          BACKUP_DIR="/root/ferraco-volumes-backup-$(date +%Y%m%d-%H%M%S)"
+          mkdir -p $BACKUP_DIR
+
+          # Backup do BANCO (pg_dump logico)
+          #
+          # Este bloco salvava uploads e sessions, mas NAO o banco — protegia o
+          # menos critico e deixava o mais critico sem rede. Nenhum passo do
+          # deploy apaga o volume do Postgres, mas uma migration destrutiva ou
+          # um seed acidental sao irreversiveis sem dump.
+          #
+          # pg_dump (logico) em vez de tar do volume: o tar de um Postgres EM
+          # EXECUCAO copia arquivos sob escrita e pode gerar um backup corrompido
+          # que so falha na hora de restaurar. O pg_dump e consistente.
+          if docker ps --format '{{.Names}}' | grep -q '^ferraco-postgres$'; then
+            echo "📦 Backup do banco (pg_dump)..."
+            if docker exec ferraco-postgres pg_dump -U ferraco -d ferraco_crm \
+                 -Fc --no-owner --no-acl > "$BACKUP_DIR/database.dump" 2>/dev/null; then
+              DB_SIZE=$(du -sh "$BACKUP_DIR/database.dump" | cut -f1)
+              # Um pg_dump que falha no meio deixa arquivo pequeno e inutil;
+              # exigir um tamanho minimo evita "backup" de 0 bytes passando batido.
+              if [ "$(stat -c%s "$BACKUP_DIR/database.dump")" -gt 10000 ]; then
+                echo "  ✅ Backup criado: database.dump ($DB_SIZE)"
+              else
+                echo "  ❌ database.dump suspeito (muito pequeno) — ABORTANDO deploy"
+                exit 1
+              fi
+            else
+              echo "  ❌ pg_dump FALHOU — abortando antes de tocar na aplicacao."
+              echo "     Sem backup do banco, um deploy ruim seria irreversivel."
+              exit 1
+            fi
+          else
+            # Primeiro deploy: ainda nao existe banco para salvar.
+            echo "  ℹ️  ferraco-postgres nao esta rodando — sem banco a salvar"
+          fi
+
           # Parar containers anteriores (SEM remover volumes - preserva banco de dados!)
           echo "⏹️  Parando containers anteriores..."
           # CORREÇÃO: Usar caminho absoluto para garantir que o docker-compose.vps.yml seja encontrado
@@ -452,8 +488,11 @@ jobs:
           echo "💾 BACKUP AUTOMÁTICO DE VOLUMES"
           echo "========================================="
 
-          BACKUP_DIR="/root/ferraco-volumes-backup-$(date +%Y%m%d-%H%M%S)"
-          mkdir -p $BACKUP_DIR
+          # $BACKUP_DIR ja foi definido no inicio deste script, junto do backup
+          # do banco. Redefinir aqui criaria uma SEGUNDA pasta (o timestamp e
+          # calculado no momento da atribuicao), separando o dump do banco dos
+          # tarballs de uploads/sessions — e o conjunto de um mesmo deploy
+          # deixaria de ser restauravel como uma unidade coerente.
 
           # Backup de uploads (imagens)
           if docker volume inspect ferraco-uploads >/dev/null 2>&1; then
